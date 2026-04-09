@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AdManager — Cris Costa Beauty</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --rose:       #F5E0DC;
+  --rose-deep:  #C98B83;
+  --rose-light: #FDF0ED;
+  --rose-pale:  #FEF7F5;
+  --wine:       #4A2535;
+  --wine-mid:   #7D4A5E;
+  --wine-light: #B87A92;
+  --white:      #FFFFFF;
+  --gray-50:    #FEF7F5;
+  --gray-100:   #FAF0ED;
+  --gray-200:   #F0DDD8;
+  --gray-400:   #C4A09A;
+  --gray-600:   #8A6560;
+  --gray-800:   #3D1F1A;
+  --green:      #27AE60;
+  --green-bg:   #D5F5E3;
+  --red:        #E74C3C;
+  --red-bg:     #FADBD8;
+  --yellow:     #E67E22;
+  --yellow-bg:  #FDEBD0;
+  --blue:       #2980B9;
+  --blue-bg:    #D6EAF8;
+  --shadow-sm:  0 1px 4px rgba(74,37,53,.09);
+  --shadow:     0 4px 16px rgba(74,37,53,.11);
+  --shadow-lg:  0 12px 36px rgba(74,37,53,.16);
+  --radius:     14px;
+  --radius-sm:  9px;
+}
+body { font-family:'Inter',sans-serif; background:var(--rose-light); color:var(--gray-800); display:flex; min-height:100vh; overflow-x:hidden; }
+
+/* ─── SIDEBAR ─── */
+.sidebar { width:230px; min-height:100vh; background:var(--wine); display:flex; flex-direction:column; position:fixed; top:0; left:0; z-index:100; }
+.sidebar-logo { padding:22px 18px 18px; border-bottom:1px solid rgba(255,255,255,.09); }
+.sidebar-logo img { width:140px; display:block; margin-bottom:12px; filter:brightness(0) invert(1) sepia(.15) saturate(.5) brightness(1.4); opacity:.88; }
+.sidebar-logo .brand { color:rgba(255,255,255,.38); font-size:10px; font-weight:600; letter-spacing:1.4px; text-transform:uppercase; margin-bottom:1px; }
+.sidebar-logo h1 { color:rgba(255,255,255,.72); font-size:12px; font-weight:500; }
+
+.demo-badge { margin:12px 14px 0; background:rgba(201,139,131,.2); border:1px solid rgba(201,139,131,.35); border-radius:8px; padding:7px 10px; display:flex; align-items:center; gap:7px; }
+.demo-badge .dot { width:7px; height:7px; border-radius:50%; background:#F5E0DC; flex-shrink:0; animation:pulse 1.8s infinite; }
+.demo-badge span { font-size:10px; color:var(--rose); font-weight:600; letter-spacing:.4px; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
+
+.sidebar-section { padding:14px 10px 6px; }
+.sidebar-label { color:rgba(255,255,255,.3); font-size:10px; font-weight:600; letter-spacing:1.2px; text-transform:uppercase; padding:0 8px; margin-bottom:5px; }
+.nav-item { display:flex; align-items:center; gap:9px; padding:8px 10px; border-radius:var(--radius-sm); color:rgba(255,255,255,.6); font-size:13px; font-weight:500; cursor:pointer; transition:all .15s; margin-bottom:2px; }
+.nav-item:hover { background:rgba(255,255,255,.08); color:#fff; }
+.nav-item.active { background:var(--rose-deep); color:#fff; }
+.nav-badge { margin-left:auto; background:rgba(255,255,255,.18); color:#fff; font-size:10px; font-weight:700; padding:2px 7px; border-radius:10px; }
+
+.sidebar-footer { margin-top:auto; padding:14px 10px; border-top:1px solid rgba(255,255,255,.08); }
+.user-card { display:flex; align-items:center; gap:9px; padding:8px 10px; border-radius:var(--radius-sm); cursor:pointer; }
+.user-card:hover { background:rgba(255,255,255,.07); }
+.user-avatar { width:32px; height:32px; background:var(--rose-deep); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:13px; font-weight:700; flex-shrink:0; }
+.user-name { color:#fff; font-size:12px; font-weight:600; }
+.user-role { color:rgba(255,255,255,.4); font-size:11px; }
+
+/* ─── MAIN ─── */
+.main { margin-left:230px; flex:1; display:flex; flex-direction:column; }
+.topbar { background:var(--white); border-bottom:1px solid var(--gray-200); padding:0 28px; height:58px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:50; }
+.topbar-left { display:flex; align-items:center; gap:10px; }
+.topbar-title { font-size:15px; font-weight:700; color:var(--wine); }
+.demo-tag { background:var(--rose); color:var(--rose-deep); font-size:10px; font-weight:700; padding:3px 9px; border-radius:20px; letter-spacing:.5px; }
+.topbar-actions { display:flex; align-items:center; gap:10px; }
+.btn { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:var(--radius-sm); font-size:13px; font-weight:600; cursor:pointer; border:none; transition:all .15s; font-family:inherit; }
+.btn-primary { background:var(--rose-deep); color:#fff; }
+.btn-primary:hover { background:var(--wine-mid); }
+.btn-ghost { background:var(--white); color:var(--wine-mid); border:1.5px solid var(--gray-200); }
+.btn-ghost:hover { border-color:var(--rose-deep); color:var(--rose-deep); }
+.btn-sm { padding:6px 12px; font-size:12px; }
+
+.content { padding:24px 28px; flex:1; }
+
+/* ─── DEMO BANNER ─── */
+.demo-banner { background:linear-gradient(135deg,var(--wine) 0%,var(--wine-mid) 100%); border-radius:var(--radius); padding:16px 20px; margin-bottom:24px; display:flex; align-items:center; gap:14px; }
+.demo-banner .icon { font-size:28px; flex-shrink:0; }
+.demo-banner h3 { color:var(--rose); font-size:14px; font-weight:700; margin-bottom:2px; }
+.demo-banner p { color:rgba(253,240,237,.65); font-size:12px; line-height:1.4; }
+.demo-banner .close { margin-left:auto; cursor:pointer; color:rgba(255,255,255,.4); font-size:20px; flex-shrink:0; }
+.demo-banner .close:hover { color:#fff; }
+
+/* ─── TABS ─── */
+.tabs { display:flex; gap:3px; margin-bottom:22px; background:var(--rose); padding:4px; border-radius:var(--radius-sm); width:fit-content; }
+.tab { padding:6px 16px; border-radius:6px; font-size:12px; font-weight:500; cursor:pointer; color:var(--gray-600); transition:all .15s; }
+.tab.active { background:#fff; color:var(--wine); font-weight:700; box-shadow:var(--shadow-sm); }
+
+/* ─── STATS ─── */
+.stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:26px; }
+.stat-card { background:#fff; border-radius:var(--radius); padding:18px 20px; box-shadow:var(--shadow-sm); border:1px solid var(--gray-200); position:relative; overflow:hidden; }
+.stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; }
+.stat-card.s1::before { background:var(--rose-deep); }
+.stat-card.s2::before { background:var(--green); }
+.stat-card.s3::before { background:var(--blue); }
+.stat-card.s4::before { background:var(--yellow); }
+.stat-icon { position:absolute; right:16px; top:16px; font-size:20px; opacity:.12; }
+.stat-label { font-size:10px; font-weight:700; color:var(--gray-400); text-transform:uppercase; letter-spacing:.7px; margin-bottom:7px; }
+.stat-value { font-size:24px; font-weight:800; color:var(--wine); line-height:1; margin-bottom:5px; }
+.stat-change { font-size:11px; font-weight:600; }
+.stat-change.up { color:var(--green); }
+.stat-change.dn { color:var(--red); }
+
+/* ─── SECTION HEADER ─── */
+.section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.section-header h3 { font-size:14px; font-weight:700; color:var(--wine); }
+.filters { display:flex; gap:7px; flex-wrap:wrap; }
+.chip { padding:5px 12px; border-radius:20px; font-size:11px; font-weight:600; border:1.5px solid var(--gray-200); background:#fff; color:var(--gray-600); cursor:pointer; transition:all .15s; }
+.chip.active { border-color:var(--rose-deep); color:var(--rose-deep); background:var(--rose); }
+.chip:hover:not(.active) { border-color:var(--rose-deep); color:var(--rose-deep); }
+
+/* ─── CAMPAIGN GRID ─── */
+.campaigns-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+@media(max-width:1100px){.campaigns-grid{grid-template-columns:repeat(2,1fr);}}
+
+.campaign-card { background:#fff; border-radius:var(--radius); border:1px solid var(--gray-200); box-shadow:var(--shadow-sm); overflow:hidden; transition:box-shadow .2s,transform .2s; }
+.campaign-card:hover { box-shadow:var(--shadow); transform:translateY(-2px); }
+.campaign-card.new-card { animation:slideIn .5s cubic-bezier(.34,1.56,.64,1) both; }
+@keyframes slideIn { from{opacity:0;transform:scale(.88) translateY(12px)} to{opacity:1;transform:none} }
+
+.card-thumb { width:100%; height:126px; position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; font-size:42px; }
+.plat-badge { position:absolute; top:8px; left:8px; font-size:10px; font-weight:700; padding:3px 8px; border-radius:20px; color:#fff; letter-spacing:.4px; }
+.plat-badge.meta { background:rgba(41,128,185,.85); }
+.plat-badge.google { background:rgba(231,76,60,.82); }
+.plat-badge.tiktok { background:rgba(0,0,0,.78); }
+.plat-badge.manual { background:rgba(74,37,53,.78); }
+.live-dot { position:absolute; top:8px; right:8px; width:8px; height:8px; background:var(--green); border-radius:50%; box-shadow:0 0 0 3px rgba(39,174,96,.25); animation:livePulse 2s infinite; }
+@keyframes livePulse { 0%,100%{box-shadow:0 0 0 3px rgba(39,174,96,.25)}50%{box-shadow:0 0 0 6px rgba(39,174,96,.08)} }
+
+.card-body { padding:13px 15px; }
+.card-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:11px; gap:8px; }
+.card-name { font-size:12px; font-weight:700; color:var(--wine); line-height:1.3; }
+.card-obj { font-size:11px; color:var(--gray-400); margin-top:2px; }
+.toggle-wrap { display:flex; align-items:center; gap:5px; flex-shrink:0; }
+.toggle { position:relative; width:36px; height:19px; cursor:pointer; }
+.toggle input { opacity:0; width:0; height:0; }
+.toggle-track { position:absolute; inset:0; background:var(--gray-200); border-radius:20px; transition:.2s; }
+.toggle-track::before { content:''; position:absolute; width:13px; height:13px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
+.toggle input:checked + .toggle-track { background:var(--green); }
+.toggle input:checked + .toggle-track::before { transform:translateX(17px); }
+.status-lbl { font-size:10px; font-weight:700; }
+.status-lbl.on { color:var(--green); }
+.status-lbl.off { color:var(--gray-400); }
+
+.metrics-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin-bottom:11px; }
+.metric { background:var(--rose-pale); border-radius:7px; padding:7px 9px; }
+.metric-lbl { font-size:9px; color:var(--gray-400); font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin-bottom:2px; }
+.metric-val { font-size:13px; font-weight:700; color:var(--wine); }
+.metric-val.good { color:var(--green); }
+.metric-val.warn { color:var(--yellow); }
+
+.budget-bar-row { display:flex; justify-content:space-between; font-size:10px; color:var(--gray-600); margin-bottom:4px; font-weight:500; }
+.budget-bar-row strong { color:var(--wine); }
+.budget-bar { height:5px; background:var(--gray-200); border-radius:3px; overflow:hidden; margin-bottom:11px; }
+.budget-fill { height:100%; border-radius:3px; transition:width .6s ease; }
+.budget-fill.low { background:var(--rose-deep); }
+.budget-fill.mid { background:var(--yellow); }
+.budget-fill.high { background:var(--red); }
+
+.alert-strip { border-radius:7px; padding:7px 10px; font-size:11px; font-weight:500; display:flex; align-items:flex-start; gap:6px; margin-bottom:10px; }
+.alert-strip.warn { background:var(--yellow-bg); color:#7a4a00; }
+.alert-strip.ok   { background:var(--green-bg); color:#1a6b3c; }
+
+.card-footer { display:flex; align-items:center; justify-content:space-between; padding-top:9px; border-top:1px solid var(--gray-100); }
+.card-dates { font-size:10px; color:var(--gray-400); }
+.card-actions { display:flex; gap:5px; }
+.icon-btn { width:26px; height:26px; border-radius:6px; background:var(--rose-pale); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--gray-600); transition:all .15s; }
+.icon-btn:hover { background:var(--rose); color:var(--rose-deep); }
+
+/* ─── WIZARD OVERLAY ─── */
+.overlay { display:none; position:fixed; inset:0; background:rgba(74,37,53,.45); backdrop-filter:blur(4px); z-index:200; align-items:center; justify-content:center; }
+.overlay.open { display:flex; }
+.modal { background:#fff; border-radius:20px; width:640px; max-width:95vw; max-height:92vh; overflow-y:auto; box-shadow:var(--shadow-lg); }
+
+.modal-header { padding:24px 26px 0; }
+.modal-header h2 { font-size:19px; font-weight:800; color:var(--wine); margin-bottom:3px; }
+.modal-header p { font-size:12px; color:var(--gray-600); }
+
+/* Steps progress */
+.steps-bar { display:flex; align-items:center; padding:18px 26px; gap:0; }
+.step-node { display:flex; flex-direction:column; align-items:center; gap:4px; }
+.step-circle { width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; border:2px solid var(--gray-200); color:var(--gray-400); background:#fff; transition:all .2s; flex-shrink:0; }
+.step-circle.done { background:var(--rose-deep); border-color:var(--rose-deep); color:#fff; }
+.step-circle.active { background:var(--wine); border-color:var(--wine); color:#fff; }
+.step-lbl { font-size:9px; color:var(--gray-400); font-weight:600; white-space:nowrap; }
+.step-lbl.active { color:var(--wine); font-weight:700; }
+.step-line { flex:1; height:2px; background:var(--gray-200); margin:0 4px; margin-bottom:14px; transition:background .3s; }
+.step-line.done { background:var(--rose-deep); }
+
+.modal-body { padding:6px 26px 26px; }
+.step-content { display:none; }
+.step-content.active { display:block; animation:fadeStep .25s ease both; }
+@keyframes fadeStep { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+
+.step-title { font-size:15px; font-weight:700; color:var(--wine); margin-bottom:3px; }
+.step-sub { font-size:12px; color:var(--gray-600); margin-bottom:18px; line-height:1.4; }
+
+/* Platform chooser */
+.plat-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+.plat-card { border:2px solid var(--gray-200); border-radius:var(--radius-sm); padding:14px; cursor:pointer; transition:all .15s; display:flex; align-items:center; gap:11px; }
+.plat-card:hover { border-color:var(--rose-deep); background:var(--rose-pale); }
+.plat-card.sel { border-color:var(--rose-deep); background:var(--rose); }
+.plat-card .pi { width:38px; height:38px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:19px; flex-shrink:0; }
+.plat-card .pn { font-size:13px; font-weight:700; color:var(--wine); }
+.plat-card .pd { font-size:11px; color:var(--gray-600); margin-top:1px; }
+
+/* Objectives */
+.obj-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; }
+.obj-card { border:2px solid var(--gray-200); border-radius:var(--radius-sm); padding:13px 10px; text-align:center; cursor:pointer; transition:all .15s; }
+.obj-card:hover { border-color:var(--rose-deep); }
+.obj-card.sel { border-color:var(--rose-deep); background:var(--rose); }
+.obj-icon { font-size:22px; margin-bottom:5px; }
+.obj-name { font-size:12px; font-weight:700; color:var(--wine); margin-bottom:2px; }
+.obj-desc { font-size:10px; color:var(--gray-400); line-height:1.3; }
+
+/* Form */
+.form-group { margin-bottom:14px; }
+.form-label { font-size:12px; font-weight:700; color:var(--wine); margin-bottom:5px; display:flex; align-items:center; gap:5px; }
+.form-hint { font-size:11px; color:var(--gray-400); font-weight:400; }
+.form-input { width:100%; border:1.5px solid var(--gray-200); border-radius:var(--radius-sm); padding:9px 13px; font-size:13px; font-family:inherit; color:var(--wine); outline:none; transition:border-color .15s; background:#fff; }
+.form-input:focus { border-color:var(--rose-deep); }
+textarea.form-input { resize:vertical; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+
+/* Upload */
+.upload-zone { border:2px dashed var(--gray-200); border-radius:var(--radius); padding:28px 20px; text-align:center; cursor:pointer; transition:all .2s; background:var(--rose-pale); position:relative; }
+.upload-zone:hover { border-color:var(--rose-deep); background:var(--rose); }
+.upload-zone.done { border-style:solid; border-color:var(--green); background:var(--green-bg); }
+.upload-zone.err { border-style:solid; border-color:var(--red); background:var(--red-bg); }
+.upload-icon { font-size:32px; margin-bottom:7px; }
+.upload-title { font-size:14px; font-weight:700; color:var(--wine); margin-bottom:3px; }
+.upload-sub { font-size:11px; color:var(--gray-600); margin-bottom:12px; }
+.format-tags { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; }
+.ftag { font-size:11px; font-weight:600; padding:3px 9px; border-radius:6px; }
+.ftag.ok  { background:var(--green-bg); color:#1a6b3c; border:1px solid rgba(39,174,96,.3); }
+.ftag.warn{ background:var(--yellow-bg); color:#7a4a00; border:1px solid rgba(230,126,34,.3); }
+.ftag.bad { background:var(--red-bg); color:#8b1c1c; border:1px solid rgba(231,76,60,.3); }
+
+.upload-preview { display:none; }
+.upload-preview.show { display:flex; gap:14px; align-items:flex-start; text-align:left; }
+.thumb-preview { width:80px; height:80px; border-radius:9px; object-fit:cover; display:flex; align-items:center; justify-content:center; font-size:32px; flex-shrink:0; }
+.preview-file { font-size:12px; font-weight:700; color:var(--wine); margin-bottom:3px; }
+.preview-size { font-size:11px; color:var(--gray-600); margin-bottom:8px; }
+.alert-inline { border-radius:7px; padding:7px 10px; font-size:11px; font-weight:600; display:flex; align-items:center; gap:6px; }
+.alert-inline.ok   { background:var(--green-bg); color:#1a6b3c; }
+.alert-inline.warn { background:var(--yellow-bg); color:#7a4a00; }
+.alert-inline.err  { background:var(--red-bg); color:#8b1c1c; }
+
+.formats-guide { background:var(--rose-pale); border:1px solid var(--gray-200); border-radius:var(--radius-sm); padding:12px 14px; margin-top:12px; }
+.formats-guide h4 { font-size:11px; font-weight:700; color:var(--wine); margin-bottom:8px; text-transform:uppercase; letter-spacing:.5px; }
+.format-row { display:flex; align-items:center; justify-content:space-between; padding:5px 0; border-bottom:1px solid var(--gray-200); font-size:11px; }
+.format-row:last-child { border-bottom:none; }
+.format-name { font-weight:600; color:var(--wine-mid); }
+.format-spec { color:var(--gray-600); }
+.format-status { font-weight:700; font-size:10px; }
+.format-status.ok { color:var(--green); }
+.format-status.sel { color:var(--blue); }
+
+/* Budget presets */
+.budget-presets { display:grid; grid-template-columns:repeat(4,1fr); gap:9px; margin-bottom:14px; }
+.bpreset { border:2px solid var(--gray-200); border-radius:var(--radius-sm); padding:11px 8px; text-align:center; cursor:pointer; transition:all .15s; }
+.bpreset:hover { border-color:var(--rose-deep); }
+.bpreset.sel { border-color:var(--rose-deep); background:var(--rose); }
+.bp-val { font-size:17px; font-weight:800; color:var(--wine); }
+.bp-lbl { font-size:10px; color:var(--gray-400); margin-top:2px; }
+.bp-est { font-size:10px; color:var(--green); font-weight:600; margin-top:3px; }
+
+/* Review */
+.review-box { background:var(--rose); border:1.5px solid var(--gray-200); border-radius:var(--radius); padding:16px; }
+.review-row { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid rgba(201,139,131,.2); }
+.review-row:last-child { border-bottom:none; }
+.review-lbl { font-size:12px; color:var(--wine-mid); }
+.review-val { font-size:12px; font-weight:700; color:var(--wine); }
+
+/* Success screen */
+.success-screen { text-align:center; padding:30px 20px; }
+.success-screen .s-icon { font-size:56px; margin-bottom:14px; animation:popIn .5s cubic-bezier(.34,1.56,.64,1) both; }
+@keyframes popIn { from{transform:scale(0)}to{transform:scale(1)} }
+.success-screen h3 { font-size:20px; font-weight:800; color:var(--wine); margin-bottom:6px; }
+.success-screen p { font-size:13px; color:var(--gray-600); max-width:320px; margin:0 auto 20px; line-height:1.5; }
+.live-indicator { display:inline-flex; align-items:center; gap:7px; background:var(--green-bg); border:1px solid rgba(39,174,96,.3); color:var(--green); font-size:12px; font-weight:700; padding:7px 14px; border-radius:20px; margin-bottom:20px; }
+.live-indicator .ld { width:8px; height:8px; background:var(--green); border-radius:50%; animation:pulse 1.5s infinite; }
+
+/* Modal footer */
+.modal-footer { display:flex; align-items:center; justify-content:space-between; padding:14px 26px; border-top:1px solid var(--gray-100); }
+.step-dots { display:flex; gap:5px; }
+.dot { width:6px; height:6px; border-radius:50%; background:var(--gray-200); cursor:pointer; transition:all .2s; }
+.dot.active { background:var(--rose-deep); width:16px; border-radius:3px; }
+
+/* ─── TOAST ─── */
+.toast { position:fixed; bottom:28px; right:28px; background:var(--wine); color:#fff; border-radius:var(--radius-sm); padding:13px 18px; font-size:13px; font-weight:600; display:flex; align-items:center; gap:9px; box-shadow:var(--shadow-lg); z-index:9999; transform:translateY(80px); opacity:0; transition:all .35s cubic-bezier(.34,1.2,.64,1); }
+.toast.show { transform:none; opacity:1; }
+.toast .t-icon { font-size:18px; }
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar { width:5px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--rose); border-radius:3px; }
+
+/* ─── ANIMATIONS ─── */
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none} }
+.stat-card { animation:fadeIn .3s ease both; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <img src="Visual/3.png" alt="Cris Costa Beauty"/>
+    <div class="brand">Gestor de Tráfego</div>
+    <h1>AdManager</h1>
+  </div>
+
+  <div class="demo-badge">
+    <div class="dot"></div>
+    <span>MODO DEMO ATIVO</span>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Principal</div>
+    <div class="nav-item active" onclick="setNav(this,'dashboard')">
+      <span>📊</span> Dashboard
+    </div>
+    <div class="nav-item" onclick="setNav(this,'dashboard')">
+      <span>📣</span> Campanhas
+      <span class="nav-badge" id="campCount">3</span>
+    </div>
+    <div class="nav-item" onclick="openWizard()">
+      <span>✨</span> Novo Anúncio
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Análise</div>
+    <div class="nav-item" onclick="setNav(this,'dashboard')">
+      <span>📈</span> Desempenho
+    </div>
+    <div class="nav-item" onclick="setNav(this,'dashboard')">
+      <span>💰</span> Orçamento
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Conta</div>
+    <div class="nav-item" onclick="setNav(this,'dashboard')">
+      <span>🔗</span> Plataformas
+    </div>
+    <div class="nav-item" onclick="setNav(this,'dashboard')">
+      <span>⚙️</span> Configurações
+    </div>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="user-card">
+      <div class="user-avatar">CC</div>
+      <div>
+        <div class="user-name">Cris Costa</div>
+        <div class="user-role">Modo Demo</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="topbar-title">Dashboard</span>
+      <span class="demo-tag">✦ DEMO</span>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost btn-sm">📥 Exportar</button>
+      <button class="btn btn-primary btn-sm" onclick="openWizard()">+ Novo Anúncio</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- Demo banner -->
+    <div class="demo-banner" id="demoBanner">
+      <div class="icon">🎯</div>
+      <div>
+        <h3>Modo Demo — Cris Costa Beauty</h3>
+        <p>Todos os dados são fictícios para você explorar o sistema. Crie anúncios simulados, veja métricas ao vivo e aprenda o fluxo completo. Quando tiver sua conta Meta Ads, conecte e os dados reais aparecem aqui.</p>
+      </div>
+      <span class="close" onclick="document.getElementById('demoBanner').style.display='none'">×</span>
+    </div>
+
+    <!-- Tabs período -->
+    <div class="tabs">
+      <div class="tab active">Hoje</div>
+      <div class="tab" onclick="switchTab(this)">Esta semana</div>
+      <div class="tab" onclick="switchTab(this)">Este mês</div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card s1">
+        <span class="stat-icon">💸</span>
+        <div class="stat-label">Gasto Total</div>
+        <div class="stat-value" id="sv1">R$ 847</div>
+        <div class="stat-change up">↑ 12% vs ontem</div>
+      </div>
+      <div class="stat-card s2">
+        <span class="stat-icon">🖱️</span>
+        <div class="stat-label">Cliques</div>
+        <div class="stat-value" id="sv2">2.341</div>
+        <div class="stat-change up">↑ 8% vs ontem</div>
+      </div>
+      <div class="stat-card s3">
+        <span class="stat-icon">👁️</span>
+        <div class="stat-label">Impressões</div>
+        <div class="stat-value" id="sv3">48.9k</div>
+        <div class="stat-change dn">↓ 3% vs ontem</div>
+      </div>
+      <div class="stat-card s4">
+        <span class="stat-icon">🎯</span>
+        <div class="stat-label">Conversões</div>
+        <div class="stat-value" id="sv4">37</div>
+        <div class="stat-change up">↑ 22% vs ontem</div>
+      </div>
+    </div>
+
+    <!-- Campaigns header -->
+    <div class="section-header">
+      <h3>Seus Anúncios</h3>
+      <div class="filters">
+        <div class="chip active" onclick="filterChip(this)">Todos</div>
+        <div class="chip" onclick="filterChip(this)">🟢 Ativos</div>
+        <div class="chip" onclick="filterChip(this)">⏸ Pausados</div>
+        <div class="chip" onclick="filterChip(this)">Meta</div>
+        <div class="chip" onclick="filterChip(this)">Google</div>
+        <div class="chip" onclick="filterChip(this)">TikTok</div>
+      </div>
+    </div>
+
+    <!-- Campaign cards -->
+    <div class="campaigns-grid" id="campaignsGrid">
+
+      <!-- Card 1 -->
+      <div class="campaign-card">
+        <div class="card-thumb" style="background:linear-gradient(135deg,#FDF0ED,#F5E0DC);">
+          <span class="plat-badge meta">META · INSTAGRAM</span>
+          <div class="live-dot"></div>
+          💄
+        </div>
+        <div class="card-body">
+          <div class="card-top">
+            <div>
+              <div class="card-name">Promoção Verão — Maquiagem</div>
+              <div class="card-obj">🛒 Vendas · Mulheres 25–44 · SP</div>
+            </div>
+            <div class="toggle-wrap">
+              <label class="toggle"><input type="checkbox" checked onchange="doToggle(this)"/><span class="toggle-track"></span></label>
+              <span class="status-lbl on">ON</span>
+            </div>
+          </div>
+          <div class="metrics-grid">
+            <div class="metric"><div class="metric-lbl">Verba/dia</div><div class="metric-val">R$ 50</div></div>
+            <div class="metric"><div class="metric-lbl">CPC</div><div class="metric-val good">R$ 0,42</div></div>
+            <div class="metric"><div class="metric-lbl">CTR</div><div class="metric-val good">4,8%</div></div>
+            <div class="metric"><div class="metric-lbl">Conversões</div><div class="metric-val" id="conv1">18</div></div>
+            <div class="metric"><div class="metric-lbl">Custo/conv.</div><div class="metric-val good">R$ 27</div></div>
+            <div class="metric"><div class="metric-lbl">ROAS</div><div class="metric-val good">3,7×</div></div>
+          </div>
+          <div class="budget-bar-row"><span>Orçamento usado</span><strong>R$ 312 / R$ 500</strong></div>
+          <div class="budget-bar"><div class="budget-fill low" style="width:62%"></div></div>
+          <div class="card-footer">
+            <div class="card-dates">📅 01/01 → 31/01</div>
+            <div class="card-actions">
+              <button class="icon-btn" title="Relatório">📈</button>
+              <button class="icon-btn" title="Editar">✏️</button>
+              <button class="icon-btn" title="Duplicar">⧉</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="campaign-card">
+        <div class="card-thumb" style="background:linear-gradient(135deg,#D6EAF8,#85C1E9);">
+          <span class="plat-badge google">GOOGLE ADS</span>
+          🧴
+        </div>
+        <div class="card-body">
+          <div class="card-top">
+            <div>
+              <div class="card-name">Skincare Rotina Diária</div>
+              <div class="card-obj">🌐 Tráfego · Rede de Pesquisa</div>
+            </div>
+            <div class="toggle-wrap">
+              <label class="toggle"><input type="checkbox" onchange="doToggle(this)"/><span class="toggle-track"></span></label>
+              <span class="status-lbl off">OFF</span>
+            </div>
+          </div>
+          <div class="metrics-grid">
+            <div class="metric"><div class="metric-lbl">Verba/dia</div><div class="metric-val">R$ 30</div></div>
+            <div class="metric"><div class="metric-lbl">CPC</div><div class="metric-val warn">R$ 1,20</div></div>
+            <div class="metric"><div class="metric-lbl">CTR</div><div class="metric-val warn">1,2%</div></div>
+            <div class="metric"><div class="metric-lbl">Conversões</div><div class="metric-val">5</div></div>
+            <div class="metric"><div class="metric-lbl">Custo/conv.</div><div class="metric-val warn">R$ 72</div></div>
+            <div class="metric"><div class="metric-lbl">ROAS</div><div class="metric-val warn">1,4×</div></div>
+          </div>
+          <div class="budget-bar-row"><span>Orçamento usado</span><strong>R$ 360 / R$ 400</strong></div>
+          <div class="budget-bar"><div class="budget-fill mid" style="width:90%"></div></div>
+          <div class="alert-strip warn">⚠️ 90% do orçamento usado. Revise ou aumente a verba.</div>
+          <div class="card-footer">
+            <div class="card-dates">📅 15/12 → 15/01</div>
+            <div class="card-actions">
+              <button class="icon-btn">📈</button>
+              <button class="icon-btn">✏️</button>
+              <button class="icon-btn">⧉</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="campaign-card">
+        <div class="card-thumb" style="background:linear-gradient(135deg,#111,#333);">
+          <span class="plat-badge tiktok">TIKTOK ADS</span>
+          <div class="live-dot"></div>
+          💅
+        </div>
+        <div class="card-body">
+          <div class="card-top">
+            <div>
+              <div class="card-name">Esmalte Tendência #UnhasPerfeitas</div>
+              <div class="card-obj">❤️ Engajamento · Vídeo In-Feed</div>
+            </div>
+            <div class="toggle-wrap">
+              <label class="toggle"><input type="checkbox" checked onchange="doToggle(this)"/><span class="toggle-track"></span></label>
+              <span class="status-lbl on">ON</span>
+            </div>
+          </div>
+          <div class="metrics-grid">
+            <div class="metric"><div class="metric-lbl">Verba/dia</div><div class="metric-val">R$ 70</div></div>
+            <div class="metric"><div class="metric-lbl">CPV</div><div class="metric-val good">R$ 0,08</div></div>
+            <div class="metric"><div class="metric-lbl">Views</div><div class="metric-val good" id="views3">32k</div></div>
+            <div class="metric"><div class="metric-lbl">Conversões</div><div class="metric-val">14</div></div>
+            <div class="metric"><div class="metric-lbl">Custo/conv.</div><div class="metric-val good">R$ 35</div></div>
+            <div class="metric"><div class="metric-lbl">ROAS</div><div class="metric-val good">2,9×</div></div>
+          </div>
+          <div class="budget-bar-row"><span>Orçamento usado</span><strong>R$ 175 / R$ 700</strong></div>
+          <div class="budget-bar"><div class="budget-fill low" style="width:25%"></div></div>
+          <div class="card-footer">
+            <div class="card-dates">📅 05/01 → 05/02</div>
+            <div class="card-actions">
+              <button class="icon-btn">📈</button>
+              <button class="icon-btn">✏️</button>
+              <button class="icon-btn">⧉</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /grid -->
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- ═══════════════ WIZARD MODAL ═══════════════ -->
+<div class="overlay" id="overlay" onclick="closeOut(event)">
+<div class="modal" id="wizardModal">
+
+  <div class="modal-header">
+    <h2 id="wizTitle">Criar Novo Anúncio</h2>
+    <p id="wizSub">Siga os passos — é simples, qualquer pessoa consegue ✨</p>
+  </div>
+
+  <div class="steps-bar" id="stepsBar">
+    <div class="step-node">
+      <div class="step-circle done" id="sc1">✓</div>
+      <div class="step-lbl" id="sl1">Plataforma</div>
+    </div>
+    <div class="step-line done" id="sln1"></div>
+    <div class="step-node">
+      <div class="step-circle active" id="sc2">2</div>
+      <div class="step-lbl active" id="sl2">Objetivo</div>
+    </div>
+    <div class="step-line" id="sln2"></div>
+    <div class="step-node">
+      <div class="step-circle" id="sc3">3</div>
+      <div class="step-lbl" id="sl3">Criativo</div>
+    </div>
+    <div class="step-line" id="sln3"></div>
+    <div class="step-node">
+      <div class="step-circle" id="sc4">4</div>
+      <div class="step-lbl" id="sl4">Público</div>
+    </div>
+    <div class="step-line" id="sln4"></div>
+    <div class="step-node">
+      <div class="step-circle" id="sc5">5</div>
+      <div class="step-lbl" id="sl5">Orçamento</div>
+    </div>
+  </div>
+
+  <div class="modal-body">
+
+    <!-- STEP 1 -->
+    <div class="step-content" id="ws1">
+      <div class="step-title">Onde você quer anunciar?</div>
+      <div class="step-sub">Não sabe qual escolher? Comece pelo <strong>Meta Ads</strong> — é o mais indicado para beleza e moda.</div>
+      <div class="plat-grid">
+        <div class="plat-card sel" id="platMeta" onclick="selPlat('meta',this)">
+          <div class="pi" style="background:#E8F0FE">📘</div>
+          <div><div class="pn">Meta Ads</div><div class="pd">Instagram + Facebook · Ideal para beleza</div></div>
+        </div>
+        <div class="plat-card" id="platGoogle" onclick="selPlat('google',this)">
+          <div class="pi" style="background:#FCE8E6">🔴</div>
+          <div><div class="pn">Google Ads</div><div class="pd">Pesquisa e YouTube · Alcance quem busca</div></div>
+        </div>
+        <div class="plat-card" id="platTiktok" onclick="selPlat('tiktok',this)">
+          <div class="pi" style="background:#000;color:#fff">♪</div>
+          <div><div class="pn">TikTok Ads</div><div class="pd">Vídeos curtos · Público jovem e engajado</div></div>
+        </div>
+        <div class="plat-card" id="platManual" onclick="selPlat('manual',this)">
+          <div class="pi" style="background:var(--rose)">📝</div>
+          <div><div class="pn">Manual</div><div class="pd">Registre dados de qualquer plataforma</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="step-content active" id="ws2">
+      <div class="step-title">Qual é o objetivo do anúncio?</div>
+      <div class="step-sub">O sistema vai configurar as métricas certas para o que você escolher.</div>
+      <div class="obj-grid">
+        <div class="obj-card sel" onclick="selObj(this)">
+          <div class="obj-icon">🛒</div>
+          <div class="obj-name">Vendas</div>
+          <div class="obj-desc">Quero vender produtos ou serviços</div>
+        </div>
+        <div class="obj-card" onclick="selObj(this)">
+          <div class="obj-icon">👥</div>
+          <div class="obj-name">Cadastros</div>
+          <div class="obj-desc">Capturar leads e contatos</div>
+        </div>
+        <div class="obj-card" onclick="selObj(this)">
+          <div class="obj-icon">🌐</div>
+          <div class="obj-name">Visitas ao site</div>
+          <div class="obj-desc">Mais pessoas no meu site</div>
+        </div>
+        <div class="obj-card" onclick="selObj(this)">
+          <div class="obj-icon">❤️</div>
+          <div class="obj-name">Engajamento</div>
+          <div class="obj-desc">Curtidas, seguidores, comentários</div>
+        </div>
+        <div class="obj-card" onclick="selObj(this)">
+          <div class="obj-icon">📞</div>
+          <div class="obj-name">Contato</div>
+          <div class="obj-desc">WhatsApp, ligações ou mensagens</div>
+        </div>
+        <div class="obj-card" onclick="selObj(this)">
+          <div class="obj-icon">🏪</div>
+          <div class="obj-name">Loja física</div>
+          <div class="obj-desc">Levar pessoas até a loja</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="step-content" id="ws3">
+      <div class="step-title">Adicione o criativo do anúncio</div>
+      <div class="step-sub">Faça o upload da imagem ou vídeo. O sistema verifica automaticamente se o formato está correto.</div>
+
+      <div class="upload-zone" id="uploadZone" onclick="simulateUpload()">
+        <div id="uploadEmpty">
+          <div class="upload-icon">🖼️</div>
+          <div class="upload-title">Clique para selecionar ou arraste aqui</div>
+          <div class="upload-sub">Imagem ou vídeo do seu anúncio</div>
+          <div class="format-tags">
+            <span class="ftag ok">JPG ✓</span>
+            <span class="ftag ok">PNG ✓</span>
+            <span class="ftag ok">MP4 ✓</span>
+            <span class="ftag warn">GIF ⚠</span>
+            <span class="ftag bad">BMP ✗</span>
+          </div>
+        </div>
+        <div class="upload-preview" id="uploadPreview">
+          <div class="thumb-preview" style="background:linear-gradient(135deg,#FDF0ED,#F5E0DC)">💄</div>
+          <div>
+            <div class="preview-file">batom-nude-verao.jpg</div>
+            <div class="preview-size">1080 × 1080 px · 380 KB</div>
+            <div class="alert-inline ok">✅ Formato perfeito para feed do Instagram!</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="formats-guide" id="fmtGuide">
+        <h4>📐 Formatos recomendados para Meta / Instagram</h4>
+        <div class="format-row"><span class="format-name">Feed quadrado</span><span class="format-spec">1080×1080px · até 30MB</span><span class="format-status sel">✦ Selecionado</span></div>
+        <div class="format-row"><span class="format-name">Stories / Reels</span><span class="format-spec">1080×1920px · até 4GB (vídeo)</span><span class="format-status ok">✓ Ok</span></div>
+        <div class="format-row"><span class="format-name">Feed paisagem</span><span class="format-spec">1200×628px · até 30MB</span><span class="format-status ok">✓ Ok</span></div>
+        <div class="format-row"><span class="format-name">Vídeo Feed</span><span class="format-spec">MP4 · até 240 seg · 4GB</span><span class="format-status ok">✓ Ok</span></div>
+      </div>
+
+      <div class="form-group" style="margin-top:14px">
+        <div class="form-label">Nome do anúncio <span class="form-hint">(para você identificar depois)</span></div>
+        <input class="form-input" id="adName" type="text" placeholder="Ex: Batom Nude — Coleção Verão 2026" value="Batom Nude — Coleção Verão 2026"/>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Texto do anúncio</div>
+        <textarea class="form-input" rows="2" placeholder="Ex: Renove seu look com nossa coleção de verão…">✨ Realce sua beleza com o Batom Nude da coleção Verão 2026. Frete grátis acima de R$150!</textarea>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="step-content" id="ws4">
+      <div class="step-title">Para quem é este anúncio?</div>
+      <div class="step-sub">Quanto mais preciso o público, melhor o resultado — e menor o gasto por cliente.</div>
+      <div class="form-row">
+        <div class="form-group">
+          <div class="form-label">Localização</div>
+          <input class="form-input" type="text" value="São Paulo e região, Brasil"/>
+        </div>
+        <div class="form-group">
+          <div class="form-label">Faixa etária</div>
+          <select class="form-input">
+            <option>18–24 anos</option>
+            <option selected>25–34 anos</option>
+            <option>35–44 anos</option>
+            <option>45–54 anos</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <div class="form-label">Gênero</div>
+          <select class="form-input">
+            <option>Todos</option>
+            <option selected>Feminino</option>
+            <option>Masculino</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <div class="form-label">Interesses</div>
+          <input class="form-input" type="text" value="maquiagem, beleza, skincare, moda"/>
+        </div>
+      </div>
+      <div class="alert-strip ok">✅ Público estimado: <strong>260.000 – 400.000 pessoas</strong> — tamanho ideal para sua campanha!</div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="step-content" id="ws5">
+      <div class="step-title">Quanto quer investir?</div>
+      <div class="step-sub">Escolha o orçamento diário. Você pode pausar ou alterar a qualquer momento.</div>
+      <div class="budget-presets">
+        <div class="bpreset" onclick="selBudget(this,'20')">
+          <div class="bp-val">R$20</div>
+          <div class="bp-lbl">por dia</div>
+          <div class="bp-est">~R$ 600/mês</div>
+        </div>
+        <div class="bpreset sel" onclick="selBudget(this,'50')" id="bpActive">
+          <div class="bp-val">R$50</div>
+          <div class="bp-lbl">por dia</div>
+          <div class="bp-est">~R$ 1.500/mês</div>
+        </div>
+        <div class="bpreset" onclick="selBudget(this,'100')">
+          <div class="bp-val">R$100</div>
+          <div class="bp-lbl">por dia</div>
+          <div class="bp-est">~R$ 3.000/mês</div>
+        </div>
+        <div class="bpreset" onclick="selBudget(this,'200')">
+          <div class="bp-val">R$200</div>
+          <div class="bp-lbl">por dia</div>
+          <div class="bp-est">~R$ 6.000/mês</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Ou informe um valor personalizado</div>
+        <input class="form-input" type="number" placeholder="R$ por dia" style="max-width:180px" id="customBudget"/>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <div class="form-label">Data de início</div>
+          <input class="form-input" type="date" value="2026-04-07"/>
+        </div>
+        <div class="form-group">
+          <div class="form-label">Data de término</div>
+          <input class="form-input" type="date" value="2026-05-07"/>
+        </div>
+      </div>
+      <div class="form-label" style="margin-bottom:10px;margin-top:4px;">Resumo do Anúncio</div>
+      <div class="review-box">
+        <div class="review-row"><span class="review-lbl">Plataforma</span><span class="review-val">Meta Ads — Instagram + Facebook</span></div>
+        <div class="review-row"><span class="review-lbl">Objetivo</span><span class="review-val">🛒 Vendas</span></div>
+        <div class="review-row"><span class="review-lbl">Criativo</span><span class="review-val">batom-nude-verao.jpg · 1080×1080</span></div>
+        <div class="review-row"><span class="review-lbl">Público</span><span class="review-val">Mulheres 25–34 · SP · Beleza</span></div>
+        <div class="review-row"><span class="review-lbl">Orçamento</span><span class="review-val">R$ 50/dia · 07/04 → 07/05</span></div>
+        <div class="review-row"><span class="review-lbl">Investimento total estimado</span><span class="review-val" style="color:var(--rose-deep);font-size:14px;">R$ 1.550,00</span></div>
+      </div>
+    </div>
+
+    <!-- STEP SUCCESS -->
+    <div class="step-content" id="wsSuccess">
+      <div class="success-screen">
+        <div class="s-icon">🎉</div>
+        <h3>Anúncio criado com sucesso!</h3>
+        <p>Seu anúncio <strong>"Batom Nude — Coleção Verão 2026"</strong> foi configurado e já aparece no seu dashboard.</p>
+        <div class="live-indicator">
+          <div class="ld"></div>
+          Rodando agora no Instagram
+        </div>
+        <div class="review-box" style="text-align:left;margin-bottom:18px;">
+          <div class="review-row"><span class="review-lbl">Status</span><span class="review-val" style="color:var(--green)">🟢 Ativo — Online</span></div>
+          <div class="review-row"><span class="review-lbl">Plataforma</span><span class="review-val">Meta Ads · Instagram Feed</span></div>
+          <div class="review-row"><span class="review-lbl">Orçamento diário</span><span class="review-val">R$ 50,00</span></div>
+          <div class="review-row"><span class="review-lbl">Previsão de cliques/dia</span><span class="review-val">~80–140 cliques</span></div>
+        </div>
+        <button class="btn btn-primary" onclick="closeWizard()">Ver no Dashboard →</button>
+      </div>
+    </div>
+
+  </div><!-- /modal-body -->
+
+  <div class="modal-footer" id="wizardFooter">
+    <button class="btn btn-ghost btn-sm" id="btnBack" onclick="wizBack()" style="visibility:hidden">← Voltar</button>
+    <div class="step-dots" id="stepDots">
+      <div class="dot" onclick="goStep(1)"></div>
+      <div class="dot active" onclick="goStep(2)"></div>
+      <div class="dot" onclick="goStep(3)"></div>
+      <div class="dot" onclick="goStep(4)"></div>
+      <div class="dot" onclick="goStep(5)"></div>
+    </div>
+    <button class="btn btn-primary btn-sm" id="btnNext" onclick="wizNext()">Próximo →</button>
+  </div>
+
+</div><!-- /modal -->
+</div><!-- /overlay -->
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <span class="t-icon">🎉</span>
+  <span id="toastMsg">Anúncio criado!</span>
+</div>
+
+<script>
+let currentStep = 2;
+let selectedPlat = 'meta';
+let uploadDone = false;
+
+// ─ NAVIGATION ─
+function setNav(el, view) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ─ TABS ─
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    animateStats();
+  });
+});
+function switchTab(el) {
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  el.classList.add('active');
+  animateStats();
+}
+
+// ─ FILTERS ─
+function filterChip(el) {
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ─ TOGGLE ─
+function doToggle(cb) {
+  const wrap = cb.closest('.toggle-wrap');
+  const lbl = wrap.querySelector('.status-lbl');
+  if (cb.checked) { lbl.textContent='ON'; lbl.className='status-lbl on'; showToast('✅ Anúncio ativado!'); }
+  else            { lbl.textContent='OFF'; lbl.className='status-lbl off'; showToast('⏸ Anúncio pausado'); }
+}
+
+// ─ WIZARD ─
+function openWizard() {
+  document.getElementById('overlay').classList.add('open');
+  uploadDone = false;
+  goStep(2);
+  document.getElementById('wizTitle').textContent = 'Criar Novo Anúncio';
+  document.getElementById('wizSub').textContent = 'Siga os passos — é simples, qualquer pessoa consegue ✨';
+  document.getElementById('wizardFooter').style.display = 'flex';
+}
+
+function closeOut(e) {
+  if (e.target === document.getElementById('overlay')) closeWizard();
+}
+
+function closeWizard() {
+  document.getElementById('overlay').classList.remove('open');
+}
+
+function goStep(n) {
+  currentStep = n;
+  for (let i = 1; i <= 5; i++) {
+    const ws = document.getElementById('ws' + i);
+    if (ws) ws.classList.toggle('active', i === n);
+    const sc = document.getElementById('sc' + i);
+    if (sc) {
+      sc.classList.remove('done','active');
+      if (i < n) { sc.classList.add('done'); sc.textContent = '✓'; }
+      else if (i === n) { sc.classList.add('active'); sc.textContent = i; }
+      else { sc.textContent = i; }
+    }
+    const sl = document.getElementById('sl' + i);
+    if (sl) { sl.classList.toggle('active', i === n); }
+    const sln = document.getElementById('sln' + i);
+    if (sln) sln.classList.toggle('done', i < n);
+  }
+  document.getElementById('wsSuccess').classList.remove('active');
+  const dots = document.querySelectorAll('.dot');
+  dots.forEach((d, i) => d.classList.toggle('active', i === n - 1));
+  document.getElementById('btnBack').style.visibility = n === 1 ? 'hidden' : 'visible';
+  document.getElementById('btnNext').textContent = n === 5 ? '🚀 Publicar Anúncio' : 'Próximo →';
+}
+
+function wizNext() {
+  if (currentStep < 5) { goStep(currentStep + 1); }
+  else { publishAd(); }
+}
+
+function wizBack() {
+  if (currentStep > 1) goStep(currentStep - 1);
+}
+
+function publishAd() {
+  // Show success screen
+  for (let i = 1; i <= 5; i++) {
+    const ws = document.getElementById('ws' + i);
+    if (ws) ws.classList.remove('active');
+  }
+  document.getElementById('wsSuccess').classList.add('active');
+  document.getElementById('wizardFooter').style.display = 'none';
+  document.getElementById('wizTitle').textContent = 'Tudo pronto! 🎉';
+  document.getElementById('wizSub').textContent = 'Seu anúncio foi criado em modo demo.';
+
+  // Add new card to dashboard after delay
+  setTimeout(addNewCard, 800);
+}
+
+function addNewCard() {
+  const grid = document.getElementById('campaignsGrid');
+  const card = document.createElement('div');
+  card.className = 'campaign-card new-card';
+  card.innerHTML = `
+    <div class="card-thumb" style="background:linear-gradient(135deg,#FDF0ED,#F5E0DC);">
+      <span class="plat-badge meta">META · INSTAGRAM</span>
+      <div class="live-dot"></div>
+      💋
+    </div>
+    <div class="card-body">
+      <div class="card-top">
+        <div>
+          <div class="card-name">Batom Nude — Coleção Verão 2026</div>
+          <div class="card-obj">🛒 Vendas · Mulheres 25–34 · SP</div>
+        </div>
+        <div class="toggle-wrap">
+          <label class="toggle"><input type="checkbox" checked onchange="doToggle(this)"/><span class="toggle-track"></span></label>
+          <span class="status-lbl on">ON</span>
+        </div>
+      </div>
+      <div class="metrics-grid">
+        <div class="metric"><div class="metric-lbl">Verba/dia</div><div class="metric-val">R$ 50</div></div>
+        <div class="metric"><div class="metric-lbl">CPC</div><div class="metric-val" id="newCPC">—</div></div>
+        <div class="metric"><div class="metric-lbl">CTR</div><div class="metric-val" id="newCTR">—</div></div>
+        <div class="metric"><div class="metric-lbl">Cliques</div><div class="metric-val" id="newClicks">0</div></div>
+        <div class="metric"><div class="metric-lbl">Impressões</div><div class="metric-val" id="newImpr">0</div></div>
+        <div class="metric"><div class="metric-lbl">Conversões</div><div class="metric-val" id="newConv">0</div></div>
+      </div>
+      <div class="budget-bar-row"><span>Orçamento usado</span><strong id="newBudgetText">R$ 0 / R$ 1.550</strong></div>
+      <div class="budget-bar"><div class="budget-fill low" style="width:0%" id="newBudgetBar"></div></div>
+      <div class="alert-strip ok">🟢 Anúncio recém publicado — métricas chegando em instantes!</div>
+      <div class="card-footer">
+        <div class="card-dates">📅 07/04 → 07/05/2026</div>
+        <div class="card-actions">
+          <button class="icon-btn">📈</button>
+          <button class="icon-btn">✏️</button>
+          <button class="icon-btn">⧉</button>
+        </div>
+      </div>
+    </div>`;
+  grid.appendChild(card);
+
+  // Update badge
+  const cnt = document.getElementById('campCount');
+  cnt.textContent = parseInt(cnt.textContent) + 1;
+
+  // Animate metrics growing
+  setTimeout(animateNewCard, 400);
+}
+
+function animateNewCard() {
+  let clicks = 0, impr = 0, conv = 0, budget = 0;
+  const interval = setInterval(() => {
+    clicks = Math.min(clicks + Math.floor(Math.random()*8+3), 94);
+    impr   = Math.min(impr + Math.floor(Math.random()*60+20), 1820);
+    conv   = Math.min(conv + (Math.random() > .7 ? 1 : 0), 4);
+    budget = Math.min(budget + (Math.random()*2+1), 12);
+
+    const el = (id) => document.getElementById(id);
+    if (el('newClicks')) el('newClicks').textContent = clicks;
+    if (el('newImpr'))   el('newImpr').textContent   = impr.toLocaleString('pt-BR');
+    if (el('newConv'))   el('newConv').textContent   = conv;
+    if (el('newCPC'))    el('newCPC').textContent     = clicks > 0 ? 'R$ ' + (budget/clicks*100).toFixed(2) : '—';
+    if (el('newCTR'))    el('newCTR').textContent     = impr > 0 ? ((clicks/impr)*100).toFixed(1)+'%' : '—';
+    if (el('newBudgetText')) el('newBudgetText').textContent = `R$ ${budget.toFixed(0)} / R$ 1.550`;
+    if (el('newBudgetBar'))  el('newBudgetBar').style.width = (budget/1550*100).toFixed(2) + '%';
+
+    if (clicks >= 94) clearInterval(interval);
+  }, 180);
+}
+
+// ─ PLATFORM SELECTION ─
+function selPlat(p, el) {
+  document.querySelectorAll('.plat-card').forEach(c => c.classList.remove('sel'));
+  el.classList.add('sel');
+  selectedPlat = p;
+}
+
+// ─ OBJECTIVE SELECTION ─
+function selObj(el) {
+  document.querySelectorAll('.obj-card').forEach(c => c.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+// ─ BUDGET SELECTION ─
+function selBudget(el, val) {
+  document.querySelectorAll('.bpreset').forEach(c => c.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+// ─ SIMULATED UPLOAD ─
+function simulateUpload() {
+  if (uploadDone) return;
+  uploadDone = true;
+  document.getElementById('uploadEmpty').style.display = 'none';
+  document.getElementById('uploadPreview').classList.add('show');
+  document.getElementById('uploadZone').classList.add('done');
+  document.getElementById('fmtGuide').style.display = 'block';
+}
+
+// ─ LIVE METRICS (small increments on active cards) ─
+function animateStats() {
+  const vals = ['R$ ' + (800+Math.floor(Math.random()*200)), (2200+Math.floor(Math.random()*500)).toLocaleString('pt-BR'), (45+Math.floor(Math.random()*10))+'.'+Math.floor(Math.random()*9)+'k', (30+Math.floor(Math.random()*20))+''];
+  ['sv1','sv2','sv3','sv4'].forEach((id,i) => {
+    const el = document.getElementById(id);
+    if (el) { el.style.opacity='0'; setTimeout(() => { el.textContent = vals[i]; el.style.opacity='1'; el.style.transition='opacity .3s'; }, 200); }
+  });
+}
+
+// ─ TOAST ─
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ─ LIVE COUNTER (ambient animation for active cards) ─
+setInterval(() => {
+  const el = document.getElementById('conv1');
+  if (el && Math.random() > 0.6) {
+    const v = parseInt(el.textContent) + 1;
+    el.textContent = v;
+    el.style.transform = 'scale(1.2)';
+    el.style.color = 'var(--green)';
+    setTimeout(() => { el.style.transform = ''; el.style.color = ''; el.style.transition = 'all .3s'; }, 300);
+  }
+  const vw = document.getElementById('views3');
+  if (vw && Math.random() > 0.5) {
+    const n = parseInt(vw.textContent) + Math.floor(Math.random()*3+1);
+    vw.textContent = n + 'k';
+  }
+}, 4000);
+</script>
+</body>
+</html>
