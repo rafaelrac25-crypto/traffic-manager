@@ -122,26 +122,51 @@ export default function NewCampaignWizard({ onClose, onCreated, initialDraft }) 
     const url = URL.createObjectURL(file);
     const img = new Image();
     img.onload = () => {
-      const w = img.naturalWidth;
-      const h = img.naturalHeight;
-      const ratio = w / h;
-      const size  = (file.size / 1024).toFixed(0);
-      const VALID_FORMATS = ['JPG','JPEG','PNG','WEBP'];
-      const formatOk = VALID_FORMATS.includes(ext);
-      // Instagram: 1:1 (1080×1080), 4:5 (1080×1350), 9:16 (1080×1920)
-      const ratioName =
-        Math.abs(ratio - 1)     < 0.05 ? '1:1 (Feed quadrado)' :
-        Math.abs(ratio - 0.8)   < 0.05 ? '4:5 (Feed retrato)' :
-        Math.abs(ratio - 0.5625)< 0.06 ? '9:16 (Stories / Reels)' :
-        Math.abs(ratio - 1.91)  < 0.06 ? '1.91:1 (Paisagem)' : null;
-      const ratioOk  = !!ratioName;
-      const sizeOk   = file.size < 30 * 1024 * 1024;
-      const minDim   = w >= 600 && h >= 600;
-      setImageMeta({ w, h, size, ext, formatOk, ratioName, ratioOk, sizeOk, minDim,
-        valid: formatOk && ratioOk && sizeOk && minDim });
-      setImageURL(url);
-      setImageFile(file);
-      setUploaded(true);
+      const MAX_DIM = 2000;
+      let w = img.naturalWidth;
+      let h = img.naturalHeight;
+
+      // Redimensiona via canvas se exceder 2000px em qualquer dimensão
+      let finalFile = file;
+      let finalUrl  = url;
+      const needsResize = w > MAX_DIM || h > MAX_DIM;
+      const doFinalize = (fw, fh, fFile, fUrl) => {
+        const ratio = fw / fh;
+        const size  = (fFile.size / 1024).toFixed(0);
+        const VALID_FORMATS = ['JPG','JPEG','PNG','WEBP'];
+        const formatOk = VALID_FORMATS.includes(ext);
+        const ratioName =
+          Math.abs(ratio - 1)     < 0.05 ? '1:1 (Feed quadrado)' :
+          Math.abs(ratio - 0.8)   < 0.05 ? '4:5 (Feed retrato)' :
+          Math.abs(ratio - 0.5625)< 0.06 ? '9:16 (Stories / Reels)' :
+          Math.abs(ratio - 1.91)  < 0.06 ? '1.91:1 (Paisagem)' : null;
+        const ratioOk  = !!ratioName;
+        const sizeOk   = fFile.size < 30 * 1024 * 1024;
+        const minDim   = fw >= 600 && fh >= 600;
+        setImageMeta({ w: fw, h: fh, size, ext, formatOk, ratioName, ratioOk, sizeOk, minDim,
+          valid: formatOk && ratioOk && sizeOk && minDim });
+        setImageURL(fUrl);
+        setImageFile(fFile);
+        setUploaded(true);
+      };
+
+      if (needsResize) {
+        const scale = MAX_DIM / Math.max(w, h);
+        const nw = Math.round(w * scale);
+        const nh = Math.round(h * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width  = nw;
+        canvas.height = nh;
+        canvas.getContext('2d').drawImage(img, 0, 0, nw, nh);
+        canvas.toBlob(blob => {
+          const resizedFile = new File([blob], file.name, { type: file.type });
+          const resizedUrl  = URL.createObjectURL(resizedFile);
+          URL.revokeObjectURL(url);
+          doFinalize(nw, nh, resizedFile, resizedUrl);
+        }, file.type, 0.92);
+      } else {
+        doFinalize(w, h, finalFile, finalUrl);
+      }
     };
     img.src = url;
   }
