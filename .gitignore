@@ -2,9 +2,11 @@ node_modules/
 .env
 *.env.local
 .vercel/
-dist/
+backend/dist/
 build/
 *.db
 *.db-journal
 *.db-shm
 *.db-wal
+
+.vercel
