@@ -1,18 +1,30 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
+const fs = require('fs');
 
 const app = express();
 
 app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
 app.use(express.json());
 
+// Rotas da API
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/campaigns', require('./routes/campaigns'));
 app.use('/api/platforms', require('./routes/platforms'));
 app.use('/api/alerts', require('./routes/alerts'));
 
 app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
+
+// Servir frontend estático (produção)
+const frontendDist = path.join(__dirname, '../../frontend/dist');
+if (fs.existsSync(frontendDist)) {
+  app.use(express.static(frontendDist));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(frontendDist, 'index.html'));
+  });
+}
 
 // Modo local: inicia o servidor HTTP
 // Modo Vercel (serverless): apenas exporta o app

@@ -5,7 +5,7 @@
     "scripts": {
           "start": "node src/index.js",
           "dev": "nodemon src/index.js",
-          "build": "node src/db/init.js && node src/db/seed.js",
+          "build": "cd ../frontend && npm install && npm run build && cd ../backend && node src/db/init.js && node src/db/seed.js",
           "db:init": "node src/db/init.js",
           "db:seed": "node src/db/seed.js"
     },
