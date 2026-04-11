@@ -9,7 +9,7 @@ router.get('/', async (req, res) => {
     const result = await db.query('SELECT platform, account_id, updated_at FROM platform_credentials');
     const connected = {};
     result.rows.forEach(r => { connected[r.platform] = r; });
-    const platforms = ['google', 'meta', 'tiktok'];
+    const platforms = ['google', 'meta'];
     res.json(platforms.map(p => ({
       platform: p,
       connected: !!connected[p],
@@ -23,7 +23,7 @@ router.get('/', async (req, res) => {
 
 router.post('/:platform/connect', async (req, res) => {
   const { platform } = req.params;
-  if (!['google', 'meta', 'tiktok'].includes(platform)) return res.status(400).json({ error: 'Plataforma inválida' });
+  if (!['google', 'meta'].includes(platform)) return res.status(400).json({ error: 'Plataforma inválida' });
   const { access_token, refresh_token, account_id } = req.body;
   if (!access_token) return res.status(400).json({ error: 'access_token obrigatório' });
   try {

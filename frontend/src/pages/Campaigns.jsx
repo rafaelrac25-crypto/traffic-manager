@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import NewCampaignWizard, { getDrafts, deleteDraft } from '../components/NewCampaignWizard';
 
-const PLAT_COLORS = { meta: '#C13584', google: '#E74C3C', tiktok: '#000', manual: '#7D4A5E' };
-const PLAT_LABELS = { meta: 'Tráfego Instagram', google: 'Google Ads', tiktok: 'TikTok', manual: 'Manual' };
+const PLAT_COLORS = { meta: '#C13584', google: '#E74C3C', manual: '#7D4A5E' };
+const PLAT_LABELS = { meta: 'Tráfego Instagram', google: 'Google Ads', manual: 'Manual' };
 const STATUS_COLOR = { active: 'var(--green)', paused: 'var(--yellow)', ended: 'var(--gray-400)' };
 const STATUS_LABEL = { active: 'Ativo', paused: 'Pausado', ended: 'Encerrado' };
 

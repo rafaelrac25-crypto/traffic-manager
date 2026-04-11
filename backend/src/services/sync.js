@@ -1,9 +1,8 @@
 const db = require('../db');
 const googleAds = require('./googleAds');
 const metaAds = require('./metaAds');
-const tiktokAds = require('./tiktokAds');
 
-const handlers = { google: googleAds, meta: metaAds, tiktok: tiktokAds };
+const handlers = { google: googleAds, meta: metaAds };
 
 async function syncPlatform(platform) {
   const handler = handlers[platform];

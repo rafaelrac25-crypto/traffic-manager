@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import NewCampaignWizard from '../components/NewCampaignWizard';
 
-const PLAT_COLORS = { meta: '#C13584', google: '#E74C3C', tiktok: '#000', manual: '#7D4A5E' };
-const PLAT_LABELS = { meta: 'INSTAGRAM', google: 'GOOGLE ADS', tiktok: 'TIKTOK', manual: 'MANUAL' };
+const PLAT_COLORS = { meta: '#C13584', google: '#E74C3C', manual: '#7D4A5E' };
+const PLAT_LABELS = { meta: 'INSTAGRAM', google: 'GOOGLE ADS', manual: 'MANUAL' };
 const STATUS_COLOR = { active: 'var(--green)', review: '#D97706', scheduled: '#4F46E5', paused: 'var(--gray-400)', ended: 'var(--gray-400)' };
 const STATUS_FLAG  = { active: '🟢', review: '🟡', scheduled: '🔵', paused: '⚫', ended: '⚫' };
 const STATUS_LABEL = { active: 'Rodando', review: 'Em revisão', scheduled: 'Agendado', paused: 'Pausado', ended: 'Encerrado' };

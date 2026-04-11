@@ -195,7 +195,6 @@ export default function Platforms() {
           {[
             ['📘 Meta Ads', 'Acesse business.facebook.com → Configurações → Acesso à API → Gere um token de longa duração e copie o ID da conta de anúncio.'],
             ['🔴 Google Ads', 'Acesse console.developers.google.com → Crie credenciais OAuth2 → Autorize a API de Google Ads e copie o token gerado.'],
-            ['🎵 TikTok Ads', 'Acesse business.tiktok.com → Ferramentas → App Center → Crie um app e copie o Access Token e o Advertiser ID.'],
           ].map(([title, text]) => (
             <div key={title}>
               <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--wine)', marginBottom: '5px' }}>{title}</div>
