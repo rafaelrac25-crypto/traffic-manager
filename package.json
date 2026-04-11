@@ -1,0 +1,8 @@
+{
+  "name": "traffic-manager",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build && cd ../backend && npm install && node src/db/init.js && node src/db/seed.js",
+    "start": "node backend/src/index.js"
+  }
+}
