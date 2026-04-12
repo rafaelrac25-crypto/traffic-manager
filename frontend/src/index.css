@@ -5,7 +5,9 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* ── Tema claro (padrão) ── */
 :root {
+  /* Paleta rose/wine */
   --rose:       #F5E0DC;
   --rose-deep:  #C98B83;
   --rose-light: #FDF0ED;
@@ -32,18 +34,71 @@
   --shadow-lg:  0 12px 36px rgba(74,37,53,.16);
   --radius:     14px;
   --radius-sm:  9px;
+
+  /* ── Variáveis de tema ── */
+  --c-page-bg:    #FBF0F0;
+  --c-sidebar-bg: #ffffff;
+  --c-card-bg:    #ffffff;
+  --c-topbar-bg:  #ffffff;
+  --c-border:     #F0DEDE;
+  --c-border-lt:  #F8ECEC;
+  --c-active-bg:  #F8E8E8;
+  --c-surface:    #FBF0F0;
+  --c-hover:      #FDF4F4;
+  --c-text-1:     #4A2535;
+  --c-text-2:     #7D4A5E;
+  --c-text-3:     #9A7070;
+  --c-text-4:     #C4A09A;
+  --c-accent:     #C98B83;
+  --c-accent-dk:  #B8776F;
+  --c-shadow:     rgba(180,80,100,.08);
+  --c-shadow-md:  rgba(180,80,100,.13);
+}
+
+/* ── Tema escuro ── */
+[data-theme="dark"] {
+  --c-page-bg:    #1A1118;
+  --c-sidebar-bg: #221320;
+  --c-card-bg:    #2C1826;
+  --c-topbar-bg:  #221320;
+  --c-border:     #3E1F34;
+  --c-border-lt:  #301828;
+  --c-active-bg:  #3E1F34;
+  --c-surface:    #241520;
+  --c-hover:      #341A2C;
+  --c-text-1:     #F5E0E8;
+  --c-text-2:     #E8C0CC;
+  --c-text-3:     #B89090;
+  --c-text-4:     #8A6070;
+  --c-accent:     #D4988E;
+  --c-accent-dk:  #C98B83;
+  --c-shadow:     rgba(0,0,0,.25);
+  --c-shadow-md:  rgba(0,0,0,.35);
+
+  /* Ajustes de paleta para dark */
+  --rose-pale:  #2C1826;
+  --rose:       #3E1F34;
+  --gray-100:   #301828;
+  --gray-200:   #3E1F34;
+  --gray-400:   #8A6070;
+  --gray-600:   #B89090;
+  --gray-800:   #F5E0E8;
+  --shadow-sm:  0 1px 4px rgba(0,0,0,.3);
+  --shadow:     0 4px 16px rgba(0,0,0,.35);
+  --shadow-lg:  0 12px 36px rgba(0,0,0,.45);
 }
 
 body {
   font-family: 'Inter', sans-serif;
-  background: var(--rose-light);
-  color: var(--gray-800);
+  background: var(--c-page-bg);
+  color: var(--c-text-1);
   min-height: 100vh;
+  transition: background .25s ease, color .25s ease;
 }
 
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--rose); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: var(--c-border); border-radius: 3px; }
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }

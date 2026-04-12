@@ -39,7 +39,7 @@ function Layout() {
   const title = PAGE_TITLE[location.pathname] || 'Dashboard';
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#FBF0F0' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--c-page-bg)', transition: 'background .25s ease' }}>
       <Sidebar campCount={campCount} />
 
       {showWizard && (
@@ -55,8 +55,8 @@ function Layout() {
       <div style={{ marginLeft: '220px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         {/* Topbar */}
         <div style={{
-          background: '#fff',
-          borderBottom: '1px solid #F0DEDE',
+          background: 'var(--c-topbar-bg)',
+          borderBottom: '1px solid var(--c-border)',
           padding: '0 28px',
           height: '60px',
           display: 'flex',
@@ -65,40 +65,29 @@ function Layout() {
           position: 'sticky',
           top: 0,
           zIndex: 50,
+          transition: 'background .25s ease, border-color .25s ease',
         }}>
-          {/* Título */}
-          <span style={{ fontSize: '16px', fontWeight: 700, color: '#4A2535', letterSpacing: '-0.2px' }}>{title}</span>
+          <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--c-text-1)', letterSpacing: '-0.2px' }}>{title}</span>
 
-          {/* Centro: busca */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#FBF0F0', border: '1.5px solid #F0DEDE', borderRadius: '10px', padding: '7px 14px', minWidth: '220px' }}>
-            <span style={{ fontSize: '13px', color: '#C4A09A' }}>⌕</span>
+          {/* Busca */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--c-surface)', border: '1.5px solid var(--c-border)', borderRadius: '10px', padding: '7px 14px', minWidth: '220px', transition: 'background .25s ease' }}>
+            <span style={{ fontSize: '13px', color: 'var(--c-text-4)' }}>⌕</span>
             <input
               type="text"
               placeholder="Buscar campanhas..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '12px', color: '#4A2535', fontFamily: 'inherit', width: '100%' }}
+              style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '12px', color: 'var(--c-text-1)', fontFamily: 'inherit', width: '100%' }}
             />
           </div>
 
-          {/* Direita: botão + avatar */}
+          {/* Ações */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button
               onClick={() => setShowWizard(true)}
-              style={{
-                background: '#C98B83',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '10px',
-                padding: '8px 16px',
-                fontSize: '12px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'background .15s',
-                letterSpacing: '.2px',
-              }}
-              onMouseEnter={e => e.target.style.background = '#B8776F'}
-              onMouseLeave={e => e.target.style.background = '#C98B83'}
+              style={{ background: 'var(--c-accent)', color: '#fff', border: 'none', borderRadius: '10px', padding: '8px 16px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'background .15s', letterSpacing: '.2px' }}
+              onMouseEnter={e => e.target.style.background = 'var(--c-accent-dk)'}
+              onMouseLeave={e => e.target.style.background = 'var(--c-accent)'}
             >
               + Nova Campanha
             </button>
