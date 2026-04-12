@@ -249,7 +249,7 @@ export default function Dashboard({ searchQuery = '' }) {
 
   function load() {
     setLoading(true);
-    api.get('/api/campaigns').then(r => setCampaigns(r.data)).finally(() => setLoading(false));
+    api.get('/api/campaigns').then(r => setCampaigns(Array.isArray(r.data) ? r.data : [])).catch(() => setCampaigns([])).finally(() => setLoading(false));
   }
   useEffect(() => { load(); }, []);
 
