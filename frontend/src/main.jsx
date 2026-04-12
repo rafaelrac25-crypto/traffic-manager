@@ -30,6 +30,7 @@ function HideLoader({ children }) {
   React.useEffect(() => {
     const el = document.getElementById('loading');
     if (el) el.style.display = 'none';
+    if (window._markAppLoaded) window._markAppLoaded();
   }, []);
   return children;
 }
