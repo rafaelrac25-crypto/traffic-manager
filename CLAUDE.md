@@ -4,6 +4,13 @@ Painel de gestão de tráfego pago para a cliente Cris Costa Beauty (salão/est�
 
 **Sempre responder em português do Brasil.**
 
+## Fluxo Obrigatório
+
+1. Ler `PROJECT_MAP.md` antes de qualquer tarefa
+2. Identificar o módulo relevante
+3. Abrir apenas os arquivos desse módulo
+4. Nunca ler o projeto inteiro sem necessidade
+
 ---
 
 ## Stack

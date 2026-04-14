@@ -2,6 +2,14 @@
 
 > Leia este arquivo antes de qualquer tarefa. Identifique o módulo e abra apenas os arquivos necessários.
 
+## Regras
+
+- Cada tarefa deve trabalhar em apenas um módulo
+- Evitar leitura global do projeto
+- Consultar este arquivo antes de qualquer ação
+- Abrir somente os arquivos necessários para a tarefa
+- Usar busca por caminho específico antes de explorar
+
 ---
 
 ## Módulos
