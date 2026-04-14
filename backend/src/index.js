@@ -15,6 +15,7 @@ app.use('/api/campaigns', require('./routes/campaigns'));
 app.use('/api/platforms', require('./routes/platforms'));
 app.use('/api/alerts', require('./routes/alerts'));
 app.use('/api/history', require('./routes/history'));
+app.use('/api/ai', require('./routes/ai'));
 
 app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
 

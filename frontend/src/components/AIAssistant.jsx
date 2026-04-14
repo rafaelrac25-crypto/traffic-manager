@@ -1,32 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-
-const SYSTEM_PROMPT = `Você é um assistente especializado em tráfego pago para o estúdio de estética feminina Cris Costa Beauty.
-
-Sobre a Cris Costa Beauty:
-- Estúdio de estética feminina premium
-- Serviços: sobrancelhas, cílios, skincare, maquiagem, tratamentos faciais
-- Público-alvo: mulheres 25-45 anos, classes B/C, região de Joinville/SC
-- Tom de voz: feminino, acolhedor, sofisticado mas acessível
-- Cores da marca: vinho e rosé
-- Instagram: @criscosta.beauty
-
-Seu papel:
-1. Criar textos curtos e persuasivos para anúncios de tráfego pago (Meta Ads, Google Ads)
-2. Sugerir CTAs, headlines, descrições de criativos
-3. Tirar dúvidas sobre o funcionamento do sistema AdManager
-4. Orientar sobre estratégias de tráfego pago para estética feminina
-
-Diretrizes para copy de tráfego pago:
-- Máximo 150 caracteres para headlines
-- Máximo 500 caracteres para descrições
-- Use gatilhos: escassez, prova social, benefício imediato
-- Linguagem direta e feminina
-- Sempre foque na transformação/resultado
-
-Responda sempre em português do Brasil.`;
+import api from '../services/api';
 
 const MODELS = [
-  { id: 'gemini', label: 'Gemini', icon: '✦', color: '#4285F4' },
+  { id: 'gemini',  label: 'Gemini',  icon: '✦', color: '#4285F4' },
   { id: 'chatgpt', label: 'ChatGPT', icon: '◎', color: '#10A37F' },
 ];
 
@@ -38,69 +14,14 @@ const QUICK_PROMPTS = [
   'Texto para anúncio de pacote de estética completa',
 ];
 
-async function callGemini(messages, apiKey) {
-  const contents = messages
-    .filter(m => m.role !== 'system')
-    .map(m => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }],
-    }));
-
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        contents,
-        generationConfig: { maxOutputTokens: 800, temperature: 0.7 },
-      }),
-    }
-  );
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `Gemini error ${res.status}`);
-  }
-  const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || '(sem resposta)';
-}
-
-async function callChatGPT(messages, apiKey) {
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
-      max_tokens: 800,
-      temperature: 0.7,
-    }),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `OpenAI error ${res.status}`);
-  }
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content || '(sem resposta)';
-}
-
 export default function AIAssistant() {
-  const [open,       setOpen]       = useState(false);
-  const [model,      setModel]      = useState('gemini');
-  const [messages,   setMessages]   = useState([]);
-  const [input,      setInput]      = useState('');
-  const [loading,    setLoading]    = useState(false);
-  const [apiKeys,    setApiKeys]    = useState({ gemini: '', chatgpt: '' });
-  const [showConfig, setShowConfig] = useState(false);
+  const [open,     setOpen]     = useState(false);
+  const [model,    setModel]    = useState('gemini');
+  const [messages, setMessages] = useState([]);
+  const [input,    setInput]    = useState('');
+  const [loading,  setLoading]  = useState(false);
   const bottomRef = useRef(null);
   const inputRef  = useRef(null);
-
-  // Carregar API keys do localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem('ai_apikeys');
-    if (saved) { try { setApiKeys(JSON.parse(saved)); } catch {} }
-  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -110,17 +31,9 @@ export default function AIAssistant() {
     if (open) setTimeout(() => inputRef.current?.focus(), 100);
   }, [open]);
 
-  function saveKeys(keys) {
-    setApiKeys(keys);
-    localStorage.setItem('ai_apikeys', JSON.stringify(keys));
-  }
-
   async function send(text) {
     const msg = text || input.trim();
     if (!msg || loading) return;
-
-    const currentKey = model === 'gemini' ? apiKeys.gemini : apiKeys.chatgpt;
-    if (!currentKey) { setShowConfig(true); return; }
 
     const newMessages = [...messages, { role: 'user', content: msg }];
     setMessages(newMessages);
@@ -128,18 +41,15 @@ export default function AIAssistant() {
     setLoading(true);
 
     try {
-      const reply = model === 'gemini'
-        ? await callGemini(newMessages, currentKey)
-        : await callChatGPT(newMessages, currentKey);
-      setMessages(m => [...m, { role: 'assistant', content: reply }]);
+      const res = await api.post('/api/ai/chat', { model, messages: newMessages });
+      setMessages(m => [...m, { role: 'assistant', content: res.data.reply }]);
     } catch (err) {
-      setMessages(m => [...m, { role: 'assistant', content: `⚠️ Erro: ${err.message}`, error: true }]);
+      const errMsg = err.response?.data?.error || err.message || 'Erro ao conectar com a IA';
+      setMessages(m => [...m, { role: 'assistant', content: `⚠️ ${errMsg}`, error: true }]);
     } finally {
       setLoading(false);
     }
   }
-
-  const currentModel = MODELS.find(m => m.id === model);
 
   return (
     <>
@@ -177,15 +87,12 @@ export default function AIAssistant() {
 
           {/* Header */}
           <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--c-border)', background: 'linear-gradient(135deg, #C13584 0%, #7D4A5E 100%)', color: '#fff' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '16px' }}>✦</span>
-                <div>
-                  <div style={{ fontSize: '13px', fontWeight: 700 }}>Assistente IA</div>
-                  <div style={{ fontSize: '10px', opacity: .8 }}>Cris Costa Beauty</div>
-                </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+              <span style={{ fontSize: '16px' }}>✦</span>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 700 }}>Assistente IA</div>
+                <div style={{ fontSize: '10px', opacity: .8 }}>Cris Costa Beauty</div>
               </div>
-              <button onClick={() => setShowConfig(s => !s)} title="Configurar API Keys" style={{ background: 'rgba(255,255,255,.15)', border: 'none', borderRadius: '8px', width: '28px', height: '28px', cursor: 'pointer', color: '#fff', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>⚙</button>
             </div>
 
             {/* Seletor de modelo */}
@@ -204,28 +111,6 @@ export default function AIAssistant() {
               ))}
             </div>
           </div>
-
-          {/* Config de API keys */}
-          {showConfig && (
-            <div style={{ padding: '12px 14px', background: 'var(--c-surface)', borderBottom: '1px solid var(--c-border)' }}>
-              <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--c-text-4)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: '8px' }}>API Keys (salvas localmente)</div>
-              {MODELS.map(m => (
-                <div key={m.id} style={{ marginBottom: '6px' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--c-text-3)', marginBottom: '3px' }}>{m.label}</div>
-                  <input
-                    type="password"
-                    placeholder={`Cole sua ${m.label} API Key`}
-                    value={apiKeys[m.id]}
-                    onChange={e => saveKeys({ ...apiKeys, [m.id]: e.target.value })}
-                    style={{ width: '100%', padding: '6px 10px', fontSize: '11px', border: '1.5px solid var(--c-border)', borderRadius: '8px', background: 'var(--c-card-bg)', color: 'var(--c-text-1)', outline: 'none', boxSizing: 'border-box', fontFamily: 'monospace' }}
-                  />
-                </div>
-              ))}
-              <div style={{ fontSize: '9px', color: 'var(--c-text-4)', marginTop: '4px' }}>
-                🔒 As keys ficam salvas apenas no seu navegador.
-              </div>
-            </div>
-          )}
 
           {/* Mensagens */}
           <div style={{ flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -251,7 +136,8 @@ export default function AIAssistant() {
             {messages.map((m, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
                 <div style={{
-                  maxWidth: '85%', padding: '9px 12px', borderRadius: m.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+                  maxWidth: '85%', padding: '9px 12px',
+                  borderRadius: m.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
                   background: m.role === 'user' ? 'linear-gradient(135deg, #C13584, #7D4A5E)' : m.error ? '#FDEAED' : 'var(--c-surface)',
                   color: m.role === 'user' ? '#fff' : m.error ? '#E74C3C' : 'var(--c-text-1)',
                   fontSize: '12px', lineHeight: 1.5,
