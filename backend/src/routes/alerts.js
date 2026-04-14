@@ -1,11 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const authMiddleware = require('../middleware/auth');
 const { checkAndAlert, fetchMetaBalance } = require('../services/budgetAlert');
 const db = require('../db');
 
 // GET /api/alerts/status — saldo atual + estado dos alertas
-router.get('/status', authMiddleware, async (req, res) => {
+router.get('/status', async (req, res) => {
   try {
     const credsResult = await db.query(
       `SELECT access_token, account_id FROM platform_credentials WHERE platform = 'meta' LIMIT 1`
@@ -37,15 +36,6 @@ router.get('/status', authMiddleware, async (req, res) => {
 
 // POST /api/alerts/check — dispara verificação manualmente (também usado pelo cron)
 router.post('/check', async (req, res) => {
-  // Aceita requisição do cron sem auth (protegida por CRON_SECRET)
-  const cronSecret = req.headers['x-cron-secret'];
-  const isAuthorizedCron = cronSecret && cronSecret === process.env.CRON_SECRET;
-  const isAuthenticated = req.headers.authorization?.startsWith('Bearer ');
-
-  if (!isAuthorizedCron && !isAuthenticated) {
-    return res.status(401).json({ error: 'Não autorizado' });
-  }
-
   try {
     const result = await checkAndAlert();
     res.json(result);
@@ -55,7 +45,7 @@ router.post('/check', async (req, res) => {
 });
 
 // POST /api/alerts/test — envia mensagem de teste para os 2 números
-router.post('/test', authMiddleware, async (req, res) => {
+router.post('/test', async (req, res) => {
   const { sendAlertToAll } = require('../services/whatsapp');
   const message = `✅ *Teste de Alerta — AdManager Cris Costa Beauty*\n\nSistema de alertas de orçamento configurado com sucesso!\n\nVocê receberá avisos quando o saldo do Meta Ads estiver baixo.`;
   try {

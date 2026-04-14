@@ -1,8 +1,5 @@
 const router = require('express').Router();
 const db = require('../db');
-const authMiddleware = require('../middleware/auth');
-
-router.use(authMiddleware);
 
 router.get('/', async (req, res) => {
   const { platform, status } = req.query;

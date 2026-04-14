@@ -1,17 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import NewCampaignWizard from './components/NewCampaignWizard';
-import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Campaigns from './pages/Campaigns';
 import CampaignDetail from './pages/CampaignDetail';
 import Platforms from './pages/Platforms';
 import api from './services/api';
-
-function PrivateRoute({ children }) {
-  return localStorage.getItem('token') ? children : <Navigate to="/login" replace />;
-}
 
 function Layout() {
   const navigate  = useNavigate();
@@ -116,12 +111,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/*" element={
-          <PrivateRoute>
-            <Layout />
-          </PrivateRoute>
-        } />
+        <Route path="/*" element={<Layout />} />
       </Routes>
     </BrowserRouter>
   );
