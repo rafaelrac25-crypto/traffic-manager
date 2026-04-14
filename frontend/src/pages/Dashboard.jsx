@@ -101,19 +101,30 @@ function PlatformBlock({ platform, campaigns, totalSpent }) {
   );
 }
 
-function CampaignCard({ c, onToggle, onEdit, onDelete }) {
+function CampaignCard({ c, onToggle, onEdit, onDelete, rank }) {
   const pct = c.budget > 0 ? Math.min((c.spent / (c.budget * 30)) * 100, 100) : 0;
   const fillColor = pct > 85 ? '#E74C3C' : pct > 60 ? '#E67E22' : 'var(--c-accent)';
   const isActive  = c.status === 'active';
   const platColor = PLAT_COLORS[c.platform] || '#7D4A5E';
+  const isTop     = rank === 0 && (c.conversions || 0) > 0;
 
   return (
     <div
-      style={{ background: 'var(--c-card-bg)', borderRadius: '14px', border: '1px solid var(--c-border)', boxShadow: '0 1px 6px var(--c-shadow)', overflow: 'hidden', transition: 'box-shadow .2s, transform .2s, background .25s ease', animation: 'fadeIn .3s ease' }}
-      onMouseEnter={e => { e.currentTarget.style.boxShadow = `0 6px 20px var(--c-shadow-md)`; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-      onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 1px 6px var(--c-shadow)'; e.currentTarget.style.transform = 'none'; }}
+      style={{ background: 'var(--c-card-bg)', borderRadius: '14px', border: isTop ? '2px solid #F5A623' : '1px solid var(--c-border)', boxShadow: isTop ? '0 4px 16px rgba(245,166,35,0.18)' : '0 1px 6px var(--c-shadow)', overflow: 'hidden', transition: 'box-shadow .2s, transform .2s, background .25s ease', animation: 'fadeIn .3s ease', position: 'relative' }}
+      onMouseEnter={e => { e.currentTarget.style.boxShadow = isTop ? '0 8px 24px rgba(245,166,35,0.28)' : `0 6px 20px var(--c-shadow-md)`; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+      onMouseLeave={e => { e.currentTarget.style.boxShadow = isTop ? '0 4px 16px rgba(245,166,35,0.18)' : '0 1px 6px var(--c-shadow)'; e.currentTarget.style.transform = 'none'; }}
     >
-      <div style={{ height: '5px', background: platColor }} />
+      {isTop && (
+        <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'linear-gradient(135deg, #F5A623, #F7D06A)', color: '#7A4F00', fontSize: '9px', fontWeight: 800, padding: '3px 8px', borderRadius: '20px', letterSpacing: '.5px', zIndex: 2, textTransform: 'uppercase' }}>
+          🏆 Melhor Conversão
+        </div>
+      )}
+      {rank !== undefined && (rank > 0 || (c.conversions || 0) === 0) && (
+        <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'var(--c-surface)', color: 'var(--c-text-4)', fontSize: '9px', fontWeight: 700, padding: '3px 8px', borderRadius: '20px', zIndex: 2 }}>
+          #{rank + 1}
+        </div>
+      )}
+      <div style={{ height: '5px', background: isTop ? 'linear-gradient(90deg, #F5A623, #F7D06A)' : platColor }} />
 
       <div style={{ padding: '14px 16px' }}>
         {/* Badge + toggle */}
@@ -347,8 +358,8 @@ export default function Dashboard({ searchQuery = '' }) {
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
-          {filtered.map(c => (
-            <CampaignCard key={c.id} c={c} onToggle={handleToggle} onEdit={camp => navigate(`/campanhas/${camp.id}`)} onDelete={handleDelete} />
+          {[...filtered].sort((a, b) => (b.conversions || 0) - (a.conversions || 0)).map((c, rank) => (
+            <CampaignCard key={c.id} c={c} rank={rank} onToggle={handleToggle} onEdit={camp => navigate(`/campanhas/${camp.id}`)} onDelete={handleDelete} />
           ))}
         </div>
       )}
