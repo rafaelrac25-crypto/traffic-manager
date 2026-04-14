@@ -7,6 +7,7 @@ import Campaigns from './pages/Campaigns';
 import CampaignDetail from './pages/CampaignDetail';
 import Platforms from './pages/Platforms';
 import Calendar from './pages/Calendar';
+import History from './pages/History';
 import api from './services/api';
 
 function Layout() {
@@ -31,6 +32,8 @@ function Layout() {
     '/': 'Dashboard',
     '/campanhas': 'Campanhas',
     '/plataformas': 'Plataformas',
+    '/calendario': 'Calendário',
+    '/historico': 'Histórico',
   };
   const title = PAGE_TITLE[location.pathname] || 'Dashboard';
 
@@ -101,6 +104,7 @@ function Layout() {
             <Route path="/campanhas/:id" element={<CampaignDetail />} />
             <Route path="/plataformas"   element={<Platforms />} />
             <Route path="/calendario"    element={<Calendar />} />
+            <Route path="/historico"     element={<History />} />
             <Route path="*"              element={<Dashboard />} />
           </Routes>
         </div>

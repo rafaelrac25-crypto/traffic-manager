@@ -53,6 +53,16 @@ db.exec(`
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS activity_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    action TEXT NOT NULL,
+    entity TEXT NOT NULL,
+    entity_id INTEGER,
+    description TEXT,
+    meta TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
 `);
 
 // Migração: adiciona colunas novas em bancos já existentes (ignora erro se já existir)

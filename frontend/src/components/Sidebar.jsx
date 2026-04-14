@@ -11,6 +11,7 @@ const NAV = [
   ]},
   { section: 'Conta', items: [
     { to: '/plataformas', icon: '⊕', label: 'Plataformas' },
+    { to: '/historico',   icon: '◷', label: 'Histórico' },
   ]},
 ];
 

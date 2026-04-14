@@ -41,3 +41,13 @@ CREATE TABLE IF NOT EXISTS alert_state (
   key VARCHAR(100) PRIMARY KEY,
   value TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS activity_log (
+  id SERIAL PRIMARY KEY,
+  action VARCHAR(100) NOT NULL,
+  entity VARCHAR(100) NOT NULL,
+  entity_id INTEGER,
+  description TEXT,
+  meta TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);

@@ -1,6 +1,15 @@
 const router = require('express').Router();
 const db = require('../db');
 
+async function log(action, entity, entity_id, description, meta) {
+  try {
+    await db.query(
+      `INSERT INTO activity_log (action, entity, entity_id, description, meta) VALUES (?, ?, ?, ?, ?)`,
+      [action, entity, entity_id || null, description || null, meta ? JSON.stringify(meta) : null]
+    );
+  } catch {}
+}
+
 router.get('/', async (req, res) => {
   const { platform, status } = req.query;
   let query = 'SELECT * FROM campaigns WHERE 1=1';
@@ -37,7 +46,12 @@ router.post('/', async (req, res) => {
       [name, platform, budget || null, start_date || null, end_date || null,
        mode, status, sched, submitted_at]
     );
-    res.status(201).json(result.rows[0]);
+    const camp = result.rows[0];
+    const desc = mode === 'scheduled'
+      ? `Campanha "${name}" agendada para ${sched}`
+      : `Campanha "${name}" criada na plataforma ${platform}`;
+    await log('create', 'campaign', camp?.id, desc, { platform, budget, mode });
+    res.status(201).json(camp);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Erro ao criar campanha' });
@@ -87,7 +101,10 @@ router.patch('/:id/status', async (req, res) => {
       [status, req.params.id]
     );
     if (!result.rows[0]) return res.status(404).json({ error: 'Campanha não encontrada' });
-    res.json(result.rows[0]);
+    const camp = result.rows[0];
+    const statusLabels = { active: 'Ativada', paused: 'Pausada', ended: 'Encerrada', review: 'Enviada para revisão', scheduled: 'Agendada' };
+    await log('status_change', 'campaign', camp.id, `Campanha "${camp.name}" — ${statusLabels[status] || status}`, { status });
+    res.json(camp);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Erro ao atualizar status' });
@@ -96,7 +113,10 @@ router.patch('/:id/status', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
+    const before = await db.query('SELECT name, platform FROM campaigns WHERE id = ?', [req.params.id]);
+    const camp = before.rows[0];
     await db.query('DELETE FROM campaigns WHERE id = ?', [req.params.id]);
+    if (camp) await log('delete', 'campaign', parseInt(req.params.id), `Campanha "${camp.name}" removida`, { platform: camp.platform });
     res.json({ message: 'Campanha removida' });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao remover campanha' });
