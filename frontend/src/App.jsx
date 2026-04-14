@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import Campaigns from './pages/Campaigns';
 import CampaignDetail from './pages/CampaignDetail';
 import Platforms from './pages/Platforms';
+import Calendar from './pages/Calendar';
 import api from './services/api';
 
 function Layout() {
@@ -99,6 +100,7 @@ function Layout() {
             <Route path="/campanhas"     element={<Campaigns />} />
             <Route path="/campanhas/:id" element={<CampaignDetail />} />
             <Route path="/plataformas"   element={<Platforms />} />
+            <Route path="/calendario"    element={<Calendar />} />
             <Route path="*"              element={<Dashboard />} />
           </Routes>
         </div>

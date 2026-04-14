@@ -6,6 +6,7 @@ const NAV = [
   { section: 'Principal', items: [
     { to: '/',            icon: '◈', label: 'Dashboard' },
     { to: '/campanhas',   icon: '◉', label: 'Campanhas', badge: true },
+    { to: '/calendario',  icon: '◻', label: 'Calendário' },
     { to: '/novo',        icon: '✦', label: 'Nova Campanha' },
   ]},
   { section: 'Conta', items: [
