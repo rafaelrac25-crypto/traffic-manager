@@ -8,6 +8,7 @@ import CampaignDetail from './pages/CampaignDetail';
 import Platforms from './pages/Platforms';
 import Calendar from './pages/Calendar';
 import History from './pages/History';
+import AIAssistant from './components/AIAssistant';
 import api from './services/api';
 
 function Layout() {
@@ -98,6 +99,7 @@ function Layout() {
 
         {/* Content */}
         <div style={{ flex: 1 }}>
+          <AIAssistant />
           <Routes>
             <Route path="/"              element={<Dashboard searchQuery={search} />} />
             <Route path="/campanhas"     element={<Campaigns />} />

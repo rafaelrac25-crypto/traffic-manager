@@ -1,0 +1,319 @@
+import React, { useState, useRef, useEffect } from 'react';
+
+const SYSTEM_PROMPT = `Você é um assistente especializado em tráfego pago para o estúdio de estética feminina Cris Costa Beauty.
+
+Sobre a Cris Costa Beauty:
+- Estúdio de estética feminina premium
+- Serviços: sobrancelhas, cílios, skincare, maquiagem, tratamentos faciais
+- Público-alvo: mulheres 25-45 anos, classes B/C, região de Joinville/SC
+- Tom de voz: feminino, acolhedor, sofisticado mas acessível
+- Cores da marca: vinho e rosé
+- Instagram: @criscosta.beauty
+
+Seu papel:
+1. Criar textos curtos e persuasivos para anúncios de tráfego pago (Meta Ads, Google Ads)
+2. Sugerir CTAs, headlines, descrições de criativos
+3. Tirar dúvidas sobre o funcionamento do sistema AdManager
+4. Orientar sobre estratégias de tráfego pago para estética feminina
+
+Diretrizes para copy de tráfego pago:
+- Máximo 150 caracteres para headlines
+- Máximo 500 caracteres para descrições
+- Use gatilhos: escassez, prova social, benefício imediato
+- Linguagem direta e feminina
+- Sempre foque na transformação/resultado
+
+Responda sempre em português do Brasil.`;
+
+const MODELS = [
+  { id: 'gemini', label: 'Gemini', icon: '✦', color: '#4285F4' },
+  { id: 'chatgpt', label: 'ChatGPT', icon: '◎', color: '#10A37F' },
+];
+
+const QUICK_PROMPTS = [
+  'Crie um texto para anúncio de design de sobrancelhas',
+  'Headline para promoção de limpeza de pele',
+  'CTA para stories de alongamento de cílios',
+  'Como funciona o sistema de agendamento?',
+  'Texto para anúncio de pacote de estética completa',
+];
+
+async function callGemini(messages, apiKey) {
+  const contents = messages
+    .filter(m => m.role !== 'system')
+    .map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    }));
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents,
+        generationConfig: { maxOutputTokens: 800, temperature: 0.7 },
+      }),
+    }
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `Gemini error ${res.status}`);
+  }
+  const data = await res.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || '(sem resposta)';
+}
+
+async function callChatGPT(messages, apiKey) {
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
+      max_tokens: 800,
+      temperature: 0.7,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `OpenAI error ${res.status}`);
+  }
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content || '(sem resposta)';
+}
+
+export default function AIAssistant() {
+  const [open,       setOpen]       = useState(false);
+  const [model,      setModel]      = useState('gemini');
+  const [messages,   setMessages]   = useState([]);
+  const [input,      setInput]      = useState('');
+  const [loading,    setLoading]    = useState(false);
+  const [apiKeys,    setApiKeys]    = useState({ gemini: '', chatgpt: '' });
+  const [showConfig, setShowConfig] = useState(false);
+  const bottomRef = useRef(null);
+  const inputRef  = useRef(null);
+
+  // Carregar API keys do localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('ai_apikeys');
+    if (saved) { try { setApiKeys(JSON.parse(saved)); } catch {} }
+  }, []);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, loading]);
+
+  useEffect(() => {
+    if (open) setTimeout(() => inputRef.current?.focus(), 100);
+  }, [open]);
+
+  function saveKeys(keys) {
+    setApiKeys(keys);
+    localStorage.setItem('ai_apikeys', JSON.stringify(keys));
+  }
+
+  async function send(text) {
+    const msg = text || input.trim();
+    if (!msg || loading) return;
+
+    const currentKey = model === 'gemini' ? apiKeys.gemini : apiKeys.chatgpt;
+    if (!currentKey) { setShowConfig(true); return; }
+
+    const newMessages = [...messages, { role: 'user', content: msg }];
+    setMessages(newMessages);
+    setInput('');
+    setLoading(true);
+
+    try {
+      const reply = model === 'gemini'
+        ? await callGemini(newMessages, currentKey)
+        : await callChatGPT(newMessages, currentKey);
+      setMessages(m => [...m, { role: 'assistant', content: reply }]);
+    } catch (err) {
+      setMessages(m => [...m, { role: 'assistant', content: `⚠️ Erro: ${err.message}`, error: true }]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const currentModel = MODELS.find(m => m.id === model);
+
+  return (
+    <>
+      {/* Botão flutuante */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        title="Assistente IA"
+        style={{
+          position: 'fixed', bottom: '28px', right: '28px', zIndex: 500,
+          width: '52px', height: '52px', borderRadius: '50%',
+          background: open ? '#333' : 'linear-gradient(135deg, #C13584, #7D4A5E)',
+          color: '#fff', border: 'none', cursor: 'pointer',
+          fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 4px 16px rgba(193,53,132,.4)',
+          transition: 'all .2s',
+          transform: open ? 'rotate(45deg)' : 'none',
+        }}
+      >
+        {open ? '×' : '✦'}
+      </button>
+
+      {/* Painel do chat */}
+      {open && (
+        <div style={{
+          position: 'fixed', bottom: '92px', right: '28px', zIndex: 499,
+          width: '360px', height: '520px',
+          background: 'var(--c-card-bg)',
+          borderRadius: '20px',
+          border: '1px solid var(--c-border)',
+          boxShadow: '0 8px 40px rgba(0,0,0,.18)',
+          display: 'flex', flexDirection: 'column',
+          overflow: 'hidden',
+          animation: 'slideIn .2s ease',
+        }}>
+
+          {/* Header */}
+          <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--c-border)', background: 'linear-gradient(135deg, #C13584 0%, #7D4A5E 100%)', color: '#fff' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '16px' }}>✦</span>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 700 }}>Assistente IA</div>
+                  <div style={{ fontSize: '10px', opacity: .8 }}>Cris Costa Beauty</div>
+                </div>
+              </div>
+              <button onClick={() => setShowConfig(s => !s)} title="Configurar API Keys" style={{ background: 'rgba(255,255,255,.15)', border: 'none', borderRadius: '8px', width: '28px', height: '28px', cursor: 'pointer', color: '#fff', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>⚙</button>
+            </div>
+
+            {/* Seletor de modelo */}
+            <div style={{ display: 'flex', gap: '6px' }}>
+              {MODELS.map(m => (
+                <button
+                  key={m.id}
+                  onClick={() => setModel(m.id)}
+                  style={{
+                    flex: 1, padding: '5px 8px', borderRadius: '8px', border: 'none',
+                    background: model === m.id ? 'rgba(255,255,255,.25)' : 'rgba(255,255,255,.1)',
+                    color: '#fff', fontSize: '11px', fontWeight: model === m.id ? 700 : 500,
+                    cursor: 'pointer', transition: 'all .15s',
+                  }}
+                >{m.icon} {m.label}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Config de API keys */}
+          {showConfig && (
+            <div style={{ padding: '12px 14px', background: 'var(--c-surface)', borderBottom: '1px solid var(--c-border)' }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--c-text-4)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: '8px' }}>API Keys (salvas localmente)</div>
+              {MODELS.map(m => (
+                <div key={m.id} style={{ marginBottom: '6px' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--c-text-3)', marginBottom: '3px' }}>{m.label}</div>
+                  <input
+                    type="password"
+                    placeholder={`Cole sua ${m.label} API Key`}
+                    value={apiKeys[m.id]}
+                    onChange={e => saveKeys({ ...apiKeys, [m.id]: e.target.value })}
+                    style={{ width: '100%', padding: '6px 10px', fontSize: '11px', border: '1.5px solid var(--c-border)', borderRadius: '8px', background: 'var(--c-card-bg)', color: 'var(--c-text-1)', outline: 'none', boxSizing: 'border-box', fontFamily: 'monospace' }}
+                  />
+                </div>
+              ))}
+              <div style={{ fontSize: '9px', color: 'var(--c-text-4)', marginTop: '4px' }}>
+                🔒 As keys ficam salvas apenas no seu navegador.
+              </div>
+            </div>
+          )}
+
+          {/* Mensagens */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+
+            {messages.length === 0 && (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <div style={{ textAlign: 'center', marginBottom: '14px' }}>
+                  <div style={{ fontSize: '28px', marginBottom: '6px' }}>✦</div>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--c-text-2)', marginBottom: '3px' }}>Como posso ajudar?</div>
+                  <div style={{ fontSize: '10px', color: 'var(--c-text-4)' }}>Crie textos para anúncios ou tire dúvidas sobre o sistema</div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  {QUICK_PROMPTS.map((p, i) => (
+                    <button key={i} onClick={() => send(p)} style={{ background: 'var(--c-surface)', border: '1px solid var(--c-border)', borderRadius: '10px', padding: '7px 10px', fontSize: '11px', color: 'var(--c-text-2)', cursor: 'pointer', textAlign: 'left', transition: 'all .15s', fontFamily: 'Inter, sans-serif' }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--c-accent)'; e.currentTarget.style.color = 'var(--c-accent)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--c-border)'; e.currentTarget.style.color = 'var(--c-text-2)'; }}
+                    >{p}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {messages.map((m, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                <div style={{
+                  maxWidth: '85%', padding: '9px 12px', borderRadius: m.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+                  background: m.role === 'user' ? 'linear-gradient(135deg, #C13584, #7D4A5E)' : m.error ? '#FDEAED' : 'var(--c-surface)',
+                  color: m.role === 'user' ? '#fff' : m.error ? '#E74C3C' : 'var(--c-text-1)',
+                  fontSize: '12px', lineHeight: 1.5,
+                  border: m.role === 'assistant' ? '1px solid var(--c-border)' : 'none',
+                  whiteSpace: 'pre-wrap',
+                }}>
+                  {m.content}
+                </div>
+              </div>
+            ))}
+
+            {loading && (
+              <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                <div style={{ background: 'var(--c-surface)', border: '1px solid var(--c-border)', borderRadius: '14px 14px 14px 4px', padding: '9px 14px', display: 'flex', gap: '4px', alignItems: 'center' }}>
+                  {[0,1,2].map(i => (
+                    <div key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C13584', animation: `bounce 1s ${i * .2}s infinite` }} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div ref={bottomRef} />
+          </div>
+
+          {/* Input */}
+          <div style={{ padding: '10px 12px', borderTop: '1px solid var(--c-border)', display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+            <textarea
+              ref={inputRef}
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
+              placeholder="Pergunte ou peça um texto..."
+              rows={1}
+              style={{
+                flex: 1, padding: '8px 11px', fontSize: '12px',
+                border: '1.5px solid var(--c-border)', borderRadius: '10px',
+                background: 'var(--c-surface)', color: 'var(--c-text-1)',
+                outline: 'none', resize: 'none', fontFamily: 'Inter, sans-serif',
+                lineHeight: 1.4, maxHeight: '80px', overflowY: 'auto',
+              }}
+            />
+            <button
+              onClick={() => send()}
+              disabled={!input.trim() || loading}
+              style={{
+                width: '34px', height: '34px', borderRadius: '10px', border: 'none',
+                background: input.trim() && !loading ? 'linear-gradient(135deg, #C13584, #7D4A5E)' : 'var(--c-border)',
+                color: '#fff', cursor: input.trim() && !loading ? 'pointer' : 'not-allowed',
+                fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all .15s', flexShrink: 0,
+              }}
+            >↑</button>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes bounce {
+          0%, 80%, 100% { transform: translateY(0); }
+          40% { transform: translateY(-5px); }
+        }
+      `}</style>
+    </>
+  );
+}
