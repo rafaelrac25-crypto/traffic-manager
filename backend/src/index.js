@@ -9,6 +9,14 @@ const app = express();
 app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
 app.use(express.json());
 
+// Remove prefixo /_/backend das URLs (Vercel proxy)
+app.use((req, res, next) => {
+  if (req.url.startsWith('/_/backend')) {
+    req.url = req.url.replace('/_/backend', '');
+  }
+  next();
+});
+
 // Rotas da API
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/campaigns', require('./routes/campaigns'));
