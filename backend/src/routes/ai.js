@@ -73,7 +73,7 @@ router.post('/chat', async (req, res) => {
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) return res.status(503).json({ error: 'GROQ_API_KEY não configurada no servidor' });
 
-    const model = image ? 'llama-3.2-11b-vision-preview' : 'llama-3.3-70b-versatile';
+    const model = image ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'llama-3.3-70b-versatile';
 
     const groqMessages = messages.map((m, idx) => {
       const isLastUser = m.role === 'user' && idx === messages.length - 1;

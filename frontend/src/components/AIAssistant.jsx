@@ -9,28 +9,43 @@ const QUICK_PROMPTS = [
   'Texto para anúncio de pacote de estética completa',
 ];
 
-// Comprime e redimensiona a imagem para max 800px, JPEG 75% — evita payload 413
+// Comprime a imagem iterativamente até garantir base64 < 3MB (limite Groq: 4MB)
 function compressImage(file) {
   return new Promise((resolve) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
       URL.revokeObjectURL(url);
-      const MAX = 800;
-      let { width, height } = img;
-      if (width > MAX || height > MAX) {
-        if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
-        else { width = Math.round(width * MAX / height); height = MAX; }
+
+      function tryCompress(maxDim, quality) {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) { height = Math.round(height * maxDim / width); width = maxDim; }
+          else { width = Math.round(width * maxDim / height); height = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const dataUrl = reader.result;
+            const sizeBytes = Math.round((dataUrl.length * 3) / 4); // base64 → bytes aprox
+            if (sizeBytes > 3 * 1024 * 1024 && quality > 0.3) {
+              // ainda grande: reduz qualidade ou dimensão
+              const nextQuality = quality > 0.5 ? quality - 0.15 : quality - 0.1;
+              const nextDim = quality <= 0.5 ? Math.round(maxDim * 0.75) : maxDim;
+              tryCompress(nextDim, Math.max(nextQuality, 0.2));
+            } else {
+              resolve(dataUrl);
+            }
+          };
+          reader.readAsDataURL(blob);
+        }, 'image/jpeg', quality);
       }
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-      canvas.toBlob((blob) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result); // dataURL
-        reader.readAsDataURL(blob);
-      }, 'image/jpeg', 0.75);
+
+      tryCompress(1024, 0.8);
     };
     img.src = url;
   });
