@@ -36,7 +36,7 @@ Exemplos de tom e frases no estilo da marca:
 - "Para quem quer acordar linda todo dia — sem esforço."
 
 Hashtags do nicho (usar 5 a 10 por post):
-#designdesobrancelhas #sobrancelhas #micropigmentacao #micropigmentacaolabial #limpezadepele #esteticafeminina #beleza #cuidadoscomaface #joinville #criscostabeleza #sobrancelhaperfeita #estetica #skincare #transformacão
+#designdesobrancelhas #sobrancelhas #micropigmentacao #micropigmentacaolabial #limpezadepele #esteticafeminina #beleza #cuidadoscomaface #joinville #criscostabeleza #sobrancelhaperfeita #estetica #skincare #transformacao
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 SEU PAPEL
@@ -60,7 +60,7 @@ DIRETRIZES DE COPY
 
 Responda sempre em português do Brasil.`;
 
-// POST /api/ai/chat — proxy para Gemini
+// POST /api/ai/chat — proxy para Groq (Llama 3.3 70B — free tier)
 router.post('/chat', async (req, res) => {
   const { messages } = req.body;
   if (!messages || !Array.isArray(messages)) {
@@ -68,31 +68,29 @@ router.post('/chat', async (req, res) => {
   }
 
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return res.status(503).json({ error: 'Gemini API key não configurada no servidor' });
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) return res.status(503).json({ error: 'GROQ_API_KEY não configurada no servidor' });
 
-    const contents = messages
-      .filter(m => m.role !== 'system')
-      .map(m => ({
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: m.content }],
-      }));
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          ...messages.map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content })),
+        ],
+        max_tokens: 800,
+        temperature: 0.7,
+      }),
+    });
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-          contents,
-          generationConfig: { maxOutputTokens: 800, temperature: 0.7 },
-        }),
-      }
-    );
     const data = await response.json();
-    if (!response.ok) throw new Error(data?.error?.message || `Gemini error ${response.status}`);
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '(sem resposta)';
+    if (!response.ok) throw new Error(data?.error?.message || `Groq error ${response.status}`);
+    const text = data.choices?.[0]?.message?.content || '(sem resposta)';
     return res.json({ reply: text });
 
   } catch (err) {
