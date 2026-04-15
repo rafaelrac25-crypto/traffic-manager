@@ -1,6 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import api from '../services/api';
 
+const MODELS = [
+  { id: 'gemini', label: 'Gemini', icon: '✦', color: '#4285F4' },
+];
+
 const QUICK_PROMPTS = [
     'Crie um texto para anúncio de design de sobrancelhas',
     'Headline para promoção de limpeza de pele',

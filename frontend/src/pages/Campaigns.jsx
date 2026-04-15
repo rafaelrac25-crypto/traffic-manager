@@ -38,7 +38,7 @@ export default function Campaigns() {
     const params = new URLSearchParams();
     if (filter.platform) params.set('platform', filter.platform);
     if (filter.status)   params.set('status',   filter.status);
-    api.get(`/api/campaigns?${params}`).then(r => setCampaigns(r.data)).finally(() => setLoading(false));
+    api.get(`/api/campaigns?${params}`).then(r => setCampaigns(Array.isArray(r.data) ? r.data : [])).catch(() => setCampaigns([])).finally(() => setLoading(false));
   }
   useEffect(() => { load(); loadDrafts(); }, [filter]);
 
