@@ -60,9 +60,11 @@ DIRETRIZES DE COPY
 
 Responda sempre em português do Brasil.`;
 
-// POST /api/ai/chat — proxy para Groq (Llama 3.3 70B — free tier)
+// POST /api/ai/chat — proxy para Groq
+// Suporta imagens: envie { messages, image: { base64, mimeType } }
+// Com imagem usa llama-3.2-11b-vision-preview; sem imagem usa llama-3.3-70b-versatile
 router.post('/chat', async (req, res) => {
-  const { messages } = req.body;
+  const { messages, image } = req.body;
   if (!messages || !Array.isArray(messages)) {
     return res.status(400).json({ error: 'messages obrigatório' });
   }
@@ -71,6 +73,22 @@ router.post('/chat', async (req, res) => {
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) return res.status(503).json({ error: 'GROQ_API_KEY não configurada no servidor' });
 
+    const model = image ? 'llama-3.2-11b-vision-preview' : 'llama-3.3-70b-versatile';
+
+    const groqMessages = messages.map((m, idx) => {
+      const isLastUser = m.role === 'user' && idx === messages.length - 1;
+      if (image && isLastUser) {
+        return {
+          role: 'user',
+          content: [
+            ...(m.content ? [{ type: 'text', text: m.content }] : []),
+            { type: 'image_url', image_url: { url: `data:${image.mimeType};base64,${image.base64}` } },
+          ],
+        };
+      }
+      return { role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content };
+    });
+
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -78,10 +96,10 @@ router.post('/chat', async (req, res) => {
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model,
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
-          ...messages.map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content })),
+          ...groqMessages,
         ],
         max_tokens: 800,
         temperature: 0.7,
