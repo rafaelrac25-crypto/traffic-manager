@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const fetch = globalThis.fetch ?? require('node-fetch');
 
 const SYSTEM_PROMPT = `Você é um assistente especializado em tráfego pago para o estúdio de estética feminina Cris Costa Beauty.
 
