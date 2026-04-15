@@ -9,11 +9,30 @@ const QUICK_PROMPTS = [
   'Texto para anúncio de pacote de estética completa',
 ];
 
-function fileToBase64(file) {
+// Comprime e redimensiona a imagem para max 800px, JPEG 75% — evita payload 413
+function compressImage(file) {
   return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result);
-    reader.readAsDataURL(file);
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const MAX = 800;
+      let { width, height } = img;
+      if (width > MAX || height > MAX) {
+        if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
+        else { width = Math.round(width * MAX / height); height = MAX; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      canvas.toBlob((blob) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result); // dataURL
+        reader.readAsDataURL(blob);
+      }, 'image/jpeg', 0.75);
+    };
+    img.src = url;
   });
 }
 
@@ -22,7 +41,7 @@ export default function AIAssistant() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [imageFile, setImageFile] = useState(null);
+  const [imageBase64, setImageBase64] = useState(null); // dataURL já comprimida
   const [imagePreview, setImagePreview] = useState(null);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
@@ -36,22 +55,17 @@ export default function AIAssistant() {
     if (open) setTimeout(() => inputRef.current?.focus(), 100);
   }, [open]);
 
-  function handleImageSelect(e) {
+  async function handleImageSelect(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 4 * 1024 * 1024) {
-      alert('Imagem muito grande. Máximo 4MB.');
-      return;
-    }
-    setImageFile(file);
-    const reader = new FileReader();
-    reader.onloadend = () => setImagePreview(reader.result);
-    reader.readAsDataURL(file);
+    const dataUrl = await compressImage(file); // comprime para max 800px JPEG 75%
+    setImageBase64(dataUrl);
+    setImagePreview(dataUrl);
     e.target.value = '';
   }
 
   function removeImage() {
-    setImageFile(null);
+    setImageBase64(null);
     setImagePreview(null);
   }
 
@@ -71,11 +85,10 @@ export default function AIAssistant() {
     setLoading(true);
 
     let imageData = null;
-    if (imageFile) {
-      const dataUrl = await fileToBase64(imageFile);
-      imageData = { base64: dataUrl.split(',')[1], mimeType: imageFile.type };
+    if (imageBase64) {
+      imageData = { base64: imageBase64.split(',')[1], mimeType: 'image/jpeg' };
     }
-    setImageFile(null);
+    setImageBase64(null);
     setImagePreview(null);
 
     try {
