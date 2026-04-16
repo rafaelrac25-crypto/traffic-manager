@@ -59,7 +59,7 @@ export default function SplashScreen({ onDone }) {
         <div style={{
           width:      '1px',
           height:     '56px',
-          background: '#C13584',
+          background: '#d68d8f',
           flexShrink: 0,
         }} />
 
@@ -74,7 +74,7 @@ export default function SplashScreen({ onDone }) {
             fontWeight:    700,
             letterSpacing: '4px',
             textTransform: 'uppercase',
-            color:         '#C13584',
+            color:         '#d68d8f',
             lineHeight:    1,
           }}>Gestor de</span>
           <span style={{
@@ -82,7 +82,7 @@ export default function SplashScreen({ onDone }) {
             fontWeight:    700,
             letterSpacing: '4px',
             textTransform: 'uppercase',
-            color:         '#C13584',
+            color:         '#d68d8f',
             lineHeight:    1,
           }}>Tráfego</span>
         </div>
@@ -99,7 +99,7 @@ export default function SplashScreen({ onDone }) {
       }}>
         <div style={{
           height:    '100%',
-          background:'linear-gradient(90deg, #E8A4C8, #C13584)',
+          background:'linear-gradient(90deg, #E8A4C8, #d68d8f)',
           animation: `splashProgress ${HOLD_MS}ms linear forwards`,
           width:     '0%',
         }} />
@@ -119,7 +119,7 @@ export default function SplashScreen({ onDone }) {
             width:       '6px',
             height:      '6px',
             borderRadius:'50%',
-            background:  '#C13584',
+            background:  '#d68d8f',
             opacity:     0.5,
             animation:   `pulse 1.2s ${i * 0.2}s ease-in-out infinite`,
           }} />
