@@ -250,3 +250,64 @@ body {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* ── Wizard Meta Ads ── */
+.wizard-layout {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  gap: 20px;
+  align-items: start;
+}
+.wizard-summary-panel {
+  position: sticky;
+  top: 80px;
+}
+
+@media (max-width: 1024px) {
+  .wizard-layout { grid-template-columns: 1fr; }
+  .wizard-summary-panel { display: none; }
+}
+
+/* Leaflet */
+.leaflet-map-container {
+  height: 300px;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1.5px solid var(--c-border);
+  z-index: 0;
+}
+.leaflet-top, .leaflet-bottom { z-index: 1 !important; }
+[data-theme="dark"] .leaflet-tile { filter: brightness(.85) saturate(.8); }
+
+/* Range slider accent */
+input[type="range"] { accent-color: #C13584; }
+
+/* Drop zone de mídia */
+.drop-zone {
+  border: 2px dashed var(--c-border);
+  border-radius: 14px;
+  padding: 36px 20px;
+  text-align: center;
+  cursor: pointer;
+  background: var(--c-surface);
+  transition: border-color .15s, background .15s;
+}
+.drop-zone:hover, .drop-zone.drag-over {
+  border-color: var(--c-accent);
+  background: rgba(193,53,132,.04);
+}
+
+/* Barra de progresso do resumo */
+.progress-bar-track {
+  height: 4px;
+  background: var(--c-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: var(--c-accent);
+  border-radius: 4px;
+  transition: width .35s ease;
+}
