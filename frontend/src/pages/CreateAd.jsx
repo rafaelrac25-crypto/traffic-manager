@@ -81,7 +81,7 @@ const INTEREST_SUGGESTIONS = [
 ];
 
 const RADIUS_KM = [1, 5, 10, 25, 50, 80, 150];
-const BRASIL_CENTER = [-14.235, -51.925];
+const JOINVILLE_CENTER = [-26.304, -48.846];
 
 /* ══════════════════════════════════════════
    HELPERS
@@ -387,7 +387,7 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
 
         {/* Mapa */}
         <div className="leaflet-map-container">
-          <MapContainer center={BRASIL_CENTER} zoom={4} style={{ height: '100%', width: '100%' }}>
+          <MapContainer center={JOINVILLE_CENTER} zoom={10} style={{ height: '100%', width: '100%' }}>
             <TileLayer
               attribution='© <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
