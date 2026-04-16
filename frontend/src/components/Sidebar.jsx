@@ -1,6 +1,8 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
+import marcaBranca from '../assets/marca-branca.png';
+import marcaColorida from '../assets/marca-colorida.png';
 
 /* ── Ícones SVG ── */
 const IconDashboard = ({ active }) => (
@@ -44,37 +46,14 @@ const IconSun = () => (
   </svg>
 );
 
-/* ── LogoPlaceholder ── */
-function LogoPlaceholder({ isDark }) {
+/* ── Logo ── */
+function Logo({ isDark }) {
   return (
-    <div style={{ lineHeight: 1 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: '1px' }}>
-        <span style={{
-          fontSize: '20px',
-          fontWeight: 800,
-          color: 'var(--c-accent)',
-          fontFamily: 'Inter, sans-serif',
-          letterSpacing: '-0.5px',
-        }}>Cris</span>
-        <span style={{
-          fontSize: '20px',
-          fontWeight: 800,
-          color: 'var(--c-text-1)',
-          fontFamily: 'Inter, sans-serif',
-          letterSpacing: '-0.5px',
-        }}>Costa</span>
-      </div>
-      <div style={{
-        fontSize: '8px',
-        fontWeight: 700,
-        letterSpacing: '3px',
-        textTransform: 'uppercase',
-        color: 'var(--c-text-4)',
-        marginTop: '1px',
-      }}>
-        Beauty
-      </div>
-    </div>
+    <img
+      src={isDark ? marcaBranca : marcaColorida}
+      alt="Cris Costa Beauty"
+      style={{ height: '38px', width: 'auto', objectFit: 'contain', display: 'block' }}
+    />
   );
 }
 
@@ -118,7 +97,7 @@ export default function Sidebar({ open = false, isMobile = false }) {
         flexDirection: 'column',
         gap: '6px',
       }}>
-        <LogoPlaceholder isDark={isDark} />
+        <Logo isDark={isDark} />
         <div style={{
           fontSize: '8px',
           fontWeight: 700,

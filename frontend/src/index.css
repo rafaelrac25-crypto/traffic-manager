@@ -55,26 +55,26 @@
 
 /* ── Tema escuro ── */
 [data-theme="dark"] {
-  --c-page-bg:    #140D11;
-  --c-sidebar-bg: #1C1018;
-  --c-card-bg:    #251620;
-  --c-topbar-bg:  #1C1018;
-  --c-border:     #341828;
-  --c-border-lt:  #2A1422;
-  --c-active-bg:  #3A1830;
-  --c-surface:    #201218;
-  --c-hover:      #2C1424;
-  --c-text-1:     #F5E6EE;
-  --c-text-2:     #E0B8CC;
-  --c-text-3:     #AA7A94;
-  --c-text-4:     #7A5068;
+  --c-page-bg:    #0C0C0C;
+  --c-sidebar-bg: #111111;
+  --c-card-bg:    #1A1A1A;
+  --c-topbar-bg:  #111111;
+  --c-border:     #2A2A2A;
+  --c-border-lt:  #202020;
+  --c-active-bg:  rgba(193,53,132,.14);
+  --c-surface:    #161616;
+  --c-hover:      #1E1E1E;
+  --c-text-1:     #F0F0F0;
+  --c-text-2:     #BBBBBB;
+  --c-text-3:     #888888;
+  --c-text-4:     #555555;
   --c-accent:     #E0429C;
   --c-accent-dk:  #C13584;
-  --c-shadow:     rgba(0,0,0,.3);
-  --c-shadow-md:  rgba(0,0,0,.4);
-  --shadow-sm:    0 1px 4px rgba(0,0,0,.35);
-  --shadow:       0 4px 16px rgba(0,0,0,.4);
-  --shadow-lg:    0 12px 36px rgba(0,0,0,.5);
+  --c-shadow:     rgba(0,0,0,.4);
+  --c-shadow-md:  rgba(0,0,0,.55);
+  --shadow-sm:    0 1px 4px rgba(0,0,0,.5);
+  --shadow:       0 4px 16px rgba(0,0,0,.55);
+  --shadow-lg:    0 12px 36px rgba(0,0,0,.65);
 }
 
 body {
