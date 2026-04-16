@@ -52,7 +52,7 @@ function Logo({ isDark }) {
     <img
       src={isDark ? marcaBranca : marcaColorida}
       alt="Cris Costa Beauty"
-      style={{ height: '38px', width: 'auto', objectFit: 'contain', display: 'block' }}
+      style={{ height: '52px', width: 'auto', objectFit: 'contain', display: 'block' }}
     />
   );
 }
@@ -98,15 +98,6 @@ export default function Sidebar({ open = false, isMobile = false }) {
         gap: '6px',
       }}>
         <Logo isDark={isDark} />
-        <div style={{
-          fontSize: '8px',
-          fontWeight: 700,
-          letterSpacing: '2.5px',
-          textTransform: 'uppercase',
-          color: 'var(--c-text-4)',
-        }}>
-          Gestor de Tráfego
-        </div>
       </div>
 
       {/* ── Navegação ── */}
