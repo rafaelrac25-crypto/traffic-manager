@@ -31,8 +31,21 @@ app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
 // Servir frontend estático (produção)
 const frontendDist = path.join(__dirname, '../../frontend/dist');
 if (fs.existsSync(frontendDist)) {
-  app.use(express.static(frontendDist));
+  // Assets com hash no nome: cache longo (imutáveis)
+  app.use('/assets', express.static(path.join(frontendDist, 'assets'), {
+    maxAge: '1y',
+    immutable: true,
+  }));
+
+  // Demais arquivos estáticos sem cache agressivo
+  app.use(express.static(frontendDist, { maxAge: 0 }));
+
+  // SPA fallback: index.html nunca cacheado — garante que o browser
+  // sempre busca o HTML atual após novo deploy
   app.get('*', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.sendFile(path.join(frontendDist, 'index.html'));
   });
 }
