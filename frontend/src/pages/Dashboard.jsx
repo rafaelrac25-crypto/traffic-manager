@@ -357,7 +357,7 @@ export default function Dashboard() {
   const [chartMetric, setChartMetric] = useState('Resultados');
 
   return (
-    <div style={{ padding: '28px', maxWidth: '1300px', animation: 'fadeIn .25s ease' }}>
+    <div className="page-container">
 
       {/* ── Cabeçalho ── */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>

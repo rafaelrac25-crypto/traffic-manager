@@ -137,7 +137,7 @@ export default function CreateAd() {
   const platform = PLATFORMS.find(p => p.id === selectedPlatform) || PLATFORMS[0];
 
   return (
-    <div style={{ padding: '28px', animation: 'fadeIn .25s ease' }}>
+    <div className="page-container">
 
       {/* ── Cabeçalho ── */}
       <div style={{ marginBottom: '28px' }}>

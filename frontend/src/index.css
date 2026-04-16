@@ -159,6 +159,19 @@ body {
   flex-shrink: 0;
 }
 
+/* ── Container de página — centralizado em telas largas ── */
+.page-container {
+  padding: 28px;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+  animation: fadeIn .25s ease;
+}
+
+@media (max-width: 1024px) {
+  .page-container { padding: 20px 16px; }
+}
+
 /* ── Grid responsivo de métricas ── */
 .metric-grid {
   display: grid;

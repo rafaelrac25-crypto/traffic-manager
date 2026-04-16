@@ -78,7 +78,7 @@ export default function Calendar() {
   }
 
   return (
-    <div style={{ padding: '28px', animation: 'fadeIn .25s ease' }}>
+    <div className="page-container">
 
       {/* ── Cabeçalho ── */}
       <div style={{ marginBottom: '22px' }}>

@@ -270,7 +270,7 @@ export default function Campaigns() {
   });
 
   return (
-    <div style={{ padding: '28px', animation: 'fadeIn .25s ease' }}>
+    <div className="page-container">
 
       {/* ── Cabeçalho ── */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '22px', flexWrap: 'wrap', gap: '12px' }}>
