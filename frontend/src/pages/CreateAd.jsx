@@ -513,14 +513,7 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
         </div>
       </div>
 
-      {/* ── Idiomas — fixo em Português ── */}
-      <div>
-        <SectionLabel sub="Campanha configurada para Português. Edite o código se precisar adicionar outros idiomas.">Idioma</SectionLabel>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '6px 14px', background: 'rgba(193,53,132,.08)', border: '1px solid rgba(193,53,132,.25)', borderRadius: '20px' }}>
-          <span style={{ fontSize: '14px' }}>🇧🇷</span>
-          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-accent)' }}>Português</span>
-        </div>
-      </div>
+      {/* Idioma: fixo em Português internamente — não exibido no front */}
 
       {/* ── Interesses ── */}
       <div>
