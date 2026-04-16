@@ -207,13 +207,10 @@ function Layout() {
 }
 
 export default function App() {
-  /* Splash aparece uma vez por sessão (some ao recarregar a aba) */
-  const [showSplash, setShowSplash] = useState(
-    () => !sessionStorage.getItem('splashed')
-  );
+  /* Splash aparece sempre que a página carrega ou é atualizada */
+  const [showSplash, setShowSplash] = useState(true);
 
   function handleSplashDone() {
-    sessionStorage.setItem('splashed', '1');
     setShowSplash(false);
   }
 
