@@ -114,6 +114,22 @@ body {
   from { opacity: 0; transform: scale(0); }
   to   { opacity: 1; transform: scale(1); }
 }
+@keyframes splashLogoIn {
+  from { opacity: 0; transform: scale(.85) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes splashTagIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes splashOut {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(1.04); }
+}
+@keyframes splashProgress {
+  from { width: 0%; }
+  to   { width: 100%; }
+}
 
 /* ── Layout responsivo ── */
 .app-wrapper {

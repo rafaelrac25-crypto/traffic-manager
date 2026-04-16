@@ -6,6 +6,7 @@ import Campaigns from './pages/Campaigns';
 import Calendar from './pages/Calendar';
 import CreateAd from './pages/CreateAd';
 import AIAssistant from './components/AIAssistant';
+import SplashScreen from './components/SplashScreen';
 
 const PAGE_TITLES = {
   '/':              'Dashboard',
@@ -206,8 +207,19 @@ function Layout() {
 }
 
 export default function App() {
+  /* Splash aparece uma vez por sessão (some ao recarregar a aba) */
+  const [showSplash, setShowSplash] = useState(
+    () => !sessionStorage.getItem('splashed')
+  );
+
+  function handleSplashDone() {
+    sessionStorage.setItem('splashed', '1');
+    setShowSplash(false);
+  }
+
   return (
     <BrowserRouter>
+      {showSplash && <SplashScreen onDone={handleSplashDone} />}
       <Routes>
         <Route path="/*" element={<Layout />} />
       </Routes>
