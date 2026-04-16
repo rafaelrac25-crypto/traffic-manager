@@ -9,7 +9,17 @@ const QUICK_PROMPTS = [
   'Texto para anúncio de pacote de estética completa',
 ];
 
-// Comprime a imagem iterativamente até garantir base64 < 3MB (limite Groq: 4MB)
+// Garante imagem ≤ 2MB binário (~2.7MB base64) — limite Groq é 4MB base64
+// Testa passos do mais leve ao mais agressivo; usa o blob real para medir
+const COMPRESS_STEPS = [
+  { dim: 1024, quality: 0.82 },
+  { dim: 800,  quality: 0.72 },
+  { dim: 640,  quality: 0.62 },
+  { dim: 480,  quality: 0.52 },
+  { dim: 320,  quality: 0.40 },
+];
+const MAX_BLOB_BYTES = 2 * 1024 * 1024; // 2MB
+
 function compressImage(file) {
   return new Promise((resolve) => {
     const img = new Image();
@@ -17,35 +27,30 @@ function compressImage(file) {
     img.onload = () => {
       URL.revokeObjectURL(url);
 
-      function tryCompress(maxDim, quality) {
+      function runStep(i) {
+        const { dim, quality } = COMPRESS_STEPS[Math.min(i, COMPRESS_STEPS.length - 1)];
         let { width, height } = img;
-        if (width > maxDim || height > maxDim) {
-          if (width > height) { height = Math.round(height * maxDim / width); width = maxDim; }
-          else { width = Math.round(width * maxDim / height); height = maxDim; }
+        if (width > dim || height > dim) {
+          if (width > height) { height = Math.round(height * dim / width); width = dim; }
+          else { width = Math.round(width * dim / height); height = dim; }
         }
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
         canvas.getContext('2d').drawImage(img, 0, 0, width, height);
         canvas.toBlob((blob) => {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            const dataUrl = reader.result;
-            const sizeBytes = Math.round((dataUrl.length * 3) / 4); // base64 → bytes aprox
-            if (sizeBytes > 3 * 1024 * 1024 && quality > 0.3) {
-              // ainda grande: reduz qualidade ou dimensão
-              const nextQuality = quality > 0.5 ? quality - 0.15 : quality - 0.1;
-              const nextDim = quality <= 0.5 ? Math.round(maxDim * 0.75) : maxDim;
-              tryCompress(nextDim, Math.max(nextQuality, 0.2));
-            } else {
-              resolve(dataUrl);
-            }
-          };
-          reader.readAsDataURL(blob);
+          // Dentro do limite ou chegamos ao passo final: resolve
+          if (blob.size <= MAX_BLOB_BYTES || i >= COMPRESS_STEPS.length - 1) {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+          } else {
+            runStep(i + 1); // ainda grande: próximo passo
+          }
         }, 'image/jpeg', quality);
       }
 
-      tryCompress(1024, 0.8);
+      runStep(0);
     };
     img.src = url;
   });
