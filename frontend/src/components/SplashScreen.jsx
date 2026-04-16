@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import marcaColorida from '../assets/marca-colorida.png';
 
-/* Duração total: HOLD_MS + EXIT_MS ≈ 5 s */
-const HOLD_MS = 4200;
-const EXIT_MS = 700;
+/* Duração total: HOLD_MS + EXIT_MS ≈ 3 s */
+const HOLD_MS = 2400;
+const EXIT_MS = 600;
 
 /* Splash sempre com fundo rosê claro + marca colorida, independente do tema */
 export default function SplashScreen({ onDone }) {
