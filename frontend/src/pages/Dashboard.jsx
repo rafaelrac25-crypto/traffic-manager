@@ -184,7 +184,7 @@ export default function Dashboard({ searchQuery = '' }) {
   if (filter)      filtered = filtered.filter(c => c.platform === filter || c.status === filter);
   if (searchQuery) filtered = filtered.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
-  const sorted = [...filtered].sort((a, b) => (b.conversions || 0) - (a.conversions || 0));
+  const sorted = [...filtered].sort((a, b) => (b.conversions || 0) - (a.conversions || 0)).slice(0, 3);
 
   const summaryCards = [
     { label: 'Gasto Total',      value: `R$ ${totalSpent.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`, sub: totalClicks > 0 ? `CPC médio R$ ${(totalSpent / totalClicks).toFixed(2)}` : 'Nenhum clique ainda', accent: '#C13584' },
