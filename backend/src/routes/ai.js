@@ -61,10 +61,10 @@ DIRETRIZES DE COPY
 Responda sempre em português do Brasil.`;
 
 // POST /api/ai/chat — proxy para Groq
-// Suporta imagens: envie { messages, image: { base64, mimeType } }
-// Com imagem usa llama-3.2-11b-vision-preview; sem imagem usa llama-3.3-70b-versatile
+// Cada mensagem pode ter { role, content, imageBase64 }
+// Se qualquer mensagem tiver imagem usa llama-4-scout (vision); senão llama-3.3-70b
 router.post('/chat', async (req, res) => {
-  const { messages, image } = req.body;
+  const { messages } = req.body;
   if (!messages || !Array.isArray(messages)) {
     return res.status(400).json({ error: 'messages obrigatório' });
   }
@@ -73,16 +73,17 @@ router.post('/chat', async (req, res) => {
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) return res.status(503).json({ error: 'GROQ_API_KEY não configurada no servidor' });
 
-    const model = image ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'llama-3.3-70b-versatile';
+    const hasImage = messages.some(m => m.imageBase64);
+    const model = hasImage ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'llama-3.3-70b-versatile';
 
-    const groqMessages = messages.map((m, idx) => {
-      const isLastUser = m.role === 'user' && idx === messages.length - 1;
-      if (image && isLastUser) {
+    // Monta o histórico completo para o Groq, incluindo imagens de mensagens anteriores
+    const groqMessages = messages.map(m => {
+      if (m.imageBase64) {
         return {
-          role: 'user',
+          role: m.role === 'assistant' ? 'assistant' : 'user',
           content: [
             ...(m.content ? [{ type: 'text', text: m.content }] : []),
-            { type: 'image_url', image_url: { url: `data:${image.mimeType};base64,${image.base64}` } },
+            { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${m.imageBase64}` } },
           ],
         };
       }

@@ -93,28 +93,31 @@ export default function AIAssistant() {
     const msg = text || input.trim();
     if ((!msg && !imagePreview) || loading) return;
 
+    // Guarda o base64 puro (sem prefixo data:) dentro da própria mensagem
+    // para que o histórico completo — incluindo imagens anteriores — seja
+    // enviado ao modelo em cada requisição
     const userMessage = {
       role: 'user',
       content: msg || '',
       ...(imagePreview && { imagePreview }),
+      ...(imageBase64 && { imageBase64: imageBase64.split(',')[1] }),
     };
 
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setInput('');
-    setLoading(true);
-
-    let imageData = null;
-    if (imageBase64) {
-      imageData = { base64: imageBase64.split(',')[1], mimeType: 'image/jpeg' };
-    }
     setImageBase64(null);
     setImagePreview(null);
+    setLoading(true);
 
     try {
       const res = await api.post('/api/ai/chat', {
-        messages: newMessages.map(m => ({ role: m.role, content: m.content })),
-        image: imageData,
+        // Envia cada mensagem com seu imageBase64 quando houver
+        messages: newMessages.map(m => ({
+          role: m.role,
+          content: m.content,
+          ...(m.imageBase64 && { imageBase64: m.imageBase64 }),
+        })),
       });
       setMessages(m => [...m, { role: 'assistant', content: res.data.reply }]);
     } catch (err) {
