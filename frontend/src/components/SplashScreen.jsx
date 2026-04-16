@@ -40,31 +40,52 @@ export default function SplashScreen({ onDone }) {
         opacity:      0,
       }} />
 
-      {/* ── Logo ── */}
+      {/* ── Logo + divisor + tagline ── */}
       <div style={{
-        animation: 'splashLogoIn .7s cubic-bezier(.22,1,.36,1) forwards',
-        opacity:   0,
-        position:  'relative',
+        display:    'flex',
+        alignItems: 'center',
+        gap:        '24px',
+        animation:  'splashLogoIn .7s cubic-bezier(.22,1,.36,1) forwards',
+        opacity:    0,
       }}>
+        {/* Logo */}
         <img
           src={marcaColorida}
           alt="Cris Costa Beauty"
           style={{ height: '100px', width: 'auto', objectFit: 'contain' }}
         />
-      </div>
 
-      {/* ── Tagline ── */}
-      <div style={{
-        marginTop:    '20px',
-        fontSize:     '11px',
-        fontWeight:   700,
-        letterSpacing:'4px',
-        textTransform:'uppercase',
-        color:        '#C13584',
-        opacity:      0,
-        animation:    'splashTagIn .6s .5s ease forwards',
-      }}>
-        Gestor de Tráfego
+        {/* Traço vertical */}
+        <div style={{
+          width:      '1px',
+          height:     '56px',
+          background: 'rgba(193,53,132,.3)',
+          flexShrink: 0,
+        }} />
+
+        {/* Texto */}
+        <div style={{
+          display:       'flex',
+          flexDirection: 'column',
+          gap:           '3px',
+        }}>
+          <span style={{
+            fontSize:      '11px',
+            fontWeight:    700,
+            letterSpacing: '4px',
+            textTransform: 'uppercase',
+            color:         '#C13584',
+            lineHeight:    1,
+          }}>Gestor de</span>
+          <span style={{
+            fontSize:      '11px',
+            fontWeight:    700,
+            letterSpacing: '4px',
+            textTransform: 'uppercase',
+            color:         '#C13584',
+            lineHeight:    1,
+          }}>Tráfego</span>
+        </div>
       </div>
 
       {/* ── Barra de progresso ── */}
