@@ -1,220 +1,435 @@
-import React, { useEffect, useState, useCallback } from 'react';
+/**
+ * IMPORTANT:
+ * All displayed data is fictional placeholder data.
+ * Real data will be loaded later from Meta Ads API.
+ * Do not persist mock values.
+ */
+
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
-import NewCampaignWizard, { getDrafts, deleteDraft } from '../components/NewCampaignWizard';
+import { getDrafts, deleteDraft } from '../components/NewCampaignWizard';
 
-const PLAT_COLORS = { meta: '#C13584', google: '#E74C3C', manual: '#7D4A5E' };
-const PLAT_LABELS = { meta: 'Tráfego Instagram', google: 'Google Ads', manual: 'Manual' };
-const STATUS_COLOR = { active: 'var(--green)', paused: 'var(--yellow)', ended: 'var(--gray-400)' };
-const STATUS_LABEL = { active: 'Ativo', paused: 'Pausado', ended: 'Encerrado' };
+/* ── Dados mock ── */
+const MOCK_ADS = [
+  { id: 1, name: 'Promoção Verão',       adId: '2388471', platform: 'instagram', status: 'active',   budget: 50,  results: 43,   clicks: 3456, costPerResult: 18.64, thumbGrad: 'linear-gradient(135deg,#FECDD3,#FDA4AF,#FB7185)' },
+  { id: 2, name: 'Esmaltes Tendência',   adId: '2388472', platform: 'meta',      status: 'paused',   budget: 70,  results: 28,   clicks: 2187, costPerResult: 25.00, thumbGrad: 'linear-gradient(135deg,#D1D5DB,#9CA3AF,#6B7280)' },
+  { id: 3, name: 'Skincare Rotina Diária', adId: '2388473', platform: 'instagram', status: 'active', budget: 30,  results: 15,   clicks: 743,  costPerResult: 20.00, thumbGrad: 'linear-gradient(135deg,#FDE68A,#FCA5A5,#F9A8D4)' },
+  { id: 4, name: 'Lançamento Nova Linha', adId: '2388474', platform: 'meta',      status: 'review',  budget: 100, results: null, clicks: null, costPerResult: null,  thumbGrad: 'linear-gradient(135deg,#C4B5FD,#A78BFA,#8B5CF6)' },
+  { id: 5, name: 'Remarketing Site',     adId: '2388475', platform: 'instagram', status: 'ended',    budget: 40,  results: 12,   clicks: 1102, costPerResult: 23.10, thumbGrad: 'linear-gradient(135deg,#BAE6FD,#7DD3FC,#38BDF8)' },
+];
 
-const PLAT_LABELS_DRAFT = { meta: 'Tráfego Instagram', google: 'Google Ads' };
-const OBJ_LABELS = { vendas: 'Vendas', cadastros: 'Cadastros', trafego: 'Visitas ao site', engajamento: 'Engajamento', contato: 'Contato', loja: 'Loja física' };
+/* ── Configurações visuais ── */
+const PLAT = {
+  instagram: { label: 'Instagram', bg: '#FDF0F8', color: '#C13584' },
+  meta:      { label: 'Meta Ads',  bg: '#EFF6FF', color: '#1877F2' },
+  google:    { label: 'Google Ads', bg: '#FEF9C3', color: '#CA8A04' },
+};
 
-export default function Campaigns() {
-  const [campaigns, setCampaigns] = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [filter, setFilter]       = useState({ platform: '', status: '' });
-  const [showWizard, setShowWizard] = useState(false);
-  const [activeDraft, setActiveDraft] = useState(null);
-  const [drafts, setDrafts]       = useState([]);
-  const [syncing, setSyncing]     = useState('');
-  const navigate = useNavigate();
+const STATUS = {
+  active:  { label: 'Ativo',       dot: '#22C55E', bg: '#F0FDF4', color: '#16A34A' },
+  paused:  { label: 'Pausado',     dot: '#F97316', bg: '#FFF7ED', color: '#EA580C' },
+  review:  { label: 'Em revisão',  dot: '#8B5CF6', bg: '#F5F3FF', color: '#7C3AED' },
+  ended:   { label: 'Encerrado',   dot: '#94A3B8', bg: 'var(--c-surface)', color: 'var(--c-text-4)' },
+};
 
-  function loadDrafts() { setDrafts(getDrafts()); }
+/* ── Ícones ── */
+const PauseIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+);
+const PlayIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+);
+const EditIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+  </svg>
+);
+const CopyIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+  </svg>
+);
+const DotsIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+    <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
+  </svg>
+);
+const ChevronDown = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
+);
+const CalIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+  </svg>
+);
+const PlusIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+  </svg>
+);
 
-  function removeDraft(id) {
-    deleteDraft(id);
-    loadDrafts();
-  }
-
-  function continueDraft(draft) {
-    setActiveDraft(draft);
-    setShowWizard(true);
-  }
-
-  function load() {
-    setLoading(true);
-    const params = new URLSearchParams();
-    if (filter.platform) params.set('platform', filter.platform);
-    if (filter.status)   params.set('status',   filter.status);
-    api.get(`/api/campaigns?${params}`).then(r => setCampaigns(Array.isArray(r.data) ? r.data : [])).catch(() => setCampaigns([])).finally(() => setLoading(false));
-  }
-  useEffect(() => { load(); loadDrafts(); }, [filter]);
-
-  async function toggleStatus(c) {
-    const next = c.status === 'active' ? 'paused' : 'active';
-    await api.patch(`/api/campaigns/${c.id}/status`, { status: next });
-    load();
-  }
-
-  async function remove(c) {
-    if (!window.confirm(`Remover "${c.name}"?`)) return;
-    await api.delete(`/api/campaigns/${c.id}`);
-    load();
-  }
-
-  async function sync(platform) {
-    setSyncing(platform);
-    try {
-      const { data } = await api.post(`/api/campaigns/sync/${platform}`);
-      alert(data.message);
-      load();
-    } catch (err) {
-      alert(err.response?.data?.error || 'Erro ao sincronizar');
-    } finally {
-      setSyncing('');
-    }
-  }
-
-  const chip = (label, active, onClick) => (
-    <div onClick={onClick} style={{
-      padding: '5px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
-      border: `1.5px solid ${active ? 'var(--rose-deep)' : 'var(--gray-200)'}`,
-      background: active ? 'var(--rose)' : '#fff',
-      color: active ? 'var(--rose-deep)' : 'var(--gray-600)', transition: 'all .15s',
-    }}>{label}</div>
+/* ── Thumbnail placeholder ── */
+function AdThumb({ grad }) {
+  return (
+    <div style={{
+      width: '52px', height: '52px', borderRadius: '10px',
+      background: grad, flexShrink: 0,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: '18px', opacity: 0.85,
+    }}>
+      <span>🌸</span>
+    </div>
   );
+}
+
+/* ── Linha da tabela ── */
+function AdRow({ ad, isLast }) {
+  const [hovered, setHovered] = useState(false);
+  const plat   = PLAT[ad.platform]   || PLAT.instagram;
+  const status = STATUS[ad.status]   || STATUS.ended;
+  const isActive = ad.status === 'active';
+  const isEnded  = ad.status === 'ended';
+
+  const fmt = v => v != null ? v.toLocaleString('pt-BR') : '—';
+  const fmtCurrency = v => v != null ? `R$ ${v.toFixed(2).replace('.', ',')}` : '—';
 
   return (
-    <div style={{ padding: '24px 28px' }}>
-      {showWizard && (
-        <NewCampaignWizard
-          initialDraft={activeDraft}
-          onClose={() => { setShowWizard(false); setActiveDraft(null); loadDrafts(); }}
-          onCreated={() => { load(); loadDrafts(); }}
-        />
-      )}
-
-      {/* Cabeçalho */}
-      <div style={{ marginBottom: '20px' }}>
-        <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--wine)' }}>Todas as Campanhas</h2>
-      </div>
-
-      {/* Rascunhos */}
-      {drafts.length > 0 && (
-        <div style={{ marginBottom: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: '.5px' }}>📝 Rascunhos</span>
-            <span style={{ background: 'var(--yellow-bg,#fff8e1)', color: '#7a4a00', fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '10px', border: '1px solid rgba(255,193,7,.4)' }}>{drafts.length}</span>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '10px' }}>
-            {drafts.map(d => {
-              const platLabel = PLAT_LABELS_DRAFT[d.platform] || d.platform;
-              const objLabel  = OBJ_LABELS[d.objective] || d.objective;
-              const savedDate = new Date(d.savedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
-              const stepLabel = ['Plataforma','Objetivo','Criativo','Público','Orçamento'][d.step] || '';
-              return (
-                <div key={d.id} style={{ background: '#fff', border: '1.5px dashed var(--gray-200)', borderRadius: 'var(--radius)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '8px', animation: 'fadeIn .2s ease' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
-                    <div>
-                      <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--wine)' }}>{d.adName || 'Sem título'}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--gray-400)', marginTop: '2px' }}>{platLabel} · {objLabel}</div>
-                    </div>
-                    <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 8px', borderRadius: '10px', background: 'rgba(255,193,7,.12)', color: '#7a4a00', border: '1px solid rgba(255,193,7,.3)', whiteSpace: 'nowrap' }}>
-                      Passo {d.step + 1} — {stepLabel}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: '10px', color: 'var(--gray-400)' }}>Salvo em {savedDate}</div>
-                  <div style={{ display: 'flex', gap: '7px' }}>
-                    <button onClick={() => continueDraft(d)} style={{ flex: 1, fontSize: '12px', fontWeight: 700, padding: '7px', borderRadius: 'var(--radius-sm)', border: 'none', background: 'var(--rose-deep)', color: '#fff', cursor: 'pointer' }}>
-                      ▶ Continuar
-                    </button>
-                    <button onClick={() => removeDraft(d.id)} style={{ fontSize: '12px', fontWeight: 600, padding: '7px 12px', borderRadius: 'var(--radius-sm)', border: '1.5px solid rgba(231,76,60,.3)', background: 'var(--red-bg)', color: 'var(--red)', cursor: 'pointer' }}>
-                      🗑️
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+    <tr
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        borderBottom: isLast ? 'none' : '1px solid var(--c-border-lt)',
+        background: hovered ? 'var(--c-surface)' : 'var(--c-card-bg)',
+        transition: 'background .12s',
+      }}
+    >
+      {/* Anúncio */}
+      <td style={{ padding: '14px 20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <AdThumb grad={ad.thumbGrad} />
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--c-text-1)', marginBottom: '2px' }}>{ad.name}</div>
+            <div style={{ fontSize: '10px', color: 'var(--c-text-4)' }}>ID: {ad.adId}</div>
           </div>
         </div>
-      )}
+      </td>
 
-      {/* Filtros */}
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '20px', alignItems: 'center' }}>
-        <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: '.5px' }}>Plataforma:</span>
-        {chip('Todas', !filter.platform, () => setFilter(f => ({ ...f, platform: '' })))}
-        {['meta','google'].map(p => chip(PLAT_LABELS[p], filter.platform === p, () => setFilter(f => ({ ...f, platform: f.platform === p ? '' : p }))))}
-        <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: '.5px', marginLeft: '8px' }}>Status:</span>
-        {chip('Todos', !filter.status, () => setFilter(f => ({ ...f, status: '' })))}
-        {[['active','🟢 Ativos'],['paused','⏸ Pausados'],['ended','✖ Encerrados']].map(([v, l]) => chip(l, filter.status === v, () => setFilter(f => ({ ...f, status: f.status === v ? '' : v }))))}
-      </div>
+      {/* Plataforma */}
+      <td style={{ padding: '14px 16px' }}>
+        <span style={{
+          fontSize: '11px', fontWeight: 600,
+          background: plat.bg, color: plat.color,
+          padding: '4px 10px', borderRadius: '20px',
+          display: 'inline-block',
+        }}>
+          {plat.label}
+        </span>
+      </td>
 
-      {/* Sync buttons */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
-        {['meta','google'].map(p => (
-          <button key={p} onClick={() => sync(p)} disabled={!!syncing} style={{
-            fontSize: '11px', fontWeight: 600, padding: '5px 12px', borderRadius: '20px',
-            border: '1.5px solid var(--gray-200)', background: '#fff', color: 'var(--gray-600)',
-            cursor: syncing ? 'not-allowed' : 'pointer', opacity: syncing && syncing !== p ? .5 : 1,
-          }}>
-            {syncing === p ? '⟳ Sincronizando...' : `⟳ Sync ${PLAT_LABELS[p]}`}
+      {/* Situação */}
+      <td style={{ padding: '14px 16px' }}>
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: '5px',
+          fontSize: '11px', fontWeight: 600,
+          background: status.bg, color: status.color,
+          padding: '4px 10px', borderRadius: '20px',
+        }}>
+          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: status.dot, display: 'inline-block', flexShrink: 0 }} />
+          {status.label}
+        </span>
+      </td>
+
+      {/* Investimento */}
+      <td style={{ padding: '14px 16px', fontSize: '13px', color: 'var(--c-text-2)', whiteSpace: 'nowrap' }}>
+        R$ {ad.budget},00 / dia
+      </td>
+
+      {/* Resultados */}
+      <td style={{ padding: '14px 16px', fontSize: '13px', color: 'var(--c-text-2)', fontWeight: ad.results ? 600 : 400 }}>
+        {fmt(ad.results)}
+      </td>
+
+      {/* Cliques */}
+      <td style={{ padding: '14px 16px', fontSize: '13px', color: 'var(--c-text-2)', fontWeight: ad.clicks ? 600 : 400 }}>
+        {fmt(ad.clicks)}
+      </td>
+
+      {/* Custo por resultado */}
+      <td style={{ padding: '14px 16px', fontSize: '13px', color: 'var(--c-text-2)', whiteSpace: 'nowrap' }}>
+        {fmtCurrency(ad.costPerResult)}
+      </td>
+
+      {/* Ações */}
+      <td style={{ padding: '14px 20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {/* Pause/Play — só para ativo/pausado */}
+          {(isActive || ad.status === 'paused') && (
+            <button style={{
+              width: '30px', height: '30px', borderRadius: '8px',
+              border: '1.5px solid var(--c-border)', background: 'var(--c-surface)',
+              color: 'var(--c-text-3)', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'all .12s',
+            }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--c-active-bg)'; e.currentTarget.style.color = 'var(--c-accent)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'var(--c-surface)'; e.currentTarget.style.color = 'var(--c-text-3)'; }}
+            >
+              {isActive ? <PauseIcon /> : <PlayIcon />}
+            </button>
+          )}
+
+          {/* Copiar — só encerrados */}
+          {isEnded && (
+            <button style={{
+              width: '30px', height: '30px', borderRadius: '8px',
+              border: '1.5px solid var(--c-border)', background: 'var(--c-surface)',
+              color: 'var(--c-text-3)', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'all .12s',
+            }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--c-active-bg)'; e.currentTarget.style.color = 'var(--c-accent)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'var(--c-surface)'; e.currentTarget.style.color = 'var(--c-text-3)'; }}
+            >
+              <CopyIcon />
+            </button>
+          )}
+
+          {/* Editar */}
+          <button style={{
+            width: '30px', height: '30px', borderRadius: '8px',
+            border: '1.5px solid var(--c-border)', background: 'var(--c-surface)',
+            color: 'var(--c-text-3)', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'all .12s',
+          }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--c-active-bg)'; e.currentTarget.style.color = 'var(--c-accent)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'var(--c-surface)'; e.currentTarget.style.color = 'var(--c-text-3)'; }}
+          >
+            <EditIcon />
           </button>
-        ))}
+
+          {/* Mais opções */}
+          <button style={{
+            width: '30px', height: '30px', borderRadius: '8px',
+            border: '1.5px solid var(--c-border)', background: 'var(--c-surface)',
+            color: 'var(--c-text-3)', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'all .12s',
+          }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--c-surface)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'var(--c-surface)'; }}
+          >
+            <DotsIcon />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+/* ── Select dropdown estilizado ── */
+function FilterSelect({ value, onChange, options }) {
+  return (
+    <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        style={{
+          appearance: 'none',
+          padding: '8px 32px 8px 14px',
+          borderRadius: '10px',
+          border: '1.5px solid var(--c-border)',
+          background: 'var(--c-card-bg)',
+          fontSize: '12px', fontWeight: 500, color: 'var(--c-text-2)',
+          cursor: 'pointer', fontFamily: 'inherit',
+        }}
+      >
+        {options.map(([val, lbl]) => <option key={val} value={val}>{lbl}</option>)}
+      </select>
+      <span style={{ position: 'absolute', right: '10px', pointerEvents: 'none', color: 'var(--c-text-4)' }}>
+        <ChevronDown />
+      </span>
+    </div>
+  );
+}
+
+/* ── Página Anúncios ── */
+export default function Campaigns() {
+  const navigate = useNavigate();
+  const [statusFilter, setStatusFilter] = useState('');
+  const [platformFilter, setPlatformFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const TOTAL = 14;
+  const PER_PAGE = 5;
+
+  const filtered = MOCK_ADS.filter(ad => {
+    if (statusFilter && ad.status !== statusFilter) return false;
+    if (platformFilter && ad.platform !== platformFilter) return false;
+    return true;
+  });
+
+  return (
+    <div style={{ padding: '28px', animation: 'fadeIn .25s ease' }}>
+
+      {/* ── Cabeçalho ── */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '22px', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
+          <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '4px' }}>Anúncios</h1>
+          <p style={{ fontSize: '13px', color: 'var(--c-text-3)' }}>Gerencie seus anúncios e acompanhe os resultados.</p>
+        </div>
+        <button
+          onClick={() => navigate('/criar-anuncio')}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '7px',
+            background: 'var(--c-accent)', color: '#fff',
+            border: 'none', borderRadius: '10px',
+            padding: '10px 18px', fontSize: '13px', fontWeight: 700,
+            cursor: 'pointer', transition: 'background .15s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = 'var(--c-accent-dk)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'var(--c-accent)'}
+        >
+          <PlusIcon />
+          Novo anúncio
+        </button>
       </div>
 
-      {/* Tabela */}
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: '60px', color: 'var(--gray-400)' }}>Carregando...</div>
-      ) : campaigns.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px', color: 'var(--gray-400)' }}>
-          <div style={{ fontSize: '40px', marginBottom: '12px' }}>📣</div>
-          <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--wine)', marginBottom: '6px' }}>Nenhuma campanha encontrada</div>
-          <div style={{ fontSize: '13px', marginBottom: '20px' }}>Tente remover os filtros ou crie um novo anúncio.</div>
-          <button onClick={() => setShowWizard(true)} style={{ background: 'var(--rose-deep)', color: '#fff', border: 'none', borderRadius: 'var(--radius-sm)', padding: '10px 20px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>+ Criar Anúncio</button>
+      {/* ── Filtros ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
+        <FilterSelect
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={[['','Todos os status'],['active','Ativo'],['paused','Pausado'],['review','Em revisão'],['ended','Encerrado']]}
+        />
+        <FilterSelect
+          value={platformFilter}
+          onChange={setPlatformFilter}
+          options={[['','Todas as plataformas'],['instagram','Instagram'],['meta','Meta Ads'],['google','Google Ads']]}
+        />
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '7px',
+          padding: '8px 14px', borderRadius: '10px',
+          border: '1.5px solid var(--c-border)', background: 'var(--c-card-bg)',
+          fontSize: '12px', fontWeight: 500, color: 'var(--c-text-2)', cursor: 'pointer',
+        }}>
+          <CalIcon />
+          01/04/2026 - 14/04/2026
         </div>
-      ) : (
-        <div style={{ background: '#fff', borderRadius: 'var(--radius)', border: '1px solid var(--gray-200)', boxShadow: 'var(--shadow-sm)', overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-            <thead>
-              <tr style={{ background: 'var(--rose-pale)', borderBottom: '1px solid var(--gray-200)' }}>
-                {['Campanha','Plataforma','Status','Verba/dia','Gasto','Cliques','CTR','Conversões','Ações'].map(h => (
-                  <th key={h} style={{ padding: '11px 14px', textAlign: h === 'Ações' ? 'center' : 'left', fontSize: '10px', fontWeight: 700, color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: '.7px', whiteSpace: 'nowrap' }}>{h}</th>
-                ))}
+        {(statusFilter || platformFilter) && (
+          <button
+            onClick={() => { setStatusFilter(''); setPlatformFilter(''); }}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: '12px', fontWeight: 600, color: 'var(--c-accent)',
+            }}
+          >
+            Limpar filtros
+          </button>
+        )}
+      </div>
+
+      {/* ── Tabela ── */}
+      <div className="ads-table-wrapper" style={{
+        background: 'var(--c-card-bg)',
+        borderRadius: '16px',
+        border: '1px solid var(--c-border)',
+        boxShadow: '0 2px 8px var(--c-shadow)',
+        overflow: 'hidden',
+      }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px' }}>
+          <thead>
+            <tr style={{ background: 'var(--c-surface)', borderBottom: '1px solid var(--c-border)' }}>
+              {[
+                { label: 'ANÚNCIO',           w: 'auto' },
+                { label: 'PLATAFORMA',        w: '120px' },
+                { label: 'SITUAÇÃO',          w: '130px' },
+                { label: 'INVESTIMENTO',      w: '130px' },
+                { label: 'RESULTADOS',        w: '110px' },
+                { label: 'CLIQUES',           w: '90px' },
+                { label: 'CUSTO POR RESULT.', w: '140px' },
+                { label: 'AÇÕES',             w: '140px' },
+              ].map(({ label, w }) => (
+                <th key={label} style={{
+                  padding: '12px 16px', textAlign: 'left', fontSize: '10px',
+                  fontWeight: 700, color: 'var(--c-text-4)',
+                  letterSpacing: '.7px', whiteSpace: 'nowrap', width: w,
+                }}>
+                  {label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.length === 0 ? (
+              <tr>
+                <td colSpan={8} style={{ padding: '60px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '32px', marginBottom: '10px', opacity: .4 }}>📣</div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>Nenhum anúncio encontrado</div>
+                  <div style={{ fontSize: '12px', color: 'var(--c-text-4)' }}>Tente remover os filtros ou crie um novo anúncio.</div>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {campaigns.map((c, i) => {
-                const ctr = c.impressions > 0 ? ((c.clicks / c.impressions) * 100).toFixed(1) + '%' : '—';
-                return (
-                  <tr key={c.id} style={{ borderBottom: '1px solid var(--gray-100)', background: i % 2 === 0 ? '#fff' : 'var(--rose-pale)' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'var(--rose)'}
-                    onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? '#fff' : 'var(--rose-pale)'}>
-                    <td style={{ padding: '11px 14px', fontWeight: 600, color: 'var(--wine)' }}>
-                      <div style={{ cursor: 'pointer' }} onClick={() => navigate(`/campanhas/${c.id}`)}>{c.name}</div>
-                    </td>
-                    <td style={{ padding: '11px 14px' }}>
-                      <span style={{ background: PLAT_COLORS[c.platform] || '#7D4A5E', color: '#fff', fontSize: '10px', fontWeight: 700, padding: '3px 8px', borderRadius: '20px' }}>
-                        {PLAT_LABELS[c.platform] || c.platform}
-                      </span>
-                    </td>
-                    <td style={{ padding: '11px 14px', fontWeight: 700, color: STATUS_COLOR[c.status] }}>● {STATUS_LABEL[c.status]}</td>
-                    <td style={{ padding: '11px 14px', color: 'var(--wine)' }}>R$ {c.budget || 0}</td>
-                    <td style={{ padding: '11px 14px', color: 'var(--wine)' }}>R$ {c.spent || 0}</td>
-                    <td style={{ padding: '11px 14px', color: 'var(--wine)' }}>{(c.clicks || 0).toLocaleString('pt-BR')}</td>
-                    <td style={{ padding: '11px 14px', color: 'var(--wine)' }}>{ctr}</td>
-                    <td style={{ padding: '11px 14px', color: 'var(--wine)' }}>{c.conversions || 0}</td>
-                    <td style={{ padding: '11px 14px', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: '5px', justifyContent: 'center' }}>
-                        <button onClick={() => toggleStatus(c)} style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--gray-200)', background: '#fff', cursor: 'pointer', color: 'var(--wine-mid)', fontWeight: 600 }}>
-                          {c.status === 'active' ? '⏸ Pausar' : '▶ Ativar'}
-                        </button>
-                        <button onClick={() => navigate(`/campanhas/${c.id}`)} style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--gray-200)', background: '#fff', cursor: 'pointer', color: 'var(--wine-mid)', fontWeight: 600 }}>
-                          ✏️ Editar
-                        </button>
-                        <button onClick={() => remove(c)} style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '6px', border: '1px solid rgba(231,76,60,.3)', background: 'var(--red-bg)', cursor: 'pointer', color: 'var(--red)', fontWeight: 600 }}>
-                          🗑️
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+            ) : (
+              filtered.map((ad, i) => (
+                <AdRow key={ad.id} ad={ad} isLast={i === filtered.length - 1} />
+              ))
+            )}
+          </tbody>
+        </table>
+
+        {/* ── Paginação ── */}
+        <div style={{
+          padding: '14px 20px',
+          borderTop: '1px solid var(--c-border-lt)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <span style={{ fontSize: '12px', color: 'var(--c-text-4)' }}>
+            Mostrando {filtered.length} de {TOTAL} anúncios
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            {/* Prev */}
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              style={{
+                width: '30px', height: '30px', borderRadius: '8px',
+                border: '1.5px solid var(--c-border)', background: 'var(--c-surface)',
+                color: 'var(--c-text-3)', cursor: page === 1 ? 'default' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                opacity: page === 1 ? 0.4 : 1, fontSize: '14px',
+              }}
+            >‹</button>
+
+            {[1, 2, 3].map(n => (
+              <button
+                key={n}
+                onClick={() => setPage(n)}
+                style={{
+                  width: '30px', height: '30px', borderRadius: '8px',
+                  border: `1.5px solid ${page === n ? 'var(--c-accent)' : 'var(--c-border)'}`,
+                  background: page === n ? 'var(--c-accent)' : 'var(--c-surface)',
+                  color: page === n ? '#fff' : 'var(--c-text-3)',
+                  fontSize: '12px', fontWeight: page === n ? 700 : 400,
+                  cursor: 'pointer', transition: 'all .15s',
+                }}
+              >{n}</button>
+            ))}
+
+            {/* Next */}
+            <button
+              onClick={() => setPage(p => Math.min(3, p + 1))}
+              disabled={page === 3}
+              style={{
+                width: '30px', height: '30px', borderRadius: '8px',
+                border: '1.5px solid var(--c-border)', background: 'var(--c-surface)',
+                color: 'var(--c-text-3)', cursor: page === 3 ? 'default' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                opacity: page === 3 ? 0.4 : 1, fontSize: '14px',
+              }}
+            >›</button>
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

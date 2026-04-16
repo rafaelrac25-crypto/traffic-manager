@@ -3,89 +3,78 @@
 @tailwind components;
 @tailwind utilities;
 
+/**
+ * DESIGN STANDARD
+ *
+ * All future screens must follow the same visual structure
+ * defined in the reference images at Visual/Tema Cris costa Beauty/
+ *
+ * Do not create new layout patterns.
+ * Extend existing components only.
+ */
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 /* ── Tema claro (padrão) ── */
 :root {
-  /* Paleta rose/wine */
-  --rose:       #F5E0DC;
-  --rose-deep:  #C98B83;
-  --rose-light: #FDF0ED;
-  --rose-pale:  #FEF7F5;
-  --wine:       #4A2535;
-  --wine-mid:   #7D4A5E;
-  --wine-light: #B87A92;
   --white:      #FFFFFF;
-  --gray-50:    #FEF7F5;
-  --gray-100:   #FAF0ED;
-  --gray-200:   #F0DDD8;
-  --gray-400:   #C4A09A;
-  --gray-600:   #8A6560;
-  --gray-800:   #3D1F1A;
-  --green:      #27AE60;
-  --green-bg:   #D5F5E3;
-  --red:        #E74C3C;
-  --red-bg:     #FADBD8;
-  --yellow:     #E67E22;
-  --yellow-bg:  #FDEBD0;
-  --blue:       #2980B9;
-  --shadow-sm:  0 1px 4px rgba(74,37,53,.09);
-  --shadow:     0 4px 16px rgba(74,37,53,.11);
-  --shadow-lg:  0 12px 36px rgba(74,37,53,.16);
+  --green:      #22C55E;
+  --green-bg:   #DCFCE7;
+  --red:        #EF4444;
+  --red-bg:     #FEE2E2;
+  --yellow:     #F59E0B;
+  --yellow-bg:  #FEF3C7;
+  --blue:       #3B82F6;
+  --purple:     #8B5CF6;
+  --purple-bg:  #EDE9FE;
+  --shadow-sm:  0 1px 4px rgba(193,53,132,.08);
+  --shadow:     0 4px 16px rgba(193,53,132,.10);
+  --shadow-lg:  0 12px 36px rgba(193,53,132,.15);
   --radius:     14px;
   --radius-sm:  9px;
 
   /* ── Variáveis de tema ── */
-  --c-page-bg:    #FBF0F0;
-  --c-sidebar-bg: #ffffff;
-  --c-card-bg:    #ffffff;
-  --c-topbar-bg:  #ffffff;
-  --c-border:     #F0DEDE;
-  --c-border-lt:  #F8ECEC;
-  --c-active-bg:  #F8E8E8;
-  --c-surface:    #FBF0F0;
-  --c-hover:      #FDF4F4;
-  --c-text-1:     #4A2535;
-  --c-text-2:     #7D4A5E;
-  --c-text-3:     #9A7070;
-  --c-text-4:     #C4A09A;
-  --c-accent:     #C98B83;
-  --c-accent-dk:  #B8776F;
-  --c-shadow:     rgba(180,80,100,.08);
-  --c-shadow-md:  rgba(180,80,100,.13);
+  --c-page-bg:    #F9F4F7;
+  --c-sidebar-bg: #FFFFFF;
+  --c-card-bg:    #FFFFFF;
+  --c-topbar-bg:  #FFFFFF;
+  --c-border:     #EDE0E8;
+  --c-border-lt:  #F5EEF3;
+  --c-active-bg:  #FDF0F8;
+  --c-surface:    #FBF5FA;
+  --c-hover:      #FDF5FB;
+  --c-text-1:     #1A0A14;
+  --c-text-2:     #5A2A45;
+  --c-text-3:     #8C6078;
+  --c-text-4:     #B8A0AE;
+  --c-accent:     #C13584;
+  --c-accent-dk:  #A02D6E;
+  --c-shadow:     rgba(193,53,132,.07);
+  --c-shadow-md:  rgba(193,53,132,.12);
 }
 
 /* ── Tema escuro ── */
 [data-theme="dark"] {
-  --c-page-bg:    #1A1118;
-  --c-sidebar-bg: #221320;
-  --c-card-bg:    #2C1826;
-  --c-topbar-bg:  #221320;
-  --c-border:     #3E1F34;
-  --c-border-lt:  #301828;
-  --c-active-bg:  #3E1F34;
-  --c-surface:    #241520;
-  --c-hover:      #341A2C;
-  --c-text-1:     #F5E0E8;
-  --c-text-2:     #E8C0CC;
-  --c-text-3:     #B89090;
-  --c-text-4:     #8A6070;
-  --c-accent:     #D4988E;
-  --c-accent-dk:  #C98B83;
-  --c-shadow:     rgba(0,0,0,.25);
-  --c-shadow-md:  rgba(0,0,0,.35);
-
-  /* Ajustes de paleta para dark */
-  --rose-pale:  #2C1826;
-  --rose:       #3E1F34;
-  --gray-100:   #301828;
-  --gray-200:   #3E1F34;
-  --gray-400:   #8A6070;
-  --gray-600:   #B89090;
-  --gray-800:   #F5E0E8;
-  --shadow-sm:  0 1px 4px rgba(0,0,0,.3);
-  --shadow:     0 4px 16px rgba(0,0,0,.35);
-  --shadow-lg:  0 12px 36px rgba(0,0,0,.45);
+  --c-page-bg:    #140D11;
+  --c-sidebar-bg: #1C1018;
+  --c-card-bg:    #251620;
+  --c-topbar-bg:  #1C1018;
+  --c-border:     #341828;
+  --c-border-lt:  #2A1422;
+  --c-active-bg:  #3A1830;
+  --c-surface:    #201218;
+  --c-hover:      #2C1424;
+  --c-text-1:     #F5E6EE;
+  --c-text-2:     #E0B8CC;
+  --c-text-3:     #AA7A94;
+  --c-text-4:     #7A5068;
+  --c-accent:     #E0429C;
+  --c-accent-dk:  #C13584;
+  --c-shadow:     rgba(0,0,0,.3);
+  --c-shadow-md:  rgba(0,0,0,.4);
+  --shadow-sm:    0 1px 4px rgba(0,0,0,.35);
+  --shadow:       0 4px 16px rgba(0,0,0,.4);
+  --shadow-lg:    0 12px 36px rgba(0,0,0,.5);
 }
 
 body {
@@ -100,23 +89,135 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--c-border); border-radius: 3px; }
 
+/* ── Keyframes ── */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: none; }
 }
 @keyframes slideIn {
-  from { opacity: 0; transform: scale(.9) translateY(12px); }
+  from { opacity: 0; transform: scale(.94) translateY(10px); }
   to   { opacity: 1; transform: none; }
 }
 @keyframes popIn {
   from { transform: scale(0); }
   to   { transform: scale(1); }
 }
-@keyframes livePulse {
-  0%,100% { box-shadow: 0 0 0 3px rgba(39,174,96,.25); }
-  50%      { box-shadow: 0 0 0 6px rgba(39,174,96,.08); }
+@keyframes bounce {
+  0%, 80%, 100% { transform: translateY(0); }
+  40%           { transform: translateY(-5px); }
 }
 @keyframes pulse {
   0%,100% { opacity: 1; }
   50%      { opacity: .4; }
+}
+@keyframes chartPop {
+  from { opacity: 0; transform: scale(0); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ── Layout responsivo ── */
+.app-wrapper {
+  display: flex;
+  min-height: 100vh;
+  background: var(--c-page-bg);
+  transition: background .25s ease;
+}
+
+.main-content {
+  margin-left: 220px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  transition: margin-left .25s ease;
+}
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  z-index: 99;
+  animation: fadeOverlay .2s ease;
+}
+
+@keyframes fadeOverlay {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.hamburger-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1.5px solid var(--c-border);
+  background: var(--c-surface);
+  border-radius: 9px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* ── Grid responsivo de métricas ── */
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.dashboard-main-row {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 16px;
+  align-items: start;
+}
+
+.dashboard-bottom-row {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 16px;
+  align-items: start;
+}
+
+/* ── Anúncios table responsiva ── */
+.ads-table-wrapper {
+  overflow-x: auto;
+}
+
+/* ── Mobile ── */
+@media (max-width: 1024px) {
+  .main-content { margin-left: 0; }
+
+  .sidebar-fixed {
+    transform: translateX(-100%);
+    transition: transform .25s ease;
+  }
+  .sidebar-fixed.sidebar-open {
+    transform: translateX(0);
+  }
+  .sidebar-overlay.show {
+    display: block;
+  }
+  .hamburger-btn {
+    display: flex;
+  }
+  .dashboard-main-row {
+    grid-template-columns: 1fr;
+  }
+  .dashboard-bottom-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .metric-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .metric-grid {
+    grid-template-columns: 1fr 1fr;
+  }
 }
