@@ -9,10 +9,6 @@ const NAV = [
     { to: '/calendario',  icon: '◻', label: 'Calendário' },
     { to: '/novo',        icon: '✦', label: 'Nova Campanha' },
   ]},
-  { section: 'Conta', items: [
-    { to: '/plataformas', icon: '⊕', label: 'Plataformas' },
-    { to: '/historico',   icon: '◷', label: 'Histórico' },
-  ]},
 ];
 
 export default function Sidebar({ campCount = 0 }) {
