@@ -43,7 +43,7 @@ export default function SplashScreen({ onDone }) {
       {/* ── Logo + divisor + tagline ── */}
       <div style={{
         display:    'flex',
-        alignItems: 'flex-end',
+        alignItems: 'center',
         gap:        '24px',
         animation:  'splashLogoIn .7s cubic-bezier(.22,1,.36,1) forwards',
         opacity:    0,
@@ -52,16 +52,15 @@ export default function SplashScreen({ onDone }) {
         <img
           src={marcaColorida}
           alt="Cris Costa Beauty"
-          style={{ height: '100px', width: 'auto', objectFit: 'contain', display: 'block' }}
+          style={{ height: '100px', width: 'auto', objectFit: 'contain' }}
         />
 
-        {/* Traço vertical — alinhado à base, altura equivalente ao "Beauty" */}
+        {/* Traço vertical */}
         <div style={{
-          width:        '1.5px',
-          height:       '32px',
-          background:   '#C13584',
-          flexShrink:   0,
-          marginBottom: '2px',
+          width:      '1px',
+          height:     '56px',
+          background: '#C13584',
+          flexShrink: 0,
         }} />
 
         {/* Texto */}
@@ -69,7 +68,6 @@ export default function SplashScreen({ onDone }) {
           display:       'flex',
           flexDirection: 'column',
           gap:           '3px',
-          marginBottom:  '2px',
         }}>
           <span style={{
             fontSize:      '11px',
