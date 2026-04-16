@@ -35,7 +35,7 @@ export default function SplashScreen({ onDone }) {
         width:        '340px',
         height:       '340px',
         borderRadius: '50%',
-        background:   'radial-gradient(circle, rgba(193,53,132,.07) 0%, rgba(193,53,132,0) 70%)',
+        background:   'radial-gradient(circle, rgba(214,141,143,.1) 0%, rgba(214,141,143,0) 70%)',
         animation:    'splashLogoIn .9s cubic-bezier(.22,1,.36,1) forwards',
         opacity:      0,
       }} />
@@ -94,12 +94,12 @@ export default function SplashScreen({ onDone }) {
         bottom:    0, left: 0,
         width:     '100%',
         height:    '3px',
-        background:'rgba(193,53,132,.12)',
+        background:'rgba(214,141,143,.15)',
         overflow:  'hidden',
       }}>
         <div style={{
           height:    '100%',
-          background:'linear-gradient(90deg, #E8A4C8, #d68d8f)',
+          background:'#d68d8f',
           animation: `splashProgress ${HOLD_MS}ms linear forwards`,
           width:     '0%',
         }} />
