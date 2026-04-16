@@ -1,6 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import api from '../services/api';
 
+const RobotIcon = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <line x1="12" y1="1.5" x2="12" y2="5" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+    <circle cx="12" cy="1.5" r="1.3" fill="white"/>
+    <rect x="3" y="5" width="18" height="13" rx="3" fill="white"/>
+    <circle cx="9" cy="11" r="2" fill="#C13584"/>
+    <circle cx="15" cy="11" r="2" fill="#C13584"/>
+    <rect x="7.5" y="14.2" width="9" height="1.5" rx="0.75" fill="#C13584"/>
+  </svg>
+);
+
 const QUICK_PROMPTS = [
   'Crie um texto para anúncio de design de sobrancelhas',
   'Headline para promoção de limpeza de pele',
@@ -139,15 +150,15 @@ export default function AIAssistant() {
         style={{
           position: 'fixed', bottom: '28px', right: '28px', zIndex: 500,
           width: '52px', height: '52px', borderRadius: '50%',
-          background: open ? '#333' : 'linear-gradient(135deg, #C13584, #7D4A5E)',
-          color: '#fff', border: 'none', cursor: 'pointer',
-          fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'linear-gradient(135deg, #C13584, #7D4A5E)',
+          border: 'none', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
           boxShadow: '0 4px 16px rgba(193,53,132,.4)',
-          transition: 'all .2s',
-          transform: open ? 'rotate(45deg)' : 'none',
+          transition: 'transform .2s',
+          transform: open ? 'scale(0.92)' : 'scale(1)',
         }}
       >
-        {open ? '×' : '✦'}
+        <RobotIcon size={26} />
       </button>
 
       {/* Painel do chat */}
@@ -165,13 +176,20 @@ export default function AIAssistant() {
         }}>
 
           {/* Header */}
-          <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--c-border)', background: 'linear-gradient(135deg, #C13584 0%, #7D4A5E 100%)', color: '#fff' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '16px' }}>✦</span>
-              <div>
-                <div style={{ fontSize: '13px', fontWeight: 700 }}>Assistente IA</div>
-                <div style={{ fontSize: '10px', opacity: .8 }}>Cris Costa Beauty</div>
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--c-border)', background: 'linear-gradient(135deg, #C13584 0%, #7D4A5E 100%)', color: '#fff' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <RobotIcon size={20} />
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 700 }}>Assistente IA</div>
+                  <div style={{ fontSize: '10px', opacity: .8 }}>Cris Costa Beauty</div>
+                </div>
               </div>
+              <button
+                onClick={() => setOpen(false)}
+                title="Fechar"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fff', fontSize: '20px', lineHeight: 1, padding: '2px 4px', opacity: .8 }}
+              >×</button>
             </div>
           </div>
 
@@ -181,7 +199,11 @@ export default function AIAssistant() {
             {messages.length === 0 && (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <div style={{ textAlign: 'center', marginBottom: '14px' }}>
-                  <div style={{ fontSize: '28px', marginBottom: '6px' }}>✦</div>
+                  <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'center' }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #C13584, #7D4A5E)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <RobotIcon size={28} />
+                    </div>
+                  </div>
                   <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--c-text-2)', marginBottom: '3px' }}>Como posso ajudar?</div>
                   <div style={{ fontSize: '10px', color: 'var(--c-text-4)' }}>Crie textos, anexe referências visuais ou tire dúvidas sobre o sistema</div>
                 </div>
