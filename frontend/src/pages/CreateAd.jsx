@@ -80,7 +80,7 @@ const INTEREST_SUGGESTIONS = [
   'Estética e spa', 'Autoestima', 'Salão de beleza', 'Produtos naturais',
 ];
 
-const RADIUS_KM = [1, 5, 10, 25, 50, 80, 150];
+const RADIUS_KM = [1, 2, 3, 5, 8, 10];
 const JOINVILLE_CENTER = [-26.304, -48.846];
 
 /* ══════════════════════════════════════════
@@ -141,24 +141,26 @@ function StepIndicator({ steps, current }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
               <div style={{
                 width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
-                background: done || active ? 'var(--c-accent)' : 'var(--c-surface)',
-                border: `2px solid ${done || active ? 'var(--c-accent)' : 'var(--c-border)'}`,
+                background: done ? '#22C55E' : active ? 'var(--c-accent)' : 'var(--c-surface)',
+                border: `2px solid ${done ? '#22C55E' : active ? 'var(--c-accent)' : 'var(--c-border)'}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: '11px', fontWeight: 700,
                 color: done || active ? '#fff' : 'var(--c-text-4)',
+                transition: 'background .2s, border-color .2s',
               }}>
                 {done ? '✓' : i + 1}
               </div>
               <span style={{
                 fontSize: '12px', whiteSpace: 'nowrap',
                 fontWeight: active ? 600 : 400,
-                color: active ? 'var(--c-text-1)' : done ? 'var(--c-accent)' : 'var(--c-text-4)',
+                color: active ? 'var(--c-text-1)' : done ? '#16A34A' : 'var(--c-text-4)',
               }}>{s}</span>
             </div>
             {i < steps.length - 1 && (
               <div style={{
                 flex: 1, height: '1px', minWidth: '10px', maxWidth: '36px', margin: '0 6px',
-                background: i < current ? 'var(--c-accent)' : 'var(--c-border)',
+                background: i < current ? '#22C55E' : 'var(--c-border)',
+                transition: 'background .2s',
               }} />
             )}
           </React.Fragment>
@@ -243,28 +245,34 @@ function Step1Objective({ objective, setObjective }) {
    PASSO 2 — PÚBLICO
 ══════════════════════════════════════════ */
 
-function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender, setGender, languages, setLanguages, interests, setInterests }) {
-  const [query, setQuery]         = useState('');
-  const [results, setResults]     = useState([]);
-  const [searching, setSearching] = useState(false);
-  const [radius, setRadius]       = useState(10);
-  const [newLang, setNewLang]     = useState('');
-  const [newInt, setNewInt]       = useState('');
-  const debounceRef               = useRef(null);
+function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender, setGender, interests, setInterests }) {
+  const [query, setQuery]           = useState('');
+  const [results, setResults]       = useState([]);
+  const [searching, setSearching]   = useState(false);
+  const [highlighted, setHighlighted] = useState(0);
+  const [radius, setRadius]         = useState(5);
+  const [customRadius, setCustomRadius] = useState('');
+  const [editingRadius, setEditingRadius] = useState(false);
+  const [newInt, setNewInt]         = useState('');
+  const debounceRef                 = useRef(null);
+
+  const activeRadius = editingRadius ? (Number(customRadius) || radius) : radius;
 
   const mapCenter = locations.length > 0
     ? [locations[locations.length - 1].lat, locations[locations.length - 1].lng]
     : null;
 
   async function search(q) {
-    if (!q.trim()) { setResults([]); return; }
+    if (!q.trim()) { setResults([]); setHighlighted(0); return; }
     setSearching(true);
     try {
       const r = await fetch(
         `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=6&addressdetails=1`,
         { headers: { 'Accept-Language': 'pt-BR', 'User-Agent': 'TrafficManager/1.0' } }
       );
-      setResults(await r.json());
+      const data = await r.json();
+      setResults(data);
+      setHighlighted(0);
     } catch { setResults([]); }
     setSearching(false);
   }
@@ -273,7 +281,7 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
     const v = e.target.value;
     setQuery(v);
     clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => search(v), 400);
+    debounceRef.current = setTimeout(() => search(v), 350);
   }
 
   function addFromResult(r) {
@@ -282,21 +290,28 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
       name: r.display_name.split(',').slice(0, 2).join(',').trim(),
       lat: parseFloat(r.lat),
       lng: parseFloat(r.lon),
-      radius,
+      radius: activeRadius,
     }]);
-    setQuery(''); setResults([]);
+    setQuery(''); setResults([]); setHighlighted(0);
+  }
+
+  function onKeyDown(e) {
+    if (!results.length) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); setHighlighted(h => Math.min(h + 1, results.length - 1)); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlighted(h => Math.max(h - 1, 0)); }
+    else if (e.key === 'Enter') { e.preventDefault(); if (results[highlighted]) addFromResult(results[highlighted]); }
+    else if (e.key === 'Escape') { setResults([]); setHighlighted(0); }
   }
 
   function removeLocation(id) { setLocations(prev => prev.filter(l => l.id !== id)); }
 
-  function updateRadius(id, r) {
+  function updateLocRadius(id, r) {
     setLocations(prev => prev.map(l => l.id === id ? { ...l, radius: r } : l));
   }
 
-  function addLang(v) {
-    const t = v.trim();
-    if (t && !languages.includes(t)) setLanguages(prev => [...prev, t]);
-    setNewLang('');
+  function setCustomLocRadius(id, val) {
+    const n = Number(val);
+    if (n > 0) setLocations(prev => prev.map(l => l.id === id ? { ...l, radius: n, custom: true } : l));
   }
 
   function addInterest(v) {
@@ -313,51 +328,95 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
 
       {/* ── Localização ── */}
       <div>
-        <SectionLabel sub="Busque cidades, bairros ou clique diretamente no mapa para adicionar regiões.">
+        <SectionLabel sub="Digite o nome do bairro ou cidade — pressione Enter ou ↑↓ para navegar e selecionar. Você também pode clicar diretamente no mapa.">
           Localização
         </SectionLabel>
 
         {/* Barra de busca + raio */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: '180px', position: 'relative' }}>
+          {/* Campo de busca com teclado */}
+          <div style={{ flex: 1, minWidth: '200px', position: 'relative' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--c-surface)', border: '1.5px solid var(--c-border)', borderRadius: '10px', padding: '8px 12px' }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--c-text-4)', flexShrink: 0 }}>
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
               <input
                 type="text"
-                placeholder="Ex: Blumenau, Santa Catarina..."
+                placeholder="Bairro ou cidade... (Enter para adicionar)"
                 value={query}
                 onChange={onQueryChange}
+                onKeyDown={onKeyDown}
                 style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '13px', color: 'var(--c-text-1)', fontFamily: 'inherit', width: '100%' }}
               />
-              {searching && <span style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>...</span>}
+              {searching && <span style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>…</span>}
             </div>
-            {/* Dropdown de resultados */}
+
+            {/* Dropdown com highlight por teclado */}
             {results.length > 0 && (
               <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: 'var(--c-card-bg)', border: '1px solid var(--c-border)', borderRadius: '10px', zIndex: 10, overflow: 'hidden', boxShadow: 'var(--shadow)' }}>
-                {results.map(r => (
+                {results.map((r, i) => (
                   <div
                     key={r.place_id}
                     onMouseDown={() => addFromResult(r)}
-                    style={{ padding: '9px 14px', cursor: 'pointer', fontSize: '12px', color: 'var(--c-text-1)', borderBottom: '1px solid var(--c-border-lt)', transition: 'background .1s' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'var(--c-hover)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    onMouseEnter={() => setHighlighted(i)}
+                    style={{
+                      padding: '9px 14px', cursor: 'pointer', fontSize: '12px',
+                      color: i === highlighted ? '#fff' : 'var(--c-text-1)',
+                      background: i === highlighted ? 'var(--c-accent)' : 'transparent',
+                      borderBottom: '1px solid var(--c-border-lt)',
+                      transition: 'background .1s',
+                    }}
                   >
                     📍 {r.display_name.split(',').slice(0, 3).join(',')}
                   </div>
                 ))}
+                <div style={{ padding: '6px 14px', fontSize: '10px', color: 'var(--c-text-4)', background: 'var(--c-surface)' }}>
+                  ↑↓ navegar · Enter selecionar · Esc fechar
+                </div>
               </div>
             )}
           </div>
 
-          <select
-            value={radius}
-            onChange={e => setRadius(Number(e.target.value))}
-            style={{ padding: '8px 12px', border: '1.5px solid var(--c-border)', borderRadius: '10px', background: 'var(--c-surface)', color: 'var(--c-text-1)', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}
-          >
-            {RADIUS_KM.map(r => <option key={r} value={r}>{r} km de raio</option>)}
-          </select>
+          {/* Seletor de raio com opção de editar */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {editingRadius ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <input
+                  type="number"
+                  min={1}
+                  max={200}
+                  value={customRadius}
+                  onChange={e => setCustomRadius(e.target.value)}
+                  placeholder="km"
+                  autoFocus
+                  style={{ width: '70px', padding: '8px 10px', border: '1.5px solid var(--c-accent)', borderRadius: '10px', background: 'var(--c-surface)', color: 'var(--c-text-1)', fontSize: '13px', fontFamily: 'inherit', outline: 'none' }}
+                />
+                <button
+                  onClick={() => { if (Number(customRadius) > 0) setRadius(Number(customRadius)); setEditingRadius(false); }}
+                  style={{ padding: '8px 10px', background: 'var(--c-accent)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                >✓</button>
+                <button
+                  onClick={() => { setEditingRadius(false); setCustomRadius(''); }}
+                  style={{ padding: '8px 10px', background: 'var(--c-surface)', border: '1.5px solid var(--c-border)', borderRadius: '10px', fontSize: '12px', color: 'var(--c-text-3)', cursor: 'pointer' }}
+                >✕</button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <select
+                  value={radius}
+                  onChange={e => setRadius(Number(e.target.value))}
+                  style={{ padding: '8px 12px', border: '1.5px solid var(--c-border)', borderRadius: '10px', background: 'var(--c-surface)', color: 'var(--c-text-1)', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer' }}
+                >
+                  {RADIUS_KM.map(r => <option key={r} value={r}>{r} km de raio</option>)}
+                </select>
+                <button
+                  onClick={() => { setCustomRadius(String(radius)); setEditingRadius(true); }}
+                  title="Definir raio personalizado"
+                  style={{ padding: '8px 10px', background: 'var(--c-surface)', border: '1.5px solid var(--c-border)', borderRadius: '10px', fontSize: '12px', color: 'var(--c-text-3)', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                >✏️ Editar</button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Tags de localizações selecionadas */}
@@ -368,13 +427,29 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
                 <span style={{ fontSize: '12px', color: 'var(--c-accent)', fontWeight: 600, flex: 1, minWidth: '100px' }}>📍 {loc.name}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>Raio:</span>
-                  <select
-                    value={loc.radius}
-                    onChange={e => updateRadius(loc.id, Number(e.target.value))}
-                    style={{ padding: '2px 6px', border: '1px solid var(--c-border)', borderRadius: '6px', background: 'var(--c-surface)', color: 'var(--c-text-1)', fontSize: '11px', fontFamily: 'inherit' }}
-                  >
-                    {RADIUS_KM.map(r => <option key={r} value={r}>{r} km</option>)}
-                  </select>
+                  {loc.custom ? (
+                    <input
+                      type="number"
+                      min={1}
+                      value={loc.radius}
+                      onChange={e => setCustomLocRadius(loc.id, e.target.value)}
+                      style={{ width: '60px', padding: '2px 6px', border: '1px solid var(--c-accent)', borderRadius: '6px', background: 'var(--c-surface)', color: 'var(--c-text-1)', fontSize: '11px', fontFamily: 'inherit' }}
+                    />
+                  ) : (
+                    <select
+                      value={loc.radius}
+                      onChange={e => {
+                        const v = e.target.value;
+                        if (v === 'custom') setLocations(prev => prev.map(l => l.id === loc.id ? { ...l, custom: true } : l));
+                        else updateLocRadius(loc.id, Number(v));
+                      }}
+                      style={{ padding: '2px 6px', border: '1px solid var(--c-border)', borderRadius: '6px', background: 'var(--c-surface)', color: 'var(--c-text-1)', fontSize: '11px', fontFamily: 'inherit' }}
+                    >
+                      {RADIUS_KM.map(r => <option key={r} value={r}>{r} km</option>)}
+                      <option value="custom">✏️ Personalizar</option>
+                    </select>
+                  )}
+                  {loc.custom && <span style={{ fontSize: '10px', color: 'var(--c-text-4)' }}>km</span>}
                   <button
                     onClick={() => removeLocation(loc.id)}
                     style={{ background: 'none', border: 'none', color: 'var(--c-accent)', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: '0 2px' }}
@@ -392,7 +467,7 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
               attribution='© <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            <MapClickHandler onAdd={loc => setLocations(prev => [...prev, loc])} radius={radius} />
+            <MapClickHandler onAdd={loc => setLocations(prev => [...prev, loc])} radius={activeRadius} />
             <MapFlyTo center={mapCenter} />
             {locations.map(loc => (
               <Circle
@@ -438,29 +513,12 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
         </div>
       </div>
 
-      {/* ── Idiomas ── */}
+      {/* ── Idiomas — fixo em Português ── */}
       <div>
-        <SectionLabel sub="Deixe vazio para atingir todos os idiomas.">Idiomas</SectionLabel>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
-          {languages.map(l => (
-            <div key={l} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', background: 'rgba(193,53,132,.08)', border: '1px solid rgba(193,53,132,.25)', borderRadius: '20px', fontSize: '12px', color: 'var(--c-accent)', fontWeight: 600 }}>
-              {l}
-              <span onClick={() => setLanguages(prev => prev.filter(x => x !== l))} style={{ cursor: 'pointer', fontWeight: 700, marginLeft: '1px' }}>×</span>
-            </div>
-          ))}
-        </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <input
-            type="text"
-            placeholder="Adicionar idioma..."
-            value={newLang}
-            onChange={e => setNewLang(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && addLang(newLang)}
-            style={{ flex: 1, padding: '8px 12px', border: '1.5px solid var(--c-border)', borderRadius: '10px', background: 'var(--c-surface)', color: 'var(--c-text-1)', fontSize: '13px', fontFamily: 'inherit', outline: 'none' }}
-          />
-          <button onClick={() => addLang(newLang)} style={{ padding: '8px 14px', background: 'var(--c-surface)', border: '1.5px solid var(--c-border)', borderRadius: '10px', fontSize: '12px', color: 'var(--c-text-2)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-            + Adicionar
-          </button>
+        <SectionLabel sub="Campanha configurada para Português. Edite o código se precisar adicionar outros idiomas.">Idioma</SectionLabel>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '6px 14px', background: 'rgba(193,53,132,.08)', border: '1px solid rgba(193,53,132,.25)', borderRadius: '20px' }}>
+          <span style={{ fontSize: '14px' }}>🇧🇷</span>
+          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-accent)' }}>Português</span>
         </div>
       </div>
 
@@ -469,7 +527,6 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
         <SectionLabel sub="Segmente por interesses, comportamentos e dados demográficos.">
           Interesses e comportamentos
         </SectionLabel>
-        {/* Sugestões */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
           {INTEREST_SUGGESTIONS.filter(s => !interests.includes(s)).map(s => (
             <div
@@ -481,7 +538,6 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
             >+ {s}</div>
           ))}
         </div>
-        {/* Selecionados */}
         {interests.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
             {interests.map(i => (
@@ -1029,8 +1085,49 @@ function SummaryPanel({ step, objective, locations, budgetType, budgetValue, adF
 
   return (
     <div className="wizard-summary-panel" style={{ background: 'var(--c-card-bg)', border: '1px solid var(--c-border)', borderRadius: '14px', padding: '18px' }}>
-      <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--c-text-4)', marginBottom: '16px' }}>Resumo</div>
+      <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--c-text-4)', marginBottom: '14px' }}>Resumo</div>
 
+      {/* ── Mini tracker de etapas ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid var(--c-border-lt)' }}>
+        {STEPS.map((s, i) => {
+          const done   = i < step;
+          const active = i === step;
+          return (
+            <div key={s} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {/* Círculo numerado */}
+              <div style={{
+                width: '20px', height: '20px', borderRadius: '50%', flexShrink: 0,
+                background: done ? '#22C55E' : active ? 'var(--c-accent)' : 'var(--c-surface)',
+                border: `2px solid ${done ? '#22C55E' : active ? 'var(--c-accent)' : 'var(--c-border)'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '9px', fontWeight: 700,
+                color: done || active ? '#fff' : 'var(--c-text-4)',
+                transition: 'background .2s, border-color .2s',
+              }}>
+                {done ? '✓' : i + 1}
+              </div>
+              {/* Nome da etapa */}
+              <span style={{
+                fontSize: '11px',
+                fontWeight: active ? 600 : 400,
+                color: done ? '#16A34A' : active ? 'var(--c-text-1)' : 'var(--c-text-4)',
+                transition: 'color .2s',
+              }}>{s}</span>
+              {/* Badge "atual" */}
+              {active && (
+                <span style={{ marginLeft: 'auto', fontSize: '9px', fontWeight: 700, color: 'var(--c-accent)', background: 'rgba(193,53,132,.1)', borderRadius: '6px', padding: '1px 5px', whiteSpace: 'nowrap' }}>
+                  atual
+                </span>
+              )}
+              {done && (
+                <span style={{ marginLeft: 'auto', fontSize: '9px', color: '#16A34A' }}>✓</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Dados preenchidos ── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
         {obj && (
           <div>
@@ -1135,7 +1232,7 @@ export default function CreateAd() {
 
   const stepComponents = [
     <Step1Objective objective={objective} setObjective={setObjective} />,
-    <Step2Audience  locations={locations} setLocations={setLocations} ageRange={ageRange} setAgeRange={setAgeRange} gender={gender} setGender={setGender} languages={languages} setLanguages={setLanguages} interests={interests} setInterests={setInterests} />,
+    <Step2Audience  locations={locations} setLocations={setLocations} ageRange={ageRange} setAgeRange={setAgeRange} gender={gender} setGender={setGender} interests={interests} setInterests={setInterests} />,
     <Step3Placements placementMode={placementMode} setPlacementMode={setPlacementMode} selectedPlacements={selectedPlacements} setSelectedPlacements={setSelectedPlacements} />,
     <Step4Budget campaignName={campaignName} setCampaignName={setCampaignName} budgetType={budgetType} setBudgetType={setBudgetType} budgetValue={budgetValue} setBudgetValue={setBudgetValue} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} bidStrategy={bidStrategy} setBidStrategy={setBidStrategy} />,
     <Step5Creative adName={adName} setAdName={setAdName} adFormat={adFormat} setAdFormat={setAdFormat} mediaFiles={mediaFiles} setMediaFiles={setMediaFiles} primaryText={primaryText} setPrimaryText={setPrimaryText} headline={headline} setHeadline={setHeadline} adDescription={adDescription} setAdDescription={setAdDescription} destUrl={destUrl} setDestUrl={setDestUrl} ctaButton={ctaButton} setCtaButton={setCtaButton} />,
