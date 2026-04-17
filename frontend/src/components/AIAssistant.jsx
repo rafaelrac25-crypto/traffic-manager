@@ -86,6 +86,19 @@ export default function AIAssistant() {
     if (open) setTimeout(() => inputRef.current?.focus(), 100);
   }, [open]);
 
+  // Escuta o evento "ai-ask" disparado pela busca do topbar
+  useEffect(() => {
+    function handleAsk(e) {
+      const text = e.detail?.text?.trim();
+      if (!text) return;
+      setOpen(true);
+      setTimeout(() => send(text), 250);
+    }
+    window.addEventListener('ai-ask', handleAsk);
+    return () => window.removeEventListener('ai-ask', handleAsk);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, imagePreview, imageBase64, loading]);
+
   async function handleImageSelect(e) {
     const file = e.target.files?.[0];
     if (!file) return;

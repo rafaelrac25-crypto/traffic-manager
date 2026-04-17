@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAppState } from '../contexts/AppStateContext';
 import marcaBranca from '../assets/marca-branca.png';
 import marcaColorida from '../assets/marca-colorida.png';
 
@@ -27,9 +28,14 @@ const IconCreate = ({ active }) => (
     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
   </svg>
 );
-const IconLogout = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+const IconRejected = ({ active }) => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={active ? 'var(--c-accent)' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+  </svg>
+);
+const IconInvestment = ({ active }) => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={active ? 'var(--c-accent)' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
   </svg>
 );
 const IconMoon = () => (
@@ -46,13 +52,14 @@ const IconSun = () => (
   </svg>
 );
 
-/* ── Logo ── */
-function Logo({ isDark }) {
+function Logo({ isDark, onClick }) {
   return (
     <img
       src={isDark ? marcaBranca : marcaColorida}
       alt="Cris Costa Beauty"
-      style={{ height: '52px', width: 'auto', objectFit: 'contain', display: 'block' }}
+      onClick={onClick}
+      title="Ir para o Dashboard"
+      style={{ height: '52px', width: 'auto', objectFit: 'contain', display: 'block', cursor: 'pointer' }}
     />
   );
 }
@@ -60,14 +67,19 @@ function Logo({ isDark }) {
 const NAV = [
   { to: '/',              label: 'Dashboard',     Icon: IconDashboard },
   { to: '/anuncios',      label: 'Anúncios',      Icon: IconAds },
+  { to: '/reprovados',    label: 'Reprovados',    Icon: IconRejected, badgeKey: 'rejectedCount' },
   { to: '/calendario',    label: 'Calendário',    Icon: IconCalendar },
+  { to: '/investimento',  label: 'Investimento',  Icon: IconInvestment },
   { to: '/criar-anuncio', label: 'Criar anúncio', Icon: IconCreate },
 ];
 
 export default function Sidebar({ open = false, isMobile = false }) {
-  const navigate           = useNavigate();
-  const location           = useLocation();
-  const { isDark, toggle } = useTheme();
+  const navigate             = useNavigate();
+  const location             = useLocation();
+  const { isDark, toggle }   = useTheme();
+  const { rejectedCount, metaAccount } = useAppState();
+
+  const badgeValues = { rejectedCount };
 
   function isActive(to) {
     if (to === '/') return location.pathname === '/';
@@ -89,21 +101,19 @@ export default function Sidebar({ open = false, isMobile = false }) {
         transition: 'background .25s ease, border-color .25s ease, transform .25s ease',
       }}
     >
-      {/* ── Logo ── */}
+      {/* ── Logo (clicável → home) ── */}
       <div style={{
         padding: '22px 20px 18px',
         borderBottom: '1px solid var(--c-border-lt)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '6px',
       }}>
-        <Logo isDark={isDark} />
+        <Logo isDark={isDark} onClick={() => navigate('/')} />
       </div>
 
       {/* ── Navegação ── */}
       <nav style={{ flex: 1, overflowY: 'auto', padding: '12px 10px 0' }}>
-        {NAV.map(({ to, label, Icon }) => {
+        {NAV.map(({ to, label, Icon, badgeKey }) => {
           const active = isActive(to);
+          const badgeValue = badgeKey ? badgeValues[badgeKey] : 0;
           return (
             <div
               key={to}
@@ -136,7 +146,19 @@ export default function Sidebar({ open = false, isMobile = false }) {
                 }} />
               )}
               <Icon active={active} />
-              <span>{label}</span>
+              <span style={{ flex: 1 }}>{label}</span>
+              {badgeValue > 0 && (
+                <span style={{
+                  minWidth: '20px', height: '20px',
+                  background: '#EF4444', color: '#fff',
+                  borderRadius: '10px', padding: '0 6px',
+                  fontSize: '11px', fontWeight: 700,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  lineHeight: 1,
+                }}>
+                  {badgeValue}
+                </span>
+              )}
             </div>
           );
         })}
@@ -160,7 +182,6 @@ export default function Sidebar({ open = false, isMobile = false }) {
               {isDark ? 'Tema claro' : 'Tema escuro'}
             </span>
           </div>
-          {/* Toggle switch */}
           <div style={{
             width: '36px', height: '20px',
             borderRadius: '20px',
@@ -183,43 +204,39 @@ export default function Sidebar({ open = false, isMobile = false }) {
         </div>
       </div>
 
-      {/* ── Perfil + Sair ── */}
+      {/* ── Perfil (foto sincronizada Meta quando conectado) ── */}
       <div style={{ padding: '8px 10px 14px', borderTop: '1px solid var(--c-border-lt)' }}>
-        {/* Perfil */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: '10px',
-          padding: '8px 12px', borderRadius: '10px', cursor: 'pointer',
-          marginBottom: '2px', transition: 'background .15s',
-        }}
-          onMouseEnter={e => e.currentTarget.style.background = 'var(--c-hover)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-        >
-          <div style={{
-            width: '34px', height: '34px',
-            background: 'linear-gradient(135deg, #E8A4C8, #C13584)',
-            borderRadius: '50%', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', color: '#fff', fontSize: '12px',
-            fontWeight: 700, flexShrink: 0,
-          }}>CC</div>
-          <div>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-text-1)' }}>Cris Costa</div>
-            <div style={{ fontSize: '10px', color: 'var(--c-text-4)' }}>Administrador</div>
+          padding: '8px 12px', borderRadius: '10px',
+          transition: 'background .15s',
+        }}>
+          {metaAccount?.avatarUrl ? (
+            <img
+              src={metaAccount.avatarUrl}
+              alt={metaAccount.name}
+              style={{ width: '34px', height: '34px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '2px solid var(--c-accent)' }}
+            />
+          ) : (
+            <div style={{
+              width: '34px', height: '34px',
+              background: 'linear-gradient(135deg, #E8A4C8, #C13584)',
+              borderRadius: '50%', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', color: '#fff', fontSize: '12px',
+              fontWeight: 700, flexShrink: 0,
+            }}>CC</div>
+          )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {metaAccount?.name || 'Cris Costa'}
+            </div>
+            <div style={{ fontSize: '10px', color: metaAccount?.connected ? '#22C55E' : 'var(--c-text-4)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {metaAccount?.connected && (
+                <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#22C55E', display: 'inline-block' }} />
+              )}
+              {metaAccount?.connected ? 'Meta conectado' : 'Administrador'}
+            </div>
           </div>
-        </div>
-
-        {/* Sair */}
-        <div
-          onClick={() => {}}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '8px',
-            padding: '8px 12px', borderRadius: '10px', cursor: 'pointer',
-            fontSize: '12px', color: 'var(--c-text-3)', transition: 'all .15s',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'var(--c-hover)'; e.currentTarget.style.color = 'var(--c-accent)'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--c-text-3)'; }}
-        >
-          <IconLogout />
-          <span>Sair do sistema</span>
         </div>
       </div>
     </aside>

@@ -680,6 +680,10 @@ function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, s
 function AdMockFeed({ mediaFiles, primaryText, headline, destUrl, ctaButton, scale = 1 }) {
   const media = mediaFiles[0];
   const domain = destUrl ? destUrl.replace(/https?:\/\//, '').split('/')[0] : null;
+  // Feed 1080x1350 (4:5). Sombra em cima e embaixo = 10% cada (diferença do 1080x1080 central).
+  const mediaW = 320 * scale;
+  const mediaH = mediaW * (1350 / 1080); // = 400 * scale
+  const shadeH = mediaH * (135 / 1350);   // ~10% = 40 * scale
   return (
     <div style={{ width: 320 * scale, border: '1px solid var(--c-border)', borderRadius: 12 * scale, overflow: 'hidden', background: 'var(--c-card-bg)', fontSize: scale }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 * scale, padding: `${10 * scale}px ${12 * scale}px`, borderBottom: '1px solid var(--c-border-lt)' }}>
@@ -690,13 +694,20 @@ function AdMockFeed({ mediaFiles, primaryText, headline, destUrl, ctaButton, sca
         </div>
       </div>
       {primaryText && <div style={{ padding: `${8 * scale}px ${12 * scale}px`, fontSize: 12 * scale, color: 'var(--c-text-1)', lineHeight: 1.4 }}>{primaryText}</div>}
-      {media ? (
-        media.type === 'video'
-          ? <video src={media.url} controls style={{ width: '100%', maxHeight: 220 * scale, objectFit: 'cover', display: 'block' }} />
-          : <img src={media.url} alt="preview" style={{ width: '100%', maxHeight: 220 * scale, objectFit: 'cover', display: 'block' }} />
-      ) : (
-        <div style={{ width: '100%', height: 180 * scale, background: 'var(--c-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--c-text-4)', fontSize: 12 * scale }}>Sem mídia</div>
-      )}
+      <div style={{ position: 'relative', width: '100%', height: mediaH, background: 'var(--c-surface)' }}>
+        {media ? (
+          media.type === 'video'
+            ? <video src={media.url} controls style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            : <img src={media.url} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        ) : (
+          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--c-text-4)', fontSize: 12 * scale }}>Sem mídia (1080×1350)</div>
+        )}
+        {/* Sombra superior e inferior indicando área fora do 1080×1080 seguro */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: shadeH, background: 'rgba(0,0,0,0.45)', pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ fontSize: 9 * scale, color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,.8)' }}>zona fora do 1080×1080</span>
+        </div>
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: shadeH, background: 'rgba(0,0,0,0.45)', pointerEvents: 'none' }} />
+      </div>
       <div style={{ padding: `${10 * scale}px ${12 * scale}px`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--c-border-lt)' }}>
         <div>
           {headline && <div style={{ fontSize: 12 * scale, fontWeight: 600, color: 'var(--c-text-1)' }}>{headline}</div>}
@@ -1189,20 +1200,23 @@ function SummaryPanel({ step, objective, locations, budgetType, budgetValue, adF
    MODAL DE PUBLICAÇÃO
 ══════════════════════════════════════════ */
 
-function PublishModal({ onClose }) {
+function PublishModal({ onClose, scheduled, startDate }) {
+  const dateLabel = startDate ? new Date(startDate + 'T12:00:00').toLocaleDateString('pt-BR') : '';
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-      <div style={{ background: 'var(--c-card-bg)', border: '1px solid var(--c-border)', borderRadius: '20px', padding: '40px 36px', maxWidth: '420px', width: '100%', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,.3)', animation: 'fadeIn .25s ease' }}>
-        <div style={{ fontSize: '54px', marginBottom: '16px' }}>🎉</div>
-        <h2 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '10px' }}>Anúncio enviado!</h2>
-        <p style={{ fontSize: '14px', color: 'var(--c-text-2)', lineHeight: 1.7, marginBottom: '6px' }}>
-          Seu anúncio foi enviado para revisão do <strong>Meta Ads</strong>.
+      <div style={{ background: 'var(--c-card-bg)', border: '1px solid var(--c-border)', borderRadius: '20px', padding: '40px 36px', maxWidth: '440px', width: '100%', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,.3)', animation: 'fadeIn .25s ease' }}>
+        <div style={{ fontSize: '54px', marginBottom: '16px' }}>{scheduled ? '📅' : '🎉'}</div>
+        <h2 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '10px' }}>
+          {scheduled ? 'Campanha agendada!' : 'Anúncio enviado para revisão!'}
+        </h2>
+        <p style={{ fontSize: '14px', color: 'var(--c-text-2)', lineHeight: 1.7, marginBottom: '10px' }}>
+          Seu anúncio foi enviado para <strong>revisão do Meta Ads</strong>. Se estiver nas conformidades, será {scheduled ? `publicado automaticamente em ${dateLabel}` : 'publicado em breve'}.
         </p>
-        <p style={{ fontSize: '13px', color: 'var(--c-text-3)', lineHeight: 1.6, marginBottom: '28px' }}>
-          Você será notificado assim que for aprovado — geralmente em até <strong>24 horas</strong>. Acompanhe o status na página de anúncios.
+        <p style={{ fontSize: '13px', color: 'var(--c-text-3)', lineHeight: 1.6, marginBottom: '20px' }}>
+          Você receberá uma notificação no sino quando o Meta aprovar ou reprovar. Se for reprovado, aparecerá na sessão <strong>Reprovados</strong> com o motivo e orientação.
         </p>
         <div style={{ padding: '12px 16px', background: 'rgba(193,53,132,.07)', border: '1px solid rgba(193,53,132,.2)', borderRadius: '10px', fontSize: '12px', color: 'var(--c-text-3)', marginBottom: '24px', lineHeight: 1.5 }}>
-          📋 Status atual: <strong style={{ color: 'var(--c-accent)' }}>Em revisão pelo Meta</strong>
+          📋 Status atual: <strong style={{ color: 'var(--c-accent)' }}>{scheduled ? `Agendado para ${dateLabel} · Em revisão` : 'Em revisão pelo Meta'}</strong>
         </div>
         <button
           onClick={onClose}
@@ -1221,6 +1235,7 @@ function PublishModal({ onClose }) {
 
 export default function CreateAd() {
   const navigate = useNavigate();
+  const { addNotification } = useAppState();
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState({});
   const [publishing, setPublishing] = useState(false);
@@ -1254,8 +1269,19 @@ export default function CreateAd() {
     return errs;
   }
 
+  const todayISO = new Date().toISOString().split('T')[0];
+  const isScheduled = !!startDate && startDate > todayISO;
+
   function handlePublish() {
     setPublishing(true);
+    addNotification({
+      kind: 'info',
+      title: isScheduled ? 'Campanha agendada' : 'Anúncio enviado para revisão',
+      message: isScheduled
+        ? `Sua campanha foi agendada para ${new Date(startDate + 'T12:00:00').toLocaleDateString('pt-BR')} e está em revisão pelo Meta.`
+        : 'Assim que o Meta aprovar, sua campanha será publicada automaticamente.',
+      link: '/anuncios',
+    });
   }
 
   const reviewData = { objective, locations, ageRange, gender, interests, budgetType, budgetValue, startDate, endDate, adFormat, mediaFiles, primaryText, headline, destUrl, ctaButton };
@@ -1319,7 +1345,7 @@ export default function CreateAd() {
                 onClick={handlePublish}
                 style={{ padding: '11px 28px', background: 'linear-gradient(135deg,#E0429C,#C13584)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 16px rgba(193,53,132,.35)' }}
               >
-                🚀 Publicar campanha
+                {isScheduled ? '📅 Agendar campanha' : '🚀 Publicar campanha'}
               </button>
             )}
           </div>
@@ -1336,7 +1362,7 @@ export default function CreateAd() {
         />
       </div>
 
-      {publishing && <PublishModal onClose={() => navigate('/anuncios')} />}
+      {publishing && <PublishModal onClose={() => navigate('/anuncios')} scheduled={isScheduled} startDate={startDate} />}
     </div>
   );
 }

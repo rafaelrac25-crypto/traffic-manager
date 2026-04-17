@@ -1,47 +1,264 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import Campaigns from './pages/Campaigns';
 import Calendar from './pages/Calendar';
 import CreateAd from './pages/CreateAd';
+import Rejected from './pages/Rejected';
+import Investment from './pages/Investment';
 import AIAssistant from './components/AIAssistant';
 import SplashScreen from './components/SplashScreen';
+import { AppStateProvider, useAppState } from './contexts/AppStateContext';
 
 const PAGE_TITLES = {
   '/':              'Dashboard',
   '/anuncios':      'Anúncios',
+  '/reprovados':    'Reprovados',
   '/calendario':    'Calendário',
+  '/investimento':  'Investimento',
   '/criar-anuncio': 'Criar anúncio',
 };
 
-/* ── Ícone de busca ── */
+/* ── Mapa de busca — termos → destino ou ação ── */
+const SEARCH_MAP = [
+  { terms: ['dashboard','home','início','inicio','resumo'], to: '/',              label: 'Dashboard' },
+  { terms: ['anúncio','anuncio','anúncios','anuncios','campanhas','campanha','ads'], to: '/anuncios', label: 'Anúncios' },
+  { terms: ['reprovado','reprovados','rejeitado','recusado','negado'], to: '/reprovados', label: 'Reprovados' },
+  { terms: ['calendário','calendario','agenda','datas'], to: '/calendario', label: 'Calendário' },
+  { terms: ['investimento','saldo','fundos','cartão','cartao','pix','pagamento','recarga','orçamento','orcamento'], to: '/investimento', label: 'Investimento' },
+  { terms: ['criar','novo','nova campanha','meta','instagram','google'], to: '/criar-anuncio', label: 'Criar anúncio' },
+];
+
 const SearchIcon = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
   </svg>
 );
 
-/* ── Ícone de sino ── */
 const BellIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
   </svg>
 );
 
-/* ── Ícone hamburger ── */
 const HamburgerIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
     <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
   </svg>
 );
 
+function timeAgo(iso) {
+  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (diff < 60) return 'agora mesmo';
+  if (diff < 3600) return `${Math.floor(diff / 60)} min atrás`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} h atrás`;
+  return `${Math.floor(diff / 86400)} d atrás`;
+}
+
+function NotificationDropdown({ open, onClose }) {
+  const navigate = useNavigate();
+  const { notifications, removeNotification, clearAllNotifications } = useAppState();
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onClick(e) { if (ref.current && !ref.current.contains(e.target)) onClose(); }
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  const colors = {
+    approved:    { bg: '#F0FDF4', border: '#86EFAC', emoji: '✅' },
+    rejected:    { bg: '#FEF2F2', border: '#FCA5A5', emoji: '❌' },
+    'low-balance':{bg: '#FFFBEB', border: '#FCD34D', emoji: '💰' },
+    'high-cpc':  { bg: '#FFF7ED', border: '#FDBA74', emoji: '📈' },
+    funds:       { bg: '#F0FDF4', border: '#86EFAC', emoji: '💵' },
+    info:        { bg: 'var(--c-surface)', border: 'var(--c-border)', emoji: '🔔' },
+  };
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+        width: '360px', maxHeight: '480px',
+        background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',
+        borderRadius: '14px', boxShadow: '0 10px 40px rgba(0,0,0,.15)',
+        zIndex: 1000, overflow: 'hidden',
+        display: 'flex', flexDirection: 'column',
+      }}
+    >
+      <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--c-border-lt)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)' }}>
+          Notificações {notifications.length > 0 && <span style={{ color: 'var(--c-text-4)', fontWeight: 500 }}>({notifications.length})</span>}
+        </div>
+        {notifications.length > 0 && (
+          <button
+            onClick={clearAllNotifications}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', color: 'var(--c-accent)', fontWeight: 600 }}
+          >
+            Limpar todas
+          </button>
+        )}
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+        {notifications.length === 0 ? (
+          <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+            <div style={{ fontSize: '34px', marginBottom: '8px' }}>🔕</div>
+            <div style={{ fontSize: '12px', color: 'var(--c-text-4)' }}>Nenhuma notificação no momento</div>
+          </div>
+        ) : notifications.map(n => {
+          const style = colors[n.kind] || colors.info;
+          return (
+            <div
+              key={n.id}
+              onClick={() => {
+                if (n.link) navigate(n.link);
+                removeNotification(n.id);
+                onClose();
+              }}
+              style={{
+                padding: '12px 16px', borderBottom: '1px solid var(--c-border-lt)',
+                cursor: 'pointer', display: 'flex', gap: '10px',
+                background: n.read ? 'transparent' : style.bg,
+                borderLeft: `3px solid ${style.border}`,
+                transition: 'background .12s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--c-hover)'}
+              onMouseLeave={e => e.currentTarget.style.background = n.read ? 'transparent' : style.bg}
+            >
+              <span style={{ fontSize: '18px', flexShrink: 0 }}>{style.emoji}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '2px' }}>
+                  {n.title}
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--c-text-3)', lineHeight: 1.5, marginBottom: '4px' }}>
+                  {n.message}
+                </div>
+                <div style={{ fontSize: '10px', color: 'var(--c-text-4)' }}>{timeAgo(n.createdAt)}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function SearchBar() {
+  const navigate = useNavigate();
+  const [search, setSearch] = useState('');
+  const [showDrop, setShowDrop] = useState(false);
+  const [noMatch, setNoMatch] = useState(false);
+  const ref = useRef(null);
+
+  const matches = search.trim() === '' ? [] : SEARCH_MAP.filter(item =>
+    item.terms.some(t => t.includes(search.toLowerCase()) || search.toLowerCase().includes(t))
+  );
+
+  useEffect(() => {
+    function onClick(e) { if (ref.current && !ref.current.contains(e.target)) setShowDrop(false); }
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, []);
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    if (!search.trim()) return;
+    if (matches.length > 0) {
+      navigate(matches[0].to);
+      setSearch('');
+      setShowDrop(false);
+    } else {
+      // Sem correspondência: aciona chat flutuante com a pergunta
+      window.dispatchEvent(new CustomEvent('ai-ask', { detail: { text: search } }));
+      setNoMatch(true);
+      setSearch('');
+      setShowDrop(false);
+      setTimeout(() => setNoMatch(false), 2500);
+    }
+  }
+
+  return (
+    <form ref={ref} onSubmit={handleSubmit} style={{ flex: 1, display: 'flex', justifyContent: 'center', position: 'relative' }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '8px',
+        background: 'var(--c-surface)', border: '1.5px solid var(--c-border)',
+        borderRadius: '10px', padding: '8px 14px',
+        width: '100%', maxWidth: '420px',
+      }}>
+        <span style={{ color: 'var(--c-text-4)', display: 'flex' }}><SearchIcon /></span>
+        <input
+          type="text"
+          placeholder="Buscar sessões, ajuda ou perguntar à IA..."
+          value={search}
+          onChange={e => { setSearch(e.target.value); setShowDrop(true); }}
+          onFocus={() => setShowDrop(true)}
+          style={{
+            border: 'none', outline: 'none', background: 'transparent',
+            fontSize: '13px', color: 'var(--c-text-1)', fontFamily: 'inherit', width: '100%',
+          }}
+        />
+      </div>
+
+      {showDrop && search.trim() && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 6px)',
+          left: '50%', transform: 'translateX(-50%)',
+          width: '100%', maxWidth: '420px',
+          background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',
+          borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,.12)',
+          zIndex: 1000, overflow: 'hidden',
+        }}>
+          {matches.length > 0 ? matches.map(m => (
+            <div
+              key={m.to}
+              onClick={() => { navigate(m.to); setSearch(''); setShowDrop(false); }}
+              style={{ padding: '10px 14px', cursor: 'pointer', fontSize: '13px', color: 'var(--c-text-2)', borderBottom: '1px solid var(--c-border-lt)', display: 'flex', justifyContent: 'space-between' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--c-hover)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <span>→ {m.label}</span>
+              <span style={{ fontSize: '10px', color: 'var(--c-text-4)' }}>sessão</span>
+            </div>
+          )) : (
+            <div
+              onClick={handleSubmit}
+              style={{ padding: '12px 14px', cursor: 'pointer', fontSize: '13px', color: 'var(--c-text-2)', display: 'flex', alignItems: 'center', gap: '8px' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--c-hover)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              💬 <span>Perguntar à IA: <strong>"{search}"</strong></span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {noMatch && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 6px)',
+          background: '#C13584', color: '#fff',
+          padding: '8px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: 600,
+          boxShadow: '0 4px 12px rgba(193,53,132,.3)',
+        }}>
+          Enviado ao assistente IA →
+        </div>
+      )}
+    </form>
+  );
+}
+
 function Layout() {
   const navigate  = useNavigate();
   const location  = useLocation();
-  const [search, setSearch]           = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile]       = useState(window.innerWidth <= 1024);
+  const [bellOpen, setBellOpen]       = useState(false);
+  const { unreadCount } = useAppState();
 
   useEffect(() => {
     const handler = () => setIsMobile(window.innerWidth <= 1024);
@@ -49,27 +266,20 @@ function Layout() {
     return () => window.removeEventListener('resize', handler);
   }, []);
 
-  /* Fecha sidebar ao trocar de rota no mobile */
-  useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
+  useEffect(() => { setSidebarOpen(false); setBellOpen(false); }, [location.pathname]);
 
   const title = PAGE_TITLES[location.pathname] || 'Dashboard';
 
   return (
     <div className="app-wrapper">
-      {/* Overlay mobile */}
       {isMobile && sidebarOpen && (
-        <div
-          className="sidebar-overlay show"
-          onClick={() => setSidebarOpen(false)}
-        />
+        <div className="sidebar-overlay show" onClick={() => setSidebarOpen(false)} />
       )}
 
       <Sidebar open={sidebarOpen} isMobile={isMobile} />
 
-      {/* Conteúdo principal */}
       <div className="main-content">
 
-        {/* ── TopHeader ── */}
         <div style={{
           background: 'var(--c-topbar-bg)',
           borderBottom: '1px solid var(--c-border)',
@@ -84,7 +294,6 @@ function Layout() {
           transition: 'background .25s ease, border-color .25s ease',
         }}>
 
-          {/* Hamburger — só mobile */}
           {isMobile && (
             <button
               className="hamburger-btn"
@@ -95,104 +304,59 @@ function Layout() {
             </button>
           )}
 
-          {/* Título da página */}
           <span style={{
-            fontSize: '15px',
-            fontWeight: 700,
-            color: 'var(--c-text-1)',
-            letterSpacing: '-0.2px',
-            flexShrink: 0,
+            fontSize: '15px', fontWeight: 700, color: 'var(--c-text-1)',
+            letterSpacing: '-0.2px', flexShrink: 0,
             minWidth: isMobile ? 'auto' : '100px',
           }}>
             {title}
           </span>
 
-          {/* Barra de busca centralizada */}
-          <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              background: 'var(--c-surface)',
-              border: '1.5px solid var(--c-border)',
-              borderRadius: '10px',
-              padding: '8px 14px',
-              width: '100%',
-              maxWidth: '380px',
-              transition: 'background .25s ease, border-color .2s ease',
-            }}
-              onFocus={() => {}}
+          <SearchBar />
+
+          {/* Sino de notificações (aumentado) */}
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <button
+              onClick={() => setBellOpen(o => !o)}
+              title="Notificações"
+              style={{
+                position: 'relative', cursor: 'pointer', color: 'var(--c-text-2)',
+                background: bellOpen ? 'var(--c-active-bg)' : 'var(--c-surface)',
+                border: '1.5px solid var(--c-border)',
+                width: '40px', height: '40px', borderRadius: '12px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all .15s',
+              }}
             >
-              <span style={{ color: 'var(--c-text-4)', display: 'flex' }}><SearchIcon /></span>
-              <input
-                type="text"
-                placeholder="Buscar anúncios, resultados..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                style={{
-                  border: 'none', outline: 'none', background: 'transparent',
-                  fontSize: '13px', color: 'var(--c-text-1)', fontFamily: 'inherit', width: '100%',
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Área direita */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-
-            {/* Conta info — oculto em mobile pequeno */}
-            {!isMobile && (
-              <div style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
-                padding: '4px 10px',
-                borderRadius: '10px',
-                border: '1px solid var(--c-border)',
-                background: 'var(--c-surface)',
-                cursor: 'default',
-              }}>
-                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-text-1)', lineHeight: 1.2 }}>
-                  Cris Costa Beauty
-                </span>
-                <span style={{ fontSize: '10px', color: '#22C55E', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22C55E', display: 'inline-block' }} />
-                  Conta conectada
-                </span>
-              </div>
-            )}
-
-            {/* Sino */}
-            <div style={{ position: 'relative', cursor: 'pointer', color: 'var(--c-text-3)', display: 'flex', alignItems: 'center' }}>
               <BellIcon />
-              <span style={{
-                position: 'absolute', top: '-3px', right: '-3px',
-                width: '8px', height: '8px', borderRadius: '50%',
-                background: 'var(--c-accent)',
-                border: '1.5px solid var(--c-topbar-bg)',
-              }} />
-            </div>
+              {unreadCount > 0 && (
+                <span style={{
+                  position: 'absolute', top: '-4px', right: '-4px',
+                  minWidth: '18px', height: '18px',
+                  background: '#EF4444', color: '#fff',
+                  borderRadius: '9px', padding: '0 5px',
+                  fontSize: '10px', fontWeight: 700,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  border: '2px solid var(--c-topbar-bg)',
+                  lineHeight: 1,
+                }}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
 
-            {/* Avatar CC */}
-            <div style={{
-              width: '34px', height: '34px',
-              background: 'linear-gradient(135deg, #E8A4C8, #C13584)',
-              borderRadius: '50%',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#fff', fontSize: '12px', fontWeight: 700,
-              flexShrink: 0, cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(193,53,132,.3)',
-            }}>
-              CC
-            </div>
+            <NotificationDropdown open={bellOpen} onClose={() => setBellOpen(false)} />
           </div>
         </div>
 
-        {/* ── Conteúdo ── */}
         <div style={{ flex: 1 }}>
           <Routes>
-            <Route path="/"              element={<Dashboard searchQuery={search} />} />
+            <Route path="/"              element={<Dashboard />} />
             <Route path="/anuncios"      element={<Campaigns />} />
             <Route path="/campanhas"     element={<Navigate to="/anuncios" replace />} />
+            <Route path="/reprovados"    element={<Rejected />} />
             <Route path="/calendario"    element={<Calendar />} />
+            <Route path="/investimento"  element={<Investment />} />
             <Route path="/criar-anuncio" element={<CreateAd />} />
             <Route path="/novo"          element={<Navigate to="/criar-anuncio" replace />} />
             <Route path="*"              element={<Dashboard />} />
@@ -200,26 +364,22 @@ function Layout() {
         </div>
       </div>
 
-      {/* Chat flutuante — em todas as telas */}
       <AIAssistant />
     </div>
   );
 }
 
 export default function App() {
-  /* Splash aparece sempre que a página carrega ou é atualizada */
   const [showSplash, setShowSplash] = useState(true);
-
-  function handleSplashDone() {
-    setShowSplash(false);
-  }
 
   return (
     <BrowserRouter>
-      {showSplash && <SplashScreen onDone={handleSplashDone} />}
-      <Routes>
-        <Route path="/*" element={<Layout />} />
-      </Routes>
+      <AppStateProvider>
+        {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
+        <Routes>
+          <Route path="/*" element={<Layout />} />
+        </Routes>
+      </AppStateProvider>
     </BrowserRouter>
   );
 }
