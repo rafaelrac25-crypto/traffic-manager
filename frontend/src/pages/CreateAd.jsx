@@ -23,7 +23,7 @@ L.Icon.Default.mergeOptions({
    CONSTANTES
 ══════════════════════════════════════════ */
 
-const STEPS = ['Objetivo', 'Público', 'Posicionamentos', 'Orçamento', 'Criativo', 'Revisar'];
+const STEPS = ['Objetivo', 'Público', 'Orçamento', 'Criativo', 'Revisar'];
 
 const META_OBJECTIVES = [
   {
@@ -58,9 +58,8 @@ const META_OBJECTIVES = [
 
 
 const CTA_OPTIONS = [
-  'Saiba mais', 'Comprar agora', 'Inscrever-se', 'Entrar em contato',
-  'Reservar agora', 'Baixar', 'Obter oferta', 'Enviar mensagem',
-  'Ligar agora', 'Ver menu', 'Pedir agora', 'Assistir a mais',
+  'Saiba mais', 'Entrar em contato', 'Reservar agora', 'Enviar mensagem',
+  'Inscrever-se', 'Chamar agora', 'Mande uma mensagem', 'WhatsApp',
 ];
 
 const INTEREST_SUGGESTIONS = [
@@ -558,37 +557,7 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
 }
 
 /* ══════════════════════════════════════════
-   PASSO 3 — POSICIONAMENTOS
-══════════════════════════════════════════ */
-
-function Step3Placements() {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <div>
-        <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>Onde o anúncio vai aparecer?</h2>
-        <p style={{ fontSize: '13px', color: 'var(--c-text-3)' }}>Posicionamentos gerenciados automaticamente pelo Meta.</p>
-      </div>
-      <div style={{ padding: '18px 20px', background: 'rgba(59,130,246,.06)', border: '1px solid rgba(59,130,246,.2)', borderRadius: '14px', display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
-        <div style={{ fontSize: '28px', lineHeight: 1 }}>⚡</div>
-        <div>
-          <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '6px' }}>Advantage+ ativado</div>
-          <div style={{ fontSize: '13px', color: 'var(--c-text-2)', lineHeight: 1.6 }}>
-            O Meta testa automaticamente todos os posicionamentos — Feed, Stories, Reels, Messenger e Audience Network — e direciona o orçamento para onde o anúncio performa melhor para o seu objetivo.
-          </div>
-          <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-            {['📱 Instagram Feed', '📖 Instagram Stories', '🎬 Instagram Reels', '👥 Facebook Feed', '💬 Messenger', '🌐 Audience Network'].map(p => (
-              <span key={p} style={{ padding: '3px 10px', background: 'rgba(59,130,246,.1)', border: '1px solid rgba(59,130,246,.25)', borderRadius: '20px', fontSize: '11px', color: 'var(--c-text-2)' }}>{p}</span>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-/* ══════════════════════════════════════════
-   PASSO 4 — ORÇAMENTO
+   PASSO 3 — ORÇAMENTO
 ══════════════════════════════════════════ */
 
 function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, startDate, setStartDate, endDate, setEndDate }) {
@@ -683,10 +652,9 @@ function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, s
    PREVIEW BLOCK — Feed / Stories / Carrossel
 ══════════════════════════════════════════ */
 
-function AdMockFeed({ mediaFiles, primaryText, headline, destUrl, hashtags, ctaButton, scale = 1 }) {
+function AdMockFeed({ mediaFiles, primaryText, headline, destUrl, ctaButton, scale = 1 }) {
   const media = mediaFiles[0];
   const domain = destUrl ? destUrl.replace(/https?:\/\//, '').split('/')[0] : null;
-  const tags = hashtags ? hashtags.trim().split(/\s+/).map(h => h.startsWith('#') ? h : '#' + h).join(' ') : '';
   return (
     <div style={{ width: 320 * scale, border: '1px solid var(--c-border)', borderRadius: 12 * scale, overflow: 'hidden', background: 'var(--c-card-bg)', fontSize: scale }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 * scale, padding: `${10 * scale}px ${12 * scale}px`, borderBottom: '1px solid var(--c-border-lt)' }}>
@@ -696,7 +664,7 @@ function AdMockFeed({ mediaFiles, primaryText, headline, destUrl, hashtags, ctaB
           <div style={{ fontSize: 10 * scale, color: 'var(--c-text-4)' }}>Patrocinado · 🌐</div>
         </div>
       </div>
-      {primaryText && <div style={{ padding: `${8 * scale}px ${12 * scale}px`, fontSize: 12 * scale, color: 'var(--c-text-1)', lineHeight: 1.4 }}>{primaryText}{tags && <span style={{ color: 'var(--c-accent)' }}> {tags}</span>}</div>}
+      {primaryText && <div style={{ padding: `${8 * scale}px ${12 * scale}px`, fontSize: 12 * scale, color: 'var(--c-text-1)', lineHeight: 1.4 }}>{primaryText}</div>}
       {media ? (
         media.type === 'video'
           ? <video src={media.url} controls style={{ width: '100%', maxHeight: 220 * scale, objectFit: 'cover', display: 'block' }} />
@@ -715,9 +683,8 @@ function AdMockFeed({ mediaFiles, primaryText, headline, destUrl, hashtags, ctaB
   );
 }
 
-function AdMockStories({ mediaFiles, primaryText, headline, hashtags, ctaButton, scale = 1 }) {
+function AdMockStories({ mediaFiles, primaryText, headline, ctaButton, scale = 1 }) {
   const media = mediaFiles[0];
-  const tags = hashtags ? hashtags.trim().split(/\s+/).map(h => h.startsWith('#') ? h : '#' + h).join(' ') : '';
   return (
     <div style={{ width: 180 * scale, height: 320 * scale, borderRadius: 16 * scale, overflow: 'hidden', background: '#111', position: 'relative', display: 'flex', flexDirection: 'column' }}>
       {media ? (
@@ -735,7 +702,7 @@ function AdMockStories({ mediaFiles, primaryText, headline, hashtags, ctaButton,
         </div>
       </div>
       <div style={{ position: 'relative', zIndex: 2, marginTop: 'auto', padding: `${8 * scale}px ${10 * scale}px ${12 * scale}px` }}>
-        {(primaryText || tags) && <div style={{ fontSize: 10 * scale, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,.8)', marginBottom: 6 * scale, lineHeight: 1.3 }}>{primaryText}{tags && <span style={{ color: '#ffb3d9' }}> {tags}</span>}</div>}
+        {primaryText && <div style={{ fontSize: 10 * scale, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,.8)', marginBottom: 6 * scale, lineHeight: 1.3 }}>{primaryText}</div>}
         {headline && <div style={{ fontSize: 11 * scale, fontWeight: 700, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,.8)', marginBottom: 6 * scale }}>{headline}</div>}
         <div style={{ background: 'rgba(255,255,255,.2)', backdropFilter: 'blur(6px)', borderRadius: 20 * scale, padding: `${5 * scale}px ${14 * scale}px`, display: 'inline-block', fontSize: 10 * scale, fontWeight: 700, color: '#fff', border: '1px solid rgba(255,255,255,.4)' }}>
           {ctaButton} ↑
@@ -745,7 +712,7 @@ function AdMockStories({ mediaFiles, primaryText, headline, hashtags, ctaButton,
   );
 }
 
-function AdMockCarousel({ mediaFiles, headline, destUrl, hashtags, ctaButton, scale = 1 }) {
+function AdMockCarousel({ mediaFiles, headline, destUrl, ctaButton, scale = 1 }) {
   const domain = destUrl ? destUrl.replace(/https?:\/\//, '').split('/')[0] : null;
   const cards = mediaFiles.length > 0 ? mediaFiles : [null, null, null];
   return (
@@ -781,12 +748,12 @@ function AdMockCarousel({ mediaFiles, headline, destUrl, hashtags, ctaButton, sc
   );
 }
 
-function PreviewBlock({ adFormat, mediaFiles, primaryText, headline, destUrl, hashtags, ctaButton }) {
+function PreviewBlock({ adFormat, mediaFiles, primaryText, headline, destUrl, ctaButton }) {
   const tabs = ['Feed', 'Stories', ...(adFormat === 'carousel' ? ['Carrossel'] : [])];
   const [activeTab, setActiveTab] = useState('Feed');
   const [modal, setModal] = useState(false);
 
-  const mockProps = { mediaFiles, primaryText, headline, destUrl, hashtags, ctaButton };
+  const mockProps = { mediaFiles, primaryText, headline, destUrl, ctaButton };
 
   function renderMock(scale = 1) {
     if (activeTab === 'Stories') return <AdMockStories {...mockProps} scale={scale} />;
@@ -821,9 +788,10 @@ function PreviewBlock({ adFormat, mediaFiles, primaryText, headline, destUrl, ha
    PASSO 5 — CRIATIVO
 ══════════════════════════════════════════ */
 
-function Step5Creative({ adFormat, setAdFormat, mediaFiles, setMediaFiles, primaryText, setPrimaryText, headline, setHeadline, destUrl, setDestUrl, hashtags, setHashtags, ctaButton, setCtaButton }) {
+function Step5Creative({ adFormat, setAdFormat, mediaFiles, setMediaFiles, primaryText, setPrimaryText, headline, setHeadline, destUrl, setDestUrl, ctaButton, setCtaButton }) {
   const fileRef  = useRef(null);
   const [drag, setDrag] = useState(false);
+  const [customCta, setCustomCta] = useState('');
 
   function handleFiles(files) {
     const arr = Array.from(files).map(f => ({
@@ -949,25 +917,25 @@ function Step5Creative({ adFormat, setAdFormat, mediaFiles, setMediaFiles, prima
         {destUrl && !destUrl.startsWith('http') && <p style={{ fontSize: '11px', color: '#EF4444', marginTop: '4px' }}>URL deve começar com https://</p>}
       </div>
 
-      {/* Hashtags */}
-      <div>
-        <SectionLabel sub="Opcional. Hashtags não afetam a entrega do anúncio, mas aparecem clicáveis no criativo.">Hashtags</SectionLabel>
-        <input
-          placeholder="#beleza #estética #criscostabeleza"
-          value={hashtags}
-          onChange={e => setHashtags(e.target.value)}
-          style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1.5px solid var(--c-border)', background: 'var(--c-surface)', color: 'var(--c-text-1)', fontSize: '14px', boxSizing: 'border-box' }}
-        />
-        <p style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '4px' }}>Separe com espaço. O # será adicionado automaticamente se não incluído.</p>
-      </div>
-
       {/* CTA */}
       <div>
         <SectionLabel sub="Texto do botão que aparece no anúncio.">Botão de chamada para ação (CTA)</SectionLabel>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
           {CTA_OPTIONS.map(cta => (
-            <Pill key={cta} selected={ctaButton === cta} onClick={() => setCtaButton(cta)}>{cta}</Pill>
+            <Pill key={cta} selected={ctaButton === cta} onClick={() => { setCtaButton(cta); setCustomCta(''); }}>{cta}</Pill>
           ))}
+          <Pill selected={!CTA_OPTIONS.includes(ctaButton) && ctaButton !== ''} onClick={() => {}}>
+            <span style={{ color: 'var(--c-text-4)', fontSize: '11px' }}>Personalizado</span>
+          </Pill>
+        </div>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <input
+            type="text"
+            placeholder="Digite um texto personalizado..."
+            value={customCta}
+            onChange={e => { setCustomCta(e.target.value); if (e.target.value) setCtaButton(e.target.value); }}
+            style={{ flex: 1, padding: '9px 12px', border: '1.5px solid var(--c-border)', borderRadius: '10px', background: 'var(--c-surface)', color: 'var(--c-text-1)', fontSize: '13px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
+          />
         </div>
       </div>
 
@@ -979,7 +947,6 @@ function Step5Creative({ adFormat, setAdFormat, mediaFiles, setMediaFiles, prima
           primaryText={primaryText}
           headline={headline}
           destUrl={destUrl}
-          hashtags={hashtags}
           ctaButton={ctaButton}
         />
       )}
@@ -1011,11 +978,6 @@ function Step6Review({ data, onGoTo }) {
     },
     {
       step: 2,
-      label: 'Posicionamentos',
-      rows: ['⚡ Advantage+ automático'],
-    },
-    {
-      step: 3,
       label: 'Orçamento',
       rows: [
         data.budgetValue ? `💰 R$ ${Number(data.budgetValue).toFixed(2).replace('.', ',')} / ${{ daily: 'dia', weekly: 'semana', total: 'campanha' }[data.budgetType] || 'campanha'}` : '💰 — valor não definido',
@@ -1023,7 +985,7 @@ function Step6Review({ data, onGoTo }) {
       ].filter(Boolean),
     },
     {
-      step: 4,
+      step: 3,
       label: 'Criativo',
       rows: [
         data.adFormat ? `${{ image: '🖼️ Imagem única', carousel: '🎠 Carrossel', video: '🎬 Vídeo' }[data.adFormat]}` : null,
@@ -1198,7 +1160,6 @@ export default function CreateAd() {
   const [primaryText,        setPrimaryText]        = useState('');
   const [headline,           setHeadline]           = useState('');
   const [destUrl,            setDestUrl]            = useState('');
-  const [hashtags,           setHashtags]           = useState('');
   const [ctaButton,          setCtaButton]          = useState('Saiba mais');
 
   function handlePublish() {
@@ -1207,14 +1168,13 @@ export default function CreateAd() {
     navigate('/anuncios');
   }
 
-  const reviewData = { objective, locations, ageRange, gender, interests, budgetType, budgetValue, startDate, endDate, adFormat, mediaFiles, primaryText, headline, destUrl, hashtags, ctaButton };
+  const reviewData = { objective, locations, ageRange, gender, interests, budgetType, budgetValue, startDate, endDate, adFormat, mediaFiles, primaryText, headline, destUrl, ctaButton };
 
   const stepComponents = [
     <Step1Objective objective={objective} setObjective={setObjective} />,
     <Step2Audience  locations={locations} setLocations={setLocations} ageRange={ageRange} setAgeRange={setAgeRange} gender={gender} setGender={setGender} interests={interests} setInterests={setInterests} />,
-    <Step3Placements />,
     <Step4Budget budgetType={budgetType} setBudgetType={setBudgetType} budgetValue={budgetValue} setBudgetValue={setBudgetValue} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} />,
-    <Step5Creative adFormat={adFormat} setAdFormat={setAdFormat} mediaFiles={mediaFiles} setMediaFiles={setMediaFiles} primaryText={primaryText} setPrimaryText={setPrimaryText} headline={headline} setHeadline={setHeadline} destUrl={destUrl} setDestUrl={setDestUrl} hashtags={hashtags} setHashtags={setHashtags} ctaButton={ctaButton} setCtaButton={setCtaButton} />,
+    <Step5Creative adFormat={adFormat} setAdFormat={setAdFormat} mediaFiles={mediaFiles} setMediaFiles={setMediaFiles} primaryText={primaryText} setPrimaryText={setPrimaryText} headline={headline} setHeadline={setHeadline} destUrl={destUrl} setDestUrl={setDestUrl} ctaButton={ctaButton} setCtaButton={setCtaButton} />,
     <Step6Review data={reviewData} onGoTo={setStep} />,
   ];
 
@@ -1224,7 +1184,7 @@ export default function CreateAd() {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '4px' }}>Criar anúncio</h1>
-          <p style={{ fontSize: '13px', color: 'var(--c-text-3)' }}>Meta Ads · Configure sua campanha de tráfego pago em 6 passos.</p>
+          <p style={{ fontSize: '13px', color: 'var(--c-text-3)' }}>Meta Ads · Configure sua campanha de tráfego pago em 5 passos.</p>
         </div>
         <button
           onClick={() => navigate('/anuncios')}
