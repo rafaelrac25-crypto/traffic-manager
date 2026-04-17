@@ -62,11 +62,6 @@ const META_PLACEMENTS = [
   { platform: 'Audience Network', icon: '🌐', items: ['Nativo, banner e intersticial', 'Vídeos in-stream rewarded'] },
 ];
 
-const BID_STRATEGIES = [
-  { id: 'lowest_cost', label: 'Menor custo',     desc: 'O Meta maximiza resultados usando todo o orçamento disponível.' },
-  { id: 'cost_cap',    label: 'Limite de custo',  desc: 'Controla o custo médio por resultado. Recomendado para escala.' },
-  { id: 'bid_cap',     label: 'Limite de lance',  desc: 'Define o valor máximo por lance em cada leilão de anúncios.' },
-];
 
 const CTA_OPTIONS = [
   'Saiba mais', 'Comprar agora', 'Inscrever-se', 'Entrar em contato',
@@ -1082,7 +1077,7 @@ function Step6Review({ data, onGoTo }) {
    PAINEL DE RESUMO
 ══════════════════════════════════════════ */
 
-function SummaryPanel({ step, objective, locations, budgetType, budgetValue, adFormat, campaignName }) {
+function SummaryPanel({ step, objective, locations, budgetType, budgetValue, adFormat }) {
   const obj = META_OBJECTIVES.flatMap(g => g.items).find(o => o.id === objective);
   const progress = Math.round(((step + 1) / STEPS.length) * 100);
 
@@ -1136,13 +1131,6 @@ function SummaryPanel({ step, objective, locations, budgetType, budgetValue, adF
           <div>
             <div style={{ fontSize: '10px', color: 'var(--c-text-4)', marginBottom: '3px' }}>OBJETIVO</div>
             <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--c-text-1)' }}>{obj.icon} {obj.label}</div>
-          </div>
-        )}
-
-        {campaignName && (
-          <div>
-            <div style={{ fontSize: '10px', color: 'var(--c-text-4)', marginBottom: '3px' }}>CAMPANHA</div>
-            <div style={{ fontSize: '12px', color: 'var(--c-text-2)' }}>{campaignName}</div>
           </div>
         )}
 
@@ -1296,7 +1284,6 @@ export default function CreateAd() {
           budgetType={budgetType}
           budgetValue={budgetValue}
           adFormat={adFormat}
-          campaignName={campaignName}
         />
       </div>
     </div>
