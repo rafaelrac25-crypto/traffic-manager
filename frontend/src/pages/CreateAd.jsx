@@ -71,6 +71,26 @@ const INTEREST_SUGGESTIONS = [
 const RADIUS_KM = [1, 2, 3, 5, 8, 10];
 const JOINVILLE_CENTER = [-26.304, -48.846];
 
+const PT_ACCENT_CHECKS = [
+  [/\bnao\b/i, 'não'], [/\bvoce\b/i, 'você'], [/\btambem\b/i, 'também'],
+  [/\batencao\b/i, 'atenção'], [/\bpromocao\b/i, 'promoção'], [/\bpromocoes\b/i, 'promoções'],
+  [/\binscricao\b/i, 'inscrição'], [/\binformacoes\b/i, 'informações'], [/\bsao\b/i, 'são'],
+  [/\balem\b/i, 'além'], [/\bagendamento\b/i, null], [/\boferta\b/i, null],
+];
+
+function checkTextQuality(text, label) {
+  if (!text) return [];
+  const warns = [];
+  if (/  /.test(text)) warns.push(`${label}: espaço duplo detectado`);
+  if (text !== text.trim()) warns.push(`${label}: espaço no início ou fim do texto`);
+  for (const [re, correct] of PT_ACCENT_CHECKS) {
+    if (!correct) continue;
+    const m = text.match(re);
+    if (m) warns.push(`${label}: "${m[0]}" — correto: "${correct}"`);
+  }
+  return warns;
+}
+
 /* ══════════════════════════════════════════
    HELPERS
 ══════════════════════════════════════════ */
@@ -194,7 +214,7 @@ function MapFlyTo({ center }) {
    PASSO 1 — OBJETIVO
 ══════════════════════════════════════════ */
 
-function Step1Objective({ objective, setObjective }) {
+function Step1Objective({ objective, setObjective, errors = {} }) {
   return (
     <div>
       <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
@@ -225,6 +245,10 @@ function Step1Objective({ objective, setObjective }) {
           </div>
         </div>
       ))}
+
+      {errors.objective && (
+        <p style={{ fontSize: '13px', color: '#EF4444', fontWeight: 600, marginTop: '4px' }}>⚠ {errors.objective}</p>
+      )}
     </div>
   );
 }
@@ -560,7 +584,7 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
    PASSO 3 — ORÇAMENTO
 ══════════════════════════════════════════ */
 
-function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, startDate, setStartDate, endDate, setEndDate }) {
+function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, startDate, setStartDate, endDate, setEndDate, errors = {} }) {
   const today = new Date().toISOString().split('T')[0];
 
   return (
@@ -590,7 +614,7 @@ function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, s
       {/* Valor */}
       <div>
         <SectionLabel>{{ daily: 'Orçamento diário', weekly: 'Orçamento semanal', total: 'Orçamento total da campanha' }[budgetType]}</SectionLabel>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--c-surface)', border: '1.5px solid var(--c-border)', borderRadius: '10px', padding: '0 16px' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--c-surface)', border: `1.5px solid ${errors.budgetValue ? '#EF4444' : 'var(--c-border)'}`, borderRadius: '10px', padding: '0 16px' }}>
           <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--c-accent)' }}>R$</span>
           <input
             type="number"
@@ -602,6 +626,7 @@ function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, s
             style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '20px', fontWeight: 700, color: 'var(--c-text-1)', fontFamily: 'inherit', padding: '10px 0', width: '120px' }}
           />
         </div>
+        {errors.budgetValue && <p style={{ fontSize: '12px', color: '#EF4444', fontWeight: 600, marginTop: '6px' }}>⚠ {errors.budgetValue}</p>}
         {budgetValue && budgetType === 'daily' && (
           <p style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '6px' }}>
             Estimativa semanal: <b>R$ {(Number(budgetValue) * 7).toFixed(2).replace('.', ',')}</b>
@@ -788,7 +813,7 @@ function PreviewBlock({ adFormat, mediaFiles, primaryText, headline, destUrl, ct
    PASSO 5 — CRIATIVO
 ══════════════════════════════════════════ */
 
-function Step5Creative({ adFormat, setAdFormat, mediaFiles, setMediaFiles, primaryText, setPrimaryText, headline, setHeadline, destUrl, setDestUrl, ctaButton, setCtaButton }) {
+function Step5Creative({ adFormat, setAdFormat, mediaFiles, setMediaFiles, primaryText, setPrimaryText, headline, setHeadline, destUrl, setDestUrl, ctaButton, setCtaButton, errors = {} }) {
   const fileRef  = useRef(null);
   const [drag, setDrag] = useState(false);
   const [customCta, setCustomCta] = useState('');
@@ -880,8 +905,9 @@ function Step5Creative({ adFormat, setAdFormat, mediaFiles, setMediaFiles, prima
           onChange={e => setPrimaryText(e.target.value)}
           maxLength={125}
           rows={3}
-          style={{ width: '100%', padding: '10px 14px', border: '1.5px solid var(--c-border)', borderRadius: '10px', background: 'var(--c-surface)', color: 'var(--c-text-1)', fontSize: '13px', fontFamily: 'inherit', outline: 'none', resize: 'vertical', lineHeight: 1.5, boxSizing: 'border-box' }}
+          style={{ width: '100%', padding: '10px 14px', border: `1.5px solid ${errors.primaryText ? '#EF4444' : 'var(--c-border)'}`, borderRadius: '10px', background: 'var(--c-surface)', color: 'var(--c-text-1)', fontSize: '13px', fontFamily: 'inherit', outline: 'none', resize: 'vertical', lineHeight: 1.5, boxSizing: 'border-box' }}
         />
+        {errors.primaryText && <p style={{ fontSize: '12px', color: '#EF4444', fontWeight: 600, marginTop: '4px' }}>⚠ {errors.primaryText}</p>}
       </div>
 
       {/* Título */}
@@ -903,7 +929,7 @@ function Step5Creative({ adFormat, setAdFormat, mediaFiles, setMediaFiles, prima
       {/* URL de destino */}
       <div>
         <SectionLabel>URL de destino *</SectionLabel>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--c-surface)', border: `1.5px solid ${destUrl && !destUrl.startsWith('http') ? '#EF4444' : 'var(--c-border)'}`, borderRadius: '10px', padding: '0 14px', transition: 'border-color .15s' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--c-surface)', border: `1.5px solid ${(errors.destUrl || (destUrl && !destUrl.startsWith('http'))) ? '#EF4444' : 'var(--c-border)'}`, borderRadius: '10px', padding: '0 14px', transition: 'border-color .15s' }}>
           <span style={{ fontSize: '13px', color: 'var(--c-text-4)', flexShrink: 0 }}>🔗</span>
           <input
             type="url"
@@ -914,7 +940,9 @@ function Step5Creative({ adFormat, setAdFormat, mediaFiles, setMediaFiles, prima
           />
           {destUrl && destUrl.startsWith('http') && <span style={{ color: '#22C55E', fontSize: '14px' }}>✓</span>}
         </div>
-        {destUrl && !destUrl.startsWith('http') && <p style={{ fontSize: '11px', color: '#EF4444', marginTop: '4px' }}>URL deve começar com https://</p>}
+        {(errors.destUrl || (destUrl && !destUrl.startsWith('http'))) && (
+          <p style={{ fontSize: '12px', color: '#EF4444', fontWeight: 600, marginTop: '4px' }}>⚠ {errors.destUrl || 'URL deve começar com https://'}</p>
+        )}
       </div>
 
       {/* CTA */}
@@ -1020,6 +1048,26 @@ function Step6Review({ data, onGoTo }) {
           </div>
         </div>
       ))}
+
+      {/* Verificação de qualidade do texto */}
+      {(() => {
+        const warns = [
+          ...checkTextQuality(data.primaryText, 'Texto principal'),
+          ...checkTextQuality(data.headline, 'Título'),
+        ];
+        if (!warns.length) return null;
+        return (
+          <div style={{ padding: '14px 16px', background: 'rgba(239,68,68,.06)', border: '1px solid rgba(239,68,68,.25)', borderRadius: '12px' }}>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: '#DC2626', marginBottom: '8px' }}>🔤 Atenção — possíveis erros de texto:</div>
+            <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {warns.map((w, i) => (
+                <li key={i} style={{ fontSize: '12px', color: '#B91C1C', lineHeight: 1.5 }}>{w}</li>
+              ))}
+            </ul>
+            <p style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '8px', marginBottom: 0 }}>Corrija no passo Criativo antes de publicar, se necessário.</p>
+          </div>
+        );
+      })()}
 
       {/* Aviso de revisão */}
       <div style={{ padding: '14px 16px', background: 'rgba(245,158,11,.07)', border: '1px solid rgba(245,158,11,.25)', borderRadius: '12px', fontSize: '12px', color: 'var(--c-text-2)', lineHeight: 1.6 }}>
@@ -1138,12 +1186,44 @@ function SummaryPanel({ step, objective, locations, budgetType, budgetValue, adF
 }
 
 /* ══════════════════════════════════════════
+   MODAL DE PUBLICAÇÃO
+══════════════════════════════════════════ */
+
+function PublishModal({ onClose }) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+      <div style={{ background: 'var(--c-card-bg)', border: '1px solid var(--c-border)', borderRadius: '20px', padding: '40px 36px', maxWidth: '420px', width: '100%', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,.3)', animation: 'fadeIn .25s ease' }}>
+        <div style={{ fontSize: '54px', marginBottom: '16px' }}>🎉</div>
+        <h2 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '10px' }}>Anúncio enviado!</h2>
+        <p style={{ fontSize: '14px', color: 'var(--c-text-2)', lineHeight: 1.7, marginBottom: '6px' }}>
+          Seu anúncio foi enviado para revisão do <strong>Meta Ads</strong>.
+        </p>
+        <p style={{ fontSize: '13px', color: 'var(--c-text-3)', lineHeight: 1.6, marginBottom: '28px' }}>
+          Você será notificado assim que for aprovado — geralmente em até <strong>24 horas</strong>. Acompanhe o status na página de anúncios.
+        </p>
+        <div style={{ padding: '12px 16px', background: 'rgba(193,53,132,.07)', border: '1px solid rgba(193,53,132,.2)', borderRadius: '10px', fontSize: '12px', color: 'var(--c-text-3)', marginBottom: '24px', lineHeight: 1.5 }}>
+          📋 Status atual: <strong style={{ color: 'var(--c-accent)' }}>Em revisão pelo Meta</strong>
+        </div>
+        <button
+          onClick={onClose}
+          style={{ padding: '13px 32px', background: 'linear-gradient(135deg,#E0429C,#C13584)', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 16px rgba(193,53,132,.35)', width: '100%' }}
+        >
+          Ver meus anúncios →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════
    COMPONENTE PRINCIPAL
 ══════════════════════════════════════════ */
 
 export default function CreateAd() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
+  const [errors, setErrors] = useState({});
+  const [publishing, setPublishing] = useState(false);
 
   /* ── Estado do formulário ── */
   const [objective,          setObjective]          = useState('');
@@ -1162,20 +1242,30 @@ export default function CreateAd() {
   const [destUrl,            setDestUrl]            = useState('');
   const [ctaButton,          setCtaButton]          = useState('Saiba mais');
 
+  function validateStep(s) {
+    const errs = {};
+    if (s === 0 && !objective) errs.objective = 'Selecione um objetivo para continuar.';
+    if (s === 2 && (!budgetValue || Number(budgetValue) <= 0)) errs.budgetValue = 'Defina um valor de orçamento maior que zero.';
+    if (s === 3) {
+      if (!primaryText.trim()) errs.primaryText = 'O texto principal é obrigatório.';
+      if (!destUrl.trim()) errs.destUrl = 'A URL de destino é obrigatória.';
+      else if (!destUrl.startsWith('http')) errs.destUrl = 'A URL deve começar com https://';
+    }
+    return errs;
+  }
+
   function handlePublish() {
-    // TODO: integrar com POST /api/campaigns
-    alert('✅ Anúncio enviado para revisão do Meta!\n\nVocê será notificado quando for aprovado.');
-    navigate('/anuncios');
+    setPublishing(true);
   }
 
   const reviewData = { objective, locations, ageRange, gender, interests, budgetType, budgetValue, startDate, endDate, adFormat, mediaFiles, primaryText, headline, destUrl, ctaButton };
 
   const stepComponents = [
-    <Step1Objective objective={objective} setObjective={setObjective} />,
+    <Step1Objective objective={objective} setObjective={setObjective} errors={errors} />,
     <Step2Audience  locations={locations} setLocations={setLocations} ageRange={ageRange} setAgeRange={setAgeRange} gender={gender} setGender={setGender} interests={interests} setInterests={setInterests} />,
-    <Step4Budget budgetType={budgetType} setBudgetType={setBudgetType} budgetValue={budgetValue} setBudgetValue={setBudgetValue} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} />,
-    <Step5Creative adFormat={adFormat} setAdFormat={setAdFormat} mediaFiles={mediaFiles} setMediaFiles={setMediaFiles} primaryText={primaryText} setPrimaryText={setPrimaryText} headline={headline} setHeadline={setHeadline} destUrl={destUrl} setDestUrl={setDestUrl} ctaButton={ctaButton} setCtaButton={setCtaButton} />,
-    <Step6Review data={reviewData} onGoTo={setStep} />,
+    <Step4Budget budgetType={budgetType} setBudgetType={setBudgetType} budgetValue={budgetValue} setBudgetValue={setBudgetValue} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} errors={errors} />,
+    <Step5Creative adFormat={adFormat} setAdFormat={setAdFormat} mediaFiles={mediaFiles} setMediaFiles={setMediaFiles} primaryText={primaryText} setPrimaryText={setPrimaryText} headline={headline} setHeadline={setHeadline} destUrl={destUrl} setDestUrl={setDestUrl} ctaButton={ctaButton} setCtaButton={setCtaButton} errors={errors} />,
+    <Step6Review data={reviewData} onGoTo={(s) => { setErrors({}); setStep(s); }} />,
   ];
 
   return (
@@ -1206,7 +1296,7 @@ export default function CreateAd() {
           {/* Navegação */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '36px', paddingTop: '20px', borderTop: '1px solid var(--c-border-lt)' }}>
             <button
-              onClick={() => step > 0 ? setStep(s => s - 1) : navigate('/anuncios')}
+              onClick={() => { setErrors({}); step > 0 ? setStep(s => s - 1) : navigate('/anuncios'); }}
               style={{ padding: '10px 20px', border: '1.5px solid var(--c-border)', background: 'var(--c-surface)', color: 'var(--c-text-2)', borderRadius: '10px', fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}
             >
               {step === 0 ? 'Cancelar' : '← Voltar'}
@@ -1214,7 +1304,12 @@ export default function CreateAd() {
 
             {step < STEPS.length - 1 ? (
               <button
-                onClick={() => setStep(s => s + 1)}
+                onClick={() => {
+                  const errs = validateStep(step);
+                  if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+                  setErrors({});
+                  setStep(s => s + 1);
+                }}
                 style={{ padding: '10px 26px', background: 'var(--c-accent)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
               >
                 Próximo →
@@ -1240,6 +1335,8 @@ export default function CreateAd() {
           adFormat={adFormat}
         />
       </div>
+
+      {publishing && <PublishModal onClose={() => navigate('/anuncios')} />}
     </div>
   );
 }
