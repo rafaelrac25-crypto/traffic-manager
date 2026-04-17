@@ -788,10 +788,148 @@ function Step4Budget({ campaignName, setCampaignName, budgetType, setBudgetType,
 }
 
 /* ══════════════════════════════════════════
+   PREVIEW BLOCK — Feed / Stories / Carrossel
+══════════════════════════════════════════ */
+
+function AdMockFeed({ mediaFiles, primaryText, headline, destUrl, hashtags, ctaButton, scale = 1 }) {
+  const media = mediaFiles[0];
+  const domain = destUrl ? destUrl.replace(/https?:\/\//, '').split('/')[0] : null;
+  const tags = hashtags ? hashtags.trim().split(/\s+/).map(h => h.startsWith('#') ? h : '#' + h).join(' ') : '';
+  return (
+    <div style={{ width: 320 * scale, border: '1px solid var(--c-border)', borderRadius: 12 * scale, overflow: 'hidden', background: 'var(--c-card-bg)', fontSize: scale }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 * scale, padding: `${10 * scale}px ${12 * scale}px`, borderBottom: '1px solid var(--c-border-lt)' }}>
+        <div style={{ width: 32 * scale, height: 32 * scale, borderRadius: '50%', background: 'linear-gradient(135deg,#E8A4C8,#C13584)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11 * scale, fontWeight: 700, flexShrink: 0 }}>CC</div>
+        <div>
+          <div style={{ fontSize: 12 * scale, fontWeight: 600, color: 'var(--c-text-1)' }}>Cris Costa Beauty</div>
+          <div style={{ fontSize: 10 * scale, color: 'var(--c-text-4)' }}>Patrocinado · 🌐</div>
+        </div>
+      </div>
+      {primaryText && <div style={{ padding: `${8 * scale}px ${12 * scale}px`, fontSize: 12 * scale, color: 'var(--c-text-1)', lineHeight: 1.4 }}>{primaryText}{tags && <span style={{ color: 'var(--c-accent)' }}> {tags}</span>}</div>}
+      {media ? (
+        media.type === 'video'
+          ? <video src={media.url} controls style={{ width: '100%', maxHeight: 220 * scale, objectFit: 'cover', display: 'block' }} />
+          : <img src={media.url} alt="preview" style={{ width: '100%', maxHeight: 220 * scale, objectFit: 'cover', display: 'block' }} />
+      ) : (
+        <div style={{ width: '100%', height: 180 * scale, background: 'var(--c-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--c-text-4)', fontSize: 12 * scale }}>Sem mídia</div>
+      )}
+      <div style={{ padding: `${10 * scale}px ${12 * scale}px`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--c-border-lt)' }}>
+        <div>
+          {headline && <div style={{ fontSize: 12 * scale, fontWeight: 600, color: 'var(--c-text-1)' }}>{headline}</div>}
+          {domain && <div style={{ fontSize: 10 * scale, color: 'var(--c-text-4)' }}>{domain}</div>}
+        </div>
+        <div style={{ padding: `${5 * scale}px ${12 * scale}px`, background: 'var(--c-accent)', color: '#fff', borderRadius: 6 * scale, fontSize: 11 * scale, fontWeight: 600, flexShrink: 0, marginLeft: 8 * scale }}>{ctaButton}</div>
+      </div>
+    </div>
+  );
+}
+
+function AdMockStories({ mediaFiles, primaryText, headline, hashtags, ctaButton, scale = 1 }) {
+  const media = mediaFiles[0];
+  const tags = hashtags ? hashtags.trim().split(/\s+/).map(h => h.startsWith('#') ? h : '#' + h).join(' ') : '';
+  return (
+    <div style={{ width: 180 * scale, height: 320 * scale, borderRadius: 16 * scale, overflow: 'hidden', background: '#111', position: 'relative', display: 'flex', flexDirection: 'column' }}>
+      {media ? (
+        media.type === 'video'
+          ? <video src={media.url} autoPlay muted loop style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+          : <img src={media.url} alt="stories" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+      ) : (
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg,#3a1a2e,#C13584)' }} />
+      )}
+      <div style={{ position: 'relative', zIndex: 2, padding: `${10 * scale}px ${10 * scale}px 0`, display: 'flex', alignItems: 'center', gap: 6 * scale }}>
+        <div style={{ width: 26 * scale, height: 26 * scale, borderRadius: '50%', background: 'linear-gradient(135deg,#E8A4C8,#C13584)', border: `2px solid #fff`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 8 * scale, fontWeight: 700 }}>CC</div>
+        <div>
+          <div style={{ fontSize: 9 * scale, fontWeight: 600, color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,.6)' }}>Cris Costa Beauty</div>
+          <div style={{ fontSize: 8 * scale, color: 'rgba(255,255,255,.7)' }}>Patrocinado</div>
+        </div>
+      </div>
+      <div style={{ position: 'relative', zIndex: 2, marginTop: 'auto', padding: `${8 * scale}px ${10 * scale}px ${12 * scale}px` }}>
+        {(primaryText || tags) && <div style={{ fontSize: 10 * scale, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,.8)', marginBottom: 6 * scale, lineHeight: 1.3 }}>{primaryText}{tags && <span style={{ color: '#ffb3d9' }}> {tags}</span>}</div>}
+        {headline && <div style={{ fontSize: 11 * scale, fontWeight: 700, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,.8)', marginBottom: 6 * scale }}>{headline}</div>}
+        <div style={{ background: 'rgba(255,255,255,.2)', backdropFilter: 'blur(6px)', borderRadius: 20 * scale, padding: `${5 * scale}px ${14 * scale}px`, display: 'inline-block', fontSize: 10 * scale, fontWeight: 700, color: '#fff', border: '1px solid rgba(255,255,255,.4)' }}>
+          {ctaButton} ↑
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdMockCarousel({ mediaFiles, headline, destUrl, hashtags, ctaButton, scale = 1 }) {
+  const domain = destUrl ? destUrl.replace(/https?:\/\//, '').split('/')[0] : null;
+  const cards = mediaFiles.length > 0 ? mediaFiles : [null, null, null];
+  return (
+    <div style={{ width: 320 * scale, border: '1px solid var(--c-border)', borderRadius: 12 * scale, overflow: 'hidden', background: 'var(--c-card-bg)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 * scale, padding: `${10 * scale}px ${12 * scale}px`, borderBottom: '1px solid var(--c-border-lt)' }}>
+        <div style={{ width: 32 * scale, height: 32 * scale, borderRadius: '50%', background: 'linear-gradient(135deg,#E8A4C8,#C13584)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11 * scale, fontWeight: 700, flexShrink: 0 }}>CC</div>
+        <div>
+          <div style={{ fontSize: 12 * scale, fontWeight: 600, color: 'var(--c-text-1)' }}>Cris Costa Beauty</div>
+          <div style={{ fontSize: 10 * scale, color: 'var(--c-text-4)' }}>Patrocinado · 🌐</div>
+        </div>
+      </div>
+      <div style={{ display: 'flex', overflowX: 'auto', gap: 4 * scale, padding: `0 ${12 * scale}px`, scrollbarWidth: 'none' }}>
+        {cards.map((f, i) => (
+          <div key={i} style={{ flexShrink: 0, width: 140 * scale, height: 140 * scale, background: 'var(--c-surface)', borderRadius: 8 * scale, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {f ? (
+              f.type === 'video'
+                ? <video src={f.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <img src={f.url} alt={`card ${i+1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <span style={{ fontSize: 10 * scale, color: 'var(--c-text-4)' }}>Card {i + 1}</span>
+            )}
+          </div>
+        ))}
+      </div>
+      <div style={{ padding: `${10 * scale}px ${12 * scale}px`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--c-border-lt)' }}>
+        <div>
+          {headline && <div style={{ fontSize: 12 * scale, fontWeight: 600, color: 'var(--c-text-1)' }}>{headline}</div>}
+          {domain && <div style={{ fontSize: 10 * scale, color: 'var(--c-text-4)' }}>{domain}</div>}
+        </div>
+        <div style={{ padding: `${5 * scale}px ${12 * scale}px`, background: 'var(--c-accent)', color: '#fff', borderRadius: 6 * scale, fontSize: 11 * scale, fontWeight: 600, flexShrink: 0, marginLeft: 8 * scale }}>{ctaButton}</div>
+      </div>
+    </div>
+  );
+}
+
+function PreviewBlock({ adFormat, mediaFiles, primaryText, headline, destUrl, hashtags, ctaButton }) {
+  const tabs = ['Feed', 'Stories', ...(adFormat === 'carousel' ? ['Carrossel'] : [])];
+  const [activeTab, setActiveTab] = useState('Feed');
+  const [modal, setModal] = useState(false);
+
+  const mockProps = { mediaFiles, primaryText, headline, destUrl, hashtags, ctaButton };
+
+  function renderMock(scale = 1) {
+    if (activeTab === 'Stories') return <AdMockStories {...mockProps} scale={scale} />;
+    if (activeTab === 'Carrossel') return <AdMockCarousel {...mockProps} scale={scale} />;
+    return <AdMockFeed {...mockProps} scale={scale} />;
+  }
+
+  return (
+    <div>
+      <SectionLabel sub="Clique no preview para ampliar.">Pré-visualização</SectionLabel>
+      <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
+        {tabs.map(t => (
+          <button key={t} onClick={() => setActiveTab(t)} style={{ padding: '4px 14px', borderRadius: '20px', border: '1.5px solid', borderColor: activeTab === t ? 'var(--c-accent)' : 'var(--c-border)', background: activeTab === t ? 'var(--c-accent)' : 'transparent', color: activeTab === t ? '#fff' : 'var(--c-text-2)', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>{t}</button>
+        ))}
+      </div>
+      <div onClick={() => setModal(true)} style={{ cursor: 'zoom-in', display: 'inline-block' }} title="Clique para ampliar">
+        {renderMock(1)}
+      </div>
+      {modal && (
+        <div onClick={() => setModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.75)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div onClick={e => e.stopPropagation()} style={{ position: 'relative' }}>
+            <button onClick={() => setModal(false)} style={{ position: 'absolute', top: -36, right: 0, background: 'rgba(255,255,255,.15)', border: 'none', color: '#fff', borderRadius: '50%', width: 32, height: 32, fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+            {renderMock(activeTab === 'Stories' ? 2 : 1.6)}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════
    PASSO 5 — CRIATIVO
 ══════════════════════════════════════════ */
 
-function Step5Creative({ adName, setAdName, adFormat, setAdFormat, mediaFiles, setMediaFiles, primaryText, setPrimaryText, headline, setHeadline, adDescription, setAdDescription, destUrl, setDestUrl, ctaButton, setCtaButton }) {
+function Step5Creative({ adName, setAdName, adFormat, setAdFormat, mediaFiles, setMediaFiles, primaryText, setPrimaryText, headline, setHeadline, adDescription, setAdDescription, destUrl, setDestUrl, hashtags, setHashtags, ctaButton, setCtaButton }) {
   const fileRef  = useRef(null);
   const [drag, setDrag] = useState(false);
 
@@ -943,6 +1081,18 @@ function Step5Creative({ adName, setAdName, adFormat, setAdFormat, mediaFiles, s
         {destUrl && !destUrl.startsWith('http') && <p style={{ fontSize: '11px', color: '#EF4444', marginTop: '4px' }}>URL deve começar com https://</p>}
       </div>
 
+      {/* Hashtags */}
+      <div>
+        <SectionLabel sub="Opcional. Hashtags não afetam a entrega do anúncio, mas aparecem clicáveis no criativo.">Hashtags</SectionLabel>
+        <input
+          placeholder="#beleza #estética #criscostabeleza"
+          value={hashtags}
+          onChange={e => setHashtags(e.target.value)}
+          style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1.5px solid var(--c-border)', background: 'var(--c-surface)', color: 'var(--c-text-1)', fontSize: '14px', boxSizing: 'border-box' }}
+        />
+        <p style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '4px' }}>Separe com espaço. O # será adicionado automaticamente se não incluído.</p>
+      </div>
+
       {/* CTA */}
       <div>
         <SectionLabel sub="Texto do botão que aparece no anúncio.">Botão de chamada para ação (CTA)</SectionLabel>
@@ -953,39 +1103,17 @@ function Step5Creative({ adName, setAdName, adFormat, setAdFormat, mediaFiles, s
         </div>
       </div>
 
-      {/* Preview simplificado */}
+      {/* Preview */}
       {(mediaFiles.length > 0 || primaryText || headline) && (
-        <div>
-          <SectionLabel sub="Visualização aproximada no feed do Instagram.">Pré-visualização</SectionLabel>
-          <div style={{ maxWidth: '320px', border: '1px solid var(--c-border)', borderRadius: '12px', overflow: 'hidden', background: 'var(--c-card-bg)' }}>
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', borderBottom: '1px solid var(--c-border-lt)' }}>
-              <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg,#E8A4C8,#C13584)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '11px', fontWeight: 700 }}>CC</div>
-              <div>
-                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-text-1)' }}>Cris Costa Beauty</div>
-                <div style={{ fontSize: '10px', color: 'var(--c-text-4)' }}>Patrocinado · 🌐</div>
-              </div>
-            </div>
-            {/* Texto */}
-            {primaryText && <div style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--c-text-1)', lineHeight: 1.4 }}>{primaryText}</div>}
-            {/* Mídia */}
-            {mediaFiles.length > 0 && (
-              mediaFiles[0].type === 'video'
-                ? <video src={mediaFiles[0].url} style={{ width: '100%', maxHeight: '220px', objectFit: 'cover', display: 'block' }} />
-                : <img src={mediaFiles[0].url} alt="preview" style={{ width: '100%', maxHeight: '220px', objectFit: 'cover', display: 'block' }} />
-            )}
-            {/* Rodapé */}
-            <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--c-border-lt)' }}>
-              <div>
-                {headline && <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-text-1)' }}>{headline}</div>}
-                {destUrl && <div style={{ fontSize: '10px', color: 'var(--c-text-4)' }}>{destUrl.replace(/https?:\/\//,'').split('/')[0]}</div>}
-              </div>
-              <div style={{ padding: '5px 12px', background: 'var(--c-accent)', color: '#fff', borderRadius: '6px', fontSize: '11px', fontWeight: 600, flexShrink: 0, marginLeft: '8px' }}>
-                {ctaButton}
-              </div>
-            </div>
-          </div>
-        </div>
+        <PreviewBlock
+          adFormat={adFormat}
+          mediaFiles={mediaFiles}
+          primaryText={primaryText}
+          headline={headline}
+          destUrl={destUrl}
+          hashtags={hashtags}
+          ctaButton={ctaButton}
+        />
       )}
     </div>
   );
@@ -1224,6 +1352,7 @@ export default function CreateAd() {
   const [headline,           setHeadline]           = useState('');
   const [adDescription,      setAdDescription]      = useState('');
   const [destUrl,            setDestUrl]            = useState('');
+  const [hashtags,           setHashtags]           = useState('');
   const [ctaButton,          setCtaButton]          = useState('Saiba mais');
 
   function handlePublish() {
@@ -1232,14 +1361,14 @@ export default function CreateAd() {
     navigate('/anuncios');
   }
 
-  const reviewData = { objective, locations, ageRange, gender, languages, interests, placementMode, selectedPlacements, campaignName, budgetType, budgetValue, startDate, endDate, bidStrategy, adName, adFormat, mediaFiles, primaryText, headline, adDescription, destUrl, ctaButton };
+  const reviewData = { objective, locations, ageRange, gender, languages, interests, placementMode, selectedPlacements, campaignName, budgetType, budgetValue, startDate, endDate, bidStrategy, adName, adFormat, mediaFiles, primaryText, headline, adDescription, destUrl, hashtags, ctaButton };
 
   const stepComponents = [
     <Step1Objective objective={objective} setObjective={setObjective} />,
     <Step2Audience  locations={locations} setLocations={setLocations} ageRange={ageRange} setAgeRange={setAgeRange} gender={gender} setGender={setGender} interests={interests} setInterests={setInterests} />,
     <Step3Placements placementMode={placementMode} setPlacementMode={setPlacementMode} selectedPlacements={selectedPlacements} setSelectedPlacements={setSelectedPlacements} />,
     <Step4Budget campaignName={campaignName} setCampaignName={setCampaignName} budgetType={budgetType} setBudgetType={setBudgetType} budgetValue={budgetValue} setBudgetValue={setBudgetValue} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} bidStrategy={bidStrategy} setBidStrategy={setBidStrategy} />,
-    <Step5Creative adName={adName} setAdName={setAdName} adFormat={adFormat} setAdFormat={setAdFormat} mediaFiles={mediaFiles} setMediaFiles={setMediaFiles} primaryText={primaryText} setPrimaryText={setPrimaryText} headline={headline} setHeadline={setHeadline} adDescription={adDescription} setAdDescription={setAdDescription} destUrl={destUrl} setDestUrl={setDestUrl} ctaButton={ctaButton} setCtaButton={setCtaButton} />,
+    <Step5Creative adName={adName} setAdName={setAdName} adFormat={adFormat} setAdFormat={setAdFormat} mediaFiles={mediaFiles} setMediaFiles={setMediaFiles} primaryText={primaryText} setPrimaryText={setPrimaryText} headline={headline} setHeadline={setHeadline} adDescription={adDescription} setAdDescription={setAdDescription} destUrl={destUrl} setDestUrl={setDestUrl} hashtags={hashtags} setHashtags={setHashtags} ctaButton={ctaButton} setCtaButton={setCtaButton} />,
     <Step6Review data={reviewData} onGoTo={setStep} />,
   ];
 
