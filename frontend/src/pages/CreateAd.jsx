@@ -5,7 +5,7 @@
  * Os dados coletados são enviados via POST /api/campaigns.
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Circle, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -55,12 +55,6 @@ const META_OBJECTIVES = [
   },
 ];
 
-const META_PLACEMENTS = [
-  { platform: 'Facebook',         icon: '🔵', items: ['Feed', 'Stories', 'Reels', 'Coluna direita', 'Vídeos in-stream', 'Marketplace', 'Artigos instantâneos'] },
-  { platform: 'Instagram',        icon: '📸', items: ['Feed', 'Stories', 'Reels', 'Explorar', 'Explorar Home', 'Loja'] },
-  { platform: 'Messenger',        icon: '💬', items: ['Caixa de entrada', 'Stories'] },
-  { platform: 'Audience Network', icon: '🌐', items: ['Nativo, banner e intersticial', 'Vídeos in-stream rewarded'] },
-];
 
 
 const CTA_OPTIONS = [
