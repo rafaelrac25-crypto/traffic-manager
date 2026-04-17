@@ -572,103 +572,37 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
    PASSO 3 — POSICIONAMENTOS
 ══════════════════════════════════════════ */
 
-function Step3Placements({ placementMode, setPlacementMode, selectedPlacements, setSelectedPlacements }) {
-  function toggle(platform, item) {
-    const key = `${platform}|${item}`;
-    setSelectedPlacements(prev => ({ ...prev, [key]: !prev[key] }));
-  }
-
-  function toggleAll(platform, items) {
-    const allSelected = items.every(i => selectedPlacements[`${platform}|${i}`]);
-    const update = {};
-    items.forEach(i => { update[`${platform}|${i}`] = !allSelected; });
-    setSelectedPlacements(prev => ({ ...prev, ...update }));
-  }
-
+function Step3Placements() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <div>
         <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>Onde o anúncio vai aparecer?</h2>
-        <p style={{ fontSize: '13px', color: 'var(--c-text-3)' }}>Escolha onde seu anúncio será exibido nas plataformas Meta.</p>
+        <p style={{ fontSize: '13px', color: 'var(--c-text-3)' }}>Posicionamentos gerenciados automaticamente pelo Meta.</p>
       </div>
-
-      {/* Toggle automático / manual */}
-      <div style={{ display: 'flex', gap: '10px' }}>
-        {[
-          { v: 'auto',   l: 'Automático (Advantage+)', d: 'O Meta escolhe os melhores posicionamentos para seu objetivo e audiência.' },
-          { v: 'manual', l: 'Manual',                  d: 'Você decide exatamente onde o anúncio aparece.' },
-        ].map(opt => (
-          <RadioCard key={opt.v} selected={placementMode === opt.v} onClick={() => setPlacementMode(opt.v)} style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-              <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: `2px solid ${placementMode === opt.v ? 'var(--c-accent)' : 'var(--c-border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                {placementMode === opt.v && <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--c-accent)' }} />}
-              </div>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: placementMode === opt.v ? 'var(--c-accent)' : 'var(--c-text-1)' }}>{opt.l}</span>
-            </div>
-            <p style={{ fontSize: '11px', color: 'var(--c-text-4)', margin: 0, paddingLeft: '24px' }}>{opt.d}</p>
-          </RadioCard>
-        ))}
+      <div style={{ padding: '18px 20px', background: 'rgba(59,130,246,.06)', border: '1px solid rgba(59,130,246,.2)', borderRadius: '14px', display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+        <div style={{ fontSize: '28px', lineHeight: 1 }}>⚡</div>
+        <div>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '6px' }}>Advantage+ ativado</div>
+          <div style={{ fontSize: '13px', color: 'var(--c-text-2)', lineHeight: 1.6 }}>
+            O Meta testa automaticamente todos os posicionamentos — Feed, Stories, Reels, Messenger e Audience Network — e direciona o orçamento para onde o anúncio performa melhor para o seu objetivo.
+          </div>
+          <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {['📱 Instagram Feed', '📖 Instagram Stories', '🎬 Instagram Reels', '👥 Facebook Feed', '💬 Messenger', '🌐 Audience Network'].map(p => (
+              <span key={p} style={{ padding: '3px 10px', background: 'rgba(59,130,246,.1)', border: '1px solid rgba(59,130,246,.25)', borderRadius: '20px', fontSize: '11px', color: 'var(--c-text-2)' }}>{p}</span>
+            ))}
+          </div>
+        </div>
       </div>
-
-      {placementMode === 'auto' && (
-        <div style={{ padding: '14px 16px', background: 'rgba(59,130,246,.06)', border: '1px solid rgba(59,130,246,.2)', borderRadius: '12px', fontSize: '13px', color: 'var(--c-text-2)', lineHeight: 1.6 }}>
-          <b>Recomendado para a maioria das campanhas.</b> O Advantage+ testa múltiplos posicionamentos automaticamente e direciona o orçamento para os que performam melhor — Facebook, Instagram, Messenger e Audience Network.
-        </div>
-      )}
-
-      {placementMode === 'manual' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {META_PLACEMENTS.map(({ platform, icon, items }) => {
-            const allSel = items.every(i => selectedPlacements[`${platform}|${i}`]);
-            const someSel = items.some(i => selectedPlacements[`${platform}|${i}`]);
-            return (
-              <div key={platform} style={{ background: 'var(--c-card-bg)', border: '1px solid var(--c-border)', borderRadius: '12px', overflow: 'hidden' }}>
-                {/* Header da plataforma */}
-                <label style={{ padding: '11px 16px', background: 'var(--c-surface)', borderBottom: '1px solid var(--c-border)', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={allSel}
-                    ref={el => { if (el) el.indeterminate = !allSel && someSel; }}
-                    onChange={() => toggleAll(platform, items)}
-                    style={{ accentColor: '#C13584', width: '15px', height: '15px', cursor: 'pointer' }}
-                  />
-                  <span style={{ fontSize: '16px' }}>{icon}</span>
-                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--c-text-1)' }}>{platform}</span>
-                  <span style={{ fontSize: '11px', color: 'var(--c-text-4)', marginLeft: 'auto' }}>
-                    {items.filter(i => selectedPlacements[`${platform}|${i}`]).length}/{items.length} selecionados
-                  </span>
-                </label>
-                {/* Itens */}
-                <div style={{ padding: '6px' }}>
-                  {items.map(item => (
-                    <label key={item} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', borderRadius: '8px', cursor: 'pointer' }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'var(--c-hover)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={!!selectedPlacements[`${platform}|${item}`]}
-                        onChange={() => toggle(platform, item)}
-                        style={{ accentColor: '#C13584', width: '14px', height: '14px', cursor: 'pointer' }}
-                      />
-                      <span style={{ fontSize: '13px', color: 'var(--c-text-2)' }}>{item}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }
+
 
 /* ══════════════════════════════════════════
    PASSO 4 — ORÇAMENTO
 ══════════════════════════════════════════ */
 
-function Step4Budget({ campaignName, setCampaignName, budgetType, setBudgetType, budgetValue, setBudgetValue, startDate, setStartDate, endDate, setEndDate, bidStrategy, setBidStrategy }) {
+function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, startDate, setStartDate, endDate, setEndDate }) {
   const today = new Date().toISOString().split('T')[0];
 
   return (
@@ -676,18 +610,6 @@ function Step4Budget({ campaignName, setCampaignName, budgetType, setBudgetType,
       <div>
         <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>Orçamento e programação</h2>
         <p style={{ fontSize: '13px', color: 'var(--c-text-3)' }}>Defina quanto investir e por quanto tempo o anúncio ficará ativo.</p>
-      </div>
-
-      {/* Nome da campanha */}
-      <div>
-        <SectionLabel>Nome da campanha</SectionLabel>
-        <input
-          type="text"
-          placeholder="Ex: Promo Verão — Estética — Jul 2026"
-          value={campaignName}
-          onChange={e => setCampaignName(e.target.value)}
-          style={{ width: '100%', padding: '10px 14px', border: '1.5px solid var(--c-border)', borderRadius: '10px', background: 'var(--c-surface)', color: 'var(--c-text-1)', fontSize: '13px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
-        />
       </div>
 
       {/* Tipo de orçamento */}
@@ -764,25 +686,6 @@ function Step4Budget({ campaignName, setCampaignName, budgetType, setBudgetType,
         {!endDate && <p style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '6px' }}>Sem data de término: o anúncio ficará ativo até ser pausado manualmente.</p>}
       </div>
 
-      {/* Estratégia de lance */}
-      <div>
-        <SectionLabel sub="Define como o Meta vai competir nos leilões de anúncios.">Estratégia de lance</SectionLabel>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {BID_STRATEGIES.map(s => (
-            <RadioCard key={s.id} selected={bidStrategy === s.id} onClick={() => setBidStrategy(s.id)}>
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: `2px solid ${bidStrategy === s.id ? 'var(--c-accent)' : 'var(--c-border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }}>
-                  {bidStrategy === s.id && <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--c-accent)' }} />}
-                </div>
-                <div>
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: bidStrategy === s.id ? 'var(--c-accent)' : 'var(--c-text-1)', marginBottom: '2px' }}>{s.label}</div>
-                  <div style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>{s.desc}</div>
-                </div>
-              </div>
-            </RadioCard>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
@@ -929,7 +832,7 @@ function PreviewBlock({ adFormat, mediaFiles, primaryText, headline, destUrl, ha
    PASSO 5 — CRIATIVO
 ══════════════════════════════════════════ */
 
-function Step5Creative({ adName, setAdName, adFormat, setAdFormat, mediaFiles, setMediaFiles, primaryText, setPrimaryText, headline, setHeadline, adDescription, setAdDescription, destUrl, setDestUrl, hashtags, setHashtags, ctaButton, setCtaButton }) {
+function Step5Creative({ adFormat, setAdFormat, mediaFiles, setMediaFiles, primaryText, setPrimaryText, headline, setHeadline, destUrl, setDestUrl, hashtags, setHashtags, ctaButton, setCtaButton }) {
   const fileRef  = useRef(null);
   const [drag, setDrag] = useState(false);
 
@@ -949,18 +852,6 @@ function Step5Creative({ adName, setAdName, adFormat, setAdFormat, mediaFiles, s
       <div>
         <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>Crie o anúncio</h2>
         <p style={{ fontSize: '13px', color: 'var(--c-text-3)' }}>Adicione a mídia e escreva os textos que o público vai ver.</p>
-      </div>
-
-      {/* Nome do anúncio */}
-      <div>
-        <SectionLabel sub="Identificação interna, não aparece para o público.">Nome do anúncio</SectionLabel>
-        <input
-          type="text"
-          placeholder="Ex: Promoção Esmalte Gel — Imagem 1"
-          value={adName}
-          onChange={e => setAdName(e.target.value)}
-          style={{ width: '100%', padding: '10px 14px', border: '1.5px solid var(--c-border)', borderRadius: '10px', background: 'var(--c-surface)', color: 'var(--c-text-1)', fontSize: '13px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
-        />
       </div>
 
       {/* Formato */}
@@ -1052,18 +943,6 @@ function Step5Creative({ adName, setAdName, adFormat, setAdFormat, mediaFiles, s
         />
       </div>
 
-      {/* Descrição */}
-      <div>
-        <SectionLabel sub="Texto adicional opcional, exibido em alguns posicionamentos.">Descrição</SectionLabel>
-        <input
-          type="text"
-          placeholder="Ex: Especialistas em estética há mais de 10 anos."
-          value={adDescription}
-          onChange={e => setAdDescription(e.target.value)}
-          style={{ width: '100%', padding: '10px 14px', border: '1.5px solid var(--c-border)', borderRadius: '10px', background: 'var(--c-surface)', color: 'var(--c-text-1)', fontSize: '13px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
-        />
-      </div>
-
       {/* URL de destino */}
       <div>
         <SectionLabel>URL de destino *</SectionLabel>
@@ -1138,34 +1017,26 @@ function Step6Review({ data, onGoTo }) {
       rows: [
         data.locations.length ? `📍 ${data.locations.map(l => l.name).join(' · ')}` : '📍 Brasil (sem segmentação geográfica)',
         `👤 ${data.ageRange[0]}–${data.ageRange[1]}${data.ageRange[1] === 65 ? '+' : ''} anos · ${({ all: 'Todos', female: 'Feminino', male: 'Masculino' })[data.gender] || 'Todos'}`,
-        data.languages.length ? `🌐 ${data.languages.join(', ')}` : null,
         data.interests.length ? `🎯 ${data.interests.slice(0, 3).join(', ')}${data.interests.length > 3 ? ` +${data.interests.length - 3}` : ''}` : null,
       ].filter(Boolean),
     },
     {
       step: 2,
       label: 'Posicionamentos',
-      rows: [
-        data.placementMode === 'auto'
-          ? '⚡ Automático (Advantage+)'
-          : `Manual · ${Object.values(data.selectedPlacements).filter(Boolean).length} posicionamentos`,
-      ],
+      rows: ['⚡ Advantage+ automático'],
     },
     {
       step: 3,
       label: 'Orçamento',
       rows: [
-        data.campaignName ? `📌 ${data.campaignName}` : null,
         data.budgetValue ? `💰 R$ ${Number(data.budgetValue).toFixed(2).replace('.', ',')} / ${{ daily: 'dia', weekly: 'semana', total: 'campanha' }[data.budgetType] || 'campanha'}` : '💰 — valor não definido',
         `📅 Início: ${data.startDate || 'hoje'} ${data.endDate ? `· Término: ${data.endDate}` : '· Sem data de término'}`,
-        `🎯 Lance: ${BID_STRATEGIES.find(s => s.id === data.bidStrategy)?.label || 'Menor custo'}`,
       ].filter(Boolean),
     },
     {
       step: 4,
       label: 'Criativo',
       rows: [
-        data.adName ? `📝 ${data.adName}` : null,
         data.adFormat ? `${{ image: '🖼️ Imagem única', carousel: '🎠 Carrossel', video: '🎬 Vídeo' }[data.adFormat]}` : null,
         data.mediaFiles.length ? `📎 ${data.mediaFiles.length} arquivo(s) adicionado(s)` : '📎 Nenhuma mídia adicionada',
         data.headline ? `"${data.headline}"` : null,
@@ -1335,22 +1206,15 @@ export default function CreateAd() {
   const [locations,          setLocations]          = useState([]);
   const [ageRange,           setAgeRange]           = useState([18, 65]);
   const [gender,             setGender]             = useState('all');
-  const [languages,          setLanguages]          = useState(['Português']);
   const [interests,          setInterests]          = useState([]);
-  const [placementMode,      setPlacementMode]      = useState('auto');
-  const [selectedPlacements, setSelectedPlacements] = useState({});
-  const [campaignName,       setCampaignName]       = useState('');
   const [budgetType,         setBudgetType]         = useState('daily');
   const [budgetValue,        setBudgetValue]        = useState('');
   const [startDate,          setStartDate]          = useState('');
   const [endDate,            setEndDate]            = useState('');
-  const [bidStrategy,        setBidStrategy]        = useState('lowest_cost');
-  const [adName,             setAdName]             = useState('');
   const [adFormat,           setAdFormat]           = useState('image');
   const [mediaFiles,         setMediaFiles]         = useState([]);
   const [primaryText,        setPrimaryText]        = useState('');
   const [headline,           setHeadline]           = useState('');
-  const [adDescription,      setAdDescription]      = useState('');
   const [destUrl,            setDestUrl]            = useState('');
   const [hashtags,           setHashtags]           = useState('');
   const [ctaButton,          setCtaButton]          = useState('Saiba mais');
@@ -1361,14 +1225,14 @@ export default function CreateAd() {
     navigate('/anuncios');
   }
 
-  const reviewData = { objective, locations, ageRange, gender, languages, interests, placementMode, selectedPlacements, campaignName, budgetType, budgetValue, startDate, endDate, bidStrategy, adName, adFormat, mediaFiles, primaryText, headline, adDescription, destUrl, hashtags, ctaButton };
+  const reviewData = { objective, locations, ageRange, gender, interests, budgetType, budgetValue, startDate, endDate, adFormat, mediaFiles, primaryText, headline, destUrl, hashtags, ctaButton };
 
   const stepComponents = [
     <Step1Objective objective={objective} setObjective={setObjective} />,
     <Step2Audience  locations={locations} setLocations={setLocations} ageRange={ageRange} setAgeRange={setAgeRange} gender={gender} setGender={setGender} interests={interests} setInterests={setInterests} />,
-    <Step3Placements placementMode={placementMode} setPlacementMode={setPlacementMode} selectedPlacements={selectedPlacements} setSelectedPlacements={setSelectedPlacements} />,
-    <Step4Budget campaignName={campaignName} setCampaignName={setCampaignName} budgetType={budgetType} setBudgetType={setBudgetType} budgetValue={budgetValue} setBudgetValue={setBudgetValue} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} bidStrategy={bidStrategy} setBidStrategy={setBidStrategy} />,
-    <Step5Creative adName={adName} setAdName={setAdName} adFormat={adFormat} setAdFormat={setAdFormat} mediaFiles={mediaFiles} setMediaFiles={setMediaFiles} primaryText={primaryText} setPrimaryText={setPrimaryText} headline={headline} setHeadline={setHeadline} adDescription={adDescription} setAdDescription={setAdDescription} destUrl={destUrl} setDestUrl={setDestUrl} hashtags={hashtags} setHashtags={setHashtags} ctaButton={ctaButton} setCtaButton={setCtaButton} />,
+    <Step3Placements />,
+    <Step4Budget budgetType={budgetType} setBudgetType={setBudgetType} budgetValue={budgetValue} setBudgetValue={setBudgetValue} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} />,
+    <Step5Creative adFormat={adFormat} setAdFormat={setAdFormat} mediaFiles={mediaFiles} setMediaFiles={setMediaFiles} primaryText={primaryText} setPrimaryText={setPrimaryText} headline={headline} setHeadline={setHeadline} destUrl={destUrl} setDestUrl={setDestUrl} hashtags={hashtags} setHashtags={setHashtags} ctaButton={ctaButton} setCtaButton={setCtaButton} />,
     <Step6Review data={reviewData} onGoTo={setStep} />,
   ];
 
