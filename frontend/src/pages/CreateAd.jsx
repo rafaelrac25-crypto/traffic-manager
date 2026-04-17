@@ -342,7 +342,7 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
 
             {/* Dropdown com highlight por teclado */}
             {results.length > 0 && (
-              <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: 'var(--c-card-bg)', border: '1px solid var(--c-border)', borderRadius: '10px', zIndex: 10, overflow: 'hidden', boxShadow: 'var(--shadow)' }}>
+              <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: 'var(--c-card-bg)', border: '1px solid var(--c-border)', borderRadius: '10px', zIndex: 9999, overflow: 'hidden', boxShadow: 'var(--shadow)' }}>
                 {results.map((r, i) => (
                   <div
                     key={r.place_id}
@@ -451,7 +451,7 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
 
         {/* Mapa */}
         <div className="leaflet-map-container">
-          <MapContainer center={JOINVILLE_CENTER} zoom={10} style={{ height: '100%', width: '100%' }}>
+          <MapContainer center={JOINVILLE_CENTER} zoom={13} style={{ height: '100%', width: '100%' }}>
             <TileLayer
               attribution='© <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
