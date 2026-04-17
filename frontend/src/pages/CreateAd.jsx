@@ -694,7 +694,11 @@ function Step4Budget({ campaignName, setCampaignName, budgetType, setBudgetType,
       <div>
         <SectionLabel>Tipo de orçamento</SectionLabel>
         <div style={{ display: 'flex', gap: '10px' }}>
-          {[{ v: 'daily', l: 'Diário', d: 'Gaste até X reais por dia' }, { v: 'total', l: 'Total da campanha', d: 'Gaste X reais no período total' }].map(t => (
+          {[
+            { v: 'daily',   l: 'Diário',             d: 'Gaste até X reais por dia' },
+            { v: 'weekly',  l: 'Semanal',             d: 'Gaste até X reais por semana' },
+            { v: 'total',   l: 'Total da campanha',   d: 'Gaste X reais no período total' },
+          ].map(t => (
             <RadioCard key={t.v} selected={budgetType === t.v} onClick={() => setBudgetType(t.v)} style={{ flex: 1 }}>
               <div style={{ fontSize: '13px', fontWeight: 600, color: budgetType === t.v ? 'var(--c-accent)' : 'var(--c-text-1)', marginBottom: '2px' }}>{t.l}</div>
               <div style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>{t.d}</div>
@@ -705,7 +709,7 @@ function Step4Budget({ campaignName, setCampaignName, budgetType, setBudgetType,
 
       {/* Valor */}
       <div>
-        <SectionLabel>{budgetType === 'daily' ? 'Orçamento diário' : 'Orçamento total'}</SectionLabel>
+        <SectionLabel>{{ daily: 'Orçamento diário', weekly: 'Orçamento semanal', total: 'Orçamento total da campanha' }[budgetType]}</SectionLabel>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--c-surface)', border: '1.5px solid var(--c-border)', borderRadius: '10px', padding: '0 16px' }}>
           <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--c-accent)' }}>R$</span>
           <input
@@ -720,7 +724,14 @@ function Step4Budget({ campaignName, setCampaignName, budgetType, setBudgetType,
         </div>
         {budgetValue && budgetType === 'daily' && (
           <p style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '6px' }}>
-            Estimativa mensal: <b>R$ {(Number(budgetValue) * 30).toFixed(2).replace('.', ',')}</b>
+            Estimativa semanal: <b>R$ {(Number(budgetValue) * 7).toFixed(2).replace('.', ',')}</b>
+            {' · '}mensal: <b>R$ {(Number(budgetValue) * 30).toFixed(2).replace('.', ',')}</b>
+          </p>
+        )}
+        {budgetValue && budgetType === 'weekly' && (
+          <p style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '6px' }}>
+            Estimativa mensal: <b>R$ {(Number(budgetValue) * 4.33).toFixed(2).replace('.', ',')}</b>
+            {' · '}diário: <b>R$ {(Number(budgetValue) / 7).toFixed(2).replace('.', ',')}</b>
           </p>
         )}
       </div>
@@ -1017,7 +1028,7 @@ function Step6Review({ data, onGoTo }) {
       label: 'Orçamento',
       rows: [
         data.campaignName ? `📌 ${data.campaignName}` : null,
-        data.budgetValue ? `💰 R$ ${Number(data.budgetValue).toFixed(2).replace('.', ',')} / ${data.budgetType === 'daily' ? 'dia' : 'campanha'}` : '💰 — valor não definido',
+        data.budgetValue ? `💰 R$ ${Number(data.budgetValue).toFixed(2).replace('.', ',')} / ${{ daily: 'dia', weekly: 'semana', total: 'campanha' }[data.budgetType] || 'campanha'}` : '💰 — valor não definido',
         `📅 Início: ${data.startDate || 'hoje'} ${data.endDate ? `· Término: ${data.endDate}` : '· Sem data de término'}`,
         `🎯 Lance: ${BID_STRATEGIES.find(s => s.id === data.bidStrategy)?.label || 'Menor custo'}`,
       ].filter(Boolean),
@@ -1151,7 +1162,7 @@ function SummaryPanel({ step, objective, locations, budgetType, budgetValue, adF
             <div style={{ fontSize: '10px', color: 'var(--c-text-4)', marginBottom: '3px' }}>INVESTIMENTO</div>
             <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--c-accent)' }}>
               R$ {Number(budgetValue).toFixed(2).replace('.', ',')}
-              <span style={{ fontSize: '10px', fontWeight: 400, color: 'var(--c-text-4)' }}> /{budgetType === 'daily' ? 'dia' : 'total'}</span>
+              <span style={{ fontSize: '10px', fontWeight: 400, color: 'var(--c-text-4)' }}> /{{ daily: 'dia', weekly: 'semana', total: 'total' }[budgetType] || 'total'}</span>
             </div>
           </div>
         )}
