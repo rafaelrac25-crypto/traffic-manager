@@ -5,7 +5,7 @@
  * Do not persist mock values.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../contexts/AppStateContext';
 
@@ -132,13 +132,16 @@ function RefreshIcon() {
   );
 }
 
-/* ── Gráfico de linha SVG ── */
-function LineChart({ data }) {
-  const W = 540, H = 160;
-  const padL = 40, padR = 20, padT = 30, padB = 30;
+/* ── Gráfico de linha SVG (interativo) ── */
+function LineChart({ data, unit = 'resultados' }) {
+  const W = 540, H = 180;
+  const padL = 40, padR = 20, padT = 34, padB = 30;
   const plotW = W - padL - padR;
   const plotH = H - padT - padB;
-  const maxVal = 200;
+  const maxVal = Math.max(200, Math.ceil(Math.max(...data.map(d => d.value)) / 50) * 50);
+  const svgRef = useRef(null);
+  const [hoverIdx, setHoverIdx] = useState(data.length - 1);
+  const [isHovering, setIsHovering] = useState(false);
 
   const pts = data.map((d, i) => ({
     x: padL + (i / (data.length - 1)) * plotW,
@@ -146,7 +149,6 @@ function LineChart({ data }) {
     ...d,
   }));
 
-  /* Smooth path com cubic bezier */
   function smoothPath(points) {
     if (points.length < 2) return '';
     let d = `M ${points[0].x},${points[0].y}`;
@@ -158,36 +160,62 @@ function LineChart({ data }) {
     }
     return d;
   }
-
-  /* Área preenchida */
   function areaPath(points) {
-    const linePath = smoothPath(points);
-    const lastPt = points[points.length - 1];
-    const firstPt = points[0];
-    return `${linePath} L ${lastPt.x},${padT + plotH} L ${firstPt.x},${padT + plotH} Z`;
+    const lp = smoothPath(points);
+    const last = points[points.length - 1];
+    const first = points[0];
+    return `${lp} L ${last.x},${padT + plotH} L ${first.x},${padT + plotH} Z`;
   }
 
   const linePath = smoothPath(pts);
   const fillPath = areaPath(pts);
-  const highlightPt = pts[4]; /* 12 Abr — pico */
+  const gridVals = [0, Math.round(maxVal / 4), Math.round(maxVal / 2), Math.round(maxVal * 3 / 4), maxVal];
 
-  /* Y-grid labels */
-  const gridVals = [0, 50, 100, 150, 200];
+  function handleMove(e) {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const svgX = ((e.clientX - rect.left) / rect.width) * W;
+    let nearest = 0, best = Infinity;
+    for (let i = 0; i < pts.length; i++) {
+      const d = Math.abs(pts[i].x - svgX);
+      if (d < best) { best = d; nearest = i; }
+    }
+    setHoverIdx(nearest);
+    setIsHovering(true);
+  }
+
+  const active = pts[hoverIdx] || pts[pts.length - 1];
+  const tooltipX = Math.max(padL + 46, Math.min(W - padR - 46, active.x));
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block', overflow: 'visible' }}>
+    <svg
+      ref={svgRef}
+      viewBox={`0 0 ${W} ${H}`}
+      width="100%"
+      style={{ display: 'block', overflow: 'visible', cursor: 'crosshair' }}
+      onMouseMove={handleMove}
+      onMouseLeave={() => setIsHovering(false)}
+      onTouchMove={(e) => {
+        const t = e.touches[0];
+        if (t) handleMove({ clientX: t.clientX });
+      }}
+    >
       <defs>
         <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stopColor="#C13584" stopOpacity="0.18"/>
+          <stop offset="0%"   stopColor="#C13584" stopOpacity="0.22"/>
           <stop offset="100%" stopColor="#C13584" stopOpacity="0.01"/>
         </linearGradient>
         <linearGradient id="chartLine" x1="0" y1="0" x2="1" y2="0">
           <stop offset="0%"   stopColor="#E879A8"/>
           <stop offset="100%" stopColor="#C13584"/>
         </linearGradient>
+        <filter id="chartGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="3" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
       </defs>
 
-      {/* Grid Y */}
       {gridVals.map(v => {
         const y = padT + plotH - (v / maxVal) * plotH;
         return (
@@ -198,26 +226,79 @@ function LineChart({ data }) {
         );
       })}
 
-      {/* Área preenchida */}
-      <path d={fillPath} fill="url(#chartFill)"/>
+      <path d={fillPath} fill="url(#chartFill)" style={{ transition: 'd .3s ease' }}/>
+      <path d={linePath} fill="none" stroke="url(#chartLine)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" filter="url(#chartGlow)"/>
 
-      {/* Linha principal */}
-      <path d={linePath} fill="none" stroke="url(#chartLine)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-
-      {/* Rótulos X */}
       {pts.map((pt, i) => (
-        <text key={i} x={pt.x} y={H - 4} fontSize="9" fill="var(--c-text-4)" textAnchor="middle">{pt.label}</text>
+        <text
+          key={i}
+          x={pt.x}
+          y={H - 4}
+          fontSize="9"
+          fill={i === hoverIdx ? '#C13584' : 'var(--c-text-4)'}
+          fontWeight={i === hoverIdx ? 700 : 400}
+          textAnchor="middle"
+          style={{ transition: 'fill .18s ease' }}
+        >
+          {pt.label}
+        </text>
       ))}
 
-      {/* Ponto destacado — 12 Abr */}
-      <line x1={highlightPt.x} y1={padT} x2={highlightPt.x} y2={padT + plotH} stroke="#C13584" strokeWidth="1" strokeDasharray="3,3" opacity="0.5"/>
-      <circle cx={highlightPt.x} cy={highlightPt.y} r="5" fill="#C13584" stroke="#fff" strokeWidth="2" style={{ animation: 'chartPop .3s ease' }}/>
+      {pts.map((pt, i) => (
+        <circle
+          key={`dot-${i}`}
+          cx={pt.x}
+          cy={pt.y}
+          r={i === hoverIdx ? 5 : 2.5}
+          fill={i === hoverIdx ? '#C13584' : '#fff'}
+          stroke="#C13584"
+          strokeWidth={i === hoverIdx ? 2 : 1.5}
+          style={{ transition: 'r .22s cubic-bezier(.22,1,.36,1), fill .18s ease' }}
+        />
+      ))}
 
-      {/* Tooltip do ponto */}
-      <g>
-        <rect x={highlightPt.x - 42} y={highlightPt.y - 32} width="84" height="26" rx="7" fill="#C13584"/>
-        <text x={highlightPt.x} y={highlightPt.y - 14} fontSize="10" fill="white" textAnchor="middle" fontWeight="700">12 de Abril</text>
-        <text x={highlightPt.x} y={highlightPt.y - 4} fontSize="9" fill="white" textAnchor="middle" opacity="0.85">166 resultados</text>
+      <line
+        x1={active.x} y1={padT}
+        x2={active.x} y2={padT + plotH}
+        stroke="#C13584"
+        strokeWidth="1"
+        strokeDasharray="3,3"
+        opacity={isHovering ? 0.7 : 0.45}
+        style={{ transition: 'x1 .18s ease, x2 .18s ease, opacity .18s ease' }}
+      />
+
+      <g style={{ transition: 'transform .2s ease', transform: `translate(${tooltipX - active.x}px, 0)` }}>
+        <rect
+          x={active.x - 46}
+          y={active.y - 36}
+          width="92"
+          height="30"
+          rx="8"
+          fill="#C13584"
+          style={{ transition: 'x .22s cubic-bezier(.22,1,.36,1), y .22s cubic-bezier(.22,1,.36,1)', filter: 'drop-shadow(0 4px 10px rgba(193,53,132,.35))' }}
+        />
+        <text
+          x={active.x}
+          y={active.y - 19}
+          fontSize="10.5"
+          fill="white"
+          textAnchor="middle"
+          fontWeight="800"
+          style={{ transition: 'x .22s ease, y .22s ease' }}
+        >
+          {active.label}
+        </text>
+        <text
+          x={active.x}
+          y={active.y - 8}
+          fontSize="9"
+          fill="white"
+          textAnchor="middle"
+          opacity="0.92"
+          style={{ transition: 'x .22s ease, y .22s ease' }}
+        >
+          {active.value} {unit}
+        </text>
       </g>
     </svg>
   );

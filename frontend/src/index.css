@@ -478,3 +478,40 @@ input[type="range"] { accent-color: #C13584; }
 .sidebar-fixed nav > div:active {
   transform: scale(.98);
 }
+
+/* Abertura animada do dropdown de notificações */
+@keyframes bellOpen {
+  0%   { opacity: 0; transform: scale(.9) translateY(-6px); }
+  60%  { opacity: 1; transform: scale(1.01) translateY(0); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Sacudida do sino quando há notificações não lidas (aplicada pelo componente) */
+@keyframes bellShake {
+  0%,100% { transform: rotate(0); }
+  10%,30% { transform: rotate(-10deg); }
+  20%,40% { transform: rotate(10deg); }
+  50%     { transform: rotate(-6deg); }
+  60%     { transform: rotate(6deg); }
+  70%     { transform: rotate(0); }
+}
+.bell-shake {
+  animation: bellShake 1.2s ease-in-out;
+  transform-origin: top center;
+}
+
+/* Hover lift universal em cards comuns do sistema (via page-container) */
+.page-container .ccb-card,
+.page-container [data-lift="true"] {
+  transition:
+    transform .28s var(--ease-out-soft),
+    box-shadow .28s var(--ease-out-soft),
+    border-color .2s ease;
+  will-change: transform;
+}
+.page-container .ccb-card:hover,
+.page-container [data-lift="true"]:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 32px var(--c-shadow-md, rgba(193,53,132,.18));
+  border-color: color-mix(in srgb, var(--c-accent) 35%, var(--c-border));
+}

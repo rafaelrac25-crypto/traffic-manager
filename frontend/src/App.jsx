@@ -96,9 +96,11 @@ function NotificationDropdown({ open, onClose }) {
         position: 'absolute', top: 'calc(100% + 8px)', right: 0,
         width: '360px', maxHeight: '480px',
         background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',
-        borderRadius: '14px', boxShadow: '0 10px 40px rgba(0,0,0,.15)',
+        borderRadius: '14px', boxShadow: '0 16px 48px rgba(193,53,132,.22)',
         zIndex: 1000, overflow: 'hidden',
         display: 'flex', flexDirection: 'column',
+        transformOrigin: 'top right',
+        animation: 'bellOpen .28s cubic-bezier(.22,1,.36,1)',
       }}
     >
       <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--c-border-lt)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -137,10 +139,21 @@ function NotificationDropdown({ open, onClose }) {
                 cursor: 'pointer', display: 'flex', gap: '10px',
                 background: n.read ? 'transparent' : style.bg,
                 borderLeft: `3px solid ${style.border}`,
-                transition: 'background .12s',
+                transition: 'background .16s ease, transform .22s cubic-bezier(.22,1,.36,1), box-shadow .22s ease',
               }}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--c-hover)'}
-              onMouseLeave={e => e.currentTarget.style.background = n.read ? 'transparent' : style.bg}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'var(--c-hover)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 8px 20px rgba(193,53,132,.14)';
+                e.currentTarget.style.position = 'relative';
+                e.currentTarget.style.zIndex = '1';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = n.read ? 'transparent' : style.bg;
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
+                e.currentTarget.style.zIndex = 'auto';
+              }}
             >
               <span style={{ fontSize: '18px', flexShrink: 0 }}>{style.emoji}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -359,7 +372,9 @@ function Layout() {
                 transition: 'all .15s',
               }}
             >
-              <BellIcon />
+              <span className={unreadCount > 0 && !bellOpen ? 'bell-shake' : ''} style={{ display: 'flex' }}>
+                <BellIcon />
+              </span>
               {unreadCount > 0 && (
                 <span style={{
                   position: 'absolute', top: '-4px', right: '-4px',
