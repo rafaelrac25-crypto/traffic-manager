@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { MapContainer, TileLayer, Circle, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -1235,10 +1235,20 @@ function PublishModal({ onClose, scheduled, startDate }) {
 
 export default function CreateAd() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const commercialDate = location.state?.commercialDate;
   const { addNotification } = useAppState();
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState({});
   const [publishing, setPublishing] = useState(false);
+
+  const initialStart = (() => {
+    if (!commercialDate?.dateISO) return '';
+    const target = new Date(commercialDate.dateISO);
+    const start = new Date(target);
+    start.setDate(start.getDate() - (commercialDate.daysBefore || 0));
+    return start.toISOString().split('T')[0];
+  })();
 
   /* ── Estado do formulário ── */
   const [objective,          setObjective]          = useState('');
@@ -1248,14 +1258,25 @@ export default function CreateAd() {
   const [interests,          setInterests]          = useState([]);
   const [budgetType,         setBudgetType]         = useState('daily');
   const [budgetValue,        setBudgetValue]        = useState('');
-  const [startDate,          setStartDate]          = useState('');
+  const [startDate,          setStartDate]          = useState(initialStart);
   const [endDate,            setEndDate]            = useState('');
   const [adFormat,           setAdFormat]           = useState('image');
   const [mediaFiles,         setMediaFiles]         = useState([]);
-  const [primaryText,        setPrimaryText]        = useState('');
-  const [headline,           setHeadline]           = useState('');
+  const [primaryText,        setPrimaryText]        = useState(commercialDate?.preFill?.primaryText || '');
+  const [headline,           setHeadline]           = useState(commercialDate?.preFill?.headline || '');
   const [destUrl,            setDestUrl]            = useState('');
   const [ctaButton,          setCtaButton]          = useState('Saiba mais');
+
+  useEffect(() => {
+    if (commercialDate) {
+      addNotification({
+        kind: 'info',
+        title: `Pré-preenchendo: ${commercialDate.name}`,
+        message: `Texto e data de início sugeridos para ${commercialDate.name}. Ajuste o criativo e revise antes de publicar.`,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function validateStep(s) {
     const errs = {};

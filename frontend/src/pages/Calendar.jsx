@@ -5,8 +5,150 @@
  * Do not persist mock values.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getUpcomingCommercialDates, getCommercialDateByKey } from '../data/commercialDates';
+
+const MONTHS_ABBR = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+
+function formatDateLong(d) {
+  return `${String(d.getDate()).padStart(2, '0')} de ${['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'][d.getMonth()]} de ${d.getFullYear()}`;
+}
+
+function CommercialDateModal({ entry, onClose, onCreateAd }) {
+  if (!entry) return null;
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 200, padding: '20px',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: 'var(--c-card-bg)',
+          borderRadius: '18px',
+          border: '1px solid var(--c-border)',
+          boxShadow: '0 20px 60px rgba(0,0,0,.4)',
+          width: '100%', maxWidth: '620px',
+          maxHeight: '88vh', overflow: 'auto',
+        }}
+      >
+        <div style={{
+          padding: '22px 24px 18px',
+          borderBottom: '1px solid var(--c-border)',
+          display: 'flex', alignItems: 'flex-start', gap: '14px',
+        }}>
+          <div style={{
+            width: '48px', height: '48px', borderRadius: '12px',
+            background: 'var(--c-active-bg)', flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '24px',
+          }}>{entry.emoji}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '17px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '4px' }}>
+              {entry.name}
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--c-text-3)' }}>
+              {formatDateLong(entry.date)} · poste com <strong style={{ color: 'var(--c-accent)' }}>{entry.daysBefore} dias</strong> de antecedência
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              width: '30px', height: '30px', borderRadius: '8px',
+              border: '1px solid var(--c-border)', background: 'var(--c-surface)',
+              cursor: 'pointer', color: 'var(--c-text-3)', fontSize: '16px', lineHeight: 1,
+            }}
+          >×</button>
+        </div>
+
+        <div style={{ padding: '20px 24px' }}>
+          <Section title="Por que é importante para a Cris Costa Beauty">
+            <p style={{ fontSize: '13px', color: 'var(--c-text-2)', lineHeight: 1.65, margin: 0 }}>
+              {entry.whyImportant}
+            </p>
+          </Section>
+
+          <Section title="Ações sugeridas">
+            <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {entry.actions.map((a, i) => (
+                <li key={i} style={{
+                  fontSize: '12.5px', color: 'var(--c-text-2)', lineHeight: 1.55,
+                  padding: '9px 12px', borderRadius: '10px',
+                  background: 'var(--c-surface)', border: '1px solid var(--c-border-lt)',
+                }}>
+                  <span style={{ color: 'var(--c-accent)', marginRight: '8px', fontWeight: 700 }}>→</span>
+                  {a}
+                </li>
+              ))}
+            </ul>
+          </Section>
+
+          <Section title="Diretrizes de comunicação">
+            <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {entry.communication.map((c, i) => (
+                <li key={i} style={{ fontSize: '12px', color: 'var(--c-text-3)', lineHeight: 1.55, display: 'flex', gap: '8px' }}>
+                  <span style={{ color: 'var(--c-accent)' }}>✓</span>
+                  <span>{c}</span>
+                </li>
+              ))}
+            </ul>
+            <div style={{
+              marginTop: '10px', padding: '10px 12px',
+              background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '10px',
+              fontSize: '11.5px', color: '#991B1B', lineHeight: 1.55,
+            }}>
+              <strong>Evite:</strong> "promoção", "desconto", "liquidação". Use "condição especial", "oportunidade", "poucas vagas", "exclusivo".
+            </div>
+          </Section>
+        </div>
+
+        <div style={{
+          padding: '16px 24px',
+          borderTop: '1px solid var(--c-border)',
+          display: 'flex', justifyContent: 'flex-end', gap: '10px',
+          background: 'var(--c-surface)',
+        }}>
+          <button
+            onClick={onClose}
+            style={{
+              padding: '10px 16px', borderRadius: '10px',
+              border: '1.5px solid var(--c-border)', background: 'var(--c-card-bg)',
+              fontSize: '12px', fontWeight: 600, color: 'var(--c-text-2)', cursor: 'pointer',
+            }}
+          >Fechar</button>
+          <button
+            onClick={() => onCreateAd(entry)}
+            style={{
+              padding: '10px 18px', borderRadius: '10px',
+              border: 'none', background: 'var(--c-accent)',
+              fontSize: '12px', fontWeight: 700, color: '#fff', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '6px',
+            }}
+          >
+            <PlusIcon /> Criar anúncio para esta data
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Section({ title, children }) {
+  return (
+    <div style={{ marginBottom: '18px' }}>
+      <div style={{
+        fontSize: '11px', fontWeight: 800, letterSpacing: '.8px',
+        color: 'var(--c-text-4)', textTransform: 'uppercase', marginBottom: '8px',
+      }}>{title}</div>
+      {children}
+    </div>
+  );
+}
 
 const MONTHS     = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const WEEK_DAYS  = ['DOM','SEG','TER','QUA','QUI','SEX','SÁB'];
@@ -60,6 +202,22 @@ export default function Calendar() {
   const today    = new Date();
   const [year,  setYear]  = useState(2026);
   const [month, setMonth] = useState(3); /* Abril */
+  const [modalEntry, setModalEntry] = useState(null);
+
+  const upcomingCommercial = useMemo(() => getUpcomingCommercialDates(new Date(), 45), []);
+
+  function openCommercialModal(entry) { setModalEntry(entry); }
+  function closeCommercialModal() { setModalEntry(null); }
+  function createAdForDate(entry) {
+    navigate('/criar-anuncio', { state: { commercialDate: {
+      id: entry.id,
+      name: entry.name,
+      emoji: entry.emoji,
+      dateISO: entry.date.toISOString(),
+      daysBefore: entry.daysBefore,
+      preFill: entry.preFill,
+    } } });
+  }
 
   function prevMonth() {
     if (month === 0) { setYear(y => y - 1); setMonth(11); }
@@ -140,15 +298,18 @@ export default function Calendar() {
             {cells.map((cell, idx) => {
               const key = cell.current ? dayKey(cell.day) : null;
               const events = key ? (MOCK_EVENTS[key] || []) : [];
+              const commercial = key ? getCommercialDateByKey(key) : null;
               const isToday = key === todayStr;
               const isLastRow = idx >= cells.length - 7;
 
               return (
                 <div
                   key={idx}
+                  onClick={() => commercial && openCommercialModal(commercial)}
                   style={{
                     minHeight: '100px',
                     padding: '8px 6px 6px',
+                    position: 'relative',
                     borderRight: (idx + 1) % 7 !== 0 ? '1px solid var(--c-border-lt)' : 'none',
                     borderBottom: !isLastRow ? '1px solid var(--c-border-lt)' : 'none',
                     background: !cell.current ? 'var(--c-surface)' : isToday ? 'var(--c-active-bg)' : 'var(--c-card-bg)',
@@ -159,20 +320,39 @@ export default function Calendar() {
                   onMouseLeave={e => { if (cell.current && !isToday) e.currentTarget.style.background = 'var(--c-card-bg)'; }}
                 >
                   {/* Número do dia */}
-                  <div style={{
-                    width: '26px', height: '26px', borderRadius: '50%',
-                    background: isToday ? 'var(--c-accent)' : 'transparent',
-                    color: !cell.current ? 'var(--c-text-4)' : isToday ? '#fff' : 'var(--c-text-2)',
-                    fontSize: '12px', fontWeight: isToday ? 800 : cell.current ? 500 : 400,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    marginBottom: '4px',
-                    opacity: !cell.current ? 0.4 : 1,
-                  }}>
-                    {cell.day}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <div style={{
+                      width: '26px', height: '26px', borderRadius: '50%',
+                      background: isToday ? 'var(--c-accent)' : 'transparent',
+                      color: !cell.current ? 'var(--c-text-4)' : isToday ? '#fff' : 'var(--c-text-2)',
+                      fontSize: '12px', fontWeight: isToday ? 800 : cell.current ? 500 : 400,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      opacity: !cell.current ? 0.4 : 1,
+                    }}>
+                      {cell.day}
+                    </div>
+                    {commercial && (
+                      <span
+                        title={commercial.name}
+                        style={{ fontSize: '14px', lineHeight: 1 }}
+                      >{commercial.emoji}</span>
+                    )}
                   </div>
 
                   {/* Eventos */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    {commercial && (
+                      <div style={{
+                        fontSize: '9px', fontWeight: 700,
+                        color: '#C13584',
+                        borderLeft: '2px solid #C13584',
+                        borderRadius: '0 4px 4px 0',
+                        padding: '2px 5px',
+                        background: '#C1358418',
+                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                        maxWidth: '100%',
+                      }}>{commercial.name}</div>
+                    )}
                     {events.map(ev => (
                       <div key={ev.id} style={{
                         fontSize: '9px', fontWeight: 600,
@@ -298,7 +478,7 @@ export default function Calendar() {
             </div>
           </div>
 
-          {/* Card de dica */}
+          {/* Datas comerciais BR — 45 dias à frente */}
           <div style={{
             background: 'var(--c-card-bg)',
             borderRadius: '16px',
@@ -306,25 +486,81 @@ export default function Calendar() {
             padding: '18px',
             boxShadow: '0 2px 8px var(--c-shadow)',
           }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-              <div style={{
-                width: '38px', height: '38px', borderRadius: '10px',
-                background: 'var(--c-active-bg)', flexShrink: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '18px',
-              }}>📅</div>
-              <div>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-accent)', marginBottom: '5px' }}>
-                  Organize melhor suas campanhas
-                </div>
-                <p style={{ fontSize: '11px', color: 'var(--c-text-3)', lineHeight: 1.6 }}>
-                  Planeje seus anúncios com antecedência e uma estratégia consistente.
-                </p>
-              </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+              <span style={{ fontSize: '16px' }}>🗓️</span>
+              <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-1)' }}>
+                Datas comerciais
+              </span>
             </div>
+            <p style={{ fontSize: '11px', color: 'var(--c-text-3)', lineHeight: 1.5, marginBottom: '14px' }}>
+              Próximos 45 dias. Clique para ver estratégia e criar anúncio.
+            </p>
+
+            {upcomingCommercial.length === 0 ? (
+              <div style={{ fontSize: '11.5px', color: 'var(--c-text-4)', padding: '8px 0' }}>
+                Nenhuma data comercial relevante nos próximos 45 dias.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {upcomingCommercial.map(entry => (
+                  <button
+                    key={entry.key}
+                    onClick={() => openCommercialModal(entry)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '10px',
+                      padding: '9px 10px', borderRadius: '10px',
+                      background: 'var(--c-surface)',
+                      border: '1px solid var(--c-border-lt)',
+                      cursor: 'pointer', textAlign: 'left',
+                      transition: 'all .12s',
+                      width: '100%',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--c-accent)'; e.currentTarget.style.background = 'var(--c-hover)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--c-border-lt)'; e.currentTarget.style.background = 'var(--c-surface)'; }}
+                  >
+                    <div style={{
+                      background: 'var(--c-active-bg)',
+                      borderRadius: '8px', padding: '5px 6px',
+                      textAlign: 'center', flexShrink: 0,
+                      minWidth: '40px',
+                    }}>
+                      <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--c-accent)', lineHeight: 1 }}>
+                        {String(entry.date.getDate()).padStart(2, '0')}
+                      </div>
+                      <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--c-text-4)', letterSpacing: '1px' }}>
+                        {MONTHS_ABBR[entry.date.getMonth()]}
+                      </div>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        fontSize: '12px', fontWeight: 700, color: 'var(--c-text-1)',
+                        marginBottom: '2px',
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>
+                        <span style={{ marginRight: '5px' }}>{entry.emoji}</span>
+                        {entry.name}
+                      </div>
+                      <div style={{ fontSize: '10px', color: 'var(--c-text-3)' }}>
+                        {entry.daysUntil === 0 ? 'hoje' : entry.daysUntil === 1 ? 'amanhã' : `em ${entry.daysUntil} dias`}
+                        {' · '}
+                        <span style={{ color: 'var(--c-accent)', fontWeight: 600 }}>
+                          postar com {entry.daysBefore}d
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      <CommercialDateModal
+        entry={modalEntry}
+        onClose={closeCommercialModal}
+        onCreateAd={createAdForDate}
+      />
     </div>
   );
 }
