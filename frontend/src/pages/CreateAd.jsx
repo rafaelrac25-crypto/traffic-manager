@@ -27,6 +27,45 @@ L.Icon.Default.mergeOptions({
 
 const STEPS = ['Objetivo', 'Público', 'Orçamento', 'Criativo', 'Revisar'];
 
+/* ── Coords conhecidas (fallback) — região Balneário Camboriú ── */
+const CITY_COORDS = {
+  'Balneário Camboriú': { lat: -26.9906, lng: -48.6354 },
+  'Itajaí':             { lat: -26.9078, lng: -48.6619 },
+  'Itapema':            { lat: -27.0903, lng: -48.6114 },
+  'Camboriú':           { lat: -27.0244, lng: -48.6547 },
+  'Navegantes':         { lat: -26.8977, lng: -48.6547 },
+  'Penha':              { lat: -26.7706, lng: -48.6453 },
+  'Porto Belo':         { lat: -27.1583, lng: -48.5508 },
+  'Bombinhas':          { lat: -27.1408, lng: -48.4819 },
+  'Brusque':            { lat: -27.0978, lng: -48.9083 },
+};
+
+function normalizeAudienceLocations(locs) {
+  if (!Array.isArray(locs)) return [];
+  return locs
+    .map((loc, i) => {
+      if (loc && typeof loc === 'object' && loc.lat != null && loc.lng != null) {
+        return loc;
+      }
+      const name = typeof loc === 'string' ? loc : loc?.name;
+      if (!name) return null;
+      const coords = CITY_COORDS[name];
+      if (!coords) return null;
+      return {
+        id: `legacy-${Date.now()}-${i}`,
+        name,
+        lat: coords.lat,
+        lng: coords.lng,
+        radius: 5,
+      };
+    })
+    .filter(Boolean);
+}
+
+function normalizeAudienceGender(g) {
+  return ({ F: 'female', M: 'male', A: 'all' })[g] || (g || 'all');
+}
+
 const META_OBJECTIVES = [
   {
     category: 'Reconhecimento',
@@ -1316,11 +1355,15 @@ export default function CreateAd() {
         ? String(commercialDate.suggestedBudget.daily)
         : (canReview ? String(DEFAULT_QUICK_BUDGET) : ''));
 
+  /* Normalizar schema do audience reusado para o Step2Audience */
+  const normalizedAudienceLocations = normalizeAudienceLocations(quickFillAudience?.locations);
+  const normalizedAudienceGender = normalizeAudienceGender(quickFillAudience?.gender);
+
   /* ── Estado do formulário ── */
   const [objective,          setObjective]          = useState(source?.objective || (quickFill ? 'messages' : ''));
-  const [locations,          setLocations]          = useState(source?.locations || (quickFillAudience?.locations || []));
+  const [locations,          setLocations]          = useState(source?.locations || (quickFillAudience ? normalizedAudienceLocations : []));
   const [ageRange,           setAgeRange]           = useState(source?.ageRange || (quickFillAudience ? [quickFillAudience.ageMin, quickFillAudience.ageMax] : [18, 65]));
-  const [gender,             setGender]             = useState(source?.gender || (quickFillAudience?.gender || 'all'));
+  const [gender,             setGender]             = useState(source?.gender || (quickFillAudience ? normalizedAudienceGender : 'all'));
   const [interests,          setInterests]          = useState(source?.interests || (quickFillAudience?.interests || []));
   const [budgetType,         setBudgetType]         = useState(source?.budgetType || 'daily');
   const [budgetValue,        setBudgetValue]        = useState(initialBudget);

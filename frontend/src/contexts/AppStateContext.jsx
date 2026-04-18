@@ -35,6 +35,18 @@ function save(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
 }
 
+/* Coords compatíveis com o mapa do Step2Audience (Leaflet) */
+const DEFAULT_CITY_COORDS = {
+  'Balneário Camboriú': { lat: -26.9906, lng: -48.6354 },
+  'Itajaí':             { lat: -26.9078, lng: -48.6619 },
+  'Itapema':            { lat: -27.0903, lng: -48.6114 },
+  'Camboriú':           { lat: -27.0244, lng: -48.6547 },
+};
+function defaultLoc(name, i) {
+  const c = DEFAULT_CITY_COORDS[name];
+  return { id: `loc-default-${i}`, name, lat: c?.lat ?? null, lng: c?.lng ?? null, radius: 5 };
+}
+
 const DEFAULT_AUDIENCES = [
   {
     id: 'aud-demo-1',
@@ -43,7 +55,7 @@ const DEFAULT_AUDIENCES = [
     gender: 'F',
     ageMin: 25,
     ageMax: 45,
-    locations: ['Balneário Camboriú', 'Itajaí', 'Itapema', 'Camboriú'],
+    locations: ['Balneário Camboriú', 'Itajaí', 'Itapema', 'Camboriú'].map(defaultLoc),
     interests: ['Estética', 'Skincare', 'Autocuidado', 'Beleza', 'Bem-estar'],
     createdAt: new Date().toISOString(),
   },
@@ -54,7 +66,7 @@ const DEFAULT_AUDIENCES = [
     gender: 'F',
     ageMin: 22,
     ageMax: 40,
-    locations: ['Balneário Camboriú', 'Itajaí'],
+    locations: ['Balneário Camboriú', 'Itajaí'].map(defaultLoc),
     interests: ['Casamento', 'Estética', 'Beleza', 'Eventos'],
     createdAt: new Date().toISOString(),
   },

@@ -12,6 +12,29 @@ const BCAMBORIU_CITIES = [
   'Navegantes', 'Penha', 'Porto Belo', 'Bombinhas', 'Brusque',
 ];
 
+/* Coords para salvar localização compatível com Step2Audience (mapa) */
+const CITY_COORDS = {
+  'Balneário Camboriú': { lat: -26.9906, lng: -48.6354 },
+  'Itajaí':             { lat: -26.9078, lng: -48.6619 },
+  'Itapema':            { lat: -27.0903, lng: -48.6114 },
+  'Camboriú':           { lat: -27.0244, lng: -48.6547 },
+  'Navegantes':         { lat: -26.8977, lng: -48.6547 },
+  'Penha':              { lat: -26.7706, lng: -48.6453 },
+  'Porto Belo':         { lat: -27.1583, lng: -48.5508 },
+  'Bombinhas':          { lat: -27.1408, lng: -48.4819 },
+  'Brusque':            { lat: -27.0978, lng: -48.9083 },
+};
+
+/* Extrai o nome de uma localização (aceita string legada ou objeto novo) */
+function locName(l) { return typeof l === 'string' ? l : (l?.name || ''); }
+
+/* Rótulo amigável de gênero — aceita schema antigo (F/M/A) e novo (female/male/all) */
+function genderLabel(g) {
+  if (g === 'F' || g === 'female') return '♀ Mulheres';
+  if (g === 'M' || g === 'male') return '♂ Homens';
+  return '⚥ Todos';
+}
+
 const INTEREST_SUGGESTIONS = [
   'Estética', 'Skincare', 'Autocuidado', 'Beleza', 'Bem-estar',
   'Casamento', 'Eventos', 'Maquiagem', 'Cabelo', 'Unhas',
@@ -45,15 +68,25 @@ const IconUsers = () => (
 );
 
 function emptyAudience() {
+  const bc = CITY_COORDS['Balneário Camboriú'];
   return {
     name: '',
     description: '',
     gender: 'F',
     ageMin: 25,
     ageMax: 45,
-    locations: ['Balneário Camboriú'],
+    locations: [{ id: `loc-${Date.now()}`, name: 'Balneário Camboriú', lat: bc.lat, lng: bc.lng, radius: 5 }],
     interests: [],
   };
+}
+
+function buildLocation(name) {
+  const v = name.trim();
+  if (!v) return null;
+  const coords = CITY_COORDS[v];
+  return coords
+    ? { id: `loc-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, name: v, lat: coords.lat, lng: coords.lng, radius: 5 }
+    : { id: `loc-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, name: v, lat: null, lng: null, radius: 5 };
 }
 
 function Chip({ label, onRemove, active = true }) {
@@ -117,7 +150,7 @@ function AudienceCard({ audience, onEdit, onRemove, onReuseQuick, onReuseAdjust 
       </div>
 
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-        <Chip label={audience.gender === 'F' ? '♀ Mulheres' : audience.gender === 'M' ? '♂ Homens' : '⚥ Todos'} />
+        <Chip label={genderLabel(audience.gender)} />
         <Chip label={`${audience.ageMin}–${audience.ageMax} anos`} />
       </div>
 
@@ -127,7 +160,10 @@ function AudienceCard({ audience, onEdit, onRemove, onReuseQuick, onReuseAdjust 
             Localização
           </div>
           <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-            {audience.locations.map(l => <Chip key={l} label={`📍 ${l}`} active={false} />)}
+            {audience.locations.map((l, i) => {
+              const label = locName(l);
+              return <Chip key={label || i} label={`📍 ${label}`} active={false} />;
+            })}
           </div>
         </div>
       )}
@@ -187,12 +223,17 @@ function AudienceForm({ initial, onSave, onCancel }) {
 
   function addLocation(loc) {
     const v = (loc || locInput).trim();
-    if (!v || data.locations.includes(v)) return;
-    update({ locations: [...data.locations, v] });
+    if (!v) return;
+    const existingNames = data.locations.map(locName);
+    if (existingNames.includes(v)) return;
+    const newLoc = buildLocation(v);
+    if (!newLoc) return;
+    update({ locations: [...data.locations, newLoc] });
     setLocInput('');
   }
   function removeLocation(loc) {
-    update({ locations: data.locations.filter(l => l !== loc) });
+    const target = locName(loc);
+    update({ locations: data.locations.filter(l => locName(l) !== target) });
   }
   function addInterest(it) {
     const v = (it || intInput).trim();
@@ -302,21 +343,25 @@ function AudienceForm({ initial, onSave, onCancel }) {
           </button>
         </div>
         <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginBottom: '8px' }}>
-          {data.locations.map(l => (
-            <Chip key={l} label={`📍 ${l}`} onRemove={() => removeLocation(l)} />
-          ))}
+          {data.locations.map((l, i) => {
+            const label = locName(l);
+            return <Chip key={label || i} label={`📍 ${label}`} onRemove={() => removeLocation(l)} />;
+          })}
         </div>
         <div style={{ fontSize: '10px', color: 'var(--c-text-4)', marginBottom: '4px' }}>Sugestões:</div>
         <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-          {BCAMBORIU_CITIES.filter(c => !data.locations.includes(c)).map(c => (
-            <button
-              key={c}
-              onClick={() => addLocation(c)}
-              style={suggestionBtn}
-            >
-              + {c}
-            </button>
-          ))}
+          {(() => {
+            const current = data.locations.map(locName);
+            return BCAMBORIU_CITIES.filter(c => !current.includes(c)).map(c => (
+              <button
+                key={c}
+                onClick={() => addLocation(c)}
+                style={suggestionBtn}
+              >
+                + {c}
+              </button>
+            ));
+          })()}
         </div>
       </div>
 
