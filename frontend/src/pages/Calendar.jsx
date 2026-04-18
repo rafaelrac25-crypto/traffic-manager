@@ -284,7 +284,7 @@ export default function Calendar() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '20px', alignItems: 'start' }}>
 
         {/* ── Calendário principal ── */}
-        <div style={{
+        <div className="ccb-card" style={{
           background: 'var(--c-card-bg)',
           borderRadius: '16px',
           border: '1px solid var(--c-border)',

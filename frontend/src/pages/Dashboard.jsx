@@ -399,35 +399,41 @@ function MiniCalendar({ onViewFull }) {
   );
 }
 
-/* ── Card de métrica ── */
+/* ── Card de métrica (compacto — visão geral) ── */
 function MetricCard({ label, value, trend, trendUp, sub, icon, iconBg, iconColor }) {
   return (
     <div className="ccb-card" style={{
       background: 'var(--c-card-bg)',
-      borderRadius: '14px',
-      padding: '18px 20px',
+      borderRadius: '12px',
+      padding: '10px 14px',
       border: '1px solid var(--c-border)',
-      boxShadow: '0 2px 8px var(--c-shadow)',
+      boxShadow: '0 1px 4px var(--c-shadow)',
       display: 'flex',
-      flexDirection: 'column',
-      gap: '10px',
+      alignItems: 'center',
+      gap: '12px',
       cursor: 'default',
+      minHeight: '58px',
     }}>
-      {/* Ícone */}
       <div className="ccb-icon" style={{
-        width: '40px', height: '40px', borderRadius: '12px',
+        width: '30px', height: '30px', borderRadius: '8px',
         background: iconBg, color: iconColor,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0,
       }}>
-        {icon}
+        {React.cloneElement(icon, { width: 15, height: 15 })}
       </div>
-      <div>
-        <div style={{ fontSize: '11px', color: 'var(--c-text-3)', marginBottom: '4px' }}>{label}</div>
-        <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--c-text-1)', lineHeight: 1, marginBottom: '6px' }}>{value}</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          {trendUp ? <ArrowUp color="#22C55E" /> : <ArrowDown color="#EF4444" />}
-          <span style={{ fontSize: '11px', fontWeight: 600, color: trendUp ? '#22C55E' : '#EF4444' }}>{trend}</span>
-          <span style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>{sub}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '10px', color: 'var(--c-text-4)', lineHeight: 1.2, marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '.3px', fontWeight: 600 }}>
+          {label}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', flexWrap: 'wrap' }}>
+          <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--c-text-1)', lineHeight: 1.1 }}>
+            {value}
+          </div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+            {trendUp ? <ArrowUp color="#22C55E" /> : <ArrowDown color="#EF4444" />}
+            <span style={{ fontSize: '10px', fontWeight: 700, color: trendUp ? '#22C55E' : '#EF4444' }}>{trend}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -449,29 +455,31 @@ const HIGH_CPC_ADS = MOCK_CPC.filter(a => a.cpc > HIGH_CPC_THRESHOLD);
 function BalanceCard({ funds, lowBalance, threshold, onAdd }) {
   const pct = Math.min(100, (funds / 200) * 100);
   return (
-    <div style={{
+    <div className="ccb-card" style={{
       background: 'var(--c-card-bg)',
-      borderRadius: '16px',
+      borderRadius: '14px',
       border: `1px solid ${lowBalance ? '#FCA5A5' : 'var(--c-border)'}`,
-      padding: '18px 20px',
+      padding: '14px 16px',
       boxShadow: '0 2px 8px var(--c-shadow)',
       display: 'flex',
       flexDirection: 'column',
-      gap: '12px',
+      gap: '8px',
+      height: '100%',
+      justifyContent: 'space-between',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '16px' }}>{lowBalance ? '⚠️' : '💰'}</span>
-          <span style={{ fontSize: '12px', fontWeight: 700, color: lowBalance ? '#DC2626' : 'var(--c-text-2)', letterSpacing: '.5px', textTransform: 'uppercase' }}>
-            Saldo de investimento
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ fontSize: '14px' }}>{lowBalance ? '⚠️' : '💰'}</span>
+          <span style={{ fontSize: '10px', fontWeight: 700, color: lowBalance ? '#DC2626' : 'var(--c-text-3)', letterSpacing: '.4px', textTransform: 'uppercase' }}>
+            Saldo
           </span>
         </div>
         <button
           onClick={onAdd}
           style={{
             background: 'var(--c-accent)', color: '#fff',
-            border: 'none', borderRadius: '8px',
-            padding: '5px 10px', fontSize: '11px', fontWeight: 700,
+            border: 'none', borderRadius: '7px',
+            padding: '4px 10px', fontSize: '10px', fontWeight: 700,
             cursor: 'pointer',
           }}
         >
@@ -479,16 +487,16 @@ function BalanceCard({ funds, lowBalance, threshold, onAdd }) {
         </button>
       </div>
 
-      <div>
-        <div style={{ fontSize: '26px', fontWeight: 800, color: lowBalance ? '#DC2626' : 'var(--c-text-1)', lineHeight: 1 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <div style={{ fontSize: '22px', fontWeight: 800, color: lowBalance ? '#DC2626' : 'var(--c-text-1)', lineHeight: 1 }}>
           R$ {funds.toFixed(2).replace('.', ',')}
         </div>
-        <div style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '4px' }}>
+        <div style={{ fontSize: '10px', color: 'var(--c-text-4)', marginTop: '3px' }}>
           {lowBalance ? `Abaixo do mínimo de R$ ${threshold},00` : 'Disponível para veicular anúncios'}
         </div>
       </div>
 
-      <div style={{ height: '6px', background: 'var(--c-border-lt)', borderRadius: '3px', overflow: 'hidden' }}>
+      <div style={{ height: '5px', background: 'var(--c-border-lt)', borderRadius: '3px', overflow: 'hidden' }}>
         <div style={{
           height: '100%',
           width: `${pct}%`,
@@ -526,28 +534,33 @@ function HistoricalComparisonCard({ onViewCalendar }) {
   const cprDelta = ((item.current.cpr - item.previous.cpr) / item.previous.cpr) * 100;
 
   return (
-    <div style={{
+    <div className="ccb-card" style={{
       background: 'var(--c-card-bg)',
-      borderRadius: '16px',
+      borderRadius: '14px',
       border: '1px solid var(--c-border)',
-      padding: '18px 20px',
+      padding: '14px 16px',
       boxShadow: '0 2px 8px var(--c-shadow)',
-      display: 'flex', flexDirection: 'column', gap: '12px',
+      display: 'flex', flexDirection: 'column', gap: '8px',
+      height: '100%', justifyContent: 'space-between',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '16px' }}>📊</span>
-          <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--c-text-2)', letterSpacing: '.5px', textTransform: 'uppercase' }}>
-            Histórico comparativo
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+          <span style={{ fontSize: '14px' }}>📊</span>
+          <span style={{
+            fontSize: '10px', fontWeight: 700, color: 'var(--c-text-3)',
+            letterSpacing: '.4px', textTransform: 'uppercase',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {item.event} {item.current.year} vs {item.previous.year}
           </span>
         </div>
-        <div style={{ display: 'flex', gap: '4px' }}>
+        <div style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
           {HISTORICAL_COMPARISON.map((_, i) => (
             <button
               key={i}
               onClick={() => setIdx(i)}
               style={{
-                width: '7px', height: '7px', borderRadius: '50%',
+                width: '6px', height: '6px', borderRadius: '50%',
                 background: i === idx ? 'var(--c-accent)' : 'var(--c-border)',
                 border: 'none', cursor: 'pointer', padding: 0,
               }}
@@ -556,56 +569,45 @@ function HistoricalComparisonCard({ onViewCalendar }) {
         </div>
       </div>
 
-      <div>
-        <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '2px' }}>
-          {item.event} {item.current.year}
-        </div>
-        <div style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>
-          Comparativo com {item.previous.year}
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-        <div style={{ padding: '10px 12px', background: 'var(--c-surface)', borderRadius: '10px' }}>
-          <div style={{ fontSize: '10px', color: 'var(--c-text-4)', fontWeight: 700, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '.4px' }}>
-            Resultados
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, justifyContent: 'center' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '7px 10px', background: 'var(--c-surface)', borderRadius: '8px',
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '10px', color: 'var(--c-text-4)', fontWeight: 600 }}>Resultados</span>
+            <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--c-text-1)', lineHeight: 1.1 }}>
+              {item.current.results} <span style={{ fontSize: '10px', fontWeight: 500, color: 'var(--c-text-4)' }}>vs {item.previous.results}</span>
+            </span>
           </div>
-          <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--c-text-1)', lineHeight: 1 }}>
-            {item.current.results}
-          </div>
-          <div style={{ fontSize: '10px', color: 'var(--c-text-4)', marginTop: '4px' }}>
-            vs {item.previous.results} em {item.previous.year}
-          </div>
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: '3px',
-            marginTop: '4px', padding: '2px 7px', borderRadius: '6px',
+          <span style={{
+            padding: '3px 8px', borderRadius: '6px',
             background: resultsDelta >= 0 ? '#DCFCE7' : '#FEE2E2',
             color: resultsDelta >= 0 ? '#16A34A' : '#DC2626',
-            fontSize: '10px', fontWeight: 700,
+            fontSize: '11px', fontWeight: 800,
           }}>
             {resultsDelta >= 0 ? '▲' : '▼'} {Math.abs(resultsDelta).toFixed(1)}%
-          </div>
+          </span>
         </div>
 
-        <div style={{ padding: '10px 12px', background: 'var(--c-surface)', borderRadius: '10px' }}>
-          <div style={{ fontSize: '10px', color: 'var(--c-text-4)', fontWeight: 700, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '.4px' }}>
-            Custo por resultado
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '7px 10px', background: 'var(--c-surface)', borderRadius: '8px',
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '10px', color: 'var(--c-text-4)', fontWeight: 600 }}>Custo por resultado</span>
+            <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--c-text-1)', lineHeight: 1.1 }}>
+              R$ {item.current.cpr.toFixed(2).replace('.', ',')} <span style={{ fontSize: '10px', fontWeight: 500, color: 'var(--c-text-4)' }}>vs R$ {item.previous.cpr.toFixed(2).replace('.', ',')}</span>
+            </span>
           </div>
-          <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--c-text-1)', lineHeight: 1 }}>
-            R$ {item.current.cpr.toFixed(2).replace('.', ',')}
-          </div>
-          <div style={{ fontSize: '10px', color: 'var(--c-text-4)', marginTop: '4px' }}>
-            vs R$ {item.previous.cpr.toFixed(2).replace('.', ',')} em {item.previous.year}
-          </div>
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: '3px',
-            marginTop: '4px', padding: '2px 7px', borderRadius: '6px',
+          <span style={{
+            padding: '3px 8px', borderRadius: '6px',
             background: cprDelta <= 0 ? '#DCFCE7' : '#FEE2E2',
             color: cprDelta <= 0 ? '#16A34A' : '#DC2626',
-            fontSize: '10px', fontWeight: 700,
+            fontSize: '11px', fontWeight: 800,
           }}>
             {cprDelta <= 0 ? '▼' : '▲'} {Math.abs(cprDelta).toFixed(1)}%
-          </div>
+          </span>
         </div>
       </div>
 
@@ -613,8 +615,8 @@ function HistoricalComparisonCard({ onViewCalendar }) {
         onClick={onViewCalendar}
         style={{
           background: 'none', border: '1.5px solid var(--c-border)',
-          color: 'var(--c-text-2)', borderRadius: '10px',
-          padding: '7px', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+          color: 'var(--c-text-2)', borderRadius: '8px',
+          padding: '6px', fontSize: '10.5px', fontWeight: 700, cursor: 'pointer',
         }}
       >
         Ver todas as datas comerciais
@@ -627,64 +629,66 @@ function HistoricalComparisonCard({ onViewCalendar }) {
 function CpcAlertCard({ ads, avg, onOpenAds }) {
   if (!ads.length) {
     return (
-      <div style={{
+      <div className="ccb-card" style={{
         background: 'var(--c-card-bg)',
-        borderRadius: '16px',
+        borderRadius: '14px',
         border: '1px solid var(--c-border)',
-        padding: '18px 20px',
+        padding: '14px 16px',
         boxShadow: '0 2px 8px var(--c-shadow)',
-        display: 'flex', flexDirection: 'column', gap: '10px',
+        display: 'flex', flexDirection: 'column', gap: '8px',
+        height: '100%', justifyContent: 'center',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '16px' }}>✅</span>
-          <span style={{ fontSize: '12px', fontWeight: 700, color: '#16A34A', letterSpacing: '.5px', textTransform: 'uppercase' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ fontSize: '14px' }}>✅</span>
+          <span style={{ fontSize: '10px', fontWeight: 700, color: '#16A34A', letterSpacing: '.4px', textTransform: 'uppercase' }}>
             CPC saudável
           </span>
         </div>
-        <div style={{ fontSize: '13px', color: 'var(--c-text-2)' }}>
-          Todos os anúncios estão dentro da média (R$ {avg.toFixed(2).replace('.', ',')}/clique).
+        <div style={{ fontSize: '12px', color: 'var(--c-text-2)', lineHeight: 1.4 }}>
+          Todos os anúncios dentro da média (R$ {avg.toFixed(2).replace('.', ',')}/clique).
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{
+    <div className="ccb-card" style={{
       background: 'var(--c-card-bg)',
-      borderRadius: '16px',
+      borderRadius: '14px',
       border: '1px solid #FCA5A5',
-      padding: '18px 20px',
+      padding: '14px 16px',
       boxShadow: '0 2px 8px var(--c-shadow)',
-      display: 'flex', flexDirection: 'column', gap: '12px',
+      display: 'flex', flexDirection: 'column', gap: '8px',
+      height: '100%', justifyContent: 'space-between',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '16px' }}>🚨</span>
-          <span style={{ fontSize: '12px', fontWeight: 700, color: '#DC2626', letterSpacing: '.5px', textTransform: 'uppercase' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ fontSize: '14px' }}>🚨</span>
+          <span style={{ fontSize: '10px', fontWeight: 700, color: '#DC2626', letterSpacing: '.4px', textTransform: 'uppercase' }}>
             CPC acima da média
           </span>
         </div>
         <span style={{
           background: '#FEE2E2', color: '#DC2626',
-          padding: '3px 9px', borderRadius: '12px',
-          fontSize: '11px', fontWeight: 700,
+          padding: '2px 7px', borderRadius: '10px',
+          fontSize: '10px', fontWeight: 700,
         }}>
           {ads.length} {ads.length === 1 ? 'anúncio' : 'anúncios'}
         </span>
       </div>
 
-      <div style={{ fontSize: '12px', color: 'var(--c-text-3)' }}>
-        Média geral: <strong style={{ color: 'var(--c-text-1)' }}>R$ {avg.toFixed(2).replace('.', ',')}</strong> por clique.
+      <div style={{ fontSize: '11px', color: 'var(--c-text-3)' }}>
+        Média: <strong style={{ color: 'var(--c-text-1)' }}>R$ {avg.toFixed(2).replace('.', ',')}</strong>/clique
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
         {ads.slice(0, 2).map(ad => (
           <div key={ad.id} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            background: '#FEF2F2', borderRadius: '8px', padding: '8px 10px',
+            background: '#FEF2F2', borderRadius: '7px', padding: '6px 9px',
           }}>
-            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-text-1)' }}>{ad.name}</span>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#DC2626' }}>
+            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--c-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ad.name}</span>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: '#DC2626', flexShrink: 0, marginLeft: '6px' }}>
               R$ {ad.cpc.toFixed(2).replace('.', ',')}
             </span>
           </div>
@@ -695,11 +699,11 @@ function CpcAlertCard({ ads, avg, onOpenAds }) {
         onClick={onOpenAds}
         style={{
           background: 'none', border: '1.5px solid var(--c-accent)',
-          color: 'var(--c-accent)', borderRadius: '10px',
-          padding: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+          color: 'var(--c-accent)', borderRadius: '8px',
+          padding: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
         }}
       >
-        Ver e otimizar anúncios
+        Ver e otimizar
       </button>
     </div>
   );
