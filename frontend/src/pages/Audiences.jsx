@@ -7,22 +7,42 @@ import { useAppState } from '../contexts/AppStateContext';
  * Permite criar, editar, remover e reutilizar segmentações em CreateAd.
  */
 
-const BCAMBORIU_CITIES = [
-  'Balneário Camboriú', 'Itajaí', 'Itapema', 'Camboriú',
-  'Navegantes', 'Penha', 'Porto Belo', 'Bombinhas', 'Brusque',
+/* Joinville/SC — Cris Costa Beauty atende apenas Joinville (regra de negócio).
+   Lista de sugestões = cidade + principais bairros. */
+const JOINVILLE_LOCATIONS = [
+  'Joinville',
+  'Centro',
+  'América',
+  'Glória',
+  'Saguaçu',
+  'Anita Garibaldi',
+  'Costa e Silva',
+  'Boa Vista',
+  'Atiradores',
+  'Bom Retiro',
+  'Santo Antônio',
+  'Iririú',
 ];
 
 /* Coords para salvar localização compatível com Step2Audience (mapa) */
 const CITY_COORDS = {
-  'Balneário Camboriú': { lat: -26.9906, lng: -48.6354 },
-  'Itajaí':             { lat: -26.9078, lng: -48.6619 },
-  'Itapema':            { lat: -27.0903, lng: -48.6114 },
-  'Camboriú':           { lat: -27.0244, lng: -48.6547 },
-  'Navegantes':         { lat: -26.8977, lng: -48.6547 },
-  'Penha':              { lat: -26.7706, lng: -48.6453 },
-  'Porto Belo':         { lat: -27.1583, lng: -48.5508 },
-  'Bombinhas':          { lat: -27.1408, lng: -48.4819 },
-  'Brusque':            { lat: -27.0978, lng: -48.9083 },
+  'Joinville':        { lat: -26.3044, lng: -48.8487 },
+  'Centro':           { lat: -26.3044, lng: -48.8487 },
+  'América':          { lat: -26.3021, lng: -48.8431 },
+  'Glória':           { lat: -26.3028, lng: -48.8656 },
+  'Saguaçu':          { lat: -26.2914, lng: -48.8181 },
+  'Anita Garibaldi':  { lat: -26.2711, lng: -48.8447 },
+  'Costa e Silva':    { lat: -26.2850, lng: -48.8553 },
+  'Boa Vista':        { lat: -26.2481, lng: -48.8697 },
+  'Atiradores':       { lat: -26.2861, lng: -48.8339 },
+  'Bom Retiro':       { lat: -26.2781, lng: -48.8197 },
+  'Santo Antônio':    { lat: -26.3322, lng: -48.8775 },
+  'Iririú':           { lat: -26.3014, lng: -48.8058 },
+  'Bucarein':         { lat: -26.3208, lng: -48.8478 },
+  'Floresta':         { lat: -26.2686, lng: -48.8133 },
+  'Aventureiro':      { lat: -26.3586, lng: -48.8153 },
+  'Itaum':            { lat: -26.3406, lng: -48.8617 },
+  'Jardim Sofia':     { lat: -26.2794, lng: -48.8094 },
 };
 
 /* Extrai o nome de uma localização (aceita string legada ou objeto novo) */
@@ -68,14 +88,14 @@ const IconUsers = () => (
 );
 
 function emptyAudience() {
-  const bc = CITY_COORDS['Balneário Camboriú'];
+  const jv = CITY_COORDS['Joinville'];
   return {
     name: '',
     description: '',
     gender: 'F',
     ageMin: 25,
     ageMax: 45,
-    locations: [{ id: `loc-${Date.now()}`, name: 'Balneário Camboriú', lat: bc.lat, lng: bc.lng, radius: 5 }],
+    locations: [{ id: `loc-${Date.now()}`, name: 'Joinville', lat: jv.lat, lng: jv.lng, radius: 5 }],
     interests: [],
   };
 }
@@ -352,7 +372,7 @@ function AudienceForm({ initial, onSave, onCancel }) {
         <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
           {(() => {
             const current = data.locations.map(locName);
-            return BCAMBORIU_CITIES.filter(c => !current.includes(c)).map(c => (
+            return JOINVILLE_LOCATIONS.filter(c => !current.includes(c)).map(c => (
               <button
                 key={c}
                 onClick={() => addLocation(c)}

@@ -113,9 +113,12 @@ export default function Rejected() {
       details: 'O texto "resultado em 1 dia garantido" não pode ser usado. Remova promessas de resultado ou tempo específico.',
       payload: {
         objective: 'messages',
-        locations: ['Balneário Camboriú', 'Itajaí'],
+        locations: [
+          { id: 'loc-seed-1', name: 'Joinville', lat: -26.3044, lng: -48.8487, radius: 5 },
+          { id: 'loc-seed-2', name: 'Centro',    lat: -26.3044, lng: -48.8487, radius: 5 },
+        ],
         ageRange: [25, 45],
-        gender: 'F',
+        gender: 'female',
         interests: ['Estética', 'Autocuidado', 'Bem-estar'],
         budgetType: 'daily',
         budgetValue: '50',

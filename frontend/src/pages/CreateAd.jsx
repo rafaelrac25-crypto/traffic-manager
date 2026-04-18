@@ -27,17 +27,25 @@ L.Icon.Default.mergeOptions({
 
 const STEPS = ['Objetivo', 'Público', 'Orçamento', 'Criativo', 'Revisar'];
 
-/* ── Coords conhecidas (fallback) — região Balneário Camboriú ── */
+/* ── Coords Joinville/SC — Cris atende apenas Joinville (regra de negócio) ── */
 const CITY_COORDS = {
-  'Balneário Camboriú': { lat: -26.9906, lng: -48.6354 },
-  'Itajaí':             { lat: -26.9078, lng: -48.6619 },
-  'Itapema':            { lat: -27.0903, lng: -48.6114 },
-  'Camboriú':           { lat: -27.0244, lng: -48.6547 },
-  'Navegantes':         { lat: -26.8977, lng: -48.6547 },
-  'Penha':              { lat: -26.7706, lng: -48.6453 },
-  'Porto Belo':         { lat: -27.1583, lng: -48.5508 },
-  'Bombinhas':          { lat: -27.1408, lng: -48.4819 },
-  'Brusque':            { lat: -27.0978, lng: -48.9083 },
+  'Joinville':        { lat: -26.3044, lng: -48.8487 },
+  'Centro':           { lat: -26.3044, lng: -48.8487 },
+  'América':          { lat: -26.3021, lng: -48.8431 },
+  'Glória':           { lat: -26.3028, lng: -48.8656 },
+  'Saguaçu':          { lat: -26.2914, lng: -48.8181 },
+  'Anita Garibaldi':  { lat: -26.2711, lng: -48.8447 },
+  'Costa e Silva':    { lat: -26.2850, lng: -48.8553 },
+  'Boa Vista':        { lat: -26.2481, lng: -48.8697 },
+  'Atiradores':       { lat: -26.2861, lng: -48.8339 },
+  'Bom Retiro':       { lat: -26.2781, lng: -48.8197 },
+  'Santo Antônio':    { lat: -26.3322, lng: -48.8775 },
+  'Iririú':           { lat: -26.3014, lng: -48.8058 },
+  'Bucarein':         { lat: -26.3208, lng: -48.8478 },
+  'Floresta':         { lat: -26.2686, lng: -48.8133 },
+  'Aventureiro':      { lat: -26.3586, lng: -48.8153 },
+  'Itaum':            { lat: -26.3406, lng: -48.8617 },
+  'Jardim Sofia':     { lat: -26.2794, lng: -48.8094 },
 };
 
 function normalizeAudienceLocations(locs) {

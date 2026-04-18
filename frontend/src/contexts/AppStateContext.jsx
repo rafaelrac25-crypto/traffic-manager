@@ -35,12 +35,13 @@ function save(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
 }
 
-/* Coords compatíveis com o mapa do Step2Audience (Leaflet) */
+/* Joinville/SC — Cris atende apenas esta cidade (regra de negócio) */
 const DEFAULT_CITY_COORDS = {
-  'Balneário Camboriú': { lat: -26.9906, lng: -48.6354 },
-  'Itajaí':             { lat: -26.9078, lng: -48.6619 },
-  'Itapema':            { lat: -27.0903, lng: -48.6114 },
-  'Camboriú':           { lat: -27.0244, lng: -48.6547 },
+  'Joinville':        { lat: -26.3044, lng: -48.8487 },
+  'Centro':           { lat: -26.3044, lng: -48.8487 },
+  'América':          { lat: -26.3021, lng: -48.8431 },
+  'Glória':           { lat: -26.3028, lng: -48.8656 },
+  'Saguaçu':          { lat: -26.2914, lng: -48.8181 },
 };
 function defaultLoc(name, i) {
   const c = DEFAULT_CITY_COORDS[name];
@@ -50,23 +51,23 @@ function defaultLoc(name, i) {
 const DEFAULT_AUDIENCES = [
   {
     id: 'aud-demo-1',
-    name: 'Mulheres 25-45 — estética',
-    description: 'Clientes-alvo principais. Moram em Balneário Camboriú e região.',
+    name: 'Mulheres 25-45 — estética · Joinville',
+    description: 'Clientes-alvo principais. Moram em Joinville, bairros de renda média-alta.',
     gender: 'F',
     ageMin: 25,
     ageMax: 45,
-    locations: ['Balneário Camboriú', 'Itajaí', 'Itapema', 'Camboriú'].map(defaultLoc),
+    locations: ['Joinville', 'Centro', 'América', 'Glória', 'Saguaçu'].map(defaultLoc),
     interests: ['Estética', 'Skincare', 'Autocuidado', 'Beleza', 'Bem-estar'],
     createdAt: new Date().toISOString(),
   },
   {
     id: 'aud-demo-2',
-    name: 'Noivas & madrinhas',
-    description: 'Segmentação para datas como Dia das Mães e pré-festas.',
+    name: 'Noivas & madrinhas · Joinville',
+    description: 'Segmentação para datas como Dia das Mães e pré-festas, público de Joinville.',
     gender: 'F',
     ageMin: 22,
     ageMax: 40,
-    locations: ['Balneário Camboriú', 'Itajaí'].map(defaultLoc),
+    locations: ['Joinville', 'Centro', 'América'].map(defaultLoc),
     interests: ['Casamento', 'Estética', 'Beleza', 'Eventos'],
     createdAt: new Date().toISOString(),
   },
