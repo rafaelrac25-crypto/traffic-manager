@@ -321,7 +321,7 @@ function MiniCalendar({ onViewFull }) {
 /* ── Card de métrica ── */
 function MetricCard({ label, value, trend, trendUp, sub, icon, iconBg, iconColor }) {
   return (
-    <div style={{
+    <div className="ccb-card" style={{
       background: 'var(--c-card-bg)',
       borderRadius: '14px',
       padding: '18px 20px',
@@ -330,9 +330,10 @@ function MetricCard({ label, value, trend, trendUp, sub, icon, iconBg, iconColor
       display: 'flex',
       flexDirection: 'column',
       gap: '10px',
+      cursor: 'default',
     }}>
       {/* Ícone */}
-      <div style={{
+      <div className="ccb-icon" style={{
         width: '40px', height: '40px', borderRadius: '12px',
         background: iconBg, color: iconColor,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -695,7 +696,7 @@ export default function Dashboard() {
 
       {/* ── Gráfico (largura total) ── */}
       <div style={{ marginBottom: '20px' }}>
-        <div style={{
+        <div className="ccb-card" style={{
           background: 'var(--c-card-bg)',
           borderRadius: '16px',
           border: '1px solid var(--c-border)',

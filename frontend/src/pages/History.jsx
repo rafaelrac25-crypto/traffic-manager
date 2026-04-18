@@ -140,7 +140,7 @@ export default function History() {
         </div>
       ) : (
         Object.entries(grouped).map(([groupLabel, entries]) => (
-          <div key={groupLabel} style={{ marginBottom: '20px' }}>
+          <div key={groupLabel} className="ccb-card" style={{ marginBottom: '20px', borderRadius: '14px' }}>
             <div style={{
               fontSize: '11px', fontWeight: 700, color: 'var(--c-text-4)',
               textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: '8px', padding: '0 4px',

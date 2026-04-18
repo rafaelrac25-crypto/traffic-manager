@@ -315,3 +315,166 @@ input[type="range"] { accent-color: #C13584; }
   border-radius: 4px;
   transition: width .35s ease;
 }
+
+/* ══════════════════════════════════════════
+   ANIMAÇÕES GLOBAIS — micro-interações
+══════════════════════════════════════════ */
+
+/* Easing suave padrão usado em todos os hovers */
+:root {
+  --ease-out-soft: cubic-bezier(.22, 1, .36, 1);
+}
+
+/* Cards interativos — lift ao passar o mouse */
+.ccb-card {
+  transition:
+    transform .28s var(--ease-out-soft),
+    box-shadow .28s var(--ease-out-soft),
+    border-color .2s ease,
+    background .2s ease;
+  will-change: transform;
+}
+.ccb-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 34px var(--c-shadow-md, rgba(193,53,132,.18));
+  border-color: color-mix(in srgb, var(--c-accent) 35%, var(--c-border));
+}
+.ccb-card:active {
+  transform: translateY(-1px) scale(.997);
+  transition-duration: .08s;
+}
+
+/* Botões/chips pressionáveis — scale sutil */
+.ccb-press {
+  transition:
+    transform .18s var(--ease-out-soft),
+    box-shadow .22s var(--ease-out-soft),
+    filter .2s ease;
+}
+.ccb-press:hover {
+  transform: translateY(-1.5px);
+  filter: brightness(1.04);
+}
+.ccb-press:active {
+  transform: translateY(0) scale(.97);
+  transition-duration: .08s;
+}
+
+/* Ícones reativos — leve rotação/scale no hover do parent */
+.ccb-card:hover .ccb-icon,
+.ccb-press:hover .ccb-icon {
+  transform: scale(1.08) rotate(-2deg);
+  transition: transform .28s var(--ease-out-soft);
+}
+.ccb-icon {
+  transition: transform .28s var(--ease-out-soft);
+}
+
+/* Flutuação contínua (use com moderação — CTAs, elementos vazios) */
+@keyframes floatSoft {
+  0%,100% { transform: translateY(0);   }
+  50%     { transform: translateY(-4px); }
+}
+.ccb-float {
+  animation: floatSoft 4s ease-in-out infinite;
+}
+
+/* Shimmer — usado em skeletons/placeholders */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+.ccb-shimmer {
+  background: linear-gradient(90deg,
+    var(--c-surface) 0%,
+    var(--c-hover)  50%,
+    var(--c-surface) 100%);
+  background-size: 800px 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+/* Destaque sutil ao receber foco (teclado) */
+.ccb-card:focus-visible,
+.ccb-press:focus-visible {
+  outline: 2px solid var(--c-accent);
+  outline-offset: 3px;
+}
+
+/* Entrada escalonada — filhos aparecem em cascata (.ccb-stagger > *) */
+@keyframes staggerIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+.ccb-stagger > * {
+  opacity: 0;
+  animation: staggerIn .45s var(--ease-out-soft) forwards;
+}
+.ccb-stagger > *:nth-child(1) { animation-delay: .02s; }
+.ccb-stagger > *:nth-child(2) { animation-delay: .08s; }
+.ccb-stagger > *:nth-child(3) { animation-delay: .14s; }
+.ccb-stagger > *:nth-child(4) { animation-delay: .20s; }
+.ccb-stagger > *:nth-child(5) { animation-delay: .26s; }
+.ccb-stagger > *:nth-child(6) { animation-delay: .32s; }
+.ccb-stagger > *:nth-child(7) { animation-delay: .38s; }
+.ccb-stagger > *:nth-child(8) { animation-delay: .44s; }
+.ccb-stagger > *:nth-child(n+9) { animation-delay: .5s; }
+
+/* Respeita preferência do usuário por menos animação */
+@media (prefers-reduced-motion: reduce) {
+  .ccb-card, .ccb-press, .ccb-float, .ccb-icon,
+  .ccb-stagger > * {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+/* Grid de métricas + filhos = stagger automático + lift global */
+.metric-grid > * {
+  animation: staggerIn .4s var(--ease-out-soft) both;
+  transition:
+    transform .28s var(--ease-out-soft),
+    box-shadow .28s var(--ease-out-soft),
+    border-color .2s ease;
+  will-change: transform;
+}
+.metric-grid > *:nth-child(1) { animation-delay: .04s; }
+.metric-grid > *:nth-child(2) { animation-delay: .10s; }
+.metric-grid > *:nth-child(3) { animation-delay: .16s; }
+.metric-grid > *:nth-child(4) { animation-delay: .22s; }
+.metric-grid > *:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 32px var(--c-shadow-md, rgba(193,53,132,.16));
+}
+
+/* Botões da aplicação — press feedback global (qualquer <button>) */
+.page-container button:not(:disabled),
+.page-container [role="button"]:not([aria-disabled="true"]) {
+  transition:
+    transform .18s var(--ease-out-soft),
+    box-shadow .2s ease,
+    filter .18s ease,
+    background .2s ease,
+    border-color .2s ease;
+}
+.page-container button:not(:disabled):active,
+.page-container [role="button"]:not([aria-disabled="true"]):active {
+  transform: scale(.96);
+  transition-duration: .08s;
+}
+.page-container button:not(:disabled):hover {
+  filter: brightness(1.03);
+}
+
+/* Linhas de tabela — destaque suave no hover */
+.ads-table-wrapper tbody tr {
+  transition: background .18s ease, transform .2s var(--ease-out-soft);
+}
+.ads-table-wrapper tbody tr:hover {
+  transform: translateX(2px);
+}
+
+/* Links da sidebar — já tem transition, só adiciona micro-scale no active */
+.sidebar-fixed nav > div:active {
+  transform: scale(.98);
+}
