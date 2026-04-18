@@ -53,6 +53,12 @@ const IconCreatives = ({ active }) => (
     <polyline points="21 15 16 10 5 21"/>
   </svg>
 );
+const IconHistory = ({ active }) => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={active ? 'var(--c-accent)' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><polyline points="3 3 3 8 8 8"/>
+    <line x1="12" y1="7" x2="12" y2="12"/><line x1="12" y1="12" x2="15" y2="14"/>
+  </svg>
+);
 const IconMoon = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/>
@@ -88,6 +94,7 @@ const NAV = [
   { to: '/criativos',     label: 'Criativos',     Icon: IconCreatives },
   { to: '/investimento',  label: 'Investimento',  Icon: IconInvestment },
   { to: '/criar-anuncio', label: 'Criar anúncio', Icon: IconCreate },
+  { to: '/historico',     label: 'Histórico',     Icon: IconHistory },
 ];
 
 export default function Sidebar({ open = false, isMobile = false }) {

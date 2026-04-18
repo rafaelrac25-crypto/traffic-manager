@@ -9,6 +9,7 @@ import Rejected from './pages/Rejected';
 import Investment from './pages/Investment';
 import Audiences from './pages/Audiences';
 import CreativeLibrary from './pages/CreativeLibrary';
+import History from './pages/History';
 import AIAssistant from './components/AIAssistant';
 import SplashScreen from './components/SplashScreen';
 import { AppStateProvider, useAppState } from './contexts/AppStateContext';
@@ -22,6 +23,7 @@ const PAGE_TITLES = {
   '/criativos':     'Criativos',
   '/investimento':  'Investimento',
   '/criar-anuncio': 'Criar anúncio',
+  '/historico':     'Histórico',
 };
 
 /* ── Mapa de busca — termos → destino ou ação ── */
@@ -34,6 +36,7 @@ const SEARCH_MAP = [
   { terms: ['público','publico','públicos','publicos','audiência','audiencia','segmentação','segmentacao'], to: '/publicos', label: 'Públicos' },
   { terms: ['criativo','criativos','biblioteca','texto','título','titulo','copy'], to: '/criativos', label: 'Criativos' },
   { terms: ['criar','novo','nova campanha','meta','instagram','google'], to: '/criar-anuncio', label: 'Criar anúncio' },
+  { terms: ['histórico','historico','desfazer','restaurar','log','ações'], to: '/historico', label: 'Histórico' },
 ];
 
 const SearchIcon = () => (
@@ -64,7 +67,7 @@ function timeAgo(iso) {
 
 function NotificationDropdown({ open, onClose }) {
   const navigate = useNavigate();
-  const { notifications, removeNotification, clearAllNotifications } = useAppState();
+  const { notifications, removeNotification, clearAllNotifications, dismissCommercialDate } = useAppState();
   const ref = useRef(null);
 
   useEffect(() => {
@@ -82,6 +85,7 @@ function NotificationDropdown({ open, onClose }) {
     'low-balance':{bg: '#FFFBEB', border: '#FCD34D', emoji: '💰' },
     'high-cpc':  { bg: '#FFF7ED', border: '#FDBA74', emoji: '📈' },
     funds:       { bg: '#F0FDF4', border: '#86EFAC', emoji: '💵' },
+    'commercial-date': { bg: '#FDF2F8', border: '#F9A8D4', emoji: '📅' },
     info:        { bg: 'var(--c-surface)', border: 'var(--c-border)', emoji: '🔔' },
   };
 
@@ -119,6 +123,7 @@ function NotificationDropdown({ open, onClose }) {
           </div>
         ) : notifications.map(n => {
           const style = colors[n.kind] || colors.info;
+          const isCommercial = n.kind === 'commercial-date' && n.dateKey;
           return (
             <div
               key={n.id}
@@ -145,7 +150,27 @@ function NotificationDropdown({ open, onClose }) {
                 <div style={{ fontSize: '12px', color: 'var(--c-text-3)', lineHeight: 1.5, marginBottom: '4px' }}>
                   {n.message}
                 </div>
-                <div style={{ fontSize: '10px', color: 'var(--c-text-4)' }}>{timeAgo(n.createdAt)}</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                  <div style={{ fontSize: '10px', color: 'var(--c-text-4)' }}>{timeAgo(n.createdAt)}</div>
+                  {isCommercial && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const title = n.title?.replace(/^[\p{Emoji}\s]+/u, '').replace(/ (hoje|amanhã|em \d+ dias).*$/, '');
+                        dismissCommercialDate(n.dateKey, { name: title });
+                      }}
+                      style={{
+                        background: 'transparent', border: '1px solid var(--c-border)',
+                        color: 'var(--c-text-3)', borderRadius: '6px',
+                        padding: '3px 8px', fontSize: '10px', fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                      title="Não tenho interesse nesta data — pode ser restaurada no histórico"
+                    >
+                      Dispensar
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           );
@@ -366,6 +391,7 @@ function Layout() {
             <Route path="/publicos"      element={<Audiences />} />
             <Route path="/criativos"     element={<CreativeLibrary />} />
             <Route path="/criar-anuncio" element={<CreateAd />} />
+            <Route path="/historico"     element={<History />} />
             <Route path="/novo"          element={<Navigate to="/criar-anuncio" replace />} />
             <Route path="*"              element={<Dashboard />} />
           </Routes>

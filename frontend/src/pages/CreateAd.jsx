@@ -1257,7 +1257,7 @@ export default function CreateAd() {
   const location = useLocation();
   const commercialDate = location.state?.commercialDate;
   const rejectedAd = location.state?.rejectedAd || null;
-  const { addNotification, addAd, updateAd, getAdById, audiences, creatives, addCreative, markCreativeUsed, removeRejectedAd } = useAppState();
+  const { addNotification, addAd, updateAd, getAdById, audiences, creatives, addCreative, markCreativeUsed, removeRejectedAd, logHistory } = useAppState();
   const editId = location.state?.editId || null;
   const editingAd = editId ? getAdById(editId) : null;
 
@@ -1354,14 +1354,29 @@ export default function CreateAd() {
       adFormat, primaryText, headline, destUrl, ctaButton,
       commercialDateId: commercialDate?.id || null,
     };
+    let publishedAd = null;
     if (editingAd) {
       updateAd(editingAd.id, adPayload);
+      publishedAd = { ...editingAd, ...adPayload };
     } else {
-      addAd(adPayload);
+      publishedAd = addAd(adPayload);
     }
     if (primaryText && headline) {
       addCreative({ name: headline, primaryText, headline, destUrl, ctaButton, adFormat });
     }
+    logHistory({
+      type: fixMode ? 'ad-corrected' : (editingAd ? 'ad-updated' : 'ad-published'),
+      title: fixMode
+        ? `Correção publicada: ${adName}`
+        : editingAd
+          ? `Anúncio atualizado: ${adName}`
+          : `Anúncio publicado: ${adName}`,
+      description: isScheduled
+        ? `Agendado para ${new Date(startDate + 'T12:00:00').toLocaleDateString('pt-BR')}.`
+        : 'Enviado ao Meta para revisão.',
+      restorable: false,
+      payload: publishedAd,
+    });
     if (fixMode) {
       removeRejectedAd(rejectedAd.id);
       addNotification({

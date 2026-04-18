@@ -18,6 +18,9 @@ const KEY_AUDIENCES = 'ccb_audiences';
 const KEY_CREATIVES = 'ccb_creatives';
 const KEY_PIXEL     = 'ccb_pixel';
 const KEY_COMMERCIAL_ALERTED = 'ccb_commercial_alerted';
+const KEY_DISMISSED_DATES    = 'ccb_dismissed_dates';
+const KEY_HISTORY            = 'ccb_history';
+const HISTORY_MAX_ENTRIES    = 500;
 
 const LOW_BALANCE_THRESHOLD = 20;
 
@@ -73,6 +76,8 @@ export function AppStateProvider({ children }) {
   const [pixel,         setPixel]         = useState(() => load(KEY_PIXEL, {
     enabled: false, pixelId: '', events: { ViewContent: true, Lead: true, Contact: true, Purchase: false },
   }));
+  const [dismissedDates, setDismissedDates] = useState(() => load(KEY_DISMISSED_DATES, []));
+  const [history,        setHistory]        = useState(() => load(KEY_HISTORY, []));
 
   /* ─── Status de sincronização com as APIs ─── */
   const [syncStatus, setSyncStatus] = useState({
@@ -114,8 +119,9 @@ export function AppStateProvider({ children }) {
   useEffect(() => {
     const upcoming = getRelevantCommercialDatesInWindow(new Date(), 45);
     if (upcoming.length === 0) return;
-    const alerted = load(KEY_COMMERCIAL_ALERTED, []);
-    const toAlert = upcoming.filter(c => !alerted.includes(c.key));
+    const alerted   = load(KEY_COMMERCIAL_ALERTED, []);
+    const dismissed = load(KEY_DISMISSED_DATES, []);
+    const toAlert   = upcoming.filter(c => !alerted.includes(c.key) && !dismissed.includes(c.key));
     if (toAlert.length === 0) return;
 
     toAlert.forEach(c => {
@@ -125,7 +131,8 @@ export function AppStateProvider({ children }) {
           ? 'amanhã'
           : `em ${c.daysUntil} dias`;
       addNotification({
-        kind: 'info',
+        kind: 'commercial-date',
+        dateKey: c.key,
         title: `${c.emoji} ${c.name} ${when}`,
         message: `${c.whyImportant.split('.')[0]}. Planeje a campanha com antecedência.`,
         link: '/calendario',
@@ -144,6 +151,8 @@ export function AppStateProvider({ children }) {
   useEffect(() => save(KEY_AUDIENCES, audiences),     [audiences]);
   useEffect(() => save(KEY_CREATIVES, creatives),     [creatives]);
   useEffect(() => save(KEY_PIXEL,     pixel),         [pixel]);
+  useEffect(() => save(KEY_DISMISSED_DATES, dismissedDates), [dismissedDates]);
+  useEffect(() => save(KEY_HISTORY,   history),       [history]);
 
   const addNotification = useCallback((notif) => {
     setNotifications(prev => [{
@@ -152,6 +161,43 @@ export function AppStateProvider({ children }) {
       read: false,
       ...notif,
     }, ...prev].slice(0, 50));
+  }, []);
+
+  /* ─── Histórico (log de ações principais + undo) ─── */
+  const logHistory = useCallback((entry) => {
+    setHistory(prev => [{
+      id: `hist-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      createdAt: new Date().toISOString(),
+      restored: false,
+      ...entry,
+    }, ...prev].slice(0, HISTORY_MAX_ENTRIES));
+  }, []);
+
+  const removeHistoryEntry = useCallback((id) => {
+    setHistory(prev => prev.filter(h => h.id !== id));
+  }, []);
+
+  const clearHistory = useCallback(() => setHistory([]), []);
+
+  /* ─── Dispensar datas comerciais (com entrada no histórico) ─── */
+  const dismissCommercialDate = useCallback((dateKey, dateMeta = {}) => {
+    if (!dateKey) return;
+    setDismissedDates(prev => prev.includes(dateKey) ? prev : [...prev, dateKey]);
+    setNotifications(prev => prev.filter(n => !(n.kind === 'commercial-date' && n.dateKey === dateKey)));
+    logHistory({
+      type: 'commercial-dismissed',
+      title: `Data dispensada: ${dateMeta.name || dateKey}`,
+      description: 'Você pode restaurar esta data para voltar a receber o alerta.',
+      restorable: true,
+      payload: { dateKey, ...dateMeta },
+    });
+  }, [logHistory]);
+
+  const restoreCommercialDate = useCallback((dateKey) => {
+    if (!dateKey) return;
+    setDismissedDates(prev => prev.filter(k => k !== dateKey));
+    const alerted = load(KEY_COMMERCIAL_ALERTED, []);
+    save(KEY_COMMERCIAL_ALERTED, alerted.filter(k => k !== dateKey));
   }, []);
 
   const removeNotification = useCallback((id) => {
@@ -228,8 +274,20 @@ export function AppStateProvider({ children }) {
   }, []);
 
   const removeAd = useCallback((id) => {
-    setAds(prev => prev.filter(a => a.id !== id));
-  }, []);
+    setAds(prev => {
+      const target = prev.find(a => a.id === id);
+      if (target) {
+        logHistory({
+          type: 'ad-removed',
+          title: `Anúncio removido: ${target.name || 'sem nome'}`,
+          description: 'Você pode restaurar este anúncio no histórico.',
+          restorable: true,
+          payload: target,
+        });
+      }
+      return prev.filter(a => a.id !== id);
+    });
+  }, [logHistory]);
 
   const duplicateAd = useCallback((id) => {
     const src = ads.find(a => a.id === id);
@@ -280,8 +338,20 @@ export function AppStateProvider({ children }) {
   }, []);
 
   const removeAudience = useCallback((id) => {
-    setAudiences(prev => prev.filter(a => a.id !== id));
-  }, []);
+    setAudiences(prev => {
+      const target = prev.find(a => a.id === id);
+      if (target) {
+        logHistory({
+          type: 'audience-removed',
+          title: `Público removido: ${target.name || 'sem nome'}`,
+          description: 'Você pode restaurar este público no histórico.',
+          restorable: true,
+          payload: target,
+        });
+      }
+      return prev.filter(a => a.id !== id);
+    });
+  }, [logHistory]);
 
   /* ─── Biblioteca de criativos ─── */
   const addCreative = useCallback((creative) => {
@@ -300,8 +370,46 @@ export function AppStateProvider({ children }) {
   }, []);
 
   const removeCreative = useCallback((id) => {
-    setCreatives(prev => prev.filter(c => c.id !== id));
-  }, []);
+    setCreatives(prev => {
+      const target = prev.find(c => c.id === id);
+      if (target) {
+        logHistory({
+          type: 'creative-removed',
+          title: `Criativo removido: ${target.name || target.headline || 'sem nome'}`,
+          description: 'Você pode restaurar este criativo no histórico.',
+          restorable: true,
+          payload: target,
+        });
+      }
+      return prev.filter(c => c.id !== id);
+    });
+  }, [logHistory]);
+
+  /* ─── Restaurar entradas do histórico ─── */
+  const restoreHistoryEntry = useCallback((id) => {
+    const entry = history.find(h => h.id === id);
+    if (!entry || !entry.restorable || entry.restored) return false;
+
+    if (entry.type === 'commercial-dismissed') {
+      const key = entry.payload?.dateKey;
+      if (key) {
+        setDismissedDates(prev => prev.filter(k => k !== key));
+        const alerted = load(KEY_COMMERCIAL_ALERTED, []);
+        save(KEY_COMMERCIAL_ALERTED, alerted.filter(k => k !== key));
+      }
+    } else if (entry.type === 'ad-removed') {
+      setAds(prev => prev.some(a => a.id === entry.payload?.id) ? prev : [entry.payload, ...prev]);
+    } else if (entry.type === 'audience-removed') {
+      setAudiences(prev => prev.some(a => a.id === entry.payload?.id) ? prev : [entry.payload, ...prev]);
+    } else if (entry.type === 'creative-removed') {
+      setCreatives(prev => prev.some(c => c.id === entry.payload?.id) ? prev : [entry.payload, ...prev]);
+    } else {
+      return false;
+    }
+
+    setHistory(prev => prev.map(h => h.id === id ? { ...h, restored: true, restoredAt: new Date().toISOString() } : h));
+    return true;
+  }, [history]);
 
   const value = {
     notifications,
@@ -349,6 +457,16 @@ export function AppStateProvider({ children }) {
     setPixel,
 
     syncStatus,
+
+    history,
+    logHistory,
+    removeHistoryEntry,
+    restoreHistoryEntry,
+    clearHistory,
+
+    dismissedDates,
+    dismissCommercialDate,
+    restoreCommercialDate,
   };
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;
