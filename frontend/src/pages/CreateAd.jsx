@@ -1265,7 +1265,15 @@ export default function CreateAd() {
   const rejectionInfo = fixMode ? getRejectionInfo(rejectedAd.reason) : null;
   const source = rejectedAd?.payload || editingAd || null;
 
-  const [step, setStep] = useState(fixMode && rejectionInfo ? rejectionInfo.step : 0);
+  /* Default audience usado quando vem de data comercial (pula para Revisar) */
+  const quickFillAudience = commercialDate && !source && audiences.length > 0 ? audiences[0] : null;
+  const quickFill = !!commercialDate && !source;
+
+  const [step, setStep] = useState(
+    fixMode && rejectionInfo ? rejectionInfo.step
+    : quickFill ? 4 /* abrir direto em Revisar quando vem de data comercial */
+    : 0
+  );
   const [errors, setErrors] = useState({});
   const [publishing, setPublishing] = useState(false);
 
@@ -1289,11 +1297,11 @@ export default function CreateAd() {
     : (commercialDate?.suggestedBudget?.daily ? String(commercialDate.suggestedBudget.daily) : '');
 
   /* ── Estado do formulário ── */
-  const [objective,          setObjective]          = useState(source?.objective || '');
-  const [locations,          setLocations]          = useState(source?.locations || []);
-  const [ageRange,           setAgeRange]           = useState(source?.ageRange || [18, 65]);
-  const [gender,             setGender]             = useState(source?.gender || 'all');
-  const [interests,          setInterests]          = useState(source?.interests || []);
+  const [objective,          setObjective]          = useState(source?.objective || (quickFill ? 'messages' : ''));
+  const [locations,          setLocations]          = useState(source?.locations || (quickFillAudience?.locations || []));
+  const [ageRange,           setAgeRange]           = useState(source?.ageRange || (quickFillAudience ? [quickFillAudience.ageMin, quickFillAudience.ageMax] : [18, 65]));
+  const [gender,             setGender]             = useState(source?.gender || (quickFillAudience?.gender || 'all'));
+  const [interests,          setInterests]          = useState(source?.interests || (quickFillAudience?.interests || []));
   const [budgetType,         setBudgetType]         = useState(source?.budgetType || 'daily');
   const [budgetValue,        setBudgetValue]        = useState(initialBudget);
   const [startDate,          setStartDate]          = useState(initialStart);
@@ -1418,7 +1426,9 @@ export default function CreateAd() {
           <p style={{ fontSize: '13px', color: 'var(--c-text-3)' }}>
             {fixMode
               ? `Meta Ads · Ajuste o passo "${STEPS[rejectionInfo?.step] || '—'}" e reenvie — o restante já está preenchido.`
-              : 'Meta Ads · Configure sua campanha de tráfego pago em 5 passos.'}
+              : quickFill
+                ? `Meta Ads · ${commercialDate.name} pré-preenchido. Revise e publique, ou personalize se quiser ajustar.`
+                : 'Meta Ads · Configure sua campanha de tráfego pago em 5 passos.'}
           </p>
         </div>
         <button
@@ -1470,6 +1480,36 @@ export default function CreateAd() {
                   ← Voltar ao passo "{STEPS[rejectionInfo.step]}"
                 </button>
               )}
+            </div>
+          )}
+          {quickFill && step === 4 && (
+            <div style={{
+              padding: '14px 16px',
+              background: 'linear-gradient(135deg, rgba(214,141,143,.09), rgba(125,74,94,.04))',
+              border: '1px solid var(--c-border)',
+              borderLeft: '4px solid var(--c-accent)',
+              borderRadius: '10px',
+              marginBottom: '22px',
+            }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--c-accent)', letterSpacing: '.5px', marginBottom: '6px' }}>
+                {commercialDate.emoji} PRÉ-PREENCHIDO · {commercialDate.name.toUpperCase()}
+              </div>
+              <p style={{ fontSize: '13px', color: 'var(--c-text-2)', margin: '0 0 10px 0', lineHeight: 1.55 }}>
+                Usei os padrões da Cris: <strong>mensagens no WhatsApp</strong>
+                {quickFillAudience ? <> para o público <strong>"{quickFillAudience.name}"</strong></> : null}
+                . Texto e orçamento vieram da estratégia desta data. Revise abaixo e publique — ou personalize se quiser mudar algo.
+              </p>
+              <button
+                type="button"
+                onClick={() => { setErrors({}); setStep(0); }}
+                style={{
+                  padding: '7px 12px',
+                  background: 'var(--c-surface)', border: '1.5px solid var(--c-border)',
+                  color: 'var(--c-text-2)', borderRadius: '8px', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                ✏️ Personalizar do início
+              </button>
             </div>
           )}
           {stepComponents[step]}
