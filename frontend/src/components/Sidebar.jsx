@@ -172,17 +172,17 @@ export default function Sidebar({ open = false, isMobile = false }) {
                   background: active ? 'var(--c-active-bg)' : 'transparent',
                   color: 'var(--c-accent)',
                   border: `1.5px solid ${active ? 'var(--c-accent)' : 'var(--c-accent)'}`,
-                  boxShadow: active ? '0 2px 8px rgba(193,53,132,.14)' : 'none',
+                  boxShadow: active ? '0 2px 8px rgba(214,141,143,.14)' : 'none',
                 }}
                 onMouseEnter={e => {
                   e.currentTarget.style.background = 'var(--c-active-bg)';
                   e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(193,53,132,.22)';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(214,141,143,.22)';
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.background = active ? 'var(--c-active-bg)' : 'transparent';
                   e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = active ? '0 2px 8px rgba(193,53,132,.14)' : 'none';
+                  e.currentTarget.style.boxShadow = active ? '0 2px 8px rgba(214,141,143,.14)' : 'none';
                 }}
               >
                 <span>{label}</span>
@@ -376,7 +376,7 @@ export default function Sidebar({ open = false, isMobile = false }) {
           ) : (
             <div style={{
               width: '34px', height: '34px',
-              background: 'linear-gradient(135deg, #E8A4C8, #C13584)',
+              background: 'linear-gradient(135deg, #E8A4C8, #d68d8f)',
               borderRadius: '50%', display: 'flex', alignItems: 'center',
               justifyContent: 'center', color: '#fff', fontSize: '12px',
               fontWeight: 700, flexShrink: 0,

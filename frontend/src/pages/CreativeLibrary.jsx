@@ -59,7 +59,7 @@ function emptyCreative() {
 
 function CreativeCard({ creative, onRemove, onCopy, onReuse }) {
   return (
-    <div style={{
+    <div className="ccb-card" style={{
       background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',
       borderRadius: '14px', overflow: 'hidden',
       boxShadow: '0 2px 8px var(--c-shadow)',

@@ -92,7 +92,7 @@ function CommercialDateModal({ entry, onClose, onCreateAd }) {
             <Section title="Orçamento sugerido">
               <div style={{
                 padding: '14px 16px',
-                background: 'linear-gradient(135deg, rgba(193,53,132,.08), rgba(125,74,94,.04))',
+                background: 'linear-gradient(135deg, rgba(214,141,143,.08), rgba(125,74,94,.04))',
                 border: '1px solid var(--c-border)',
                 borderRadius: '12px',
                 display: 'flex', alignItems: 'center', gap: '14px',
@@ -201,14 +201,14 @@ const UPCOMING = [
 ];
 
 const PLAT_BADGE = {
-  instagram: { label: 'Instagram', bg: '#FDF0F8', color: '#C13584' },
+  instagram: { label: 'Instagram', bg: '#FDF0F8', color: '#d68d8f' },
   google:    { label: 'Google Ads', bg: '#FEF9C3', color: '#CA8A04' },
   meta:      { label: 'Meta Ads',  bg: '#EFF6FF', color: '#1877F2' },
   review:    { label: 'Em revisão', bg: '#F5F3FF', color: '#7C3AED' },
 };
 
 const PLAT_DOT = {
-  instagram: '#C13584',
+  instagram: '#d68d8f',
   google:    '#F97316',
   meta:      '#1877F2',
   review:    '#8B5CF6',
@@ -378,11 +378,11 @@ export default function Calendar() {
                     {commercial && (
                       <div style={{
                         fontSize: '9px', fontWeight: 700,
-                        color: '#C13584',
-                        borderLeft: '2px solid #C13584',
+                        color: '#d68d8f',
+                        borderLeft: '2px solid #d68d8f',
                         borderRadius: '0 4px 4px 0',
                         padding: '2px 5px',
-                        background: '#C1358418',
+                        background: '#d68d8f18',
                         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                         maxWidth: '100%',
                       }}>{commercial.name}</div>
@@ -415,7 +415,7 @@ export default function Calendar() {
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px',
           }}>
             <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-              {[['#C13584','Instagram'], ['#F97316','Google Ads'], ['#8B5CF6','Em revisão']].map(([color, label]) => (
+              {[['#d68d8f','Instagram'], ['#F97316','Google Ads'], ['#8B5CF6','Em revisão']].map(([color, label]) => (
                 <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                   <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: color }} />
                   <span style={{ fontSize: '11px', color: 'var(--c-text-3)' }}>{label}</span>

@@ -22,7 +22,7 @@ const MOCK_METRICS = [
     sub: 'vs. ontem',
     icon: <WalletIcon />,
     iconBg: '#FDF0F8',
-    iconColor: '#C13584',
+    iconColor: '#d68d8f',
   },
   {
     label: 'Cliques',
@@ -70,7 +70,7 @@ const CHART_DATA = [
 /* Eventos do calendário */
 const CALENDAR_EVENTS = {
   '2026-04-10': { label: 'Esmaltes Tendência', color: '#F97316', dot: true },
-  '2026-04-14': { label: 'Skincare Rotina Diária', color: '#C13584', dot: true },
+  '2026-04-14': { label: 'Skincare Rotina Diária', color: '#d68d8f', dot: true },
   '2026-04-21': { label: 'Lançamento Nova Linha', color: '#8B5CF6', dot: true },
 };
 
@@ -203,12 +203,12 @@ function LineChart({ data, unit = 'resultados' }) {
     >
       <defs>
         <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stopColor="#C13584" stopOpacity="0.22"/>
-          <stop offset="100%" stopColor="#C13584" stopOpacity="0.01"/>
+          <stop offset="0%"   stopColor="#d68d8f" stopOpacity="0.22"/>
+          <stop offset="100%" stopColor="#d68d8f" stopOpacity="0.01"/>
         </linearGradient>
         <linearGradient id="chartLine" x1="0" y1="0" x2="1" y2="0">
           <stop offset="0%"   stopColor="#E879A8"/>
-          <stop offset="100%" stopColor="#C13584"/>
+          <stop offset="100%" stopColor="#d68d8f"/>
         </linearGradient>
         <filter id="chartGlow" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="3" result="blur"/>
@@ -235,7 +235,7 @@ function LineChart({ data, unit = 'resultados' }) {
           x={pt.x}
           y={H - 4}
           fontSize="9"
-          fill={i === hoverIdx ? '#C13584' : 'var(--c-text-4)'}
+          fill={i === hoverIdx ? '#d68d8f' : 'var(--c-text-4)'}
           fontWeight={i === hoverIdx ? 700 : 400}
           textAnchor="middle"
           style={{ transition: 'fill .18s ease' }}
@@ -250,8 +250,8 @@ function LineChart({ data, unit = 'resultados' }) {
           cx={pt.x}
           cy={pt.y}
           r={i === hoverIdx ? 5 : 2.5}
-          fill={i === hoverIdx ? '#C13584' : '#fff'}
-          stroke="#C13584"
+          fill={i === hoverIdx ? '#d68d8f' : '#fff'}
+          stroke="#d68d8f"
           strokeWidth={i === hoverIdx ? 2 : 1.5}
           style={{ transition: 'r .22s cubic-bezier(.22,1,.36,1), fill .18s ease' }}
         />
@@ -260,7 +260,7 @@ function LineChart({ data, unit = 'resultados' }) {
       <line
         x1={active.x} y1={padT}
         x2={active.x} y2={padT + plotH}
-        stroke="#C13584"
+        stroke="#d68d8f"
         strokeWidth="1"
         strokeDasharray="3,3"
         opacity={isHovering ? 0.7 : 0.45}
@@ -274,8 +274,8 @@ function LineChart({ data, unit = 'resultados' }) {
           width="92"
           height="30"
           rx="8"
-          fill="#C13584"
-          style={{ transition: 'x .22s cubic-bezier(.22,1,.36,1), y .22s cubic-bezier(.22,1,.36,1)', filter: 'drop-shadow(0 4px 10px rgba(193,53,132,.35))' }}
+          fill="#d68d8f"
+          style={{ transition: 'x .22s cubic-bezier(.22,1,.36,1), y .22s cubic-bezier(.22,1,.36,1)', filter: 'drop-shadow(0 4px 10px rgba(214,141,143,.35))' }}
         />
         <text
           x={active.x}
@@ -388,7 +388,7 @@ function MiniCalendar({ onViewFull }) {
 
       {/* Legenda */}
       <div style={{ display: 'flex', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
-        {[['#C13584', 'Instagram'], ['#F97316', 'Google Ads'], ['#8B5CF6', 'Em revisão']].map(([color, label]) => (
+        {[['#d68d8f', 'Instagram'], ['#F97316', 'Google Ads'], ['#8B5CF6', 'Em revisão']].map(([color, label]) => (
           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: color }} />
             <span style={{ fontSize: '10px', color: 'var(--c-text-3)' }}>{label}</span>

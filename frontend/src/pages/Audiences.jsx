@@ -80,7 +80,7 @@ function Chip({ label, onRemove, active = true }) {
 
 function AudienceCard({ audience, onEdit, onRemove }) {
   return (
-    <div style={{
+    <div className="ccb-card" style={{
       background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',
       borderRadius: '14px', padding: '18px',
       display: 'flex', flexDirection: 'column', gap: '10px',

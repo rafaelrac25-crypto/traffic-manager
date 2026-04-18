@@ -29,7 +29,7 @@ function RejectedCard({ ad, onRemove, onEdit }) {
   });
 
   return (
-    <div style={{
+    <div className="ccb-card" style={{
       background: 'var(--c-card-bg)',
       border: '1px solid var(--c-border)',
       borderLeft: '4px solid #EF4444',

@@ -96,7 +96,7 @@ function NotificationDropdown({ open, onClose }) {
         position: 'absolute', top: 'calc(100% + 8px)', right: 0,
         width: '360px', maxHeight: '480px',
         background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',
-        borderRadius: '14px', boxShadow: '0 16px 48px rgba(193,53,132,.22)',
+        borderRadius: '14px', boxShadow: '0 16px 48px rgba(214,141,143,.22)',
         zIndex: 1000, overflow: 'hidden',
         display: 'flex', flexDirection: 'column',
         transformOrigin: 'top right',
@@ -144,7 +144,7 @@ function NotificationDropdown({ open, onClose }) {
               onMouseEnter={e => {
                 e.currentTarget.style.background = 'var(--c-hover)';
                 e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 8px 20px rgba(193,53,132,.14)';
+                e.currentTarget.style.boxShadow = '0 8px 20px rgba(214,141,143,.14)';
                 e.currentTarget.style.position = 'relative';
                 e.currentTarget.style.zIndex = '1';
               }}
@@ -285,9 +285,9 @@ function SearchBar() {
       {noMatch && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 6px)',
-          background: '#C13584', color: '#fff',
+          background: '#d68d8f', color: '#fff',
           padding: '8px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: 600,
-          boxShadow: '0 4px 12px rgba(193,53,132,.3)',
+          boxShadow: '0 4px 12px rgba(214,141,143,.3)',
         }}>
           Enviado ao assistente IA →
         </div>

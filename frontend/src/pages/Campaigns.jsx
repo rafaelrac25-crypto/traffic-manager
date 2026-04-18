@@ -20,7 +20,7 @@ const MOCK_ADS = [
 
 /* ── Configurações visuais ── */
 const PLAT = {
-  instagram: { label: 'Instagram', bg: '#FDF0F8', color: '#C13584' },
+  instagram: { label: 'Instagram', bg: '#FDF0F8', color: '#d68d8f' },
   meta:      { label: 'Meta Ads',  bg: '#EFF6FF', color: '#1877F2' },
   google:    { label: 'Google Ads', bg: '#FEF9C3', color: '#CA8A04' },
 };

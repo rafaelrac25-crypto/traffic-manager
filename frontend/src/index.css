@@ -27,9 +27,9 @@
   --blue:       #3B82F6;
   --purple:     #8B5CF6;
   --purple-bg:  #EDE9FE;
-  --shadow-sm:  0 1px 4px rgba(193,53,132,.08);
-  --shadow:     0 4px 16px rgba(193,53,132,.10);
-  --shadow-lg:  0 12px 36px rgba(193,53,132,.15);
+  --shadow-sm:  0 1px 4px rgba(214,141,143,.08);
+  --shadow:     0 4px 16px rgba(214,141,143,.10);
+  --shadow-lg:  0 12px 36px rgba(214,141,143,.15);
   --radius:     14px;
   --radius-sm:  9px;
 
@@ -47,10 +47,10 @@
   --c-text-2:     #5A2A45;
   --c-text-3:     #8C6078;
   --c-text-4:     #B8A0AE;
-  --c-accent:     #C13584;
-  --c-accent-dk:  #A02D6E;
-  --c-shadow:     rgba(193,53,132,.07);
-  --c-shadow-md:  rgba(193,53,132,.12);
+  --c-accent:     #d68d8f;
+  --c-accent-dk:  #c27577;
+  --c-shadow:     rgba(214,141,143,.07);
+  --c-shadow-md:  rgba(214,141,143,.12);
 }
 
 /* ── Tema escuro ── */
@@ -61,15 +61,15 @@
   --c-topbar-bg:  #111111;
   --c-border:     #2A2A2A;
   --c-border-lt:  #202020;
-  --c-active-bg:  rgba(193,53,132,.14);
+  --c-active-bg:  rgba(214,141,143,.14);
   --c-surface:    #161616;
   --c-hover:      #1E1E1E;
   --c-text-1:     #F0F0F0;
   --c-text-2:     #BBBBBB;
   --c-text-3:     #888888;
   --c-text-4:     #555555;
-  --c-accent:     #E0429C;
-  --c-accent-dk:  #C13584;
+  --c-accent:     #E8A9AB;
+  --c-accent-dk:  #d68d8f;
   --c-shadow:     rgba(0,0,0,.4);
   --c-shadow-md:  rgba(0,0,0,.55);
   --shadow-sm:    0 1px 4px rgba(0,0,0,.5);
@@ -285,7 +285,7 @@ body {
 [data-theme="dark"] .leaflet-tile { filter: brightness(.85) saturate(.8); }
 
 /* Range slider accent */
-input[type="range"] { accent-color: #C13584; }
+input[type="range"] { accent-color: #d68d8f; }
 
 /* Drop zone de mídia */
 .drop-zone {
@@ -299,7 +299,7 @@ input[type="range"] { accent-color: #C13584; }
 }
 .drop-zone:hover, .drop-zone.drag-over {
   border-color: var(--c-accent);
-  background: rgba(193,53,132,.04);
+  background: rgba(214,141,143,.04);
 }
 
 /* Barra de progresso do resumo */
@@ -336,7 +336,7 @@ input[type="range"] { accent-color: #C13584; }
 }
 .ccb-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 14px 34px var(--c-shadow-md, rgba(193,53,132,.18));
+  box-shadow: 0 14px 34px var(--c-shadow-md, rgba(214,141,143,.18));
   border-color: color-mix(in srgb, var(--c-accent) 35%, var(--c-border));
 }
 .ccb-card:active {
@@ -444,7 +444,7 @@ input[type="range"] { accent-color: #C13584; }
 .metric-grid > *:nth-child(4) { animation-delay: .22s; }
 .metric-grid > *:hover {
   transform: translateY(-3px);
-  box-shadow: 0 14px 32px var(--c-shadow-md, rgba(193,53,132,.16));
+  box-shadow: 0 14px 32px var(--c-shadow-md, rgba(214,141,143,.16));
 }
 
 /* Botões da aplicação — press feedback global (qualquer <button>) */
@@ -512,6 +512,6 @@ input[type="range"] { accent-color: #C13584; }
 .page-container .ccb-card:hover,
 .page-container [data-lift="true"]:hover {
   transform: translateY(-3px);
-  box-shadow: 0 14px 32px var(--c-shadow-md, rgba(193,53,132,.18));
+  box-shadow: 0 14px 32px var(--c-shadow-md, rgba(214,141,143,.18));
   border-color: color-mix(in srgb, var(--c-accent) 35%, var(--c-border));
 }

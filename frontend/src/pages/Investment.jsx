@@ -93,10 +93,10 @@ export default function Investment() {
       </div>
 
       {/* Saldo */}
-      <div style={{
+      <div className="ccb-card" style={{
         background: lowBalance
           ? 'linear-gradient(135deg, #FEF2F2, #FDEAED)'
-          : 'linear-gradient(135deg, rgba(193,53,132,.08), rgba(125,74,94,.05))',
+          : 'linear-gradient(135deg, rgba(214,141,143,.08), rgba(125,74,94,.05))',
         border: `1.5px solid ${lowBalance ? '#FCA5A5' : 'var(--c-border)'}`,
         borderRadius: '18px', padding: '24px 28px', marginBottom: '20px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px',
@@ -128,7 +128,7 @@ export default function Investment() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px,1fr) minmax(280px,1fr)', gap: '18px' }}>
         {/* Cadastro */}
-        <div style={{
+        <div className="ccb-card" style={{
           background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',
           borderRadius: '16px', padding: '22px', boxShadow: '0 2px 8px var(--c-shadow)',
         }}>
@@ -197,7 +197,7 @@ export default function Investment() {
         </div>
 
         {/* Recarga */}
-        <div style={{
+        <div className="ccb-card" style={{
           background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',
           borderRadius: '16px', padding: '22px', boxShadow: '0 2px 8px var(--c-shadow)',
         }}>
@@ -256,7 +256,7 @@ export default function Investment() {
       )}
 
       {/* ── Pixel / Rastreamento de conversão ── */}
-      <div style={{
+      <div className="ccb-card" style={{
         marginTop: '24px',
         background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',
         borderRadius: '16px', padding: '22px', boxShadow: '0 2px 8px var(--c-shadow)',

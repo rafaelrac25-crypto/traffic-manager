@@ -49,7 +49,7 @@ const META_OBJECTIVES = [
   },
   {
     category: 'Conversão',
-    color: '#C13584',
+    color: '#d68d8f',
     items: [
       { id: 'sales',         label: 'Vendas',              icon: '🛍️', desc: 'Encontre pessoas com maior probabilidade de comprar.' },
       { id: 'store_traffic', label: 'Tráfego para loja',   icon: '🏪', desc: 'Atraia visitantes para seu estabelecimento físico.' },
@@ -103,7 +103,7 @@ function RadioCard({ selected, onClick, children, style = {} }) {
       onClick={onClick}
       style={{
         border: `2px solid ${selected ? 'var(--c-accent)' : 'var(--c-border)'}`,
-        background: selected ? 'rgba(193,53,132,.07)' : 'var(--c-card-bg)',
+        background: selected ? 'rgba(214,141,143,.07)' : 'var(--c-card-bg)',
         borderRadius: '12px', padding: '14px', cursor: 'pointer',
         transition: 'all .15s', ...style,
       }}
@@ -119,7 +119,7 @@ function Pill({ selected, onClick, children }) {
         padding: '6px 14px', borderRadius: '20px', cursor: 'pointer',
         fontSize: '12px', fontWeight: selected ? 600 : 400,
         border: `1.5px solid ${selected ? 'var(--c-accent)' : 'var(--c-border)'}`,
-        background: selected ? 'rgba(193,53,132,.08)' : 'var(--c-surface)',
+        background: selected ? 'rgba(214,141,143,.08)' : 'var(--c-surface)',
         color: selected ? 'var(--c-accent)' : 'var(--c-text-3)',
         transition: 'all .15s', userSelect: 'none',
       }}
@@ -437,7 +437,7 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
         {locations.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' }}>
             {locations.map(loc => (
-              <div key={loc.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 12px', background: 'rgba(193,53,132,.08)', border: '1px solid rgba(193,53,132,.25)', borderRadius: '10px', flexWrap: 'wrap' }}>
+              <div key={loc.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 12px', background: 'rgba(214,141,143,.08)', border: '1px solid rgba(214,141,143,.25)', borderRadius: '10px', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '12px', color: 'var(--c-accent)', fontWeight: 600, flex: 1, minWidth: '100px' }}>📍 {loc.name}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>Raio:</span>
@@ -488,7 +488,7 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
                 key={loc.id}
                 center={[loc.lat, loc.lng]}
                 radius={loc.radius * 1000}
-                pathOptions={{ color: '#C13584', fillColor: '#C13584', fillOpacity: 0.18, weight: 2 }}
+                pathOptions={{ color: '#d68d8f', fillColor: '#d68d8f', fillOpacity: 0.18, weight: 2 }}
               />
             ))}
           </MapContainer>
@@ -548,7 +548,7 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
         {interests.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
             {interests.map(i => (
-              <div key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', background: 'rgba(193,53,132,.08)', border: '1px solid rgba(193,53,132,.25)', borderRadius: '20px', fontSize: '12px', color: 'var(--c-accent)', fontWeight: 600 }}>
+              <div key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', background: 'rgba(214,141,143,.08)', border: '1px solid rgba(214,141,143,.25)', borderRadius: '20px', fontSize: '12px', color: 'var(--c-accent)', fontWeight: 600 }}>
                 {i}
                 <span onClick={() => setInterests(prev => prev.filter(x => x !== i))} style={{ cursor: 'pointer', fontWeight: 700 }}>×</span>
               </div>
@@ -689,7 +689,7 @@ function AdMockFeed({ mediaFiles, primaryText, headline, destUrl, ctaButton, sca
   return (
     <div style={{ width: 320 * scale, border: '1px solid var(--c-border)', borderRadius: 12 * scale, overflow: 'hidden', background: 'var(--c-card-bg)', fontSize: scale }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 * scale, padding: `${10 * scale}px ${12 * scale}px`, borderBottom: '1px solid var(--c-border-lt)' }}>
-        <div style={{ width: 32 * scale, height: 32 * scale, borderRadius: '50%', background: 'linear-gradient(135deg,#E8A4C8,#C13584)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11 * scale, fontWeight: 700, flexShrink: 0 }}>CC</div>
+        <div style={{ width: 32 * scale, height: 32 * scale, borderRadius: '50%', background: 'linear-gradient(135deg,#E8A4C8,#d68d8f)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11 * scale, fontWeight: 700, flexShrink: 0 }}>CC</div>
         <div>
           <div style={{ fontSize: 12 * scale, fontWeight: 600, color: 'var(--c-text-1)' }}>Cris Costa Beauty</div>
           <div style={{ fontSize: 10 * scale, color: 'var(--c-text-4)' }}>Patrocinado · 🌐</div>
@@ -730,10 +730,10 @@ function AdMockStories({ mediaFiles, primaryText, headline, ctaButton, scale = 1
           ? <video src={media.url} autoPlay muted loop style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
           : <img src={media.url} alt="stories" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
       ) : (
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg,#3a1a2e,#C13584)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg,#3a1a2e,#d68d8f)' }} />
       )}
       <div style={{ position: 'relative', zIndex: 2, padding: `${10 * scale}px ${10 * scale}px 0`, display: 'flex', alignItems: 'center', gap: 6 * scale }}>
-        <div style={{ width: 26 * scale, height: 26 * scale, borderRadius: '50%', background: 'linear-gradient(135deg,#E8A4C8,#C13584)', border: `2px solid #fff`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 8 * scale, fontWeight: 700 }}>CC</div>
+        <div style={{ width: 26 * scale, height: 26 * scale, borderRadius: '50%', background: 'linear-gradient(135deg,#E8A4C8,#d68d8f)', border: `2px solid #fff`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 8 * scale, fontWeight: 700 }}>CC</div>
         <div>
           <div style={{ fontSize: 9 * scale, fontWeight: 600, color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,.6)' }}>Cris Costa Beauty</div>
           <div style={{ fontSize: 8 * scale, color: 'rgba(255,255,255,.7)' }}>Patrocinado</div>
@@ -756,7 +756,7 @@ function AdMockCarousel({ mediaFiles, headline, destUrl, ctaButton, scale = 1 })
   return (
     <div style={{ width: 320 * scale, border: '1px solid var(--c-border)', borderRadius: 12 * scale, overflow: 'hidden', background: 'var(--c-card-bg)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 * scale, padding: `${10 * scale}px ${12 * scale}px`, borderBottom: '1px solid var(--c-border-lt)' }}>
-        <div style={{ width: 32 * scale, height: 32 * scale, borderRadius: '50%', background: 'linear-gradient(135deg,#E8A4C8,#C13584)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11 * scale, fontWeight: 700, flexShrink: 0 }}>CC</div>
+        <div style={{ width: 32 * scale, height: 32 * scale, borderRadius: '50%', background: 'linear-gradient(135deg,#E8A4C8,#d68d8f)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11 * scale, fontWeight: 700, flexShrink: 0 }}>CC</div>
         <div>
           <div style={{ fontSize: 12 * scale, fontWeight: 600, color: 'var(--c-text-1)' }}>Cris Costa Beauty</div>
           <div style={{ fontSize: 10 * scale, color: 'var(--c-text-4)' }}>Patrocinado · 🌐</div>
@@ -1147,7 +1147,7 @@ function SummaryPanel({ step, objective, locations, budgetType, budgetValue, adF
               }}>{s}</span>
               {/* Badge "atual" */}
               {active && (
-                <span style={{ marginLeft: 'auto', fontSize: '9px', fontWeight: 700, color: 'var(--c-accent)', background: 'rgba(193,53,132,.1)', borderRadius: '6px', padding: '1px 5px', whiteSpace: 'nowrap' }}>
+                <span style={{ marginLeft: 'auto', fontSize: '9px', fontWeight: 700, color: 'var(--c-accent)', background: 'rgba(214,141,143,.1)', borderRadius: '6px', padding: '1px 5px', whiteSpace: 'nowrap' }}>
                   atual
                 </span>
               )}
@@ -1234,12 +1234,12 @@ function PublishModal({ onClose, scheduled, startDate }) {
         <p style={{ fontSize: '13px', color: 'var(--c-text-3)', lineHeight: 1.6, marginBottom: '20px' }}>
           Você receberá uma notificação no sino quando o Meta aprovar ou reprovar. Se for reprovado, aparecerá na sessão <strong>Reprovados</strong> com o motivo e orientação.
         </p>
-        <div style={{ padding: '12px 16px', background: 'rgba(193,53,132,.07)', border: '1px solid rgba(193,53,132,.2)', borderRadius: '10px', fontSize: '12px', color: 'var(--c-text-3)', marginBottom: '24px', lineHeight: 1.5 }}>
+        <div style={{ padding: '12px 16px', background: 'rgba(214,141,143,.07)', border: '1px solid rgba(214,141,143,.2)', borderRadius: '10px', fontSize: '12px', color: 'var(--c-text-3)', marginBottom: '24px', lineHeight: 1.5 }}>
           📋 Status atual: <strong style={{ color: 'var(--c-accent)' }}>{scheduled ? `Agendado para ${dateLabel} · Em revisão` : 'Em revisão pelo Meta'}</strong>
         </div>
         <button
           onClick={onClose}
-          style={{ padding: '13px 32px', background: 'linear-gradient(135deg,#E0429C,#C13584)', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 16px rgba(193,53,132,.35)', width: '100%' }}
+          style={{ padding: '13px 32px', background: 'linear-gradient(135deg,#E8A9AB,#d68d8f)', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 16px rgba(214,141,143,.35)', width: '100%' }}
         >
           Ver meus anúncios →
         </button>
@@ -1502,10 +1502,10 @@ export default function CreateAd() {
                   padding: '11px 28px',
                   background: fixMode
                     ? 'linear-gradient(135deg,#22C55E,#16A34A)'
-                    : 'linear-gradient(135deg,#E0429C,#C13584)',
+                    : 'linear-gradient(135deg,#E8A9AB,#d68d8f)',
                   color: '#fff', border: 'none', borderRadius: '10px',
                   fontSize: '14px', fontWeight: 700, cursor: 'pointer',
-                  boxShadow: fixMode ? '0 4px 16px rgba(22,163,74,.35)' : '0 4px 16px rgba(193,53,132,.35)',
+                  boxShadow: fixMode ? '0 4px 16px rgba(22,163,74,.35)' : '0 4px 16px rgba(214,141,143,.35)',
                 }}
               >
                 {fixMode ? '✅ Corrigir e publicar' : (isScheduled ? '📅 Agendar campanha' : '🚀 Publicar campanha')}
