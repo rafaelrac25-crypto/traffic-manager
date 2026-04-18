@@ -80,12 +80,12 @@ traffic-manager/
 | Variável | Valor |
 |---|---|
 | `DATABASE_URL` | Neon PostgreSQL (sslmode=require) |
-| `JWT_SECRET` | 945e370d... |
-| `CRON_SECRET` | 87e0acc0... |
-| `ALERT_PHONE_1` | 5547997071161 (Cristiane) |
-| `ALERT_PHONE_2` | 5547988076376 (Rafael) |
-| `ALERT_APIKEY_1` | **PENDENTE** — Cristiane se cadastrar no CallMeBot |
-| `ALERT_APIKEY_2` | **PENDENTE** — Rafael se cadastrar no CallMeBot |
+| `JWT_SECRET` | Configurado no Vercel |
+| `CRON_SECRET` | Configurado no Vercel |
+| `ALERT_PHONE_1` | Configurado no Vercel |
+| `ALERT_PHONE_2` | Configurado no Vercel |
+| `ALERT_APIKEY_1` | **PENDENTE** — aguardando cadastro no CallMeBot |
+| `ALERT_APIKEY_2` | **PENDENTE** — aguardando cadastro no CallMeBot |
 | `NODE_ENV` | production |
 | `FRONTEND_URL` | https://traffic-manager-five.vercel.app |
 
@@ -107,12 +107,12 @@ npm run dev       # Vite na porta 5173
 **backend/.env:**
 ```
 PORT=3001
-JWT_SECRET=dev_secret_local_123
+JWT_SECRET=qualquer_string_para_dev_local
 FRONTEND_URL=http://localhost:5173
-ALERT_PHONE_1=5547997071161
-ALERT_APIKEY_1=PREENCHER_APIKEY_CRISTIANE
-ALERT_PHONE_2=5547988076376
-ALERT_APIKEY_2=PREENCHER_APIKEY_RAFAEL
+ALERT_PHONE_1=PREENCHER_TELEFONE_1
+ALERT_APIKEY_1=PREENCHER_APIKEY_1
+ALERT_PHONE_2=PREENCHER_TELEFONE_2
+ALERT_APIKEY_2=PREENCHER_APIKEY_2
 CRON_SECRET=troque_por_string_aleatoria_segura
 ```
 
@@ -120,7 +120,7 @@ CRON_SECRET=troque_por_string_aleatoria_segura
 
 ## Regras de Desenvolvimento
 
-- Ao receber as API keys do CallMeBot: preencher `ALERT_APIKEY_1` e `ALERT_APIKEY_2` no Vercel com `vercel env add`
+- Configurar variáveis sensíveis (secrets, API keys, telefones) diretamente no painel do Vercel, nunca no repositório
 - Priorizar features de **Meta Ads** e **Google Ads**
 - Não quebrar compatibilidade com SQLite em dev
 - Após cada mudança: build + commit + push + enviar link de produção
@@ -134,4 +134,4 @@ CRON_SECRET=troque_por_string_aleatoria_segura
 - [ ] Integração real Google Ads
 - [ ] Gráficos de evolução temporal de métricas
 - [ ] Histórico de métricas (dados mock hoje)
-- [ ] API keys CallMeBot (aguardando Cristiane e Rafael se cadastrarem)
+- [ ] API keys CallMeBot (aguardando cadastro dos destinatários)

@@ -6,7 +6,7 @@
 
 ## Índice rápido por tarefa
 
-Quando Rafa pedir para mexer em X, abra apenas os arquivos da linha correspondente.
+Ao receber uma tarefa sobre X, abra apenas os arquivos da linha correspondente.
 
 | Tarefa                                         | Arquivos a abrir                                                                 |
 |------------------------------------------------|----------------------------------------------------------------------------------|
@@ -150,10 +150,10 @@ Contexto único para estado que atravessa páginas. Persiste em `localStorage`.
 | `DATABASE_URL`   | ✅ Neon PostgreSQL                                |
 | `JWT_SECRET`     | ✅                                                |
 | `CRON_SECRET`    | ✅                                                |
-| `ALERT_PHONE_1`  | ✅ 5547997071161 (Cristiane)                      |
-| `ALERT_PHONE_2`  | ✅ 5547988076376 (Rafael)                         |
-| `ALERT_APIKEY_1` | ⏳ Aguardando Cristiane cadastrar no CallMeBot    |
-| `ALERT_APIKEY_2` | ⏳ Aguardando Rafael cadastrar no CallMeBot       |
+| `ALERT_PHONE_1`  | ✅ Configurado no Vercel                          |
+| `ALERT_PHONE_2`  | ✅ Configurado no Vercel                          |
+| `ALERT_APIKEY_1` | ⏳ PENDENTE — aguardando cadastro no CallMeBot    |
+| `ALERT_APIKEY_2` | ⏳ PENDENTE — aguardando cadastro no CallMeBot    |
 | `GEMINI_API_KEY` | ⏳ Pendente configurar                            |
 | `NODE_ENV`       | ✅ production                                     |
 
@@ -178,4 +178,4 @@ Contexto único para estado que atravessa páginas. Persiste em `localStorage`.
 3. **Estado atravessa páginas? → AppStateContext.** Não criar novo contexto à toa.
 4. **Mudanças no frontend → `npm run build` antes do commit.** `frontend/dist/` é commitado.
 5. **Avisos `"use client"` no Vite são falsos.** O projeto é CSR, não Next.js — ignorar.
-6. **Após cada mudança:** build + commit + push + enviar link de produção (feedback permanente do Rafa).
+6. **Após cada mudança:** build + commit + push + enviar link de produção.
