@@ -72,6 +72,42 @@ export function AppStateProvider({ children }) {
     enabled: false, pixelId: '', events: { ViewContent: true, Lead: true, Contact: true, Purchase: false },
   }));
 
+  /* ─── Status de sincronização com as APIs ─── */
+  const [syncStatus, setSyncStatus] = useState({
+    status: 'checking',
+    lastCheck: null,
+    error: null,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function ping() {
+      try {
+        const res = await fetch('/api/health', { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json().catch(() => ({}));
+        if (cancelled) return;
+        setSyncStatus({
+          status: data?.status === 'ok' ? 'ok' : 'error',
+          lastCheck: new Date().toISOString(),
+          error: data?.status === 'ok' ? null : 'Resposta inesperada da API',
+        });
+      } catch (err) {
+        if (cancelled) return;
+        setSyncStatus({
+          status: 'error',
+          lastCheck: new Date().toISOString(),
+          error: err?.message || 'Falha de conexão',
+        });
+      }
+    }
+
+    ping();
+    const id = setInterval(ping, 30000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
+
   useEffect(() => save(KEY_NOTIFS,    notifications), [notifications]);
   useEffect(() => save(KEY_REJECTED,  rejectedAds),   [rejectedAds]);
   useEffect(() => save(KEY_FUNDS,     funds),         [funds]);
@@ -284,6 +320,8 @@ export function AppStateProvider({ children }) {
 
     pixel,
     setPixel,
+
+    syncStatus,
   };
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;

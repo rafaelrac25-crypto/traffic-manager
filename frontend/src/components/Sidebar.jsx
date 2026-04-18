@@ -94,7 +94,18 @@ export default function Sidebar({ open = false, isMobile = false }) {
   const navigate             = useNavigate();
   const location             = useLocation();
   const { isDark, toggle }   = useTheme();
-  const { rejectedCount, metaAccount } = useAppState();
+  const { rejectedCount, metaAccount, syncStatus } = useAppState();
+
+  const syncInfo = (() => {
+    const s = syncStatus?.status || 'checking';
+    if (s === 'ok')       return { color: '#22C55E', label: 'Sincronizado', pulse: true  };
+    if (s === 'error')    return { color: '#EF4444', label: 'Erro de sincronização', pulse: false };
+    return                       { color: '#F59E0B', label: 'Verificando…', pulse: true };
+  })();
+
+  const syncTitle = syncStatus?.lastCheck
+    ? `Última verificação: ${new Date(syncStatus.lastCheck).toLocaleTimeString('pt-BR')}${syncStatus?.error ? ` · ${syncStatus.error}` : ''}`
+    : 'Aguardando primeira verificação';
 
   const badgeValues = { rejectedCount };
 
@@ -244,14 +255,27 @@ export default function Sidebar({ open = false, isMobile = false }) {
             }}>CC</div>
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {metaAccount?.name || 'Cris Costa'}
+            <div
+              title={syncTitle}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}
+            >
+              <span
+                style={{
+                  width: '8px', height: '8px', borderRadius: '50%',
+                  background: syncInfo.color, flexShrink: 0,
+                  boxShadow: `0 0 0 2px ${syncInfo.color}22`,
+                  animation: syncInfo.pulse ? 'syncPulse 1.8s ease-in-out infinite' : 'none',
+                }}
+              />
+              <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {metaAccount?.name || 'Cris Costa'}
+              </div>
             </div>
-            <div style={{ fontSize: '10px', color: metaAccount?.connected ? '#22C55E' : 'var(--c-text-4)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              {metaAccount?.connected && (
-                <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#22C55E', display: 'inline-block' }} />
-              )}
-              {metaAccount?.connected ? 'Meta conectado' : 'Administrador'}
+            <div
+              title={syncTitle}
+              style={{ fontSize: '10px', color: syncInfo.color, fontWeight: 500, marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+            >
+              {syncInfo.label}
             </div>
           </div>
         </div>

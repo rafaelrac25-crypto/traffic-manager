@@ -11,6 +11,7 @@ import { MapContainer, TileLayer, Circle, useMapEvents, useMap } from 'react-lea
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useAppState } from '../contexts/AppStateContext';
+import { getRejectionInfo } from '../data/rejectionRules';
 
 /* ── Fix Leaflet icons no Vite ── */
 delete L.Icon.Default.prototype._getIconUrl;
@@ -1255,14 +1256,21 @@ export default function CreateAd() {
   const navigate = useNavigate();
   const location = useLocation();
   const commercialDate = location.state?.commercialDate;
-  const { addNotification, addAd, updateAd, getAdById, audiences, creatives, addCreative, markCreativeUsed } = useAppState();
+  const rejectedAd = location.state?.rejectedAd || null;
+  const { addNotification, addAd, updateAd, getAdById, audiences, creatives, addCreative, markCreativeUsed, removeRejectedAd } = useAppState();
   const editId = location.state?.editId || null;
   const editingAd = editId ? getAdById(editId) : null;
-  const [step, setStep] = useState(0);
+
+  const fixMode = !!rejectedAd;
+  const rejectionInfo = fixMode ? getRejectionInfo(rejectedAd.reason) : null;
+  const source = rejectedAd?.payload || editingAd || null;
+
+  const [step, setStep] = useState(fixMode && rejectionInfo ? rejectionInfo.step : 0);
   const [errors, setErrors] = useState({});
   const [publishing, setPublishing] = useState(false);
 
   const initialStart = (() => {
+    if (source && source.startDate !== undefined) return source.startDate || '';
     if (!commercialDate?.dateISO) return '';
     const target = new Date(commercialDate.dateISO);
     const start = new Date(target);
@@ -1271,32 +1279,41 @@ export default function CreateAd() {
   })();
 
   const initialEnd = (() => {
+    if (source && source.endDate !== undefined) return source.endDate || '';
     if (!commercialDate?.dateISO) return '';
     return new Date(commercialDate.dateISO).toISOString().split('T')[0];
   })();
 
-  const initialBudget = commercialDate?.suggestedBudget?.daily
-    ? String(commercialDate.suggestedBudget.daily)
-    : '';
+  const initialBudget = (source && source.budgetValue !== undefined)
+    ? String(source.budgetValue ?? '')
+    : (commercialDate?.suggestedBudget?.daily ? String(commercialDate.suggestedBudget.daily) : '');
 
   /* ── Estado do formulário ── */
-  const [objective,          setObjective]          = useState('');
-  const [locations,          setLocations]          = useState([]);
-  const [ageRange,           setAgeRange]           = useState([18, 65]);
-  const [gender,             setGender]             = useState('all');
-  const [interests,          setInterests]          = useState([]);
-  const [budgetType,         setBudgetType]         = useState('daily');
+  const [objective,          setObjective]          = useState(source?.objective || '');
+  const [locations,          setLocations]          = useState(source?.locations || []);
+  const [ageRange,           setAgeRange]           = useState(source?.ageRange || [18, 65]);
+  const [gender,             setGender]             = useState(source?.gender || 'all');
+  const [interests,          setInterests]          = useState(source?.interests || []);
+  const [budgetType,         setBudgetType]         = useState(source?.budgetType || 'daily');
   const [budgetValue,        setBudgetValue]        = useState(initialBudget);
   const [startDate,          setStartDate]          = useState(initialStart);
   const [endDate,            setEndDate]            = useState(initialEnd);
-  const [adFormat,           setAdFormat]           = useState('image');
-  const [mediaFiles,         setMediaFiles]         = useState([]);
-  const [primaryText,        setPrimaryText]        = useState(commercialDate?.preFill?.primaryText || '');
-  const [headline,           setHeadline]           = useState(commercialDate?.preFill?.headline || '');
-  const [destUrl,            setDestUrl]            = useState('https://wa.me/5547997071161');
-  const [ctaButton,          setCtaButton]          = useState('WhatsApp');
+  const [adFormat,           setAdFormat]           = useState(source?.adFormat || 'image');
+  const [mediaFiles,         setMediaFiles]         = useState(source?.mediaFiles || []);
+  const [primaryText,        setPrimaryText]        = useState(source?.primaryText ?? (commercialDate?.preFill?.primaryText || ''));
+  const [headline,           setHeadline]           = useState(source?.headline ?? (commercialDate?.preFill?.headline || ''));
+  const [destUrl,            setDestUrl]            = useState(source?.destUrl || 'https://wa.me/5547997071161');
+  const [ctaButton,          setCtaButton]          = useState(source?.ctaButton || 'WhatsApp');
 
   useEffect(() => {
+    if (fixMode) {
+      addNotification({
+        kind: 'info',
+        title: `Corrigindo: ${rejectedAd.name || 'anúncio reprovado'}`,
+        message: `Abrimos o anúncio no passo "${STEPS[rejectionInfo.step] || '—'}". Ajuste o que o Meta apontou e publique novamente — os demais passos permanecem como antes.`,
+      });
+      return;
+    }
     if (commercialDate) {
       addNotification({
         kind: 'info',
@@ -1345,14 +1362,24 @@ export default function CreateAd() {
     if (primaryText && headline) {
       addCreative({ name: headline, primaryText, headline, destUrl, ctaButton, adFormat });
     }
-    addNotification({
-      kind: 'info',
-      title: isScheduled ? 'Campanha agendada' : 'Anúncio enviado para revisão',
-      message: isScheduled
-        ? `Sua campanha foi agendada para ${new Date(startDate + 'T12:00:00').toLocaleDateString('pt-BR')} e está em revisão pelo Meta.`
-        : 'Assim que o Meta aprovar, sua campanha será publicada automaticamente.',
-      link: '/anuncios',
-    });
+    if (fixMode) {
+      removeRejectedAd(rejectedAd.id);
+      addNotification({
+        kind: 'info',
+        title: 'Correção enviada ao Meta',
+        message: `"${adName}" foi reenviado com as correções e está em nova revisão.`,
+        link: '/anuncios',
+      });
+    } else {
+      addNotification({
+        kind: 'info',
+        title: isScheduled ? 'Campanha agendada' : 'Anúncio enviado para revisão',
+        message: isScheduled
+          ? `Sua campanha foi agendada para ${new Date(startDate + 'T12:00:00').toLocaleDateString('pt-BR')} e está em revisão pelo Meta.`
+          : 'Assim que o Meta aprovar, sua campanha será publicada automaticamente.',
+        link: '/anuncios',
+      });
+    }
   }
 
   const reviewData = { objective, locations, ageRange, gender, interests, budgetType, budgetValue, startDate, endDate, adFormat, mediaFiles, primaryText, headline, destUrl, ctaButton };
@@ -1370,8 +1397,14 @@ export default function CreateAd() {
       {/* ── Cabeçalho ── */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '4px' }}>Criar anúncio</h1>
-          <p style={{ fontSize: '13px', color: 'var(--c-text-3)' }}>Meta Ads · Configure sua campanha de tráfego pago em 5 passos.</p>
+          <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '4px' }}>
+            {fixMode ? 'Corrigir anúncio reprovado' : 'Criar anúncio'}
+          </h1>
+          <p style={{ fontSize: '13px', color: 'var(--c-text-3)' }}>
+            {fixMode
+              ? `Meta Ads · Ajuste o passo "${STEPS[rejectionInfo?.step] || '—'}" e reenvie — o restante já está preenchido.`
+              : 'Meta Ads · Configure sua campanha de tráfego pago em 5 passos.'}
+          </p>
         </div>
         <button
           onClick={() => navigate('/anuncios')}
@@ -1388,6 +1421,42 @@ export default function CreateAd() {
       <div className="wizard-layout">
         {/* Conteúdo do passo */}
         <div style={{ background: 'var(--c-card-bg)', border: '1px solid var(--c-border)', borderRadius: '16px', padding: '28px', animation: 'fadeIn .2s ease' }}>
+          {fixMode && rejectionInfo && (
+            <div style={{
+              padding: '14px 16px',
+              background: 'rgba(239,68,68,.07)',
+              border: '1px solid rgba(239,68,68,.25)',
+              borderLeft: '4px solid #EF4444',
+              borderRadius: '10px',
+              marginBottom: '22px',
+            }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#DC2626', letterSpacing: '.5px', marginBottom: '6px' }}>
+                ⚠️ MOTIVO DA REPROVAÇÃO
+              </div>
+              <p style={{ fontSize: '13px', color: 'var(--c-text-2)', margin: '0 0 10px 0', lineHeight: 1.6 }}>
+                <strong>{rejectedAd.reason}</strong>{rejectedAd.details ? ` — ${rejectedAd.details}` : ''}
+              </p>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#16A34A', letterSpacing: '.5px', marginBottom: '4px' }}>
+                💡 COMO CORRIGIR
+              </div>
+              <p style={{ fontSize: '12px', color: 'var(--c-text-2)', margin: 0, lineHeight: 1.6 }}>
+                {rejectionInfo.hint}
+              </p>
+              {step !== rejectionInfo.step && (
+                <button
+                  type="button"
+                  onClick={() => { setErrors({}); setStep(rejectionInfo.step); }}
+                  style={{
+                    marginTop: '10px', padding: '7px 12px',
+                    background: 'var(--c-surface)', border: '1.5px solid var(--c-border)',
+                    color: 'var(--c-text-2)', borderRadius: '8px', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
+                  }}
+                >
+                  ← Voltar ao passo "{STEPS[rejectionInfo.step]}"
+                </button>
+              )}
+            </div>
+          )}
           {stepComponents[step]}
 
           {/* Navegação */}
@@ -1414,9 +1483,17 @@ export default function CreateAd() {
             ) : (
               <button
                 onClick={handlePublish}
-                style={{ padding: '11px 28px', background: 'linear-gradient(135deg,#E0429C,#C13584)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 16px rgba(193,53,132,.35)' }}
+                style={{
+                  padding: '11px 28px',
+                  background: fixMode
+                    ? 'linear-gradient(135deg,#22C55E,#16A34A)'
+                    : 'linear-gradient(135deg,#E0429C,#C13584)',
+                  color: '#fff', border: 'none', borderRadius: '10px',
+                  fontSize: '14px', fontWeight: 700, cursor: 'pointer',
+                  boxShadow: fixMode ? '0 4px 16px rgba(22,163,74,.35)' : '0 4px 16px rgba(193,53,132,.35)',
+                }}
               >
-                {isScheduled ? '📅 Agendar campanha' : '🚀 Publicar campanha'}
+                {fixMode ? '✅ Corrigir e publicar' : (isScheduled ? '📅 Agendar campanha' : '🚀 Publicar campanha')}
               </button>
             )}
           </div>

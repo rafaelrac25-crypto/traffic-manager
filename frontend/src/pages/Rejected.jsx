@@ -1,20 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../contexts/AppStateContext';
-
-/* ── Catálogo de motivos e sugestões ── */
-const REASON_HINTS = {
-  'políticas de anúncio':  'Revise o texto e a imagem: evite promessas exageradas, linguagem sensacionalista e comparações.',
-  'conteúdo sensível':     'Substitua imagens com pele excessivamente exposta ou procedimentos invasivos.',
-  'texto enganoso':        'Seja claro sobre preço, prazo e resultado. Evite termos como "milagroso" ou "instantâneo".',
-  'antes e depois':        'Imagens de antes/depois em estética são limitadas — use foto do procedimento ou resultado sutil.',
-  'direitos autorais':     'Use apenas imagens próprias, licenciadas ou do seu portfólio.',
-  'qualidade baixa':       'Use imagens em alta resolução, bem iluminadas e com o produto/serviço claro.',
-};
+import { getRejectionInfo } from '../data/rejectionRules';
 
 function SuggestionBox({ reason }) {
-  const key = Object.keys(REASON_HINTS).find(k => reason?.toLowerCase().includes(k));
-  const hint = key ? REASON_HINTS[key] : 'Revise texto, imagem e público-alvo conforme as políticas do Meta Ads.';
+  const { hint } = getRejectionInfo(reason);
   return (
     <div style={{
       marginTop: '10px',
@@ -121,7 +111,28 @@ export default function Rejected() {
       name: 'Pacote Spa Relax',
       reason: 'políticas de anúncio — texto enganoso',
       details: 'O texto "resultado em 1 dia garantido" não pode ser usado. Remova promessas de resultado ou tempo específico.',
+      payload: {
+        objective: 'messages',
+        locations: ['Balneário Camboriú', 'Itajaí'],
+        ageRange: [25, 45],
+        gender: 'F',
+        interests: ['Estética', 'Autocuidado', 'Bem-estar'],
+        budgetType: 'daily',
+        budgetValue: '50',
+        startDate: '',
+        endDate: '',
+        adFormat: 'image',
+        mediaFiles: [],
+        primaryText: 'Pacote Spa Relax com resultado em 1 dia garantido! Relaxamento milagroso para quem não aguenta mais stress. Vem já!',
+        headline: 'Resultado milagroso garantido',
+        destUrl: 'https://wa.me/5547997071161',
+        ctaButton: 'WhatsApp',
+      },
     });
+  }
+
+  function handleEdit(ad) {
+    navigate('/criar-anuncio', { state: { rejectedAd: ad } });
   }
 
   return (
@@ -182,7 +193,7 @@ export default function Rejected() {
               key={ad.id}
               ad={ad}
               onRemove={removeRejectedAd}
-              onEdit={() => navigate('/criar-anuncio')}
+              onEdit={handleEdit}
             />
           ))}
         </div>
