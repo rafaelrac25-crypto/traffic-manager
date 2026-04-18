@@ -94,8 +94,10 @@ const NAV = [
   { to: '/anuncios',      label: 'Anúncios',      Icon: IconAds },
   { to: '/reprovados',    label: 'Reprovados',    Icon: IconRejected, badgeKey: 'rejectedCount' },
   { to: '/calendario',    label: 'Calendário',    Icon: IconCalendar },
-  { to: '/publicos',      label: 'Públicos',      Icon: IconAudiences },
-  { to: '/criativos',     label: 'Criativos',     Icon: IconCreatives },
+  { kind: 'group', label: 'Biblioteca', description: 'Reutilize contexto, narrativa e público', items: [
+    { to: '/publicos',  label: 'Públicos',  Icon: IconAudiences },
+    { to: '/criativos', label: 'Criativos', Icon: IconCreatives },
+  ]},
   { to: '/investimento',  label: 'Investimento',  Icon: IconInvestment },
   { to: '/historico',     label: 'Histórico',     Icon: IconHistory },
 ];
@@ -234,7 +236,66 @@ export default function Sidebar({ open = false, isMobile = false }) {
           Navegação
         </div>
 
-        {NAV.map(({ to, label, Icon, badgeKey }) => {
+        {NAV.map((entry, idx) => {
+          if (entry.kind === 'group') {
+            const anyActive = entry.items.some(it => isActive(it.to));
+            return (
+              <div
+                key={`group-${idx}`}
+                style={{
+                  margin: '10px 4px 10px',
+                  padding: '10px 8px 8px',
+                  borderRadius: '12px',
+                  background: anyActive ? 'var(--c-active-bg)' : 'var(--c-surface)',
+                  border: `1px solid ${anyActive ? 'var(--c-accent)' : 'var(--c-border-lt)'}`,
+                  transition: 'all .18s',
+                }}
+              >
+                <div
+                  title={entry.description}
+                  style={{
+                    fontSize: '10px', fontWeight: 800, letterSpacing: '.8px',
+                    textTransform: 'uppercase',
+                    color: anyActive ? 'var(--c-accent)' : 'var(--c-text-4)',
+                    padding: '0 8px 6px', display: 'flex', alignItems: 'center', gap: '6px',
+                  }}
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                  </svg>
+                  {entry.label}
+                </div>
+                {entry.items.map(({ to, label, Icon }) => {
+                  const active = isActive(to);
+                  return (
+                    <div
+                      key={to}
+                      onClick={() => navigate(to)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '10px',
+                        padding: '8px 10px',
+                        borderRadius: '8px',
+                        color: active ? 'var(--c-accent)' : 'var(--c-text-2)',
+                        background: active ? 'var(--c-card-bg)' : 'transparent',
+                        fontSize: '12.5px',
+                        fontWeight: active ? 700 : 500,
+                        cursor: 'pointer',
+                        marginBottom: '2px',
+                        transition: 'all .15s',
+                      }}
+                      onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--c-hover)'; }}
+                      onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
+                    >
+                      <Icon active={active} />
+                      <span style={{ flex: 1 }}>{label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          }
+
+          const { to, label, Icon, badgeKey } = entry;
           const active = isActive(to);
           const badgeValue = badgeKey ? badgeValues[badgeKey] : 0;
           return (
