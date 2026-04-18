@@ -12,6 +12,15 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useAppState } from '../contexts/AppStateContext';
 import { getRejectionInfo } from '../data/rejectionRules';
+import {
+  DISTRICT_COORDS,
+  analyzeDistrict,
+  HOME_COORDS,
+  HOME_RADIUS_KM,
+  HOME_DISTRICT,
+  distanceKm,
+  ringByDistance,
+} from '../data/joinvilleDistricts';
 
 /* ── Fix Leaflet icons no Vite ── */
 delete L.Icon.Default.prototype._getIconUrl;
@@ -27,26 +36,8 @@ L.Icon.Default.mergeOptions({
 
 const STEPS = ['Objetivo', 'Público', 'Orçamento', 'Criativo', 'Revisar'];
 
-/* ── Coords Joinville/SC — Cris atende apenas Joinville (regra de negócio) ── */
-const CITY_COORDS = {
-  'Joinville':        { lat: -26.3044, lng: -48.8487 },
-  'Centro':           { lat: -26.3044, lng: -48.8487 },
-  'América':          { lat: -26.3021, lng: -48.8431 },
-  'Glória':           { lat: -26.3028, lng: -48.8656 },
-  'Saguaçu':          { lat: -26.2914, lng: -48.8181 },
-  'Anita Garibaldi':  { lat: -26.2711, lng: -48.8447 },
-  'Costa e Silva':    { lat: -26.2850, lng: -48.8553 },
-  'Boa Vista':        { lat: -26.2481, lng: -48.8697 },
-  'Atiradores':       { lat: -26.2861, lng: -48.8339 },
-  'Bom Retiro':       { lat: -26.2781, lng: -48.8197 },
-  'Santo Antônio':    { lat: -26.3322, lng: -48.8775 },
-  'Iririú':           { lat: -26.3014, lng: -48.8058 },
-  'Bucarein':         { lat: -26.3208, lng: -48.8478 },
-  'Floresta':         { lat: -26.2686, lng: -48.8133 },
-  'Aventureiro':      { lat: -26.3586, lng: -48.8153 },
-  'Itaum':            { lat: -26.3406, lng: -48.8617 },
-  'Jardim Sofia':     { lat: -26.2794, lng: -48.8094 },
-};
+/* ── Coords Joinville/SC — fonte única em data/joinvilleDistricts.js ── */
+const CITY_COORDS = DISTRICT_COORDS;
 
 function normalizeAudienceLocations(locs) {
   if (!Array.isArray(locs)) return [];
@@ -530,6 +521,30 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
             />
             <MapClickHandler onAdd={loc => setLocations(prev => [...prev, loc])} radius={activeRadius} />
             <MapFlyTo center={mapCenter} />
+
+            {/* Anéis de potencial centrados na clínica (Boa Vista) */}
+            <Circle
+              center={[HOME_COORDS.lat, HOME_COORDS.lng]}
+              radius={8000}
+              pathOptions={{ color: '#D97706', fillColor: '#D97706', fillOpacity: 0.03, weight: 1, dashArray: '4 6' }}
+            />
+            <Circle
+              center={[HOME_COORDS.lat, HOME_COORDS.lng]}
+              radius={7000}
+              pathOptions={{ color: '#F59E0B', fillColor: '#F59E0B', fillOpacity: 0.04, weight: 1, dashArray: '4 6' }}
+            />
+            <Circle
+              center={[HOME_COORDS.lat, HOME_COORDS.lng]}
+              radius={5000}
+              pathOptions={{ color: '#16A34A', fillColor: '#16A34A', fillOpacity: 0.05, weight: 1, dashArray: '4 6' }}
+            />
+            {/* Ponto da clínica */}
+            <Circle
+              center={[HOME_COORDS.lat, HOME_COORDS.lng]}
+              radius={120}
+              pathOptions={{ color: '#d68d8f', fillColor: '#d68d8f', fillOpacity: 1, weight: 2 }}
+            />
+
             {locations.map(loc => (
               <Circle
                 key={loc.id}
@@ -633,7 +648,162 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
    PASSO 3 — ORÇAMENTO
 ══════════════════════════════════════════ */
 
-function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, startDate, setStartDate, endDate, setEndDate, errors = {} }) {
+/* Classifica cada location pelo anel (primário/médio/externo/fora) */
+function classifyLocationsByRing(locations) {
+  const buckets = { primario: [], medio: [], externo: [], fora: [] };
+  (locations || []).forEach(loc => {
+    if (loc.lat == null || loc.lng == null) return;
+    const d = distanceKm(HOME_COORDS, { lat: loc.lat, lng: loc.lng });
+    if (d <= 5) buckets.primario.push(loc);
+    else if (d <= 7) buckets.medio.push(loc);
+    else if (d <= 8) buckets.externo.push(loc);
+    else buckets.fora.push(loc);
+  });
+  return buckets;
+}
+
+/* Split 100% entre anéis ativos com ajuste automático */
+function normalizeSplit(split, activeKeys) {
+  const base = { primario: 0, medio: 0, externo: 0 };
+  const cleaned = { ...base, ...split };
+  const activeSum = activeKeys.reduce((s, k) => s + (Number(cleaned[k]) || 0), 0);
+  if (activeSum === 0 && activeKeys.length > 0) {
+    const even = Math.round(100 / activeKeys.length);
+    const out = { ...base };
+    activeKeys.forEach((k, i) => out[k] = i === activeKeys.length - 1 ? 100 - even * (activeKeys.length - 1) : even);
+    return out;
+  }
+  return cleaned;
+}
+
+function RingBudgetSplit({ locations, budgetValue, budgetType, split, setSplit }) {
+  const buckets = classifyLocationsByRing(locations);
+  const activeKeys = ['primario', 'medio', 'externo'].filter(k => buckets[k].length > 0);
+
+  if (activeKeys.length < 2 || !budgetValue || Number(budgetValue) <= 0) return null;
+
+  const normalized = normalizeSplit(split, activeKeys);
+  const total = activeKeys.reduce((s, k) => s + (Number(normalized[k]) || 0), 0);
+  const balanced = total === 100;
+  const value = Number(budgetValue) || 0;
+
+  const RINGS = [
+    { key: 'primario', label: 'Anel interno (0–5 km)', color: '#16A34A', desc: 'Ticket alto · micropigmentação, glow lips' },
+    { key: 'medio',    label: 'Anel médio (5–7 km)',   color: '#F59E0B', desc: 'Ticket médio · pacotes, combos' },
+    { key: 'externo',  label: 'Anel externo (7–8 km)', color: '#D97706', desc: 'Ticket de entrada · lash, brow, limpeza' },
+  ];
+
+  function onChange(key, v) {
+    const next = { ...normalized, [key]: Math.max(0, Math.min(100, Math.round(Number(v) || 0))) };
+    setSplit(next);
+  }
+
+  function applyPreset(p) {
+    const presets = {
+      even: Object.fromEntries(activeKeys.map(k => [k, Math.round(100 / activeKeys.length)])),
+      high: { primario: 60, medio: 30, externo: 10 },
+      volume: { primario: 20, medio: 40, externo: 40 },
+      balanced: { primario: 40, medio: 40, externo: 20 },
+    }[p] || {};
+    setSplit(normalizeSplit(presets, activeKeys));
+  }
+
+  return (
+    <div style={{
+      border: '1.5px solid var(--c-border)',
+      borderRadius: '12px',
+      padding: '16px 18px',
+      background: 'var(--c-surface)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+        <div>
+          <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '2px' }}>
+            🎯 Dividir orçamento por anel
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--c-text-4)', lineHeight: 1.5 }}>
+            Você marcou bairros em mais de um anel. Defina quanto % vai pra cada. Quando integrarmos o Meta Ads, isso gera um conjunto de anúncios por anel.
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+          {[
+            { k: 'balanced', l: '40/40/20' },
+            { k: 'high',     l: 'Foco ticket alto' },
+            { k: 'volume',   l: 'Foco volume' },
+            { k: 'even',     l: 'Dividir igual' },
+          ].map(p => (
+            <button
+              key={p.k}
+              type="button"
+              onClick={() => applyPreset(p.k)}
+              style={{ padding: '5px 9px', borderRadius: '7px', border: '1px solid var(--c-border)', background: 'var(--c-card-bg)', fontSize: '10.5px', fontWeight: 600, color: 'var(--c-text-3)', cursor: 'pointer' }}
+            >
+              {p.l}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {RINGS.filter(r => activeKeys.includes(r.key)).map(r => {
+          const pct = Number(normalized[r.key]) || 0;
+          const share = (value * pct / 100).toFixed(2).replace('.', ',');
+          const hoods = buckets[r.key].map(l => l.name).join(', ');
+          return (
+            <div key={r.key}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: r.color, display: 'inline-block' }} />
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--c-text-1)' }}>{r.label}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={pct}
+                    onChange={e => onChange(r.key, e.target.value)}
+                    style={{ width: '58px', padding: '4px 8px', border: '1px solid var(--c-border)', borderRadius: '6px', background: 'var(--c-card-bg)', color: 'var(--c-text-1)', fontSize: '12px', fontWeight: 700, fontFamily: 'inherit', textAlign: 'right' }}
+                  />
+                  <span style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>%</span>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--c-accent)', minWidth: '72px', textAlign: 'right' }}>
+                    R$ {share}{budgetType === 'daily' ? '/dia' : budgetType === 'weekly' ? '/sem' : ''}
+                  </span>
+                </div>
+              </div>
+              <input
+                type="range" min={0} max={100} value={pct}
+                onChange={e => onChange(r.key, e.target.value)}
+                style={{ width: '100%', accentColor: r.color }}
+              />
+              <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', marginTop: '3px', lineHeight: 1.4 }}>
+                {r.desc}{hoods ? ` · ${hoods}` : ''}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{
+        marginTop: '12px', padding: '8px 12px', borderRadius: '8px',
+        background: balanced ? 'rgba(22,163,74,.08)' : 'rgba(239,68,68,.07)',
+        border: `1px solid ${balanced ? 'rgba(22,163,74,.3)' : 'rgba(239,68,68,.3)'}`,
+        fontSize: '11.5px', fontWeight: 700,
+        color: balanced ? '#16A34A' : '#DC2626',
+        textAlign: 'center',
+      }}>
+        {balanced ? `✅ Total: 100% · R$ ${value.toFixed(2).replace('.', ',')} distribuídos` : `⚠️ Total: ${total}% — ajuste para fechar 100%`}
+      </div>
+
+      {buckets.fora.length > 0 && (
+        <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--c-text-4)', fontStyle: 'italic' }}>
+          ℹ️ {buckets.fora.length} localização(ões) fora do raio de 8 km ({buckets.fora.map(l => l.name).join(', ')}) — não entra no split por anel.
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, startDate, setStartDate, endDate, setEndDate, errors = {}, locations = [], budgetRingSplit, setBudgetRingSplit }) {
   const today = new Date().toISOString().split('T')[0];
 
   return (
@@ -689,6 +859,15 @@ function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, s
           </p>
         )}
       </div>
+
+      {/* Split por anel (aparece só quando há localizações em mais de um anel) */}
+      <RingBudgetSplit
+        locations={locations}
+        budgetValue={budgetValue}
+        budgetType={budgetType}
+        split={budgetRingSplit}
+        setSplit={setBudgetRingSplit}
+      />
 
       {/* Datas */}
       <div>
@@ -1126,6 +1305,71 @@ function Step6Review({ data, onGoTo }) {
         </div>
       ))}
 
+      {/* Conjuntos de anúncios que serão criados (split por anel) */}
+      {(() => {
+        const buckets = classifyLocationsByRing(data.locations);
+        const activeKeys = ['primario', 'medio', 'externo'].filter(k => buckets[k].length > 0);
+        if (activeKeys.length < 2 || !data.budgetValue) return null;
+        const split = normalizeSplit(data.budgetRingSplit || {}, activeKeys);
+        const total = activeKeys.reduce((s, k) => s + (Number(split[k]) || 0), 0);
+        const value = Number(data.budgetValue) || 0;
+        const unit = { daily: '/dia', weekly: '/sem', total: ' total' }[data.budgetType] || '';
+        const RING_META = {
+          primario: { label: 'Anel interno (0-5 km)',  color: '#16A34A' },
+          medio:    { label: 'Anel médio (5-7 km)',     color: '#F59E0B' },
+          externo:  { label: 'Anel externo (7-8 km)',   color: '#D97706' },
+        };
+        return (
+          <div style={{ background: 'var(--c-card-bg)', border: '1px solid var(--c-border)', borderRadius: '12px', overflow: 'hidden' }}>
+            <div style={{ padding: '10px 16px', background: 'var(--c-surface)', borderBottom: '1px solid var(--c-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--c-text-3)' }}>
+                {activeKeys.length} conjuntos de anúncios serão criados
+              </span>
+              <button onClick={() => onGoTo(2)} style={{ fontSize: '12px', color: 'var(--c-accent)', fontWeight: 600, cursor: 'pointer', background: 'none', border: 'none' }}>
+                ✏️ Editar split
+              </button>
+            </div>
+            <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ fontSize: '11.5px', color: 'var(--c-text-3)', lineHeight: 1.5 }}>
+                Mesmo criativo para todos. Cada conjunto tem seu próprio público e orçamento — o Meta otimiza entrega por conjunto separadamente.
+              </div>
+              {activeKeys.map(k => {
+                const meta = RING_META[k];
+                const pct = Number(split[k]) || 0;
+                const share = (value * pct / 100).toFixed(2).replace('.', ',');
+                const hoods = buckets[k].map(l => l.name).join(', ');
+                return (
+                  <div key={k} style={{
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                    padding: '9px 12px', borderRadius: '10px',
+                    background: 'var(--c-surface)',
+                    borderLeft: `4px solid ${meta.color}`,
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '2px' }}>
+                        Conjunto · {meta.label}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--c-text-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        📍 {hoods}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ fontSize: '13px', fontWeight: 800, color: meta.color }}>{pct}%</div>
+                      <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--c-text-2)' }}>R$ {share}{unit}</div>
+                    </div>
+                  </div>
+                );
+              })}
+              {total !== 100 && (
+                <div style={{ fontSize: '11.5px', fontWeight: 700, color: '#DC2626' }}>
+                  ⚠️ Split está em {total}% — ajuste para 100% no passo Orçamento.
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Verificação de qualidade do texto */}
       {(() => {
         const warns = [
@@ -1375,6 +1619,7 @@ export default function CreateAd() {
   const [interests,          setInterests]          = useState(source?.interests || (quickFillAudience?.interests || []));
   const [budgetType,         setBudgetType]         = useState(source?.budgetType || 'daily');
   const [budgetValue,        setBudgetValue]        = useState(initialBudget);
+  const [budgetRingSplit,    setBudgetRingSplit]    = useState(source?.budgetRingSplit || { primario: 40, medio: 40, externo: 20 });
   const [startDate,          setStartDate]          = useState(initialStart);
   const [endDate,            setEndDate]            = useState(initialEnd);
   const [adFormat,           setAdFormat]           = useState(source?.adFormat || 'image');
@@ -1493,12 +1738,12 @@ export default function CreateAd() {
     }
   }
 
-  const reviewData = { objective, locations, ageRange, gender, interests, budgetType, budgetValue, startDate, endDate, adFormat, mediaFiles, primaryText, headline, destUrl, ctaButton };
+  const reviewData = { objective, locations, ageRange, gender, interests, budgetType, budgetValue, startDate, endDate, adFormat, mediaFiles, primaryText, headline, destUrl, ctaButton, budgetRingSplit };
 
   const stepComponents = [
     <Step1Objective objective={objective} setObjective={setObjective} errors={errors} />,
     <Step2Audience  locations={locations} setLocations={setLocations} ageRange={ageRange} setAgeRange={setAgeRange} gender={gender} setGender={setGender} interests={interests} setInterests={setInterests} />,
-    <Step4Budget budgetType={budgetType} setBudgetType={setBudgetType} budgetValue={budgetValue} setBudgetValue={setBudgetValue} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} errors={errors} />,
+    <Step4Budget budgetType={budgetType} setBudgetType={setBudgetType} budgetValue={budgetValue} setBudgetValue={setBudgetValue} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} errors={errors} locations={locations} budgetRingSplit={budgetRingSplit} setBudgetRingSplit={setBudgetRingSplit} />,
     <Step5Creative adFormat={adFormat} setAdFormat={setAdFormat} mediaFiles={mediaFiles} setMediaFiles={setMediaFiles} primaryText={primaryText} setPrimaryText={setPrimaryText} headline={headline} setHeadline={setHeadline} destUrl={destUrl} setDestUrl={setDestUrl} ctaButton={ctaButton} setCtaButton={setCtaButton} errors={errors} />,
     <Step6Review data={reviewData} onGoTo={(s) => { setErrors({}); setStep(s); }} />,
   ];

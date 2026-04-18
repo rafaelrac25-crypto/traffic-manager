@@ -1,6 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../contexts/AppStateContext';
+import {
+  DISTRICT_COORDS,
+  DISTRICT_NAMES_FOR_SUGGESTION,
+  analyzeDistrict,
+  DISTRICTS,
+  HOME_DISTRICT,
+  HOME_RADIUS_KM,
+} from '../data/joinvilleDistricts';
 
 /**
  * Audiences — CRUD de públicos salvos.
@@ -8,42 +16,10 @@ import { useAppState } from '../contexts/AppStateContext';
  */
 
 /* Joinville/SC — Cris Costa Beauty atende apenas Joinville (regra de negócio).
-   Lista de sugestões = cidade + principais bairros. */
-const JOINVILLE_LOCATIONS = [
-  'Joinville',
-  'Centro',
-  'América',
-  'Glória',
-  'Saguaçu',
-  'Anita Garibaldi',
-  'Costa e Silva',
-  'Boa Vista',
-  'Atiradores',
-  'Bom Retiro',
-  'Santo Antônio',
-  'Iririú',
-];
-
-/* Coords para salvar localização compatível com Step2Audience (mapa) */
-const CITY_COORDS = {
-  'Joinville':        { lat: -26.3044, lng: -48.8487 },
-  'Centro':           { lat: -26.3044, lng: -48.8487 },
-  'América':          { lat: -26.3021, lng: -48.8431 },
-  'Glória':           { lat: -26.3028, lng: -48.8656 },
-  'Saguaçu':          { lat: -26.2914, lng: -48.8181 },
-  'Anita Garibaldi':  { lat: -26.2711, lng: -48.8447 },
-  'Costa e Silva':    { lat: -26.2850, lng: -48.8553 },
-  'Boa Vista':        { lat: -26.2481, lng: -48.8697 },
-  'Atiradores':       { lat: -26.2861, lng: -48.8339 },
-  'Bom Retiro':       { lat: -26.2781, lng: -48.8197 },
-  'Santo Antônio':    { lat: -26.3322, lng: -48.8775 },
-  'Iririú':           { lat: -26.3014, lng: -48.8058 },
-  'Bucarein':         { lat: -26.3208, lng: -48.8478 },
-  'Floresta':         { lat: -26.2686, lng: -48.8133 },
-  'Aventureiro':      { lat: -26.3586, lng: -48.8153 },
-  'Itaum':            { lat: -26.3406, lng: -48.8617 },
-  'Jardim Sofia':     { lat: -26.2794, lng: -48.8094 },
-};
+   Fonte única dos bairros (coords, renda, tier, análise) vem de
+   data/joinvilleDistricts.js. */
+const JOINVILLE_LOCATIONS = DISTRICT_NAMES_FOR_SUGGESTION;
+const CITY_COORDS = DISTRICT_COORDS;
 
 /* Extrai o nome de uma localização (aceita string legada ou objeto novo) */
 function locName(l) { return typeof l === 'string' ? l : (l?.name || ''); }
@@ -429,6 +405,170 @@ function AudienceForm({ initial, onSave, onCancel }) {
   );
 }
 
+/* ══════════════════════════════════════════
+   Analisador de bairro — Joinville
+   Cris digita um bairro e recebe: distância do Boa Vista, perfil de renda,
+   ticket esperado, faixa etária, orçamento sugerido.
+══════════════════════════════════════════ */
+
+function DistrictAnalyzer() {
+  const [query, setQuery] = useState('');
+  const [result, setResult] = useState(null);
+  const [noMatch, setNoMatch] = useState(false);
+
+  function runAnalyze(name) {
+    const target = (name || query).trim();
+    if (!target) return;
+    const a = analyzeDistrict(target);
+    if (!a) {
+      setResult(null);
+      setNoMatch(true);
+      return;
+    }
+    setResult(a);
+    setNoMatch(false);
+  }
+
+  function fmtBRL(n) { return `R$ ${Number(n).toFixed(2).replace('.', ',')}`; }
+
+  return (
+    <div style={{
+      background: 'linear-gradient(135deg, rgba(214,141,143,.08), rgba(125,74,94,.04))',
+      border: '1.5px solid var(--c-border)',
+      borderLeft: '4px solid var(--c-accent)',
+      borderRadius: '14px',
+      padding: '18px 20px',
+      marginBottom: '20px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '14px',
+    }}>
+      <div>
+        <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '3px' }}>
+          🎯 Analisador de bairro
+        </div>
+        <div style={{ fontSize: '12px', color: 'var(--c-text-3)', lineHeight: 1.5 }}>
+          Digite um bairro de Joinville. Retorna distância do <strong>{HOME_DISTRICT}</strong> (clínica),
+          perfil de renda, ticket médio esperado e faixa etária ideal do público.
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <input
+          type="text"
+          placeholder="Ex.: Saguaçu, Glória, Costa e Silva…"
+          value={query}
+          onChange={e => { setQuery(e.target.value); setNoMatch(false); }}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); runAnalyze(); } }}
+          list="joinville-districts-datalist"
+          style={{
+            flex: 1, minWidth: '200px', padding: '10px 14px',
+            border: '1.5px solid var(--c-border)', borderRadius: '10px',
+            background: 'var(--c-card-bg)', color: 'var(--c-text-1)',
+            fontSize: '13px', fontFamily: 'inherit', outline: 'none',
+          }}
+        />
+        <datalist id="joinville-districts-datalist">
+          {DISTRICTS.map(d => <option key={d.name} value={d.name} />)}
+        </datalist>
+        <button
+          onClick={() => runAnalyze()}
+          style={{
+            padding: '10px 18px', borderRadius: '10px',
+            border: 'none', background: 'var(--c-accent)',
+            color: '#fff', fontSize: '13px', fontWeight: 700,
+            cursor: 'pointer', whiteSpace: 'nowrap',
+          }}
+        >
+          Analisar
+        </button>
+      </div>
+
+      <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '10px', color: 'var(--c-text-4)', marginRight: '4px', alignSelf: 'center' }}>Atalhos:</span>
+        {['Boa Vista', 'Glória', 'Saguaçu', 'América', 'Atiradores'].map(n => (
+          <button
+            key={n}
+            onClick={() => { setQuery(n); runAnalyze(n); }}
+            style={{
+              padding: '4px 10px', borderRadius: '16px',
+              border: '1px dashed var(--c-border)', background: 'transparent',
+              color: 'var(--c-text-3)', fontSize: '10.5px', fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >{n}</button>
+        ))}
+      </div>
+
+      {noMatch && (
+        <div style={{
+          padding: '12px 14px', borderRadius: '10px',
+          background: '#FEF2F2', border: '1px solid #FECACA',
+          fontSize: '12px', color: '#991B1B', lineHeight: 1.5,
+        }}>
+          Bairro <strong>"{query}"</strong> não está no nosso catálogo de Joinville. Verifique a grafia ou me avise que adicionamos.
+          Catálogo atual tem {DISTRICTS.length} bairros.
+        </div>
+      )}
+
+      {result && (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gap: '10px',
+        }}>
+          <StatBlock label="Bairro" value={result.name} sub={result.note} />
+          <StatBlock
+            label="Distância do Boa Vista"
+            value={`${result.distKm.toFixed(1)} km`}
+            sub={result.ring.label}
+            accent={result.ring.color}
+          />
+          <StatBlock
+            label="Renda familiar estimada"
+            value={`${fmtBRL(result.incomeRange.min)} – ${fmtBRL(result.incomeRange.max)}`}
+            sub={`Tier: ${result.tier.replace('-', ' ')}`}
+          />
+          <StatBlock
+            label="Ticket esperado (por visita)"
+            value={`${fmtBRL(result.ticket.min)} – ${fmtBRL(result.ticket.max)}`}
+            sub={result.ticket.mainProcedures.join(' · ')}
+          />
+          <StatBlock
+            label="Faixa etária ideal"
+            value={`${result.ageRange[0]}–${result.ageRange[1]} anos`}
+            sub="Core Meta Ads"
+          />
+          <StatBlock
+            label="Orçamento diário sugerido"
+            value={`${fmtBRL(result.budget.min)} – ${fmtBRL(result.budget.max)}/dia`}
+            sub="Para teste inicial"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StatBlock({ label, value, sub, accent }) {
+  return (
+    <div style={{
+      background: 'var(--c-card-bg)',
+      border: `1px solid ${accent || 'var(--c-border)'}`,
+      borderRadius: '10px',
+      padding: '10px 12px',
+    }}>
+      <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--c-text-4)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: '4px' }}>
+        {label}
+      </div>
+      <div style={{ fontSize: '14px', fontWeight: 800, color: accent || 'var(--c-text-1)', lineHeight: 1.2, marginBottom: '3px' }}>
+        {value}
+      </div>
+      {sub && <div style={{ fontSize: '10.5px', color: 'var(--c-text-3)', lineHeight: 1.4 }}>{sub}</div>}
+    </div>
+  );
+}
+
 export default function Audiences() {
   const navigate = useNavigate();
   const { audiences, addAudience, updateAudience, removeAudience } = useAppState();
@@ -489,6 +629,7 @@ export default function Audiences() {
         />
       ) : (
         <>
+          <DistrictAnalyzer />
           {audiences.length === 0 ? (
             <div style={emptyState}>
               <div style={{ fontSize: '36px', marginBottom: '10px' }}>
