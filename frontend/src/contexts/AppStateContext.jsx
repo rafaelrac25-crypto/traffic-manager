@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { getCriticalDatesInWindow } from '../data/commercialDates';
+import { getRelevantCommercialDatesInWindow } from '../data/commercialDates';
 
 /**
  * AppStateContext — estado global do painel.
@@ -110,12 +110,12 @@ export function AppStateProvider({ children }) {
     return () => { cancelled = true; clearInterval(id); };
   }, []);
 
-  /* ─── Alertas de datas comerciais imperdíveis (no mount) ─── */
+  /* ─── Alertas de datas comerciais relevantes em janela de 45 dias (no mount) ─── */
   useEffect(() => {
-    const critical = getCriticalDatesInWindow(new Date());
-    if (critical.length === 0) return;
+    const upcoming = getRelevantCommercialDatesInWindow(new Date(), 45);
+    if (upcoming.length === 0) return;
     const alerted = load(KEY_COMMERCIAL_ALERTED, []);
-    const toAlert = critical.filter(c => !alerted.includes(c.key));
+    const toAlert = upcoming.filter(c => !alerted.includes(c.key));
     if (toAlert.length === 0) return;
 
     toAlert.forEach(c => {
@@ -127,11 +127,11 @@ export function AppStateProvider({ children }) {
       addNotification({
         kind: 'info',
         title: `${c.emoji} ${c.name} ${when}`,
-        message: `Data imperdível para o segmento. ${c.whyImportant.split('.')[0]}. Planeje a campanha com antecedência.`,
+        message: `${c.whyImportant.split('.')[0]}. Planeje a campanha com antecedência.`,
         link: '/calendario',
       });
     });
-    save(KEY_COMMERCIAL_ALERTED, [...alerted, ...toAlert.map(c => c.key)].slice(-50));
+    save(KEY_COMMERCIAL_ALERTED, [...alerted, ...toAlert.map(c => c.key)].slice(-100));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

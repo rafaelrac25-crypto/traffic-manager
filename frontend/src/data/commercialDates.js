@@ -549,29 +549,16 @@ export function getCommercialDateByKey(key) {
 }
 
 /**
- * IDs das datas consideradas imperdíveis para o segmento Cris Costa Beauty.
- * São as que disparam alerta automático no sino quando entram na janela
- * de veiculação (dias antes <= daysBefore).
+ * Janela em dias usada para alertar no sino e sugerir campanhas no calendário.
+ * Todas as datas do dataset são curadas para o segmento Cris Costa Beauty,
+ * portanto entram no alerta enquanto estiverem dentro desta janela.
  */
-export const CRITICAL_DATE_IDS = new Set([
-  'dia-da-mulher',
-  'carnaval',
-  'dia-das-maes',
-  'dia-dos-namorados',
-  'dia-dos-pais',
-  'outubro-rosa',
-  'black-friday',
-  'natal',
-  'reveillon',
-]);
+export const ALERT_WINDOW_DAYS = 45;
 
 /**
- * Retorna as datas críticas em janela de veiculação a partir de `from`.
- * Inclui só entries cujo `daysUntil <= daysBefore` definido na própria entry.
+ * Retorna as datas comerciais relevantes para Cris Costa Beauty em janela
+ * de 45 dias a partir de `from`.
  */
-export function getCriticalDatesInWindow(from = new Date()) {
-  const upcoming = getUpcomingCommercialDates(from, 60);
-  return upcoming.filter(entry =>
-    CRITICAL_DATE_IDS.has(entry.id) && entry.daysUntil <= (entry.daysBefore || 14)
-  );
+export function getRelevantCommercialDatesInWindow(from = new Date(), daysAhead = ALERT_WINDOW_DAYS) {
+  return getUpcomingCommercialDates(from, daysAhead);
 }
