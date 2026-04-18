@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../contexts/AppStateContext';
 
 /**
@@ -78,7 +79,7 @@ function Chip({ label, onRemove, active = true }) {
   );
 }
 
-function AudienceCard({ audience, onEdit, onRemove }) {
+function AudienceCard({ audience, onEdit, onRemove, onReuseQuick, onReuseAdjust }) {
   return (
     <div className="ccb-card" style={{
       background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',
@@ -141,6 +142,38 @@ function AudienceCard({ audience, onEdit, onRemove }) {
           </div>
         </div>
       )}
+
+      <div style={{
+        display: 'flex', gap: '6px', marginTop: '4px',
+        paddingTop: '10px', borderTop: '1px solid var(--c-border-lt)',
+      }}>
+        <button
+          onClick={() => onReuseQuick(audience)}
+          title="Abre a criação direto na revisão, com texto e orçamento padrão já preenchidos"
+          style={{
+            flex: 1, padding: '8px 10px',
+            background: 'var(--c-accent)', color: '#fff',
+            border: 'none', borderRadius: '8px',
+            fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+          }}
+        >
+          🚀 Publicar rápido
+        </button>
+        <button
+          onClick={() => onReuseAdjust(audience)}
+          title="Abre a criação com este público selecionado, mas com o passo a passo completo"
+          style={{
+            flex: 1, padding: '8px 10px',
+            background: 'var(--c-surface)', color: 'var(--c-text-2)',
+            border: '1.5px solid var(--c-border)', borderRadius: '8px',
+            fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+          }}
+        >
+          ✏️ Usar e ajustar
+        </button>
+      </div>
     </div>
   );
 }
@@ -332,6 +365,7 @@ function AudienceForm({ initial, onSave, onCancel }) {
 }
 
 export default function Audiences() {
+  const navigate = useNavigate();
   const { audiences, addAudience, updateAudience, removeAudience } = useAppState();
   const [mode, setMode] = useState('list');
   const [editing, setEditing] = useState(null);
@@ -354,6 +388,14 @@ export default function Audiences() {
   function handleCancel() {
     setMode('list');
     setEditing(null);
+  }
+
+  function handleReuseQuick(audience) {
+    navigate('/criar-anuncio', { state: { reuseAudience: audience, reviewMode: true } });
+  }
+
+  function handleReuseAdjust(audience) {
+    navigate('/criar-anuncio', { state: { reuseAudience: audience, reviewMode: false } });
   }
 
   return (
@@ -409,6 +451,8 @@ export default function Audiences() {
                   audience={a}
                   onEdit={handleEdit}
                   onRemove={removeAudience}
+                  onReuseQuick={handleReuseQuick}
+                  onReuseAdjust={handleReuseAdjust}
                 />
               ))}
             </div>

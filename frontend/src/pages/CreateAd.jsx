@@ -1257,6 +1257,9 @@ export default function CreateAd() {
   const location = useLocation();
   const commercialDate = location.state?.commercialDate;
   const rejectedAd = location.state?.rejectedAd || null;
+  const reuseAudience = location.state?.reuseAudience || null;
+  const reuseCreative = location.state?.reuseCreative || null;
+  const reviewMode = !!location.state?.reviewMode;
   const { addNotification, addAd, updateAd, getAdById, audiences, creatives, addCreative, markCreativeUsed, removeRejectedAd, logHistory } = useAppState();
   const editId = location.state?.editId || null;
   const editingAd = editId ? getAdById(editId) : null;
@@ -1265,13 +1268,27 @@ export default function CreateAd() {
   const rejectionInfo = fixMode ? getRejectionInfo(rejectedAd.reason) : null;
   const source = rejectedAd?.payload || editingAd || null;
 
-  /* Default audience usado quando vem de data comercial (pula para Revisar) */
-  const quickFillAudience = commercialDate && !source && audiences.length > 0 ? audiences[0] : null;
-  const quickFill = !!commercialDate && !source;
+  /* Quick-start: data comercial, reuso de público ou de criativo */
+  const hasQuickStart = !!(commercialDate || reuseAudience || reuseCreative);
+  const quickFill = hasQuickStart && !source;
+
+  const quickFillAudience = quickFill
+    ? (reuseAudience || (audiences.length > 0 ? audiences[0] : null))
+    : null;
+  const quickFillCreative = quickFill
+    ? (reuseCreative || (reviewMode && creatives.length > 0 ? creatives[0] : null))
+    : null;
+
+  /* Abrir direto em Revisar apenas quando houver texto disponível para publicar */
+  const wantsReview = quickFill && (commercialDate || reviewMode);
+  const canReview = wantsReview && (
+    !!commercialDate?.preFill?.primaryText ||
+    !!quickFillCreative?.primaryText
+  );
 
   const [step, setStep] = useState(
     fixMode && rejectionInfo ? rejectionInfo.step
-    : quickFill ? 4 /* abrir direto em Revisar quando vem de data comercial */
+    : canReview ? 4 /* direto em Revisar quando o quick-start tem texto */
     : 0
   );
   const [errors, setErrors] = useState({});
@@ -1292,9 +1309,12 @@ export default function CreateAd() {
     return new Date(commercialDate.dateISO).toISOString().split('T')[0];
   })();
 
+  const DEFAULT_QUICK_BUDGET = 25;
   const initialBudget = (source && source.budgetValue !== undefined)
     ? String(source.budgetValue ?? '')
-    : (commercialDate?.suggestedBudget?.daily ? String(commercialDate.suggestedBudget.daily) : '');
+    : (commercialDate?.suggestedBudget?.daily
+        ? String(commercialDate.suggestedBudget.daily)
+        : (canReview ? String(DEFAULT_QUICK_BUDGET) : ''));
 
   /* ── Estado do formulário ── */
   const [objective,          setObjective]          = useState(source?.objective || (quickFill ? 'messages' : ''));
@@ -1308,10 +1328,10 @@ export default function CreateAd() {
   const [endDate,            setEndDate]            = useState(initialEnd);
   const [adFormat,           setAdFormat]           = useState(source?.adFormat || 'image');
   const [mediaFiles,         setMediaFiles]         = useState(source?.mediaFiles || []);
-  const [primaryText,        setPrimaryText]        = useState(source?.primaryText ?? (commercialDate?.preFill?.primaryText || ''));
-  const [headline,           setHeadline]           = useState(source?.headline ?? (commercialDate?.preFill?.headline || ''));
+  const [primaryText,        setPrimaryText]        = useState(source?.primaryText ?? (quickFillCreative?.primaryText || commercialDate?.preFill?.primaryText || ''));
+  const [headline,           setHeadline]           = useState(source?.headline ?? (quickFillCreative?.headline || commercialDate?.preFill?.headline || ''));
   const [destUrl,            setDestUrl]            = useState(source?.destUrl || 'https://wa.me/5547997071161');
-  const [ctaButton,          setCtaButton]          = useState(source?.ctaButton || 'WhatsApp');
+  const [ctaButton,          setCtaButton]          = useState(source?.ctaButton || quickFillCreative?.cta || 'WhatsApp');
 
   useEffect(() => {
     if (fixMode) {
@@ -1328,6 +1348,23 @@ export default function CreateAd() {
         title: `Pré-preenchendo: ${commercialDate.name}`,
         message: `Texto e data de início sugeridos para ${commercialDate.name}. Ajuste o criativo e revise antes de publicar.`,
       });
+      return;
+    }
+    if (reuseCreative) {
+      addNotification({
+        kind: 'info',
+        title: `Reaproveitando criativo: ${reuseCreative.name}`,
+        message: canReview ? 'Levei você direto para a revisão. Público e orçamento foram preenchidos com os padrões — ajuste se quiser.' : 'Texto e título já preenchidos. Escolha objetivo, público e orçamento.',
+      });
+      return;
+    }
+    if (reuseAudience) {
+      addNotification({
+        kind: 'info',
+        title: `Usando público: ${reuseAudience.name}`,
+        message: canReview ? 'Levei você direto para a revisão. Texto e orçamento foram preenchidos com os padrões — ajuste se quiser.' : 'Público já selecionado. Escolha objetivo, criativo e orçamento.',
+      });
+      return;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -1427,7 +1464,12 @@ export default function CreateAd() {
             {fixMode
               ? `Meta Ads · Ajuste o passo "${STEPS[rejectionInfo?.step] || '—'}" e reenvie — o restante já está preenchido.`
               : quickFill
-                ? `Meta Ads · ${commercialDate.name} pré-preenchido. Revise e publique, ou personalize se quiser ajustar.`
+                ? `Meta Ads · ${
+                    commercialDate ? commercialDate.name
+                    : reuseCreative ? `Criativo "${reuseCreative.name}"`
+                    : reuseAudience ? `Público "${reuseAudience.name}"`
+                    : 'Quick-start'
+                  } pré-preenchido. ${canReview ? 'Revise e publique, ou personalize se quiser ajustar.' : 'Complete o que falta nos passos abaixo.'}`
                 : 'Meta Ads · Configure sua campanha de tráfego pago em 5 passos.'}
           </p>
         </div>
@@ -1482,7 +1524,7 @@ export default function CreateAd() {
               )}
             </div>
           )}
-          {quickFill && step === 4 && (
+          {quickFill && canReview && step === 4 && (
             <div style={{
               padding: '14px 16px',
               background: 'linear-gradient(135deg, rgba(214,141,143,.09), rgba(125,74,94,.04))',
@@ -1491,13 +1533,35 @@ export default function CreateAd() {
               borderRadius: '10px',
               marginBottom: '22px',
             }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--c-accent)', letterSpacing: '.5px', marginBottom: '6px' }}>
-                {commercialDate.emoji} PRÉ-PREENCHIDO · {commercialDate.name.toUpperCase()}
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--c-accent)', letterSpacing: '.5px', marginBottom: '8px' }}>
+                {commercialDate
+                  ? `${commercialDate.emoji} PRÉ-PREENCHIDO · ${commercialDate.name.toUpperCase()}`
+                  : reuseCreative
+                    ? `🎨 PRÉ-PREENCHIDO · CRIATIVO "${reuseCreative.name.toUpperCase()}"`
+                    : reuseAudience
+                      ? `👥 PRÉ-PREENCHIDO · PÚBLICO "${reuseAudience.name.toUpperCase()}"`
+                      : '✨ PRÉ-PREENCHIDO'}
               </div>
-              <p style={{ fontSize: '13px', color: 'var(--c-text-2)', margin: '0 0 10px 0', lineHeight: 1.55 }}>
-                Usei os padrões da Cris: <strong>mensagens no WhatsApp</strong>
-                {quickFillAudience ? <> para o público <strong>"{quickFillAudience.name}"</strong></> : null}
-                . Texto e orçamento vieram da estratégia desta data. Revise abaixo e publique — ou personalize se quiser mudar algo.
+              <p style={{ fontSize: '13px', color: 'var(--c-text-2)', margin: '0 0 8px 0', lineHeight: 1.55 }}>
+                Revise abaixo o que foi montado:
+              </p>
+              <ul style={{ fontSize: '12.5px', color: 'var(--c-text-2)', margin: '0 0 12px 20px', lineHeight: 1.7, padding: 0 }}>
+                <li><strong>Objetivo:</strong> mensagens no WhatsApp</li>
+                {quickFillAudience && (
+                  <li><strong>Público:</strong> {quickFillAudience.name} {reuseAudience ? '' : '(padrão salvo)'}</li>
+                )}
+                {(quickFillCreative || commercialDate) && (
+                  <li>
+                    <strong>Texto:</strong>{' '}
+                    {quickFillCreative
+                      ? <>de "{quickFillCreative.name}" {reuseCreative ? '' : '(criativo salvo)'}</>
+                      : <>da estratégia desta data</>}
+                  </li>
+                )}
+                {budgetValue && <li><strong>Orçamento:</strong> R$ {budgetValue}/dia</li>}
+              </ul>
+              <p style={{ fontSize: '12px', color: 'var(--c-text-3)', margin: '0 0 10px 0', lineHeight: 1.5 }}>
+                Se tudo estiver certo, é só publicar. Caso queira mudar algo, personalize abaixo.
               </p>
               <button
                 type="button"

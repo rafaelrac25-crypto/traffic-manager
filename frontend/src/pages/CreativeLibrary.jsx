@@ -57,7 +57,7 @@ function emptyCreative() {
   };
 }
 
-function CreativeCard({ creative, onRemove, onCopy, onReuse }) {
+function CreativeCard({ creative, onRemove, onCopy, onReuseQuick, onReuseAdjust }) {
   return (
     <div className="ccb-card" style={{
       background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',
@@ -108,16 +108,43 @@ function CreativeCard({ creative, onRemove, onCopy, onReuse }) {
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: '6px', marginTop: 'auto', paddingTop: '8px' }}>
-          <button onClick={() => onReuse(creative)} style={{ ...actionBtn, flex: 1 }} title="Usar em novo anúncio">
-            <IconReuse /> Usar
-          </button>
-          <button onClick={() => onCopy(creative)} style={actionBtn} title="Copiar texto">
-            <IconCopy />
-          </button>
-          <button onClick={() => onRemove(creative.id)} style={{ ...actionBtn, color: '#DC2626' }} title="Remover">
-            <IconTrash />
-          </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: 'auto', paddingTop: '8px' }}>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <button
+              onClick={() => onReuseQuick(creative)}
+              title="Abre a criação direto na revisão, com público e orçamento padrão"
+              style={{
+                flex: 1, padding: '8px 10px',
+                background: 'var(--c-accent)', color: '#fff',
+                border: 'none', borderRadius: '8px',
+                fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+              }}
+            >
+              🚀 Publicar rápido
+            </button>
+            <button
+              onClick={() => onReuseAdjust(creative)}
+              title="Abre a criação com este texto preenchido e o passo a passo completo"
+              style={{
+                flex: 1, padding: '8px 10px',
+                background: 'var(--c-surface)', color: 'var(--c-text-2)',
+                border: '1.5px solid var(--c-border)', borderRadius: '8px',
+                fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+              }}
+            >
+              ✏️ Usar e ajustar
+            </button>
+          </div>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <button onClick={() => onCopy(creative)} style={{ ...actionBtn, flex: 1 }} title="Copiar texto">
+              <IconCopy /> Copiar texto
+            </button>
+            <button onClick={() => onRemove(creative.id)} style={{ ...actionBtn, color: '#DC2626' }} title="Remover">
+              <IconTrash />
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -256,9 +283,14 @@ export default function CreativeLibrary() {
     }
   }
 
-  function handleReuse(creative) {
+  function handleReuseQuick(creative) {
     markCreativeUsed(creative.id);
-    navigate('/criar-anuncio', { state: { reuseCreative: creative } });
+    navigate('/criar-anuncio', { state: { reuseCreative: creative, reviewMode: true } });
+  }
+
+  function handleReuseAdjust(creative) {
+    markCreativeUsed(creative.id);
+    navigate('/criar-anuncio', { state: { reuseCreative: creative, reviewMode: false } });
   }
 
   return (
@@ -311,7 +343,8 @@ export default function CreativeLibrary() {
                   creative={c}
                   onRemove={removeCreative}
                   onCopy={handleCopy}
-                  onReuse={handleReuse}
+                  onReuseQuick={handleReuseQuick}
+                  onReuseAdjust={handleReuseAdjust}
                 />
               ))}
             </div>

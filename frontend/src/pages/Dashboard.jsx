@@ -118,16 +118,19 @@ function CalendarIcon2() {
     </svg>
   );
 }
-/* ── Gráfico de linha SVG (interativo) ── */
+/* ── Gráfico de linha SVG (interativo com slide suave) ── */
 function LineChart({ data, unit = 'resultados' }) {
-  const W = 540, H = 180;
-  const padL = 40, padR = 20, padT = 34, padB = 30;
+  const W = 540, H = 190;
+  const padL = 40, padR = 20, padT = 52, padB = 30;
   const plotW = W - padL - padR;
   const plotH = H - padT - padB;
   const maxVal = Math.max(200, Math.ceil(Math.max(...data.map(d => d.value)) / 50) * 50);
   const svgRef = useRef(null);
-  const [hoverIdx, setHoverIdx] = useState(data.length - 1);
+
+  /* Posição fracionária no eixo X (0 a data.length-1). Começa no último ponto. */
+  const [cursorFrac, setCursorFrac] = useState(data.length - 1);
   const [isHovering, setIsHovering] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const pts = data.map((d, i) => ({
     x: padL + (i / (data.length - 1)) * plotW,
@@ -157,35 +160,65 @@ function LineChart({ data, unit = 'resultados' }) {
   const fillPath = areaPath(pts);
   const gridVals = [0, Math.round(maxVal / 4), Math.round(maxVal / 2), Math.round(maxVal * 3 / 4), maxVal];
 
-  function handleMove(e) {
+  function updateCursor(clientX) {
     const svg = svgRef.current;
     if (!svg) return;
     const rect = svg.getBoundingClientRect();
-    const svgX = ((e.clientX - rect.left) / rect.width) * W;
-    let nearest = 0, best = Infinity;
-    for (let i = 0; i < pts.length; i++) {
-      const d = Math.abs(pts[i].x - svgX);
-      if (d < best) { best = d; nearest = i; }
-    }
-    setHoverIdx(nearest);
+    const svgX = ((clientX - rect.left) / rect.width) * W;
+    const frac = Math.max(0, Math.min(data.length - 1,
+      ((svgX - padL) / plotW) * (data.length - 1)
+    ));
+    setCursorFrac(frac);
     setIsHovering(true);
   }
 
-  const active = pts[hoverIdx] || pts[pts.length - 1];
-  const tooltipX = Math.max(padL + 46, Math.min(W - padR - 46, active.x));
+  function handleMouseMove(e) { updateCursor(e.clientX); }
+  function handleMouseDown(e) { setIsDragging(true); updateCursor(e.clientX); }
+  function handleMouseUp() { setIsDragging(false); }
+  function handleTouchStart(e) {
+    setIsDragging(true);
+    const t = e.touches[0]; if (t) updateCursor(t.clientX);
+  }
+  function handleTouchMove(e) {
+    const t = e.touches[0]; if (t) updateCursor(t.clientX);
+  }
+  function handleTouchEnd() { setIsDragging(false); }
+
+  /* Interpolação suave entre dots */
+  const i0 = Math.floor(cursorFrac);
+  const i1 = Math.min(data.length - 1, i0 + 1);
+  const lerpT = cursorFrac - i0;
+  const activeX = pts[i0].x + (pts[i1].x - pts[i0].x) * lerpT;
+  const activeY = pts[i0].y + (pts[i1].y - pts[i0].y) * lerpT;
+  const activeValue = Math.round(pts[i0].value + (pts[i1].value - pts[i0].value) * lerpT);
+  const showInterpolated = lerpT >= 0.18 && lerpT <= 0.82 && i0 !== i1;
+  const activeLabel = showInterpolated
+    ? `${pts[i0].label} → ${pts[i1].label}`
+    : (lerpT < 0.5 ? pts[i0].label : pts[i1].label);
+
+  const TOOLTIP_W = showInterpolated ? 120 : 100;
+  const TOOLTIP_H = 44;
+  const tooltipCenterX = Math.max(padL + TOOLTIP_W/2, Math.min(W - padR - TOOLTIP_W/2, activeX));
+  const tooltipY = Math.max(4, activeY - TOOLTIP_H - 14);
 
   return (
     <svg
       ref={svgRef}
       viewBox={`0 0 ${W} ${H}`}
       width="100%"
-      style={{ display: 'block', overflow: 'visible', cursor: 'crosshair' }}
-      onMouseMove={handleMove}
-      onMouseLeave={() => setIsHovering(false)}
-      onTouchMove={(e) => {
-        const t = e.touches[0];
-        if (t) handleMove({ clientX: t.clientX });
+      style={{
+        display: 'block', overflow: 'visible',
+        cursor: isDragging ? 'grabbing' : 'grab',
+        touchAction: 'none',
+        userSelect: 'none',
       }}
+      onMouseMove={handleMouseMove}
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={() => { setIsHovering(false); setIsDragging(false); }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
       <defs>
         <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
@@ -212,78 +245,103 @@ function LineChart({ data, unit = 'resultados' }) {
         );
       })}
 
-      <path d={fillPath} fill="url(#chartFill)" style={{ transition: 'd .3s ease' }}/>
+      <path d={fillPath} fill="url(#chartFill)"/>
       <path d={linePath} fill="none" stroke="url(#chartLine)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" filter="url(#chartGlow)"/>
 
-      {pts.map((pt, i) => (
-        <text
-          key={i}
-          x={pt.x}
-          y={H - 4}
-          fontSize="9"
-          fill={i === hoverIdx ? '#d68d8f' : 'var(--c-text-4)'}
-          fontWeight={i === hoverIdx ? 700 : 400}
-          textAnchor="middle"
-          style={{ transition: 'fill .18s ease' }}
-        >
-          {pt.label}
-        </text>
-      ))}
+      {pts.map((pt, i) => {
+        const dist = Math.abs(i - cursorFrac);
+        const isNear = dist < 0.5;
+        return (
+          <text
+            key={`lbl-${i}`}
+            x={pt.x}
+            y={H - 4}
+            fontSize="9"
+            fill={isNear ? '#d68d8f' : 'var(--c-text-4)'}
+            fontWeight={isNear ? 700 : 400}
+            textAnchor="middle"
+            style={{ transition: 'fill .18s ease' }}
+          >
+            {pt.label}
+          </text>
+        );
+      })}
 
-      {pts.map((pt, i) => (
-        <circle
-          key={`dot-${i}`}
-          cx={pt.x}
-          cy={pt.y}
-          r={i === hoverIdx ? 5 : 2.5}
-          fill={i === hoverIdx ? '#d68d8f' : '#fff'}
-          stroke="#d68d8f"
-          strokeWidth={i === hoverIdx ? 2 : 1.5}
-          style={{ transition: 'r .22s cubic-bezier(.22,1,.36,1), fill .18s ease' }}
-        />
-      ))}
+      {pts.map((pt, i) => {
+        const dist = Math.abs(i - cursorFrac);
+        const weight = Math.max(0, 1 - dist); /* 1 no dot, 0 a 1 unidade de distância */
+        return (
+          <circle
+            key={`dot-${i}`}
+            cx={pt.x}
+            cy={pt.y}
+            r={2.5 + weight * 1.5}
+            fill="#fff"
+            stroke="#d68d8f"
+            strokeWidth={1.5 + weight * 0.6}
+          />
+        );
+      })}
 
+      {/* Linha vertical vai suave porque activeX desliza por interpolação */}
       <line
-        x1={active.x} y1={padT}
-        x2={active.x} y2={padT + plotH}
+        x1={activeX} y1={padT}
+        x2={activeX} y2={padT + plotH}
         stroke="#d68d8f"
         strokeWidth="1"
         strokeDasharray="3,3"
-        opacity={isHovering ? 0.7 : 0.45}
-        style={{ transition: 'x1 .18s ease, x2 .18s ease, opacity .18s ease' }}
+        opacity={isHovering ? 0.75 : 0.4}
+        style={{ transition: 'opacity .18s ease' }}
       />
 
-      <g style={{ transition: 'transform .2s ease', transform: `translate(${tooltipX - active.x}px, 0)` }}>
+      {/* Active point (desliza ao longo da linha) */}
+      <circle
+        cx={activeX}
+        cy={activeY}
+        r={showInterpolated ? 5 : 6}
+        fill="#d68d8f"
+        stroke="#fff"
+        strokeWidth="2.5"
+        style={{ filter: 'drop-shadow(0 2px 6px rgba(214,141,143,.45))' }}
+      />
+
+      {/* Tooltip diagramado com data e valor centralizados */}
+      <g>
         <rect
-          x={active.x - 46}
-          y={active.y - 36}
-          width="92"
-          height="30"
-          rx="8"
+          x={tooltipCenterX - TOOLTIP_W/2}
+          y={tooltipY}
+          width={TOOLTIP_W}
+          height={TOOLTIP_H}
+          rx="10"
           fill="#d68d8f"
-          style={{ transition: 'x .22s cubic-bezier(.22,1,.36,1), y .22s cubic-bezier(.22,1,.36,1)', filter: 'drop-shadow(0 4px 10px rgba(214,141,143,.35))' }}
+          style={{ filter: 'drop-shadow(0 6px 14px rgba(214,141,143,.4))' }}
+        />
+        {/* Pequena flecha abaixo do retângulo, apontando pro ponto */}
+        <path
+          d={`M ${activeX - 5} ${tooltipY + TOOLTIP_H} L ${activeX} ${tooltipY + TOOLTIP_H + 6} L ${activeX + 5} ${tooltipY + TOOLTIP_H} Z`}
+          fill="#d68d8f"
         />
         <text
-          x={active.x}
-          y={active.y - 19}
+          x={tooltipCenterX}
+          y={tooltipY + 17}
           fontSize="10.5"
           fill="white"
           textAnchor="middle"
           fontWeight="800"
-          style={{ transition: 'x .22s ease, y .22s ease' }}
+          style={{ letterSpacing: '.3px' }}
         >
-          {active.label}
+          {activeLabel}
         </text>
         <text
-          x={active.x}
-          y={active.y - 8}
-          fontSize="9"
+          x={tooltipCenterX}
+          y={tooltipY + 34}
+          fontSize="12"
           fill="white"
           textAnchor="middle"
-          opacity="0.92"
-          style={{ transition: 'x .22s ease, y .22s ease' }}
+          fontWeight="700"
+          opacity="0.98"
         >
-          {active.value} {unit}
+          {activeValue} <tspan fontSize="10" fontWeight="500" opacity="0.85">{unit}</tspan>
         </text>
       </g>
     </svg>
@@ -449,13 +507,23 @@ function MetricCard({ label, value, trend, trendUp, sub, icon, iconBg, iconColor
 
 /* ── Mock de CPC por anúncio ativo (até integração Meta Ads) ── */
 const MOCK_CPC = [
-  { id: 1, name: 'Promoção Verão',        cpc: 0.42 },
-  { id: 2, name: 'Esmaltes Tendência',    cpc: 1.86 },
-  { id: 3, name: 'Skincare Rotina Diária', cpc: 0.58 },
-  { id: 5, name: 'Remarketing Site',      cpc: 0.71 },
+  { id: 1, name: 'Limpeza de Pele Profunda', cpc: 0.92 },
+  { id: 2, name: 'Micropigmentação Labial',  cpc: 1.86 },
+  { id: 3, name: 'Lash Lifting + Brow',      cpc: 1.08 },
+  { id: 5, name: 'Remarketing Glow Lips',    cpc: 0.78 },
 ];
-const AVG_CPC = MOCK_CPC.reduce((s, a) => s + a.cpc, 0) / MOCK_CPC.length;
-const HIGH_CPC_THRESHOLD = AVG_CPC * 1.3;
+
+/**
+ * Benchmark de CPC do ramo de ESTÉTICA FACIAL AVANÇADA.
+ * Referência: micropigmentação (labial, sobrancelhas), extensão de cílios,
+ * lash lifting, brow lamination, glow lips, limpeza de pele, microagulhamento.
+ * NÃO representa salão de beleza generalista — procedimentos com ticket médio
+ * mais alto e público qualificado tendem a ter CPC nesta faixa.
+ * Mercado BR, Meta Ads, 2026. Atualizar quando integrar API real.
+ */
+const CPC_BENCHMARK_ESTETICA_FACIAL = 1.20;
+const CPC_BENCHMARK_LABEL = 'Estética facial avançada';
+const HIGH_CPC_THRESHOLD = CPC_BENCHMARK_ESTETICA_FACIAL * 1.3;
 const HIGH_CPC_ADS = MOCK_CPC.filter(a => a.cpc > HIGH_CPC_THRESHOLD);
 
 /* ── Card de saldo ── */
@@ -633,7 +701,7 @@ function HistoricalComparisonCard({ onViewCalendar }) {
 }
 
 /* ── Card alerta CPC alto ── */
-function CpcAlertCard({ ads, avg, onOpenAds }) {
+function CpcAlertCard({ ads, benchmark, benchmarkLabel, onOpenAds }) {
   if (!ads.length) {
     return (
       <div className="ccb-card" style={{
@@ -652,7 +720,7 @@ function CpcAlertCard({ ads, avg, onOpenAds }) {
           </span>
         </div>
         <div style={{ fontSize: '12px', color: 'var(--c-text-2)', lineHeight: 1.4 }}>
-          Todos os anúncios dentro da média (R$ {avg.toFixed(2).replace('.', ',')}/clique).
+          Todos os anúncios dentro do benchmark do ramo ({benchmarkLabel}: R$ {benchmark.toFixed(2).replace('.', ',')}/clique).
         </div>
       </div>
     );
@@ -672,7 +740,7 @@ function CpcAlertCard({ ads, avg, onOpenAds }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <span style={{ fontSize: '14px' }}>🚨</span>
           <span style={{ fontSize: '10px', fontWeight: 700, color: '#DC2626', letterSpacing: '.4px', textTransform: 'uppercase' }}>
-            CPC acima da média
+            CPC acima do ramo
           </span>
         </div>
         <span style={{
@@ -684,8 +752,9 @@ function CpcAlertCard({ ads, avg, onOpenAds }) {
         </span>
       </div>
 
-      <div style={{ fontSize: '11px', color: 'var(--c-text-3)' }}>
-        Média: <strong style={{ color: 'var(--c-text-1)' }}>R$ {avg.toFixed(2).replace('.', ',')}</strong>/clique
+      <div style={{ fontSize: '11px', color: 'var(--c-text-3)', lineHeight: 1.45 }}>
+        Benchmark <strong style={{ color: 'var(--c-text-2)' }}>{benchmarkLabel}</strong>:{' '}
+        <strong style={{ color: 'var(--c-text-1)' }}>R$ {benchmark.toFixed(2).replace('.', ',')}</strong>/clique
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
@@ -780,7 +849,8 @@ export default function Dashboard() {
         />
         <CpcAlertCard
           ads={HIGH_CPC_ADS}
-          avg={AVG_CPC}
+          benchmark={CPC_BENCHMARK_ESTETICA_FACIAL}
+          benchmarkLabel={CPC_BENCHMARK_LABEL}
           onOpenAds={() => navigate('/anuncios')}
         />
         <HistoricalComparisonCard onViewCalendar={() => navigate('/calendario')} />
