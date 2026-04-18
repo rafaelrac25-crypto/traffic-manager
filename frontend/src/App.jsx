@@ -14,18 +14,6 @@ import AIAssistant from './components/AIAssistant';
 import SplashScreen from './components/SplashScreen';
 import { AppStateProvider, useAppState } from './contexts/AppStateContext';
 
-const PAGE_TITLES = {
-  '/':              'Dashboard',
-  '/anuncios':      'Anúncios',
-  '/reprovados':    'Reprovados',
-  '/calendario':    'Calendário',
-  '/publicos':      'Públicos',
-  '/criativos':     'Criativos',
-  '/investimento':  'Investimento',
-  '/criar-anuncio': 'Criar anúncio',
-  '/historico':     'Histórico',
-};
-
 /* ── Mapa de busca — termos → destino ou ação ── */
 const SEARCH_MAP = [
   { terms: ['dashboard','home','início','inicio','resumo'], to: '/',              label: 'Dashboard' },
@@ -318,8 +306,6 @@ function Layout() {
 
   useEffect(() => { setSidebarOpen(false); setBellOpen(false); }, [location.pathname]);
 
-  const title = PAGE_TITLES[location.pathname] || 'Dashboard';
-
   return (
     <div className="app-wrapper">
       {isMobile && sidebarOpen && (
@@ -353,14 +339,6 @@ function Layout() {
               <HamburgerIcon />
             </button>
           )}
-
-          <span style={{
-            fontSize: '15px', fontWeight: 700, color: 'var(--c-text-1)',
-            letterSpacing: '-0.2px', flexShrink: 0,
-            minWidth: isMobile ? 'auto' : '100px',
-          }}>
-            {title}
-          </span>
 
           <SearchBar />
 
