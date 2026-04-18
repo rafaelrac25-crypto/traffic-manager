@@ -1,0 +1,391 @@
+PROJECT: Traffic Manager Dashboard — Cris Costa Beauty
+
+IMPORTANT — VISUAL REFERENCE SOURCE
+
+All UI layout decisions must follow the visual reference screens located at:
+
+C:\Users\Rafa\traffic-manager\Visual\Tema Cris costa Beauty
+
+These images are the visual source of truth.
+
+Do not invent new layouts.
+Do not change spacing patterns.
+Do not change visual hierarchy.
+Do not reinterpret design.
+
+If something is unclear, follow the reference images.
+
+---
+
+OBJECTIVE
+
+Build a responsive web dashboard system with 4 main screens.
+
+The system must support:
+
+Desktop
+Mobile
+Light theme
+Dark theme
+
+---
+
+DATA DISCLAIMER
+
+All displayed data is fictional placeholder data.
+
+Real data will be connected later via Meta Ads API.
+
+Add globally:
+
+/**
+ * IMPORTANT:
+ * All displayed data is fictional placeholder data.
+ * Real data will be loaded later from Meta Ads API.
+ * Do not persist mock values.
+ */
+
+---
+
+THEMES
+
+Support:
+
+Light Theme
+Dark Theme
+
+Both themes must:
+
+Use identical layout
+Use identical components
+Change only visual tokens
+
+Never duplicate layouts.
+
+Create:
+
+/theme/lightTheme.ts
+/theme/darkTheme.ts
+
+---
+
+RESPONSIVENESS
+
+System must be fully responsive.
+
+Mobile behavior:
+
+Sidebar collapses into hamburger
+Cards stack vertically
+Tables become scrollable
+Calendar becomes single column
+Buttons become full width
+Floating chat remains fixed
+
+Breakpoints:
+
+0–768px mobile
+769–1024px tablet
+1025px+ desktop
+
+---
+
+LOGO
+
+Top-left logo:
+
+"Cris Costa Beauty"
+
+IMPORTANT:
+
+Logo is temporary.
+It will be replaced later.
+
+Use placeholder component:
+
+LogoPlaceholder
+
+Do not hardcode asset path.
+
+---
+
+FLOATING CHAT BUTTON
+
+Add floating chat button in ALL screens.
+
+Position:
+
+bottom-right corner
+
+Style:
+
+round button
+robot icon
+AI assistant reference
+
+IMPORTANT:
+
+Do NOT modify backend logic.
+Do NOT change chat functionality.
+Only render UI trigger.
+
+Component:
+
+FloatingChatButton
+
+Must remain visible in:
+
+Desktop
+Tablet
+Mobile
+
+---
+
+ACCOUNT CONNECTION
+
+There is ONLY ONE account.
+
+Account is already synchronized via CLI.
+
+Remove:
+
+Account selector
+Account dropdown
+Multi-account logic
+
+Display only:
+
+Conta conectada
+
+---
+
+GLOBAL LAYOUT
+
+Create reusable layout:
+
+AppLayout
+
+Structure:
+
+Sidebar
+TopHeader
+MainContent
+FloatingChatButton
+
+---
+
+SIDEBAR MENU
+
+Dashboard
+Anúncios
+Calendário
+Criar anúncio
+
+Bottom section:
+
+Theme toggle
+User profile
+Logout
+
+---
+
+STEP WIZARD STANDARD
+
+All steps must follow the same structure.
+
+Create:
+
+WizardStepLayout
+
+Rules:
+
+Step indicator at top
+Title and description
+Main content area
+Right summary panel
+Navigation buttons
+
+Future steps must reuse this layout.
+
+Do not redesign wizard structure.
+
+---
+
+SCREENS TO IMPLEMENT
+
+SCREEN 1 — DASHBOARD
+
+Show:
+
+Investimento
+Cliques
+Resultados
+Custo por resultado
+
+Performance chart
+Tip card
+Calendar widget
+Quick action: Criar novo anúncio
+
+IMPORTANT:
+
+Do NOT include:
+
+Seus anúncios section
+
+That belongs only to:
+
+Anúncios screen
+
+---
+
+SCREEN 2 — ANÚNCIOS
+
+Include:
+
+Filter bar
+Ads table
+Pagination
+Novo anúncio button
+
+Columns:
+
+Anúncio
+Plataforma
+Situação
+Investimento
+Resultados
+Cliques
+Custo por resultado
+Ações
+
+---
+
+SCREEN 3 — CALENDÁRIO
+
+Include:
+
+Monthly calendar
+Campaign events
+Upcoming ads panel
+Legend
+
+Button:
+
+Novo agendamento
+
+---
+
+SCREEN 4 — CRIAR NOVO ANÚNCIO
+
+Use:
+
+WizardStepLayout
+
+Steps:
+
+1 Plataforma
+2 Objetivo
+3 Público
+4 Orçamento
+5 Revisar
+6 Publicar
+
+Current step:
+
+Plataforma
+
+Include:
+
+Platform cards:
+
+Instagram
+Google Ads
+Meta Ads
+
+Field:
+
+Nome do anúncio
+
+Message:
+
+Você poderá ajustar tudo depois
+
+Buttons:
+
+Cancelar
+Próximo passo
+
+IMPORTANT:
+
+Remove:
+
+Conta de anúncios selector
+
+There is only one connected account.
+
+---
+
+COMPONENTS
+
+Create:
+
+Sidebar
+TopHeader
+MetricCard
+ChartBlock
+CalendarWidget
+AdsTable
+PlatformCard
+StepIndicator
+SummaryPanel
+FooterNavigation
+ThemeToggle
+FloatingChatButton
+LogoPlaceholder
+
+---
+
+MOBILE REQUIREMENTS
+
+Mobile must:
+
+Collapse sidebar
+Stack cards vertically
+Maintain floating chat
+Keep navigation usable
+Preserve layout hierarchy
+
+---
+
+DESIGN CONSISTENCY RULE
+
+Add globally:
+
+/**
+ * DESIGN STANDARD
+ *
+ * All future screens must follow the same visual structure
+ * defined in the reference images.
+ *
+ * Do not create new layout patterns.
+ * Extend existing components only.
+ */
+
+---
+
+FINAL EXPECTATION
+
+Build:
+
+Responsive interface
+Desktop layout
+Mobile layout
+Light theme
+Dark theme
+Floating chat button
+Single connected account
+Mock data disclaimer
+Replaceable logo
+Wizard pattern
+Consistent UI based on reference screens

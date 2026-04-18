@@ -7,6 +7,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAppState } from '../contexts/AppStateContext';
 
 /* ── Constantes de mock ── */
 const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -351,10 +352,159 @@ function MetricCard({ label, value, trend, trendUp, sub, icon, iconBg, iconColor
   );
 }
 
+/* ── Mock de CPC por anúncio ativo (até integração Meta Ads) ── */
+const MOCK_CPC = [
+  { id: 1, name: 'Promoção Verão',        cpc: 0.42 },
+  { id: 2, name: 'Esmaltes Tendência',    cpc: 1.86 },
+  { id: 3, name: 'Skincare Rotina Diária', cpc: 0.58 },
+  { id: 5, name: 'Remarketing Site',      cpc: 0.71 },
+];
+const AVG_CPC = MOCK_CPC.reduce((s, a) => s + a.cpc, 0) / MOCK_CPC.length;
+const HIGH_CPC_THRESHOLD = AVG_CPC * 1.3;
+const HIGH_CPC_ADS = MOCK_CPC.filter(a => a.cpc > HIGH_CPC_THRESHOLD);
+
+/* ── Card de saldo ── */
+function BalanceCard({ funds, lowBalance, threshold, onAdd }) {
+  const pct = Math.min(100, (funds / 200) * 100);
+  return (
+    <div style={{
+      background: 'var(--c-card-bg)',
+      borderRadius: '16px',
+      border: `1px solid ${lowBalance ? '#FCA5A5' : 'var(--c-border)'}`,
+      padding: '18px 20px',
+      boxShadow: '0 2px 8px var(--c-shadow)',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '12px',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '16px' }}>{lowBalance ? '⚠️' : '💰'}</span>
+          <span style={{ fontSize: '12px', fontWeight: 700, color: lowBalance ? '#DC2626' : 'var(--c-text-2)', letterSpacing: '.5px', textTransform: 'uppercase' }}>
+            Saldo de investimento
+          </span>
+        </div>
+        <button
+          onClick={onAdd}
+          style={{
+            background: 'var(--c-accent)', color: '#fff',
+            border: 'none', borderRadius: '8px',
+            padding: '5px 10px', fontSize: '11px', fontWeight: 700,
+            cursor: 'pointer',
+          }}
+        >
+          Adicionar
+        </button>
+      </div>
+
+      <div>
+        <div style={{ fontSize: '26px', fontWeight: 800, color: lowBalance ? '#DC2626' : 'var(--c-text-1)', lineHeight: 1 }}>
+          R$ {funds.toFixed(2).replace('.', ',')}
+        </div>
+        <div style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '4px' }}>
+          {lowBalance ? `Abaixo do mínimo de R$ ${threshold},00` : 'Disponível para veicular anúncios'}
+        </div>
+      </div>
+
+      <div style={{ height: '6px', background: 'var(--c-border-lt)', borderRadius: '3px', overflow: 'hidden' }}>
+        <div style={{
+          height: '100%',
+          width: `${pct}%`,
+          background: lowBalance ? '#EF4444' : 'var(--c-accent)',
+          transition: 'width .3s',
+        }} />
+      </div>
+    </div>
+  );
+}
+
+/* ── Card alerta CPC alto ── */
+function CpcAlertCard({ ads, avg, onOpenAds }) {
+  if (!ads.length) {
+    return (
+      <div style={{
+        background: 'var(--c-card-bg)',
+        borderRadius: '16px',
+        border: '1px solid var(--c-border)',
+        padding: '18px 20px',
+        boxShadow: '0 2px 8px var(--c-shadow)',
+        display: 'flex', flexDirection: 'column', gap: '10px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '16px' }}>✅</span>
+          <span style={{ fontSize: '12px', fontWeight: 700, color: '#16A34A', letterSpacing: '.5px', textTransform: 'uppercase' }}>
+            CPC saudável
+          </span>
+        </div>
+        <div style={{ fontSize: '13px', color: 'var(--c-text-2)' }}>
+          Todos os anúncios estão dentro da média (R$ {avg.toFixed(2).replace('.', ',')}/clique).
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      background: 'var(--c-card-bg)',
+      borderRadius: '16px',
+      border: '1px solid #FCA5A5',
+      padding: '18px 20px',
+      boxShadow: '0 2px 8px var(--c-shadow)',
+      display: 'flex', flexDirection: 'column', gap: '12px',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '16px' }}>🚨</span>
+          <span style={{ fontSize: '12px', fontWeight: 700, color: '#DC2626', letterSpacing: '.5px', textTransform: 'uppercase' }}>
+            CPC acima da média
+          </span>
+        </div>
+        <span style={{
+          background: '#FEE2E2', color: '#DC2626',
+          padding: '3px 9px', borderRadius: '12px',
+          fontSize: '11px', fontWeight: 700,
+        }}>
+          {ads.length} {ads.length === 1 ? 'anúncio' : 'anúncios'}
+        </span>
+      </div>
+
+      <div style={{ fontSize: '12px', color: 'var(--c-text-3)' }}>
+        Média geral: <strong style={{ color: 'var(--c-text-1)' }}>R$ {avg.toFixed(2).replace('.', ',')}</strong> por clique.
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        {ads.slice(0, 2).map(ad => (
+          <div key={ad.id} style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            background: '#FEF2F2', borderRadius: '8px', padding: '8px 10px',
+          }}>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-text-1)' }}>{ad.name}</span>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: '#DC2626' }}>
+              R$ {ad.cpc.toFixed(2).replace('.', ',')}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <button
+        onClick={onOpenAds}
+        style={{
+          background: 'none', border: '1.5px solid var(--c-accent)',
+          color: 'var(--c-accent)', borderRadius: '10px',
+          padding: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+        }}
+      >
+        Ver e otimizar anúncios
+      </button>
+    </div>
+  );
+}
+
 /* ── Dashboard ── */
 export default function Dashboard() {
   const navigate = useNavigate();
   const [chartMetric, setChartMetric] = useState('Resultados');
+  const { funds, lowBalance, LOW_BALANCE_THRESHOLD } = useAppState();
 
   return (
     <div className="page-container">
@@ -397,6 +547,26 @@ export default function Dashboard() {
         {MOCK_METRICS.map(m => (
           <MetricCard key={m.label} {...m} />
         ))}
+      </div>
+
+      {/* ── Linha: saldo + alerta CPC ── */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: '16px',
+        marginBottom: '20px',
+      }}>
+        <BalanceCard
+          funds={funds}
+          lowBalance={lowBalance}
+          threshold={LOW_BALANCE_THRESHOLD}
+          onAdd={() => navigate('/investimento')}
+        />
+        <CpcAlertCard
+          ads={HIGH_CPC_ADS}
+          avg={AVG_CPC}
+          onOpenAds={() => navigate('/anuncios')}
+        />
       </div>
 
       {/* ── Linha: gráfico + dica do dia ── */}

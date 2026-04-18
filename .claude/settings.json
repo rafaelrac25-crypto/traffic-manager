@@ -1,0 +1,7 @@
+{
+  "enabledPlugins": {
+    "claude-mem@thedotmack": true,
+    "vercel-plugin@vercel": false,
+    "vercel@claude-plugins-official": false
+  }
+}

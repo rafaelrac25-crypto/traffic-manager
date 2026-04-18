@@ -83,8 +83,34 @@ function AdThumb({ grad }) {
   );
 }
 
+/* ── Cálculo de CPC e baixa performance ── */
+function getCpc(ad) {
+  if (!ad.clicks || ad.clicks === 0) return null;
+  return (ad.budget * (ad.results != null ? 1 : 1)) / ad.clicks;
+}
+
+function getAvgCpc(ads) {
+  const valid = ads.map(getCpc).filter(v => v != null);
+  if (!valid.length) return 0;
+  return valid.reduce((s, v) => s + v, 0) / valid.length;
+}
+
+function getPerformanceIssues(ad, avgCostPerResult) {
+  const issues = [];
+  if (ad.clicks && ad.results && (ad.results / ad.clicks) < 0.01) {
+    issues.push('Taxa de conversão baixa (<1%). Revise o texto e a oferta.');
+  }
+  if (ad.costPerResult && avgCostPerResult && ad.costPerResult > avgCostPerResult * 1.3) {
+    issues.push('Custo por resultado acima da média. Teste nova criativo ou público.');
+  }
+  if (ad.clicks && ad.clicks < 500 && ad.status === 'active') {
+    issues.push('Poucos cliques. Aumente o orçamento ou melhore a imagem do anúncio.');
+  }
+  return issues;
+}
+
 /* ── Linha da tabela ── */
-function AdRow({ ad, isLast }) {
+function AdRow({ ad, isLast, highCpc }) {
   const [hovered, setHovered] = useState(false);
   const plat   = PLAT[ad.platform]   || PLAT.instagram;
   const status = STATUS[ad.status]   || STATUS.ended;
@@ -94,14 +120,19 @@ function AdRow({ ad, isLast }) {
   const fmt = v => v != null ? v.toLocaleString('pt-BR') : '—';
   const fmtCurrency = v => v != null ? `R$ ${v.toFixed(2).replace('.', ',')}` : '—';
 
+  const rowBg = highCpc
+    ? (hovered ? '#FEF2F2' : '#FFF5F5')
+    : (hovered ? 'var(--c-surface)' : 'var(--c-card-bg)');
+
   return (
     <tr
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
         borderBottom: isLast ? 'none' : '1px solid var(--c-border-lt)',
-        background: hovered ? 'var(--c-surface)' : 'var(--c-card-bg)',
+        background: rowBg,
         transition: 'background .12s',
+        borderLeft: highCpc ? '3px solid #EF4444' : '3px solid transparent',
       }}
     >
       {/* Anúncio */}
@@ -156,8 +187,22 @@ function AdRow({ ad, isLast }) {
       </td>
 
       {/* Custo por resultado */}
-      <td style={{ padding: '14px 16px', fontSize: '13px', color: 'var(--c-text-2)', whiteSpace: 'nowrap' }}>
-        {fmtCurrency(ad.costPerResult)}
+      <td style={{ padding: '14px 16px', fontSize: '13px', whiteSpace: 'nowrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ color: highCpc ? '#DC2626' : 'var(--c-text-2)', fontWeight: highCpc ? 700 : 400 }}>
+            {fmtCurrency(ad.costPerResult)}
+          </span>
+          {highCpc && (
+            <span title="Custo por resultado acima da média" style={{
+              background: '#FEE2E2', color: '#DC2626',
+              padding: '2px 6px', borderRadius: '10px',
+              fontSize: '10px', fontWeight: 700,
+              display: 'inline-flex', alignItems: 'center', gap: '3px',
+            }}>
+              ⚠ alto
+            </span>
+          )}
+        </div>
       </td>
 
       {/* Ações */}
@@ -254,12 +299,86 @@ function FilterSelect({ value, onChange, options }) {
   );
 }
 
+/* ── Relatório de baixa performance ── */
+function PerformanceReport({ ads, avgCostPerResult }) {
+  const problematic = ads
+    .map(ad => ({ ad, issues: getPerformanceIssues(ad, avgCostPerResult) }))
+    .filter(x => x.issues.length > 0);
+
+  if (!problematic.length) {
+    return (
+      <div style={{
+        background: 'var(--c-card-bg)',
+        borderRadius: '14px',
+        border: '1px solid var(--c-border)',
+        padding: '16px 20px',
+        marginBottom: '16px',
+        display: 'flex', alignItems: 'center', gap: '10px',
+      }}>
+        <span style={{ fontSize: '18px' }}>✅</span>
+        <div>
+          <div style={{ fontSize: '13px', fontWeight: 700, color: '#16A34A' }}>Todos os anúncios performando bem</div>
+          <div style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>Nenhum alerta de performance no momento.</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      background: 'var(--c-card-bg)',
+      borderRadius: '14px',
+      border: '1px solid #FCA5A5',
+      padding: '16px 20px',
+      marginBottom: '16px',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+        <span style={{ fontSize: '18px' }}>📊</span>
+        <div>
+          <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)' }}>
+            Relatório de performance — {problematic.length} {problematic.length === 1 ? 'anúncio precisa' : 'anúncios precisam'} de atenção
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>
+            Custo médio por resultado: R$ {avgCostPerResult.toFixed(2).replace('.', ',')}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {problematic.map(({ ad, issues }) => (
+          <div key={ad.id} style={{
+            background: '#FFF5F5',
+            borderRadius: '10px',
+            padding: '10px 12px',
+            display: 'flex', flexDirection: 'column', gap: '6px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--c-text-1)' }}>{ad.name}</span>
+              <span style={{ fontSize: '11px', color: '#DC2626', fontWeight: 600 }}>
+                CPR: R$ {ad.costPerResult?.toFixed(2).replace('.', ',') || '—'}
+              </span>
+            </div>
+            <ul style={{ margin: 0, paddingLeft: '18px', color: 'var(--c-text-3)', fontSize: '11px', lineHeight: 1.55 }}>
+              {issues.map((tip, i) => <li key={i}>{tip}</li>)}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ marginTop: '12px', fontSize: '11px', color: 'var(--c-text-4)', fontStyle: 'italic' }}>
+        💡 Integração futura com Meta Ads vai analisar também a imagem do anúncio para sugestões mais específicas.
+      </div>
+    </div>
+  );
+}
+
 /* ── Página Anúncios ── */
 export default function Campaigns() {
   const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState('');
   const [platformFilter, setPlatformFilter] = useState('');
   const [page, setPage] = useState(1);
+  const [reportOpen, setReportOpen] = useState(true);
   const TOTAL = 14;
   const PER_PAGE = 5;
 
@@ -268,6 +387,12 @@ export default function Campaigns() {
     if (platformFilter && ad.platform !== platformFilter) return false;
     return true;
   });
+
+  const validCostPerResult = MOCK_ADS.map(a => a.costPerResult).filter(v => v != null);
+  const avgCostPerResult = validCostPerResult.length
+    ? validCostPerResult.reduce((s, v) => s + v, 0) / validCostPerResult.length
+    : 0;
+  const HIGH_CPR_THRESHOLD = avgCostPerResult * 1.3;
 
   return (
     <div className="page-container">
@@ -327,7 +452,24 @@ export default function Campaigns() {
             Limpar filtros
           </button>
         )}
+        <button
+          onClick={() => setReportOpen(v => !v)}
+          style={{
+            marginLeft: 'auto',
+            background: 'var(--c-card-bg)', border: '1.5px solid var(--c-border)',
+            borderRadius: '10px', padding: '8px 14px',
+            fontSize: '12px', fontWeight: 600, color: 'var(--c-text-2)',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+          }}
+        >
+          📊 {reportOpen ? 'Ocultar' : 'Ver'} relatório de performance
+        </button>
       </div>
+
+      {/* ── Relatório de performance ── */}
+      {reportOpen && (
+        <PerformanceReport ads={MOCK_ADS} avgCostPerResult={avgCostPerResult} />
+      )}
 
       {/* ── Tabela ── */}
       <div className="ads-table-wrapper" style={{
@@ -371,7 +513,12 @@ export default function Campaigns() {
               </tr>
             ) : (
               filtered.map((ad, i) => (
-                <AdRow key={ad.id} ad={ad} isLast={i === filtered.length - 1} />
+                <AdRow
+                  key={ad.id}
+                  ad={ad}
+                  isLast={i === filtered.length - 1}
+                  highCpc={ad.costPerResult != null && ad.costPerResult > HIGH_CPR_THRESHOLD}
+                />
               ))
             )}
           </tbody>
