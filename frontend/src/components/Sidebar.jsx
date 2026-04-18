@@ -85,15 +85,18 @@ function Logo({ isDark, onClick }) {
   );
 }
 
-const NAV = [
+const PRIMARY_NAV = [
   { to: '/',              label: 'Dashboard',     Icon: IconDashboard },
+  { to: '/criar-anuncio', label: 'Criar anúncio', Icon: IconCreate },
+];
+
+const NAV = [
   { to: '/anuncios',      label: 'Anúncios',      Icon: IconAds },
   { to: '/reprovados',    label: 'Reprovados',    Icon: IconRejected, badgeKey: 'rejectedCount' },
   { to: '/calendario',    label: 'Calendário',    Icon: IconCalendar },
   { to: '/publicos',      label: 'Públicos',      Icon: IconAudiences },
   { to: '/criativos',     label: 'Criativos',     Icon: IconCreatives },
   { to: '/investimento',  label: 'Investimento',  Icon: IconInvestment },
-  { to: '/criar-anuncio', label: 'Criar anúncio', Icon: IconCreate },
   { to: '/historico',     label: 'Histórico',     Icon: IconHistory },
 ];
 
@@ -145,7 +148,92 @@ export default function Sidebar({ open = false, isMobile = false }) {
       </div>
 
       {/* ── Navegação ── */}
-      <nav style={{ flex: 1, overflowY: 'auto', padding: '12px 10px 0' }}>
+      <nav style={{ flex: 1, overflowY: 'auto', padding: '14px 10px 0' }}>
+        {/* ── Destaques: Dashboard + Criar anúncio ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
+          {PRIMARY_NAV.map(({ to, label, Icon }) => {
+            const active  = isActive(to);
+            const isCreate = to === '/criar-anuncio';
+            return (
+              <div
+                key={to}
+                onClick={() => navigate(to)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '12px 14px',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  fontSize: '13px', fontWeight: 700,
+                  letterSpacing: '-0.1px',
+                  transition: 'all .18s',
+                  background: isCreate
+                    ? 'linear-gradient(135deg,#C13584,#A02D6E)'
+                    : (active ? 'var(--c-active-bg)' : 'var(--c-surface)'),
+                  color: isCreate
+                    ? '#fff'
+                    : (active ? 'var(--c-accent)' : 'var(--c-text-1)'),
+                  border: isCreate
+                    ? 'none'
+                    : `1.5px solid ${active ? 'var(--c-accent)' : 'var(--c-border)'}`,
+                  boxShadow: isCreate
+                    ? '0 6px 18px rgba(193,53,132,.32)'
+                    : (active ? '0 2px 8px rgba(193,53,132,.12)' : 'none'),
+                }}
+                onMouseEnter={e => {
+                  if (isCreate) {
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 10px 24px rgba(193,53,132,.42)';
+                  } else if (!active) {
+                    e.currentTarget.style.background = 'var(--c-hover)';
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (isCreate) {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 6px 18px rgba(193,53,132,.32)';
+                  } else if (!active) {
+                    e.currentTarget.style.background = 'var(--c-surface)';
+                  }
+                }}
+              >
+                <span style={{
+                  width: '28px', height: '28px', borderRadius: '8px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: isCreate ? 'rgba(255,255,255,.22)' : (active ? 'var(--c-accent)' : 'var(--c-card-bg)'),
+                  color: isCreate ? '#fff' : (active ? '#fff' : 'var(--c-accent)'),
+                  flexShrink: 0,
+                }}>
+                  {isCreate ? (
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                  ) : (
+                    <Icon active={true} />
+                  )}
+                </span>
+                <span style={{ flex: 1 }}>{label}</span>
+                {isCreate && (
+                  <span style={{
+                    fontSize: '10px', fontWeight: 800,
+                    background: 'rgba(255,255,255,.22)',
+                    padding: '2px 7px', borderRadius: '999px', letterSpacing: '.3px',
+                  }}>
+                    NOVO
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div style={{
+          fontSize: '10px', fontWeight: 700, color: 'var(--c-text-4)',
+          textTransform: 'uppercase', letterSpacing: '.8px',
+          padding: '0 12px 6px',
+        }}>
+          Navegação
+        </div>
+
         {NAV.map(({ to, label, Icon, badgeKey }) => {
           const active = isActive(to);
           const badgeValue = badgeKey ? badgeValues[badgeKey] : 0;
