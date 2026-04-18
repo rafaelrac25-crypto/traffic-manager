@@ -25,6 +25,8 @@ Quando Rafa pedir para mexer em X, abra apenas os arquivos da linha corresponden
 | Modal pós-publicação + botão Agendar           | `src/pages/CreateAd.jsx` (`PublishModal`, `isScheduled`, `handlePublish`)        |
 | Preview 1080×1350 com sombra fora do 1080×1080 | `src/pages/CreateAd.jsx` (`AdMockFeed`)                                          |
 | Calendário mensal                              | `src/pages/Calendar.jsx`                                                         |
+| Datas comerciais BR + modal estratégia         | `src/data/commercialDates.js` + `src/pages/Calendar.jsx` (`CommercialDateModal`, `openCommercialModal`, `upcomingCommercial`) |
+| Pré-preenchimento CreateAd via data comercial  | `src/pages/CreateAd.jsx` (`useLocation`, `commercialDate`, `initialStart`)       |
 | Splash screen                                  | `src/components/SplashScreen.jsx`                                                |
 | CSS global / classes responsivas               | `src/index.css`                                                                  |
 | Backend — CRUD campanhas                       | `backend/src/routes/campaigns.js`                                                |

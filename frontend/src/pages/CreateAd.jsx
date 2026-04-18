@@ -10,6 +10,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { MapContainer, TileLayer, Circle, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { useAppState } from '../contexts/AppStateContext';
 
 /* ── Fix Leaflet icons no Vite ── */
 delete L.Icon.Default.prototype._getIconUrl;
