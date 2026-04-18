@@ -29,7 +29,7 @@ const STATUS = {
   active:  { label: 'Ativo',       dot: '#22C55E', bg: '#F0FDF4', color: '#16A34A' },
   paused:  { label: 'Pausado',     dot: '#F97316', bg: '#FFF7ED', color: '#EA580C' },
   review:  { label: 'Em revisão',  dot: '#8B5CF6', bg: '#F5F3FF', color: '#7C3AED' },
-  ended:   { label: 'Encerrado',   dot: '#94A3B8', bg: 'var(--c-surface)', color: 'var(--c-text-4)' },
+  ended:   { label: 'Inativo',     dot: '#94A3B8', bg: 'var(--c-surface)', color: 'var(--c-text-4)' },
 };
 
 /* ── Ícones ── */
@@ -120,9 +120,11 @@ function AdRow({ ad, isLast, highCpc, onToggle, onDuplicate, onEdit, onRemove })
   const fmt = v => v != null ? v.toLocaleString('pt-BR') : '—';
   const fmtCurrency = v => v != null ? `R$ ${v.toFixed(2).replace('.', ',')}` : '—';
 
-  const rowBg = highCpc
-    ? (hovered ? '#FEF2F2' : '#FFF5F5')
-    : (hovered ? 'var(--c-surface)' : 'var(--c-card-bg)');
+  const rowBg = isEnded
+    ? (hovered ? 'var(--c-hover)' : 'var(--c-surface)')
+    : highCpc
+      ? (hovered ? '#FEF2F2' : '#FFF5F5')
+      : (hovered ? 'var(--c-surface)' : 'var(--c-card-bg)');
 
   return (
     <tr
@@ -133,6 +135,9 @@ function AdRow({ ad, isLast, highCpc, onToggle, onDuplicate, onEdit, onRemove })
         background: rowBg,
         transition: 'background .12s',
         borderLeft: highCpc ? '3px solid #EF4444' : '3px solid transparent',
+        opacity: isEnded ? 0.62 : 1,
+        color: isEnded ? 'var(--c-text-4)' : undefined,
+        filter: isEnded ? 'grayscale(0.7)' : 'none',
       }}
     >
       {/* Anúncio */}
