@@ -9,6 +9,7 @@ import React, { useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../contexts/AppStateContext';
 import { getUpcomingCommercialDates } from '../data/commercialDates';
+import { globalRingPerformance } from '../data/performanceMock';
 
 /* ── Constantes de mock ── */
 const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -583,6 +584,81 @@ function BalanceCard({ funds, lowBalance, threshold, onAdd }) {
   );
 }
 
+/* ── Teaser de desempenho por anel (últimos 7 dias) ── */
+function RingPerformanceTeaser({ ads, onOpen }) {
+  const perf = useMemo(() => globalRingPerformance(ads, { daysActive: 7 }), [ads]);
+  const hasData = perf.adCount > 0 && perf.best;
+
+  return (
+    <div className="ccb-card" style={{
+      background: 'var(--c-card-bg)',
+      borderRadius: '14px',
+      border: '1px solid var(--c-border)',
+      padding: '14px 16px',
+      boxShadow: '0 2px 8px var(--c-shadow)',
+      display: 'flex', flexDirection: 'column', gap: '8px',
+      height: '100%', justifyContent: 'space-between',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ fontSize: '14px' }}>🏆</span>
+          <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--c-text-3)', letterSpacing: '.4px', textTransform: 'uppercase' }}>
+            Melhor anel (7d)
+          </span>
+        </div>
+        {hasData && (
+          <span style={{
+            background: `${perf.best.color}22`, color: perf.best.color,
+            padding: '2px 7px', borderRadius: '10px',
+            fontSize: '10px', fontWeight: 700,
+          }}>
+            {perf.adCount} {perf.adCount === 1 ? 'anúncio' : 'anúncios'}
+          </span>
+        )}
+      </div>
+
+      {hasData ? (
+        <>
+          <div>
+            <div style={{ fontSize: '14px', fontWeight: 800, color: perf.best.color, lineHeight: 1.2, marginBottom: '2px' }}>
+              {perf.best.shortLabel}
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--c-text-3)' }}>
+              CPR <strong style={{ color: 'var(--c-text-1)' }}>R$ {perf.best.cpr.toFixed(2).replace('.', ',')}</strong> · {perf.best.conversions} conversões
+            </div>
+          </div>
+          <button
+            onClick={onOpen}
+            style={{
+              background: 'none', border: '1.5px solid var(--c-accent)',
+              color: 'var(--c-accent)', borderRadius: '8px',
+              padding: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            Ver relatório completo
+          </button>
+        </>
+      ) : (
+        <>
+          <div style={{ fontSize: '12px', color: 'var(--c-text-3)', lineHeight: 1.5 }}>
+            Publique um anúncio com <strong>split por anel</strong> para comparar performance por região.
+          </div>
+          <button
+            onClick={onOpen}
+            style={{
+              background: 'none', border: '1.5px solid var(--c-border)',
+              color: 'var(--c-text-3)', borderRadius: '8px',
+              padding: '6px', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
+            }}
+          >
+            Abrir Desempenho
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 /* ── Histórico comparativo de datas comerciais ── */
 const HISTORICAL_COMPARISON = [
   {
@@ -797,7 +873,7 @@ function saudacaoPorHora() {
 export default function Dashboard() {
   const navigate = useNavigate();
   const [chartMetric, setChartMetric] = useState('Resultados');
-  const { funds, lowBalance, LOW_BALANCE_THRESHOLD } = useAppState();
+  const { funds, lowBalance, LOW_BALANCE_THRESHOLD, ads } = useAppState();
 
   const hoje = new Date();
   const labelHoje = `Hoje, ${hoje.getDate()} de ${MESES_PT[hoje.getMonth()]}`;
@@ -853,6 +929,7 @@ export default function Dashboard() {
           benchmarkLabel={CPC_BENCHMARK_LABEL}
           onOpenAds={() => navigate('/anuncios')}
         />
+        <RingPerformanceTeaser ads={ads} onOpen={() => navigate('/desempenho')} />
         <HistoricalComparisonCard onViewCalendar={() => navigate('/calendario')} />
       </div>
 

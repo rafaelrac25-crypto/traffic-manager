@@ -10,6 +10,7 @@ import Investment from './pages/Investment';
 import Audiences from './pages/Audiences';
 import CreativeLibrary from './pages/CreativeLibrary';
 import History from './pages/History';
+import Reports from './pages/Reports';
 import AIAssistant from './components/AIAssistant';
 import SplashScreen from './components/SplashScreen';
 import { AppStateProvider, useAppState } from './contexts/AppStateContext';
@@ -391,6 +392,7 @@ function Layout() {
             <Route path="/criativos"     element={<CreativeLibrary />} />
             <Route path="/criar-anuncio" element={<CreateAd />} />
             <Route path="/historico"     element={<History />} />
+            <Route path="/desempenho"    element={<Reports />} />
             <Route path="/novo"          element={<Navigate to="/criar-anuncio" replace />} />
             <Route path="*"              element={<Dashboard />} />
           </Routes>

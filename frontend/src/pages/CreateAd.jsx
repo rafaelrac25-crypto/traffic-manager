@@ -679,8 +679,43 @@ function normalizeSplit(split, activeKeys) {
 function RingBudgetSplit({ locations, budgetValue, budgetType, split, setSplit }) {
   const buckets = classifyLocationsByRing(locations);
   const activeKeys = ['primario', 'medio', 'externo'].filter(k => buckets[k].length > 0);
+  const validLocations = (locations || []).filter(l => l && l.lat != null && l.lng != null);
 
-  if (activeKeys.length < 2 || !budgetValue || Number(budgetValue) <= 0) return null;
+  /* Estados informativos antes do split aparecer */
+  if (validLocations.length === 0) return null; /* sem localizações, nada a fazer */
+
+  if (activeKeys.length < 2) {
+    const only = activeKeys[0];
+    const labels = { primario: 'anel interno (0-5 km)', medio: 'anel médio (5-7 km)', externo: 'anel externo (7-8 km)', fora: 'fora do raio de 8 km' };
+    const onlyLabel = only ? labels[only] : (buckets.fora.length > 0 ? labels.fora : 'no mesmo anel');
+    return (
+      <div style={{
+        border: '1px dashed var(--c-border)',
+        borderRadius: '12px',
+        padding: '14px 16px',
+        background: 'var(--c-surface)',
+        fontSize: '12px', color: 'var(--c-text-3)', lineHeight: 1.55,
+      }}>
+        <strong style={{ color: 'var(--c-text-2)' }}>🎯 Split por anel indisponível</strong> — todas as suas localizações caem {only ? `no ${onlyLabel}` : onlyLabel}.
+        Para dividir o orçamento entre anéis diferentes, adicione bairros de outras distâncias do Boa Vista (ex: Boa Vista está no anel interno; Glória no anel médio).
+      </div>
+    );
+  }
+
+  if (!budgetValue || Number(budgetValue) <= 0) {
+    return (
+      <div style={{
+        border: '1px dashed var(--c-accent)',
+        borderRadius: '12px',
+        padding: '14px 16px',
+        background: 'rgba(214,141,143,.05)',
+        fontSize: '12px', color: 'var(--c-text-2)', lineHeight: 1.55,
+      }}>
+        <strong style={{ color: 'var(--c-accent)' }}>🎯 Split por anel pronto</strong> — suas localizações cobrem {activeKeys.length} anéis.
+        Digite o <strong>orçamento</strong> acima e o controle de divisão por % aparece aqui.
+      </div>
+    );
+  }
 
   const normalized = normalizeSplit(split, activeKeys);
   const total = activeKeys.reduce((s, k) => s + (Number(normalized[k]) || 0), 0);
@@ -1690,7 +1725,9 @@ export default function CreateAd() {
       platform: 'instagram',
       status: isScheduled ? 'review' : 'review',
       budget: Number(budgetValue) || 0,
+      budgetValue: Number(budgetValue) || 0,
       budgetType, startDate, endDate,
+      budgetRingSplit,
       objective, locations, ageRange, gender, interests,
       adFormat, primaryText, headline, destUrl, ctaButton,
       commercialDateId: commercialDate?.id || null,
