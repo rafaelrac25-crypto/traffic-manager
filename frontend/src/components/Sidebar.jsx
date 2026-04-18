@@ -80,7 +80,7 @@ function Logo({ isDark, onClick }) {
       alt="Cris Costa Beauty"
       onClick={onClick}
       title="Ir para o Dashboard"
-      style={{ height: '52px', width: 'auto', objectFit: 'contain', display: 'block', cursor: 'pointer' }}
+      style={{ height: '50px', width: 'auto', objectFit: 'contain', display: 'block', cursor: 'pointer', margin: '0 auto' }}
     />
   );
 }
