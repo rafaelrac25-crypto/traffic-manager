@@ -27,6 +27,13 @@ Quando Rafa pedir para mexer em X, abra apenas os arquivos da linha corresponden
 | Calendário mensal                              | `src/pages/Calendar.jsx`                                                         |
 | Datas comerciais BR + modal estratégia         | `src/data/commercialDates.js` + `src/pages/Calendar.jsx` (`CommercialDateModal`, `openCommercialModal`, `upcomingCommercial`) |
 | Pré-preenchimento CreateAd via data comercial  | `src/pages/CreateAd.jsx` (`useLocation`, `commercialDate`, `initialStart`)       |
+| Sugestão de orçamento por data comercial       | `src/data/commercialDates.js` (`suggestedBudget`) + modal `src/pages/Calendar.jsx` |
+| Públicos salvos (CRUD)                         | `src/pages/Audiences.jsx` + `src/contexts/AppStateContext.jsx` (`audiences`)     |
+| Biblioteca de criativos                        | `src/pages/CreativeLibrary.jsx` + `src/contexts/AppStateContext.jsx` (`creatives`) |
+| Pixel de rastreamento                          | `src/pages/Investment.jsx` (bloco final) + `src/contexts/AppStateContext.jsx` (`pixel`) |
+| Histórico comparativo de datas                 | `src/pages/Dashboard.jsx` (`HistoricalComparisonCard`, `HISTORICAL_COMPARISON`)  |
+| Anúncios reais persistidos + ações             | `src/contexts/AppStateContext.jsx` (`ads`, `addAd`, `updateAd`, `duplicateAd`, `toggleAdStatus`, `removeAd`) + `src/pages/Campaigns.jsx` |
+| Edição de anúncio existente                    | `src/pages/CreateAd.jsx` (`editId`, `editingAd` via `location.state`)            |
 | Splash screen                                  | `src/components/SplashScreen.jsx`                                                |
 | CSS global / classes responsivas               | `src/index.css`                                                                  |
 | Backend — CRUD campanhas                       | `backend/src/routes/campaigns.js`                                                |
@@ -38,17 +45,19 @@ Quando Rafa pedir para mexer em X, abra apenas os arquivos da linha corresponden
 
 ## Rotas ativas (`src/App.jsx`)
 
-| Rota              | Página          |
-|-------------------|-----------------|
-| `/`               | Dashboard       |
-| `/anuncios`       | Campaigns       |
-| `/campanhas`      | → `/anuncios`   |
-| `/reprovados`     | Rejected        |
-| `/calendario`     | Calendar        |
-| `/investimento`   | Investment      |
-| `/criar-anuncio`  | CreateAd        |
+| Rota              | Página           |
+|-------------------|------------------|
+| `/`               | Dashboard        |
+| `/anuncios`       | Campaigns        |
+| `/campanhas`      | → `/anuncios`    |
+| `/reprovados`     | Rejected         |
+| `/calendario`     | Calendar         |
+| `/publicos`       | Audiences        |
+| `/criativos`      | CreativeLibrary  |
+| `/investimento`   | Investment       |
+| `/criar-anuncio`  | CreateAd         |
 | `/novo`           | → `/criar-anuncio` |
-| `*`               | → Dashboard     |
+| `*`               | → Dashboard      |
 
 ---
 
@@ -63,8 +72,12 @@ Contexto único para estado que atravessa páginas. Persiste em `localStorage`.
 | `ccb_funds`           | number — saldo atual em R$                                           |
 | `ccb_meta_account`    | `{ connected, name, avatarUrl, pageId }`                             |
 | `ccb_payment_method`  | cartão ou PIX                                                        |
+| `ccb_ads`             | array — anúncios criados pelo usuário (merge com MOCK em Campaigns) |
+| `ccb_audiences`       | array — públicos salvos reutilizáveis                                |
+| `ccb_creatives`       | array — biblioteca de textos/títulos                                 |
+| `ccb_pixel`           | `{ enabled, pixelId, events: { ViewContent, Lead, Contact, Purchase } }` |
 
-**API exportada:** `useAppState()` → `{ notifications, unreadCount, addNotification, removeNotification, clearAllNotifications, rejectedAds, rejectedCount, addRejectedAd, removeRejectedAd, funds, addFunds, setFunds, lowBalance, LOW_BALANCE_THRESHOLD, metaAccount, setMetaAccount, paymentMethod, setPaymentMethod }`.
+**API exportada:** `useAppState()` → `{ notifications, unreadCount, addNotification, removeNotification, clearAllNotifications, rejectedAds, rejectedCount, addRejectedAd, removeRejectedAd, funds, addFunds, setFunds, lowBalance, LOW_BALANCE_THRESHOLD, metaAccount, setMetaAccount, paymentMethod, setPaymentMethod, ads, addAd, updateAd, removeAd, duplicateAd, toggleAdStatus, getAdById, audiences, addAudience, updateAudience, removeAudience, creatives, addCreative, markCreativeUsed, removeCreative, pixel, setPixel }`.
 
 **Regras automáticas:**
 - `addRejectedAd` dispara `addNotification({ kind: 'rejected', link: '/reprovados' })`

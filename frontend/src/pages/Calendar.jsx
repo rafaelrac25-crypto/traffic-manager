@@ -88,6 +88,40 @@ function CommercialDateModal({ entry, onClose, onCreateAd }) {
             </ul>
           </Section>
 
+          {entry.suggestedBudget && (
+            <Section title="Orçamento sugerido">
+              <div style={{
+                padding: '14px 16px',
+                background: 'linear-gradient(135deg, rgba(193,53,132,.08), rgba(125,74,94,.04))',
+                border: '1px solid var(--c-border)',
+                borderRadius: '12px',
+                display: 'flex', alignItems: 'center', gap: '14px',
+              }}>
+                <div style={{
+                  minWidth: '96px',
+                  padding: '10px 12px',
+                  background: 'var(--c-card-bg)',
+                  border: '1.5px solid var(--c-accent)',
+                  borderRadius: '10px',
+                  textAlign: 'center',
+                }}>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--c-text-4)', letterSpacing: '.6px', marginBottom: '2px' }}>POR DIA</div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--c-accent)', lineHeight: 1 }}>
+                    R$ {entry.suggestedBudget.daily}
+                  </div>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
+                    Investimento total: R$ {entry.suggestedBudget.daily * entry.daysBefore} em {entry.daysBefore} dias
+                  </div>
+                  <div style={{ fontSize: '11.5px', color: 'var(--c-text-3)', lineHeight: 1.55 }}>
+                    {entry.suggestedBudget.reason}
+                  </div>
+                </div>
+              </div>
+            </Section>
+          )}
+
           <Section title="Diretrizes de comunicação">
             <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {entry.communication.map((c, i) => (

@@ -418,6 +418,129 @@ function BalanceCard({ funds, lowBalance, threshold, onAdd }) {
   );
 }
 
+/* ── Histórico comparativo de datas comerciais ── */
+const HISTORICAL_COMPARISON = [
+  {
+    event: 'Dia das Mães',
+    current: { year: 2026, investment: 600, results: 54, cpr: 11.11 },
+    previous: { year: 2025, investment: 480, results: 38, cpr: 12.63 },
+  },
+  {
+    event: 'Black Friday',
+    current: { year: 2025, investment: 1250, results: 178, cpr: 7.02 },
+    previous: { year: 2024, investment: 900, results: 104, cpr: 8.65 },
+  },
+  {
+    event: 'Dia dos Namorados',
+    current: { year: 2025, investment: 400, results: 31, cpr: 12.90 },
+    previous: { year: 2024, investment: 320, results: 22, cpr: 14.54 },
+  },
+];
+
+function HistoricalComparisonCard({ onViewCalendar }) {
+  const [idx, setIdx] = useState(0);
+  const item = HISTORICAL_COMPARISON[idx];
+  const resultsDelta = ((item.current.results - item.previous.results) / item.previous.results) * 100;
+  const cprDelta = ((item.current.cpr - item.previous.cpr) / item.previous.cpr) * 100;
+
+  return (
+    <div style={{
+      background: 'var(--c-card-bg)',
+      borderRadius: '16px',
+      border: '1px solid var(--c-border)',
+      padding: '18px 20px',
+      boxShadow: '0 2px 8px var(--c-shadow)',
+      display: 'flex', flexDirection: 'column', gap: '12px',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '16px' }}>📊</span>
+          <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--c-text-2)', letterSpacing: '.5px', textTransform: 'uppercase' }}>
+            Histórico comparativo
+          </span>
+        </div>
+        <div style={{ display: 'flex', gap: '4px' }}>
+          {HISTORICAL_COMPARISON.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setIdx(i)}
+              style={{
+                width: '7px', height: '7px', borderRadius: '50%',
+                background: i === idx ? 'var(--c-accent)' : 'var(--c-border)',
+                border: 'none', cursor: 'pointer', padding: 0,
+              }}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '2px' }}>
+          {item.event} {item.current.year}
+        </div>
+        <div style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>
+          Comparativo com {item.previous.year}
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+        <div style={{ padding: '10px 12px', background: 'var(--c-surface)', borderRadius: '10px' }}>
+          <div style={{ fontSize: '10px', color: 'var(--c-text-4)', fontWeight: 700, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '.4px' }}>
+            Resultados
+          </div>
+          <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--c-text-1)', lineHeight: 1 }}>
+            {item.current.results}
+          </div>
+          <div style={{ fontSize: '10px', color: 'var(--c-text-4)', marginTop: '4px' }}>
+            vs {item.previous.results} em {item.previous.year}
+          </div>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: '3px',
+            marginTop: '4px', padding: '2px 7px', borderRadius: '6px',
+            background: resultsDelta >= 0 ? '#DCFCE7' : '#FEE2E2',
+            color: resultsDelta >= 0 ? '#16A34A' : '#DC2626',
+            fontSize: '10px', fontWeight: 700,
+          }}>
+            {resultsDelta >= 0 ? '▲' : '▼'} {Math.abs(resultsDelta).toFixed(1)}%
+          </div>
+        </div>
+
+        <div style={{ padding: '10px 12px', background: 'var(--c-surface)', borderRadius: '10px' }}>
+          <div style={{ fontSize: '10px', color: 'var(--c-text-4)', fontWeight: 700, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '.4px' }}>
+            Custo por resultado
+          </div>
+          <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--c-text-1)', lineHeight: 1 }}>
+            R$ {item.current.cpr.toFixed(2).replace('.', ',')}
+          </div>
+          <div style={{ fontSize: '10px', color: 'var(--c-text-4)', marginTop: '4px' }}>
+            vs R$ {item.previous.cpr.toFixed(2).replace('.', ',')} em {item.previous.year}
+          </div>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: '3px',
+            marginTop: '4px', padding: '2px 7px', borderRadius: '6px',
+            background: cprDelta <= 0 ? '#DCFCE7' : '#FEE2E2',
+            color: cprDelta <= 0 ? '#16A34A' : '#DC2626',
+            fontSize: '10px', fontWeight: 700,
+          }}>
+            {cprDelta <= 0 ? '▼' : '▲'} {Math.abs(cprDelta).toFixed(1)}%
+          </div>
+        </div>
+      </div>
+
+      <button
+        onClick={onViewCalendar}
+        style={{
+          background: 'none', border: '1.5px solid var(--c-border)',
+          color: 'var(--c-text-2)', borderRadius: '10px',
+          padding: '7px', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+        }}
+      >
+        Ver todas as datas comerciais
+      </button>
+    </div>
+  );
+}
+
 /* ── Card alerta CPC alto ── */
 function CpcAlertCard({ ads, avg, onOpenAds }) {
   if (!ads.length) {
@@ -549,10 +672,10 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* ── Linha: saldo + alerta CPC ── */}
+      {/* ── Linha: saldo + alerta CPC + histórico comparativo ── */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
         gap: '16px',
         marginBottom: '20px',
       }}>
@@ -567,6 +690,7 @@ export default function Dashboard() {
           avg={AVG_CPC}
           onOpenAds={() => navigate('/anuncios')}
         />
+        <HistoricalComparisonCard onViewCalendar={() => navigate('/calendario')} />
       </div>
 
       {/* ── Gráfico (largura total) ── */}

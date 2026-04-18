@@ -7,6 +7,8 @@ import Calendar from './pages/Calendar';
 import CreateAd from './pages/CreateAd';
 import Rejected from './pages/Rejected';
 import Investment from './pages/Investment';
+import Audiences from './pages/Audiences';
+import CreativeLibrary from './pages/CreativeLibrary';
 import AIAssistant from './components/AIAssistant';
 import SplashScreen from './components/SplashScreen';
 import { AppStateProvider, useAppState } from './contexts/AppStateContext';
@@ -16,6 +18,8 @@ const PAGE_TITLES = {
   '/anuncios':      'Anúncios',
   '/reprovados':    'Reprovados',
   '/calendario':    'Calendário',
+  '/publicos':      'Públicos',
+  '/criativos':     'Criativos',
   '/investimento':  'Investimento',
   '/criar-anuncio': 'Criar anúncio',
 };
@@ -26,7 +30,9 @@ const SEARCH_MAP = [
   { terms: ['anúncio','anuncio','anúncios','anuncios','campanhas','campanha','ads'], to: '/anuncios', label: 'Anúncios' },
   { terms: ['reprovado','reprovados','rejeitado','recusado','negado'], to: '/reprovados', label: 'Reprovados' },
   { terms: ['calendário','calendario','agenda','datas'], to: '/calendario', label: 'Calendário' },
-  { terms: ['investimento','saldo','fundos','cartão','cartao','pix','pagamento','recarga','orçamento','orcamento'], to: '/investimento', label: 'Investimento' },
+  { terms: ['investimento','saldo','fundos','cartão','cartao','pix','pagamento','recarga','orçamento','orcamento','pixel','rastreamento','conversão','conversao'], to: '/investimento', label: 'Investimento' },
+  { terms: ['público','publico','públicos','publicos','audiência','audiencia','segmentação','segmentacao'], to: '/publicos', label: 'Públicos' },
+  { terms: ['criativo','criativos','biblioteca','texto','título','titulo','copy'], to: '/criativos', label: 'Criativos' },
   { terms: ['criar','novo','nova campanha','meta','instagram','google'], to: '/criar-anuncio', label: 'Criar anúncio' },
 ];
 
@@ -357,6 +363,8 @@ function Layout() {
             <Route path="/reprovados"    element={<Rejected />} />
             <Route path="/calendario"    element={<Calendar />} />
             <Route path="/investimento"  element={<Investment />} />
+            <Route path="/publicos"      element={<Audiences />} />
+            <Route path="/criativos"     element={<CreativeLibrary />} />
             <Route path="/criar-anuncio" element={<CreateAd />} />
             <Route path="/novo"          element={<Navigate to="/criar-anuncio" replace />} />
             <Route path="*"              element={<Dashboard />} />

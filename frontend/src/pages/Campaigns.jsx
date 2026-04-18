@@ -7,7 +7,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getDrafts, deleteDraft } from '../components/NewCampaignWizard';
+import { useAppState } from '../contexts/AppStateContext';
 
 /* ── Dados mock ── */
 const MOCK_ADS = [
@@ -110,7 +110,7 @@ function getPerformanceIssues(ad, avgCostPerResult) {
 }
 
 /* ── Linha da tabela ── */
-function AdRow({ ad, isLast, highCpc }) {
+function AdRow({ ad, isLast, highCpc, onToggle, onDuplicate, onEdit, onRemove }) {
   const [hovered, setHovered] = useState(false);
   const plat   = PLAT[ad.platform]   || PLAT.instagram;
   const status = STATUS[ad.status]   || STATUS.ended;
@@ -208,65 +208,34 @@ function AdRow({ ad, isLast, highCpc }) {
       {/* Ações */}
       <td style={{ padding: '14px 20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          {/* Pause/Play — só para ativo/pausado */}
-          {(isActive || ad.status === 'paused') && (
-            <button style={{
-              width: '30px', height: '30px', borderRadius: '8px',
-              border: '1.5px solid var(--c-border)', background: 'var(--c-surface)',
-              color: 'var(--c-text-3)', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'all .12s',
-            }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--c-active-bg)'; e.currentTarget.style.color = 'var(--c-accent)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'var(--c-surface)'; e.currentTarget.style.color = 'var(--c-text-3)'; }}
-            >
-              {isActive ? <PauseIcon /> : <PlayIcon />}
-            </button>
+          {(isActive || ad.status === 'paused') && onToggle && (
+            <button
+              title={isActive ? 'Pausar anúncio' : 'Reativar anúncio'}
+              onClick={() => onToggle(ad)}
+              style={{ width: '30px', height: '30px', borderRadius: '8px', border: '1.5px solid var(--c-border)', background: 'var(--c-surface)', color: 'var(--c-text-3)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >{isActive ? <PauseIcon /> : <PlayIcon />}</button>
           )}
-
-          {/* Copiar — só encerrados */}
-          {isEnded && (
-            <button style={{
-              width: '30px', height: '30px', borderRadius: '8px',
-              border: '1.5px solid var(--c-border)', background: 'var(--c-surface)',
-              color: 'var(--c-text-3)', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'all .12s',
-            }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--c-active-bg)'; e.currentTarget.style.color = 'var(--c-accent)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'var(--c-surface)'; e.currentTarget.style.color = 'var(--c-text-3)'; }}
-            >
-              <CopyIcon />
-            </button>
+          {onDuplicate && (
+            <button
+              title="Duplicar anúncio"
+              onClick={() => onDuplicate(ad)}
+              style={{ width: '30px', height: '30px', borderRadius: '8px', border: '1.5px solid var(--c-border)', background: 'var(--c-surface)', color: 'var(--c-text-3)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            ><CopyIcon /></button>
           )}
-
-          {/* Editar */}
-          <button style={{
-            width: '30px', height: '30px', borderRadius: '8px',
-            border: '1.5px solid var(--c-border)', background: 'var(--c-surface)',
-            color: 'var(--c-text-3)', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            transition: 'all .12s',
-          }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'var(--c-active-bg)'; e.currentTarget.style.color = 'var(--c-accent)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'var(--c-surface)'; e.currentTarget.style.color = 'var(--c-text-3)'; }}
-          >
-            <EditIcon />
-          </button>
-
-          {/* Mais opções */}
-          <button style={{
-            width: '30px', height: '30px', borderRadius: '8px',
-            border: '1.5px solid var(--c-border)', background: 'var(--c-surface)',
-            color: 'var(--c-text-3)', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            transition: 'all .12s',
-          }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'var(--c-surface)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'var(--c-surface)'; }}
-          >
-            <DotsIcon />
-          </button>
+          {onEdit && (
+            <button
+              title="Editar anúncio"
+              onClick={() => onEdit(ad)}
+              style={{ width: '30px', height: '30px', borderRadius: '8px', border: '1.5px solid var(--c-border)', background: 'var(--c-surface)', color: 'var(--c-text-3)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            ><EditIcon /></button>
+          )}
+          {onRemove && (
+            <button
+              title="Remover"
+              onClick={() => { if (confirm(`Remover "${ad.name}"?`)) onRemove(ad); }}
+              style={{ width: '30px', height: '30px', borderRadius: '8px', border: '1.5px solid var(--c-border)', background: 'var(--c-surface)', color: 'var(--c-text-3)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            ><DotsIcon /></button>
+          )}
         </div>
       </td>
     </tr>
@@ -375,20 +344,26 @@ function PerformanceReport({ ads, avgCostPerResult }) {
 /* ── Página Anúncios ── */
 export default function Campaigns() {
   const navigate = useNavigate();
+  const { ads: userAds, toggleAdStatus, duplicateAd, removeAd } = useAppState();
   const [statusFilter, setStatusFilter] = useState('');
   const [platformFilter, setPlatformFilter] = useState('');
   const [page, setPage] = useState(1);
   const [reportOpen, setReportOpen] = useState(true);
-  const TOTAL = 14;
-  const PER_PAGE = 5;
 
-  const filtered = MOCK_ADS.filter(ad => {
+  const allAds = [...userAds, ...MOCK_ADS];
+  const TOTAL = allAds.length;
+
+  function handleEdit(ad) {
+    navigate('/criar-anuncio', { state: { editId: ad.id } });
+  }
+
+  const filtered = allAds.filter(ad => {
     if (statusFilter && ad.status !== statusFilter) return false;
     if (platformFilter && ad.platform !== platformFilter) return false;
     return true;
   });
 
-  const validCostPerResult = MOCK_ADS.map(a => a.costPerResult).filter(v => v != null);
+  const validCostPerResult = allAds.map(a => a.costPerResult).filter(v => v != null);
   const avgCostPerResult = validCostPerResult.length
     ? validCostPerResult.reduce((s, v) => s + v, 0) / validCostPerResult.length
     : 0;
@@ -468,7 +443,7 @@ export default function Campaigns() {
 
       {/* ── Relatório de performance ── */}
       {reportOpen && (
-        <PerformanceReport ads={MOCK_ADS} avgCostPerResult={avgCostPerResult} />
+        <PerformanceReport ads={allAds} avgCostPerResult={avgCostPerResult} />
       )}
 
       {/* ── Tabela ── */}
@@ -512,14 +487,21 @@ export default function Campaigns() {
                 </td>
               </tr>
             ) : (
-              filtered.map((ad, i) => (
-                <AdRow
-                  key={ad.id}
-                  ad={ad}
-                  isLast={i === filtered.length - 1}
-                  highCpc={ad.costPerResult != null && ad.costPerResult > HIGH_CPR_THRESHOLD}
-                />
-              ))
+              filtered.map((ad, i) => {
+                const isUserAd = userAds.some(u => u.id === ad.id);
+                return (
+                  <AdRow
+                    key={ad.id}
+                    ad={ad}
+                    isLast={i === filtered.length - 1}
+                    highCpc={ad.costPerResult != null && ad.costPerResult > HIGH_CPR_THRESHOLD}
+                    onToggle={isUserAd ? (a) => toggleAdStatus(a.id) : null}
+                    onDuplicate={isUserAd ? (a) => duplicateAd(a.id) : null}
+                    onEdit={isUserAd ? handleEdit : null}
+                    onRemove={isUserAd ? (a) => removeAd(a.id) : null}
+                  />
+                );
+              })
             )}
           </tbody>
         </table>

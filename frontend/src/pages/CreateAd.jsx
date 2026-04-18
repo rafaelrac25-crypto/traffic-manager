@@ -1255,7 +1255,9 @@ export default function CreateAd() {
   const navigate = useNavigate();
   const location = useLocation();
   const commercialDate = location.state?.commercialDate;
-  const { addNotification } = useAppState();
+  const { addNotification, addAd, updateAd, getAdById, audiences, creatives, addCreative, markCreativeUsed } = useAppState();
+  const editId = location.state?.editId || null;
+  const editingAd = editId ? getAdById(editId) : null;
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState({});
   const [publishing, setPublishing] = useState(false);
@@ -1268,6 +1270,15 @@ export default function CreateAd() {
     return start.toISOString().split('T')[0];
   })();
 
+  const initialEnd = (() => {
+    if (!commercialDate?.dateISO) return '';
+    return new Date(commercialDate.dateISO).toISOString().split('T')[0];
+  })();
+
+  const initialBudget = commercialDate?.suggestedBudget?.daily
+    ? String(commercialDate.suggestedBudget.daily)
+    : '';
+
   /* ── Estado do formulário ── */
   const [objective,          setObjective]          = useState('');
   const [locations,          setLocations]          = useState([]);
@@ -1275,9 +1286,9 @@ export default function CreateAd() {
   const [gender,             setGender]             = useState('all');
   const [interests,          setInterests]          = useState([]);
   const [budgetType,         setBudgetType]         = useState('daily');
-  const [budgetValue,        setBudgetValue]        = useState('');
+  const [budgetValue,        setBudgetValue]        = useState(initialBudget);
   const [startDate,          setStartDate]          = useState(initialStart);
-  const [endDate,            setEndDate]            = useState('');
+  const [endDate,            setEndDate]            = useState(initialEnd);
   const [adFormat,           setAdFormat]           = useState('image');
   const [mediaFiles,         setMediaFiles]         = useState([]);
   const [primaryText,        setPrimaryText]        = useState(commercialDate?.preFill?.primaryText || '');
@@ -1315,6 +1326,25 @@ export default function CreateAd() {
 
   function handlePublish() {
     setPublishing(true);
+    const adName = (headline || primaryText.slice(0, 40) || (commercialDate?.name ?? 'Novo anúncio')).trim();
+    const adPayload = {
+      name: adName,
+      platform: 'instagram',
+      status: isScheduled ? 'review' : 'review',
+      budget: Number(budgetValue) || 0,
+      budgetType, startDate, endDate,
+      objective, locations, ageRange, gender, interests,
+      adFormat, primaryText, headline, destUrl, ctaButton,
+      commercialDateId: commercialDate?.id || null,
+    };
+    if (editingAd) {
+      updateAd(editingAd.id, adPayload);
+    } else {
+      addAd(adPayload);
+    }
+    if (primaryText && headline) {
+      addCreative({ name: headline, primaryText, headline, destUrl, ctaButton, adFormat });
+    }
     addNotification({
       kind: 'info',
       title: isScheduled ? 'Campanha agendada' : 'Anúncio enviado para revisão',

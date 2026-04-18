@@ -29,6 +29,7 @@ export default function Investment() {
     funds, addFunds,
     paymentMethod, setPaymentMethod,
     LOW_BALANCE_THRESHOLD,
+    pixel, setPixel,
   } = useAppState();
 
   const [tab, setTab]           = useState('card');
@@ -253,6 +254,141 @@ export default function Investment() {
           {msg}
         </div>
       )}
+
+      {/* ── Pixel / Rastreamento de conversão ── */}
+      <div style={{
+        marginTop: '24px',
+        background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',
+        borderRadius: '16px', padding: '22px', boxShadow: '0 2px 8px var(--c-shadow)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px', gap: '12px', flexWrap: 'wrap' }}>
+          <div>
+            <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--c-text-1)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              📊 Pixel de rastreamento
+              {pixel?.enabled && (
+                <span style={{
+                  padding: '2px 8px', fontSize: '10px', fontWeight: 700,
+                  background: '#DCFCE7', color: '#16A34A',
+                  borderRadius: '6px', letterSpacing: '.3px',
+                }}>
+                  ATIVO
+                </span>
+              )}
+            </h3>
+            <p style={{ fontSize: '12px', color: 'var(--c-text-3)', margin: '4px 0 0', maxWidth: '560px', lineHeight: 1.5 }}>
+              Rastreie conversões (agendamentos, contatos, compras) no seu site ou landing page para otimizar seus anúncios.
+            </p>
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-text-3)' }}>
+              {pixel?.enabled ? 'Ativado' : 'Desativado'}
+            </span>
+            <div
+              onClick={() => setPixel({ ...pixel, enabled: !pixel?.enabled })}
+              style={{
+                width: '38px', height: '22px', borderRadius: '22px',
+                background: pixel?.enabled ? 'var(--c-accent)' : 'var(--c-border)',
+                position: 'relative', transition: 'background .2s',
+              }}
+            >
+              <div style={{
+                position: 'absolute',
+                width: '16px', height: '16px', background: '#fff',
+                borderRadius: '50%', top: '3px',
+                left: pixel?.enabled ? '19px' : '3px',
+                transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,.3)',
+              }} />
+            </div>
+          </label>
+        </div>
+
+        {pixel?.enabled && (
+          <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div>
+              <label style={{
+                display: 'block', fontSize: '11px', fontWeight: 700,
+                color: 'var(--c-text-3)', marginBottom: '6px',
+                textTransform: 'uppercase', letterSpacing: '.4px',
+              }}>
+                ID do Pixel Meta
+              </label>
+              <input
+                type="text"
+                placeholder="Ex.: 1234567890123456"
+                value={pixel?.pixelId || ''}
+                onChange={e => setPixel({ ...pixel, pixelId: e.target.value.replace(/\D/g, '') })}
+                style={inputStyle}
+              />
+              <p style={{ fontSize: '11px', color: 'var(--c-text-4)', margin: '6px 0 0' }}>
+                Encontre no Gerenciador de Anúncios Meta → Eventos → Pixel.
+              </p>
+            </div>
+
+            <div>
+              <div style={{
+                fontSize: '11px', fontWeight: 700, color: 'var(--c-text-3)',
+                marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '.4px',
+              }}>
+                Eventos rastreados
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px' }}>
+                {[
+                  { id: 'ViewContent', label: 'ViewContent', desc: 'Visualizou página' },
+                  { id: 'Lead',        label: 'Lead',        desc: 'Enviou formulário' },
+                  { id: 'Contact',     label: 'Contact',     desc: 'Clicou WhatsApp' },
+                  { id: 'Purchase',    label: 'Purchase',    desc: 'Concluiu compra' },
+                ].map(({ id, label, desc }) => {
+                  const on = pixel?.events?.[id];
+                  return (
+                    <div
+                      key={id}
+                      onClick={() => setPixel({
+                        ...pixel,
+                        events: { ...pixel.events, [id]: !on },
+                      })}
+                      style={{
+                        padding: '10px 12px', borderRadius: '10px', cursor: 'pointer',
+                        border: `1.5px solid ${on ? 'var(--c-accent)' : 'var(--c-border)'}`,
+                        background: on ? 'var(--c-active-bg)' : 'var(--c-surface)',
+                        transition: 'all .15s',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: on ? 'var(--c-accent)' : 'var(--c-text-2)' }}>
+                          {label}
+                        </span>
+                        <span style={{ fontSize: '14px' }}>{on ? '✓' : '○'}</span>
+                      </div>
+                      <div style={{ fontSize: '10px', color: 'var(--c-text-4)' }}>{desc}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {pixel?.pixelId && (
+              <div style={{
+                background: 'var(--c-surface)', border: '1px dashed var(--c-border)',
+                borderRadius: '10px', padding: '12px 14px',
+              }}>
+                <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--c-text-4)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '.4px' }}>
+                  Código para inserir no &lt;head&gt; do seu site
+                </div>
+                <pre style={{
+                  fontSize: '10px', color: 'var(--c-text-2)',
+                  fontFamily: 'Menlo, Consolas, monospace',
+                  background: 'var(--c-card-bg)', padding: '10px', borderRadius: '6px',
+                  overflow: 'auto', margin: 0, lineHeight: 1.5,
+                }}>{`<script>
+  !function(f,b,e,v,n,t,s){...}
+  fbq('init', '${pixel.pixelId}');
+  fbq('track', 'PageView');
+</script>`}</pre>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

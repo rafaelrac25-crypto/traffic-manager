@@ -63,6 +63,7 @@ function carnival(year) {
  *  - communication: dicas de linguagem (sem promoção)
  *  - daysBefore: quantos dias antes começar a veicular
  *  - preFill: { primaryText, headline } — usado ao pré-preencher CreateAd
+ *  - suggestedBudget: { daily, reason } — sugestão de investimento diário em R$
  */
 export const COMMERCIAL_DATES = [
   {
@@ -89,6 +90,10 @@ export const COMMERCIAL_DATES = [
         'Esta semana é sua. Uma pausa para se olhar no espelho e se reconhecer. Agende uma avaliação gratuita com nossa equipe e descubra o protocolo ideal para você. Vagas limitadas nesta Semana da Mulher.',
       headline: 'Seu Dia da Mulher começa aqui',
     },
+    suggestedBudget: {
+      daily: 40,
+      reason: 'Data forte para estética feminina. Invista R$ 40/dia nos 14 dias antes para alcance consistente.',
+    },
   },
   {
     id: 'carnaval',
@@ -113,6 +118,10 @@ export const COMMERCIAL_DATES = [
         'O Carnaval está chegando e sua pele merece chegar pronta. Agende agora seu protocolo pré-Carnaval e garanta uma das últimas vagas da nossa agenda.',
       headline: 'Últimas vagas para o seu pré-Carnaval',
     },
+    suggestedBudget: {
+      daily: 35,
+      reason: 'Janela de 21 dias é longa — R$ 35/dia cobre o alcance sem cansar o público.',
+    },
   },
   {
     id: 'dia-do-cabeleireiro',
@@ -135,6 +144,10 @@ export const COMMERCIAL_DATES = [
       primaryText:
         'Hoje é o dia deles. Quem cuida do seu cabelo com técnica, carinho e conhecimento. Conheça nossa equipe e agende um momento exclusivo com quem entende do assunto.',
       headline: 'Quem cuida de você tem nome',
+    },
+    suggestedBudget: {
+      daily: 25,
+      reason: 'Data institucional — objetivo é reconhecimento de marca, não venda direta.',
     },
   },
   {
@@ -161,6 +174,10 @@ export const COMMERCIAL_DATES = [
         'Ela cuida de todo mundo. Neste Dia das Mães, presenteie-a com aquilo que ela nunca compra pra si: tempo, cuidado e uma pausa bem merecida. Cartão-presente digital disponível — agenda limitada.',
       headline: 'Um presente que ela nunca compra pra si',
     },
+    suggestedBudget: {
+      daily: 60,
+      reason: 'Data mais forte do ano para estética. Invista R$ 60/dia para maximizar vendas de cartão-presente.',
+    },
   },
   {
     id: 'dia-dos-namorados',
@@ -183,6 +200,10 @@ export const COMMERCIAL_DATES = [
       primaryText:
         'O melhor presente começa em você. Agende nosso protocolo exclusivo de Dia dos Namorados e chegue inteira no encontro. Pacotes para duas pessoas com condição especial.',
       headline: 'Chegue inteira ao encontro',
+    },
+    suggestedBudget: {
+      daily: 40,
+      reason: 'Ticket médio alto (pacote duplo). R$ 40/dia por 14 dias rende bom retorno.',
     },
   },
   {
@@ -207,6 +228,10 @@ export const COMMERCIAL_DATES = [
         'As melhores manhãs são com quem a gente ama. Agende uma experiência a dois no nosso espaço e divida mais que um protocolo — divida um momento. Condição especial para vocês duas.',
       headline: 'Traga quem te faz bem',
     },
+    suggestedBudget: {
+      daily: 25,
+      reason: 'Data nichada — R$ 25/dia foca público engajado e estimula indicação.',
+    },
   },
   {
     id: 'dia-dos-pais',
@@ -229,6 +254,10 @@ export const COMMERCIAL_DATES = [
       primaryText:
         'Homem que se cuida merece um espaço feito pra isso. Neste Dia dos Pais, presenteie com um protocolo exclusivo de skincare masculino ou barba terapia. Agenda limitada.',
       headline: 'Cuidar é coisa de homem também',
+    },
+    suggestedBudget: {
+      daily: 30,
+      reason: 'Público masculino é menor mas tem menos concorrência nos anúncios.',
     },
   },
   {
@@ -253,6 +282,10 @@ export const COMMERCIAL_DATES = [
         'Beleza é cuidado. É se olhar no espelho e se reconhecer. Neste Dia Internacional da Beleza, venha conhecer nosso espaço e conversar com nossa equipe. Avaliação gratuita para novas clientes.',
       headline: 'Beleza é se reconhecer',
     },
+    suggestedBudget: {
+      daily: 30,
+      reason: 'Data do setor — engajamento alto com conteúdo institucional.',
+    },
   },
   {
     id: 'dia-da-secretaria',
@@ -275,6 +308,10 @@ export const COMMERCIAL_DATES = [
       primaryText:
         'Uma pausa no meio da semana que faz diferença. Protocolo express de 1h para quem precisa de um respiro. Cartão-presente corporativo disponível — entrega digital imediata.',
       headline: 'Uma pausa bem merecida',
+    },
+    suggestedBudget: {
+      daily: 25,
+      reason: 'Foco B2B limita alcance. R$ 25/dia por 14 dias basta.',
     },
   },
   {
@@ -300,6 +337,10 @@ export const COMMERCIAL_DATES = [
         'Outubro é mês de cuidado de verdade. Durante todo o mês, parte do valor dos nossos protocolos é destinada a uma instituição local. Agende e faça parte. Mais que beleza — cuidado.',
       headline: 'Cuidar é um ato',
     },
+    suggestedBudget: {
+      daily: 35,
+      reason: 'Mês inteiro — R$ 35/dia garante presença sem exaurir orçamento.',
+    },
   },
   {
     id: 'dia-das-criancas',
@@ -322,6 +363,10 @@ export const COMMERCIAL_DATES = [
       primaryText:
         'Depois do dia delas, chega o seu. Agende nosso protocolo de relaxamento e recupere as energias que só mãe gasta. Vagas limitadas para os dias 13 e 14 de outubro.',
       headline: 'Depois do dia delas, o seu',
+    },
+    suggestedBudget: {
+      daily: 30,
+      reason: 'Nicho específico (mães). R$ 30/dia mantém custo por resultado baixo.',
     },
   },
   {
@@ -346,6 +391,10 @@ export const COMMERCIAL_DATES = [
         'Para quem ensina o mundo a ler, um momento só seu. Professoras têm condição especial na nossa agenda nesta semana. Agende e venha relaxar.',
       headline: 'Um momento só seu',
     },
+    suggestedBudget: {
+      daily: 25,
+      reason: 'Segmentação por profissão deixa alcance menor e mais qualificado.',
+    },
   },
   {
     id: 'halloween',
@@ -368,6 +417,10 @@ export const COMMERCIAL_DATES = [
       primaryText:
         'Festa boa deixa pele cansada. Nosso protocolo pós-festa recupera o viço em 1h. Agende para os primeiros dias de novembro — vagas limitadas.',
       headline: 'A pele volta ao normal em 1h',
+    },
+    suggestedBudget: {
+      daily: 20,
+      reason: 'Janela curta. R$ 20/dia suficiente para conteúdo educacional de skincare.',
     },
   },
   {
@@ -392,6 +445,10 @@ export const COMMERCIAL_DATES = [
         'Uma condição especial só nesta sexta. Garanta seu pacote anual de manutenção com o melhor custo-benefício do ano. Quem decide hoje, leva o ano inteiro com a gente. Vagas limitadas.',
       headline: 'Uma condição exclusiva desta sexta',
     },
+    suggestedBudget: {
+      daily: 50,
+      reason: 'Concorrência alta na Black Friday — R$ 50/dia necessário para manter alcance.',
+    },
   },
   {
     id: 'natal',
@@ -415,6 +472,10 @@ export const COMMERCIAL_DATES = [
         'O presente que ela nunca compra pra si. Cartão-presente digital com entrega imediata — escolha o valor, nós cuidamos do resto. Experiência exclusiva Cris Costa Beauty.',
       headline: 'O presente que se cuida',
     },
+    suggestedBudget: {
+      daily: 55,
+      reason: 'Concorrência muito alta no Natal. R$ 55/dia por 25 dias vale pela venda de cartão-presente.',
+    },
   },
   {
     id: 'reveillon',
@@ -437,6 +498,10 @@ export const COMMERCIAL_DATES = [
       primaryText:
         'As últimas vagas da nossa agenda de 2026 estão indo. Pacote completo para o Réveillon: cabelo, maquiagem e protocolo de pele para você chegar pronta na virada. Agende agora.',
       headline: 'Últimas vagas do ano',
+    },
+    suggestedBudget: {
+      daily: 45,
+      reason: 'Agenda esgota rápido — investimento maior para capturar antes dos concorrentes.',
     },
   },
 ];
