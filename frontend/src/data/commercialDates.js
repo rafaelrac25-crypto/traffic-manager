@@ -547,3 +547,31 @@ export function getCommercialDateByKey(key) {
   }
   return null;
 }
+
+/**
+ * IDs das datas consideradas imperdíveis para o segmento Cris Costa Beauty.
+ * São as que disparam alerta automático no sino quando entram na janela
+ * de veiculação (dias antes <= daysBefore).
+ */
+export const CRITICAL_DATE_IDS = new Set([
+  'dia-da-mulher',
+  'carnaval',
+  'dia-das-maes',
+  'dia-dos-namorados',
+  'dia-dos-pais',
+  'outubro-rosa',
+  'black-friday',
+  'natal',
+  'reveillon',
+]);
+
+/**
+ * Retorna as datas críticas em janela de veiculação a partir de `from`.
+ * Inclui só entries cujo `daysUntil <= daysBefore` definido na própria entry.
+ */
+export function getCriticalDatesInWindow(from = new Date()) {
+  const upcoming = getUpcomingCommercialDates(from, 60);
+  return upcoming.filter(entry =>
+    CRITICAL_DATE_IDS.has(entry.id) && entry.daysUntil <= (entry.daysBefore || 14)
+  );
+}
