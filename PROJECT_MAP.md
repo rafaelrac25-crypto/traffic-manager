@@ -168,7 +168,6 @@ Contexto único para estado que atravessa páginas. Persiste em `localStorage`.
 | `ALERT_APIKEY_1` e `_2` no Vercel         | Alertas        | Alta (aguardando usuários) |
 | `GEMINI_API_KEY` no Vercel                | IA             | Média                      |
 | Gráficos de evolução temporal (reais)     | Dashboard      | Média                      |
-| TikTok Ads                                | Anúncios       | Baixa                      |
 
 ---
 

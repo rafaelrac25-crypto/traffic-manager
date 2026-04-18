@@ -129,7 +129,6 @@ body { font-family:'Inter',sans-serif; background:var(--rose-light); color:var(-
 .plat-badge { position:absolute; top:8px; left:8px; font-size:10px; font-weight:700; padding:3px 8px; border-radius:20px; color:#fff; letter-spacing:.4px; }
 .plat-badge.meta { background:rgba(41,128,185,.85); }
 .plat-badge.google { background:rgba(231,76,60,.82); }
-.plat-badge.tiktok { background:rgba(0,0,0,.78); }
 .plat-badge.manual { background:rgba(74,37,53,.78); }
 .live-dot { position:absolute; top:8px; right:8px; width:8px; height:8px; background:var(--green); border-radius:50%; box-shadow:0 0 0 3px rgba(39,174,96,.25); animation:livePulse 2s infinite; }
 @keyframes livePulse { 0%,100%{box-shadow:0 0 0 3px rgba(39,174,96,.25)}50%{box-shadow:0 0 0 6px rgba(39,174,96,.08)} }
@@ -438,7 +437,6 @@ textarea.form-input { resize:vertical; }
         <div class="chip" onclick="filterChip(this)">⏸ Pausados</div>
         <div class="chip" onclick="filterChip(this)">Meta</div>
         <div class="chip" onclick="filterChip(this)">Google</div>
-        <div class="chip" onclick="filterChip(this)">TikTok</div>
       </div>
     </div>
 
@@ -523,45 +521,6 @@ textarea.form-input { resize:vertical; }
         </div>
       </div>
 
-      <!-- Card 3 -->
-      <div class="campaign-card">
-        <div class="card-thumb" style="background:linear-gradient(135deg,#111,#333);">
-          <span class="plat-badge tiktok">TIKTOK ADS</span>
-          <div class="live-dot"></div>
-          💅
-        </div>
-        <div class="card-body">
-          <div class="card-top">
-            <div>
-              <div class="card-name">Esmalte Tendência #UnhasPerfeitas</div>
-              <div class="card-obj">❤️ Engajamento · Vídeo In-Feed</div>
-            </div>
-            <div class="toggle-wrap">
-              <label class="toggle"><input type="checkbox" checked onchange="doToggle(this)"/><span class="toggle-track"></span></label>
-              <span class="status-lbl on">ON</span>
-            </div>
-          </div>
-          <div class="metrics-grid">
-            <div class="metric"><div class="metric-lbl">Verba/dia</div><div class="metric-val">R$ 70</div></div>
-            <div class="metric"><div class="metric-lbl">CPV</div><div class="metric-val good">R$ 0,08</div></div>
-            <div class="metric"><div class="metric-lbl">Views</div><div class="metric-val good" id="views3">32k</div></div>
-            <div class="metric"><div class="metric-lbl">Conversões</div><div class="metric-val">14</div></div>
-            <div class="metric"><div class="metric-lbl">Custo/conv.</div><div class="metric-val good">R$ 35</div></div>
-            <div class="metric"><div class="metric-lbl">ROAS</div><div class="metric-val good">2,9×</div></div>
-          </div>
-          <div class="budget-bar-row"><span>Orçamento usado</span><strong>R$ 175 / R$ 700</strong></div>
-          <div class="budget-bar"><div class="budget-fill low" style="width:25%"></div></div>
-          <div class="card-footer">
-            <div class="card-dates">📅 05/01 → 05/02</div>
-            <div class="card-actions">
-              <button class="icon-btn">📈</button>
-              <button class="icon-btn">✏️</button>
-              <button class="icon-btn">⧉</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
     </div><!-- /grid -->
   </div><!-- /content -->
 </div><!-- /main -->
@@ -616,10 +575,6 @@ textarea.form-input { resize:vertical; }
         <div class="plat-card" id="platGoogle" onclick="selPlat('google',this)">
           <div class="pi" style="background:#FCE8E6">🔴</div>
           <div><div class="pn">Google Ads</div><div class="pd">Pesquisa e YouTube · Alcance quem busca</div></div>
-        </div>
-        <div class="plat-card" id="platTiktok" onclick="selPlat('tiktok',this)">
-          <div class="pi" style="background:#000;color:#fff">♪</div>
-          <div><div class="pn">TikTok Ads</div><div class="pd">Vídeos curtos · Público jovem e engajado</div></div>
         </div>
         <div class="plat-card" id="platManual" onclick="selPlat('manual',this)">
           <div class="pi" style="background:var(--rose)">📝</div>

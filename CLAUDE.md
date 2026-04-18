@@ -132,7 +132,6 @@ CRON_SECRET=troque_por_string_aleatoria_segura
 
 - [ ] Integração real API Meta Ads (hoje é mock)
 - [ ] Integração real Google Ads
-- [ ] TikTok Ads (sem formulário ainda)
 - [ ] Gráficos de evolução temporal de métricas
 - [ ] Histórico de métricas (dados mock hoje)
 - [ ] API keys CallMeBot (aguardando Cristiane e Rafael se cadastrarem)
