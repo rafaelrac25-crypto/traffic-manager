@@ -569,10 +569,8 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* ── Linha: gráfico + dica do dia ── */}
-      <div className="dashboard-main-row" style={{ marginBottom: '20px' }}>
-
-        {/* Gráfico */}
+      {/* ── Gráfico (largura total) ── */}
+      <div style={{ marginBottom: '20px' }}>
         <div style={{
           background: 'var(--c-card-bg)',
           borderRadius: '16px',
@@ -606,170 +604,17 @@ export default function Dashboard() {
           </div>
           <LineChart data={CHART_DATA} />
         </div>
-
-        {/* Dica do dia */}
-        <div style={{
-          background: 'var(--c-card-bg)',
-          borderRadius: '16px',
-          border: '1px solid var(--c-border)',
-          padding: '20px',
-          boxShadow: '0 2px 8px var(--c-shadow)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '14px',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '14px' }}>💡</span>
-            <span style={{ fontSize: '10px', fontWeight: 700, color: '#F97316', letterSpacing: '1px', textTransform: 'uppercase' }}>Dica do Dia</span>
-          </div>
-
-          <div>
-            <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '6px' }}>
-              Você está no caminho certo!
-            </div>
-            <p style={{ fontSize: '12px', color: 'var(--c-text-3)', lineHeight: 1.6 }}>
-              Seus anúncios estão performando acima da média. Que tal criar um novo anúncio para aproveitar o momento?
-            </p>
-          </div>
-
-          <div style={{
-            background: 'var(--c-surface)',
-            borderRadius: '10px',
-            padding: '12px',
-            display: 'flex', alignItems: 'flex-start', gap: '10px',
-          }}>
-            <span style={{ fontSize: '20px', flexShrink: 0 }}>🚀</span>
-            <div>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--c-text-2)', marginBottom: '3px' }}>Sugestão</div>
-              <p style={{ fontSize: '11px', color: 'var(--c-text-4)', lineHeight: 1.5 }}>
-                Campanhas com imagens claras geram 23% mais resultados.
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={() => navigate('/criar-anuncio')}
-            style={{
-              width: '100%',
-              background: 'var(--c-accent)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '10px',
-              padding: '12px',
-              fontSize: '13px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              transition: 'background .15s',
-            }}
-            onMouseEnter={e => e.currentTarget.style.background = 'var(--c-accent-dk)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'var(--c-accent)'}
-          >
-            Criar novo anúncio
-          </button>
-        </div>
       </div>
 
-      {/* ── Linha: calendário mini + wizard start ── */}
-      <div className="dashboard-bottom-row">
-
-        {/* Calendário mini */}
-        <div style={{
-          background: 'var(--c-card-bg)',
-          borderRadius: '16px',
-          border: '1px solid var(--c-border)',
-          padding: '20px 24px',
-          boxShadow: '0 2px 8px var(--c-shadow)',
-        }}>
-          <MiniCalendar onViewFull={() => navigate('/calendario')} />
-        </div>
-
-        {/* Quick start wizard */}
-        <div style={{
-          background: 'var(--c-card-bg)',
-          borderRadius: '16px',
-          border: '1px solid var(--c-border)',
-          padding: '20px',
-          boxShadow: '0 2px 8px var(--c-shadow)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '14px',
-        }}>
-          {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-1)' }}>
-              Criar novo anúncio
-            </div>
-            <button
-              onClick={() => navigate('/criar-anuncio')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--c-text-4)', fontSize: '18px', lineHeight: 1 }}
-            >×</button>
-          </div>
-
-          {/* Step indicator mini */}
-          <div>
-            <div style={{ fontSize: '10px', color: 'var(--c-text-4)', marginBottom: '6px' }}>Passo 1 de 6</div>
-            <div style={{ display: 'flex', gap: '4px' }}>
-              {[1,2,3,4,5,6].map(s => (
-                <div key={s} style={{
-                  flex: 1, height: '4px', borderRadius: '4px',
-                  background: s === 1 ? 'var(--c-accent)' : 'var(--c-border)',
-                  transition: 'background .2s',
-                }} />
-              ))}
-            </div>
-          </div>
-
-          {/* Pergunta */}
-          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--c-text-1)' }}>
-            Onde você quer anunciar?
-          </div>
-
-          {/* Platform cards mini */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-            {[
-              { id: 'instagram', label: 'Instagram', sub: 'Feed, Stories e Reels', bg: 'linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)', selected: true },
-              { id: 'google', label: 'Google Ads', sub: 'Resultados no Google', bg: 'linear-gradient(135deg,#4285F4,#34A853,#FBBC05,#EA4335)', selected: false },
-            ].map(p => (
-              <div key={p.id} style={{
-                border: `2px solid ${p.selected ? 'var(--c-accent)' : 'var(--c-border)'}`,
-                borderRadius: '10px', padding: '10px 8px', textAlign: 'center', cursor: 'pointer',
-                background: p.selected ? 'var(--c-active-bg)' : 'var(--c-surface)',
-                transition: 'all .15s',
-              }}>
-                <div style={{
-                  width: '32px', height: '32px', borderRadius: '8px',
-                  background: p.bg, margin: '0 auto 6px',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }} />
-                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--c-text-1)' }}>{p.label}</div>
-                <div style={{ fontSize: '9px', color: 'var(--c-text-4)', marginTop: '2px' }}>{p.sub}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Botão próximo */}
-          <button
-            onClick={() => navigate('/criar-anuncio')}
-            style={{
-              width: '100%',
-              background: 'var(--c-accent)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '10px',
-              padding: '11px',
-              fontSize: '13px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-              transition: 'background .15s',
-            }}
-            onMouseEnter={e => e.currentTarget.style.background = 'var(--c-accent-dk)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'var(--c-accent)'}
-          >
-            Próximo passo
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-          </button>
-        </div>
+      {/* ── Calendário mini (largura total) ── */}
+      <div style={{
+        background: 'var(--c-card-bg)',
+        borderRadius: '16px',
+        border: '1px solid var(--c-border)',
+        padding: '20px 24px',
+        boxShadow: '0 2px 8px var(--c-shadow)',
+      }}>
+        <MiniCalendar onViewFull={() => navigate('/calendario')} />
       </div>
     </div>
   );
