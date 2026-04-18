@@ -938,14 +938,31 @@ function Step5Creative({ adFormat, setAdFormat, mediaFiles, setMediaFiles, prima
         />
       </div>
 
-      {/* URL de destino */}
+      {/* Destino do anúncio */}
       <div>
-        <SectionLabel>URL de destino *</SectionLabel>
+        <SectionLabel sub="Para onde o clique leva. O WhatsApp da Cris já é o padrão — todo anúncio sempre leva ao WhatsApp.">Destino do anúncio</SectionLabel>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setDestUrl('https://wa.me/5547997071161')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '8px 12px', borderRadius: '10px',
+              border: '1.5px solid ' + (destUrl.includes('wa.me') ? '#25D366' : 'var(--c-border)'),
+              background: destUrl.includes('wa.me') ? '#25D36618' : 'var(--c-surface)',
+              fontSize: '12px', fontWeight: 600, color: destUrl.includes('wa.me') ? '#0F8A49' : 'var(--c-text-2)',
+              cursor: 'pointer',
+            }}
+          >💬 Usar WhatsApp da Cris</button>
+          <span style={{ fontSize: '11px', color: 'var(--c-text-4)', alignSelf: 'center' }}>
+            ou cole um link personalizado abaixo
+          </span>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--c-surface)', border: `1.5px solid ${(errors.destUrl || (destUrl && !destUrl.startsWith('http'))) ? '#EF4444' : 'var(--c-border)'}`, borderRadius: '10px', padding: '0 14px', transition: 'border-color .15s' }}>
           <span style={{ fontSize: '13px', color: 'var(--c-text-4)', flexShrink: 0 }}>🔗</span>
           <input
             type="url"
-            placeholder="https://www.criscostabeleza.com.br"
+            placeholder="https://wa.me/5547997071161"
             value={destUrl}
             onChange={e => setDestUrl(e.target.value)}
             style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '13px', color: 'var(--c-text-1)', fontFamily: 'inherit', padding: '10px 0', width: '100%' }}
@@ -1265,8 +1282,8 @@ export default function CreateAd() {
   const [mediaFiles,         setMediaFiles]         = useState([]);
   const [primaryText,        setPrimaryText]        = useState(commercialDate?.preFill?.primaryText || '');
   const [headline,           setHeadline]           = useState(commercialDate?.preFill?.headline || '');
-  const [destUrl,            setDestUrl]            = useState('');
-  const [ctaButton,          setCtaButton]          = useState('Saiba mais');
+  const [destUrl,            setDestUrl]            = useState('https://wa.me/5547997071161');
+  const [ctaButton,          setCtaButton]          = useState('WhatsApp');
 
   useEffect(() => {
     if (commercialDate) {
@@ -1285,8 +1302,10 @@ export default function CreateAd() {
     if (s === 2 && (!budgetValue || Number(budgetValue) <= 0)) errs.budgetValue = 'Defina um valor de orçamento maior que zero.';
     if (s === 3) {
       if (!primaryText.trim()) errs.primaryText = 'O texto principal é obrigatório.';
-      if (!destUrl.trim()) errs.destUrl = 'A URL de destino é obrigatória.';
-      else if (!destUrl.startsWith('http')) errs.destUrl = 'A URL deve começar com https://';
+      const messageCTAs = ['WhatsApp', 'Enviar mensagem', 'Mande uma mensagem', 'Chamar agora'];
+      const needsUrl = !messageCTAs.includes(ctaButton);
+      if (needsUrl && !destUrl.trim()) errs.destUrl = 'Com este CTA é preciso informar um destino.';
+      else if (destUrl.trim() && !destUrl.startsWith('http')) errs.destUrl = 'A URL deve começar com https://';
     }
     return errs;
   }
