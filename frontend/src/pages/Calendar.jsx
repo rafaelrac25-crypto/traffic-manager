@@ -5,8 +5,8 @@
  * Do not persist mock values.
  */
 
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getUpcomingCommercialDates, getCommercialDateByKey } from '../data/commercialDates';
 
 const MONTHS_ABBR = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
@@ -233,12 +233,27 @@ function buildCalendar(year, month) {
 
 export default function Calendar() {
   const navigate = useNavigate();
+  const location = useLocation();
   const today    = new Date();
-  const [year,  setYear]  = useState(2026);
-  const [month, setMonth] = useState(3); /* Abril */
+  const [year,  setYear]  = useState(today.getFullYear());
+  const [month, setMonth] = useState(today.getMonth());
   const [modalEntry, setModalEntry] = useState(null);
 
   const upcomingCommercial = useMemo(() => getUpcomingCommercialDates(new Date(), 45), []);
+
+  /* Abrir modal automaticamente quando vier do Dashboard via state */
+  useEffect(() => {
+    const key = location.state?.openCommercialKey;
+    if (!key) return;
+    const entry = getCommercialDateByKey(key);
+    if (entry) {
+      setYear(entry.date.getFullYear());
+      setMonth(entry.date.getMonth());
+      setModalEntry(entry);
+    }
+    window.history.replaceState({}, document.title);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function openCommercialModal(entry) { setModalEntry(entry); }
   function closeCommercialModal() { setModalEntry(null); }
@@ -281,7 +296,7 @@ export default function Calendar() {
       </div>
 
       {/* ── Layout: calendário + painel direito ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '20px', alignItems: 'start' }}>
+      <div className="calendar-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '20px', alignItems: 'start' }}>
 
         {/* ── Calendário principal ── */}
         <div className="ccb-card" style={{
@@ -435,7 +450,7 @@ export default function Calendar() {
               onMouseLeave={e => e.currentTarget.style.background = 'var(--c-accent)'}
             >
               <PlusIcon />
-              Novo agendamento
+              Criar anúncio
             </button>
           </div>
         </div>

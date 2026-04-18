@@ -515,3 +515,10 @@ input[type="range"] { accent-color: #d68d8f; }
   box-shadow: 0 14px 32px var(--c-shadow-md, rgba(214,141,143,.18));
   border-color: color-mix(in srgb, var(--c-accent) 35%, var(--c-border));
 }
+
+/* ── Layout do calendário (mobile) ── */
+@media (max-width: 900px) {
+  .calendar-layout {
+    grid-template-columns: 1fr !important;
+  }
+}

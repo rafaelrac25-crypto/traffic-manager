@@ -135,7 +135,15 @@ export function AppStateProvider({ children }) {
         dateKey: c.key,
         title: `${c.emoji} ${c.name} ${when}`,
         message: `${c.whyImportant.split('.')[0]}. Planeje a campanha com antecedência.`,
-        link: '/calendario',
+        link: '/criar-anuncio',
+        commercialDate: {
+          id: c.id,
+          name: c.name,
+          emoji: c.emoji,
+          dateISO: c.date.toISOString(),
+          daysBefore: c.daysBefore,
+          preFill: c.preFill,
+        },
       });
     });
     save(KEY_COMMERCIAL_ALERTED, [...alerted, ...toAlert.map(c => c.key)].slice(-100));

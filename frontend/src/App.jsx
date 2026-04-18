@@ -130,7 +130,13 @@ function NotificationDropdown({ open, onClose }) {
             <div
               key={n.id}
               onClick={() => {
-                if (n.link) navigate(n.link);
+                if (n.link) {
+                  if (n.commercialDate) {
+                    navigate(n.link, { state: { commercialDate: n.commercialDate } });
+                  } else {
+                    navigate(n.link);
+                  }
+                }
                 removeNotification(n.id);
                 onClose();
               }}
@@ -238,7 +244,7 @@ function SearchBar() {
         <span style={{ color: 'var(--c-text-4)', display: 'flex' }}><SearchIcon /></span>
         <input
           type="text"
-          placeholder="Buscar sessões, ajuda ou perguntar à IA..."
+          placeholder="Buscar páginas, ajuda ou perguntar à IA..."
           value={search}
           onChange={e => { setSearch(e.target.value); setShowDrop(true); }}
           onFocus={() => setShowDrop(true)}

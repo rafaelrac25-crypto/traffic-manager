@@ -5,9 +5,10 @@
  * Do not persist mock values.
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../contexts/AppStateContext';
+import { getUpcomingCommercialDates } from '../data/commercialDates';
 
 /* ── Constantes de mock ── */
 const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -67,13 +68,6 @@ const CHART_DATA = [
   { label: '14 Abr', value: 158 },
 ];
 
-/* Eventos do calendário */
-const CALENDAR_EVENTS = {
-  '2026-04-10': { label: 'Esmaltes Tendência', color: '#F97316', dot: true },
-  '2026-04-14': { label: 'Skincare Rotina Diária', color: '#d68d8f', dot: true },
-  '2026-04-21': { label: 'Lançamento Nova Linha', color: '#8B5CF6', dot: true },
-};
-
 /* ── Ícones SVG ── */
 function WalletIcon() {
   return (
@@ -124,14 +118,6 @@ function CalendarIcon2() {
     </svg>
   );
 }
-function RefreshIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-    </svg>
-  );
-}
-
 /* ── Gráfico de linha SVG (interativo) ── */
 function LineChart({ data, unit = 'resultados' }) {
   const W = 540, H = 180;
@@ -305,22 +291,33 @@ function LineChart({ data, unit = 'resultados' }) {
 }
 
 /* ── Calendário mini ── */
-function MiniCalendar({ onViewFull }) {
+function MiniCalendar({ onViewFull, onPickCommercialDate }) {
   const today = new Date();
-  const year = 2026, month = 3; /* Abril 2026 */
+  const year = today.getFullYear();
+  const month = today.getMonth();
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const cells = [];
-  for (let i = 0; i < firstDay; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  const commercialMap = useMemo(() => {
+    const upcoming = getUpcomingCommercialDates(today, 45);
+    const map = {};
+    upcoming.forEach(entry => {
+      if (entry.date.getFullYear() === year && entry.date.getMonth() === month) {
+        map[entry.date.getDate()] = entry;
+      }
+    });
+    return map;
+  }, [year, month]);
 
   return (
     <div>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-1)' }}>Calendário</span>
-          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-accent)' }}>Abril 2026</span>
+          <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-1)' }}>Datas comerciais</span>
+          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-accent)' }}>
+            {MONTHS[month]} {year}
+          </span>
         </div>
         <button
           onClick={onViewFull}
@@ -339,7 +336,6 @@ function MiniCalendar({ onViewFull }) {
 
       {/* Células */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px' }}>
-        {/* dias do mês anterior */}
         {Array.from({ length: firstDay }).map((_, i) => {
           const prevDay = new Date(year, month, 0).getDate() - firstDay + i + 1;
           return (
@@ -349,18 +345,26 @@ function MiniCalendar({ onViewFull }) {
 
         {Array.from({ length: daysInMonth }).map((_, i) => {
           const day = i + 1;
-          const dateStr = `${year}-04-${String(day).padStart(2, '0')}`;
-          const isToday = day === 14;
-          const event = CALENDAR_EVENTS[dateStr];
+          const isToday = day === today.getDate();
+          const entry = commercialMap[day];
+          const hasEvent = !!entry;
 
           return (
-            <div key={day} style={{
-              textAlign: 'center',
-              padding: '4px 2px',
-              borderRadius: '6px',
-              position: 'relative',
-              cursor: event ? 'pointer' : 'default',
-            }}>
+            <div
+              key={day}
+              onClick={() => hasEvent && onPickCommercialDate(entry)}
+              style={{
+                textAlign: 'center',
+                padding: '4px 2px',
+                borderRadius: '6px',
+                position: 'relative',
+                cursor: hasEvent ? 'pointer' : 'default',
+                transition: 'background .15s',
+              }}
+              onMouseEnter={e => { if (hasEvent) e.currentTarget.style.background = 'var(--c-hover)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+              title={hasEvent ? `${entry.name} — clique para abrir estratégia` : undefined}
+            >
               <div style={{
                 width: '24px', height: '24px', borderRadius: '50%',
                 background: isToday ? 'var(--c-accent)' : 'transparent',
@@ -371,12 +375,12 @@ function MiniCalendar({ onViewFull }) {
               }}>
                 {day}
               </div>
-              {event && (
+              {hasEvent && (
                 <div style={{ marginTop: '2px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '2px', justifyContent: 'center' }}>
-                    <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: event.color }} />
-                    <span style={{ fontSize: '8px', color: event.color, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '50px' }}>
-                      {event.label}
+                    <span style={{ fontSize: '10px', lineHeight: 1 }}>{entry.emoji}</span>
+                    <span style={{ fontSize: '8px', color: 'var(--c-accent)', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '50px' }}>
+                      {entry.name}
                     </span>
                   </div>
                 </div>
@@ -387,13 +391,11 @@ function MiniCalendar({ onViewFull }) {
       </div>
 
       {/* Legenda */}
-      <div style={{ display: 'flex', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
-        {[['#d68d8f', 'Instagram'], ['#F97316', 'Google Ads'], ['#8B5CF6', 'Em revisão']].map(([color, label]) => (
-          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: color }} />
-            <span style={{ fontSize: '10px', color: 'var(--c-text-3)' }}>{label}</span>
-          </div>
-        ))}
+      <div style={{ display: 'flex', gap: '12px', marginTop: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <span style={{ fontSize: '12px' }}>🗓️</span>
+          <span style={{ fontSize: '10px', color: 'var(--c-text-3)' }}>Data comercial — clique para estratégia</span>
+        </div>
       </div>
     </div>
   );
@@ -434,6 +436,11 @@ function MetricCard({ label, value, trend, trendUp, sub, icon, iconBg, iconColor
             {trendUp ? <ArrowUp color="#22C55E" /> : <ArrowDown color="#EF4444" />}
             <span style={{ fontSize: '10px', fontWeight: 700, color: trendUp ? '#22C55E' : '#EF4444' }}>{trend}</span>
           </div>
+          {sub && (
+            <span style={{ fontSize: '10px', color: 'var(--c-text-4)', fontWeight: 500 }}>
+              {sub}
+            </span>
+          )}
         </div>
       </div>
     </div>
@@ -710,10 +717,22 @@ function CpcAlertCard({ ads, avg, onOpenAds }) {
 }
 
 /* ── Dashboard ── */
+const MESES_PT = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+function saudacaoPorHora() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Bom dia';
+  if (h < 18) return 'Boa tarde';
+  return 'Boa noite';
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [chartMetric, setChartMetric] = useState('Resultados');
   const { funds, lowBalance, LOW_BALANCE_THRESHOLD } = useAppState();
+
+  const hoje = new Date();
+  const labelHoje = `Hoje, ${hoje.getDate()} de ${MESES_PT[hoje.getMonth()]}`;
+  const saudacao = saudacaoPorHora();
 
   return (
     <div className="page-container">
@@ -722,32 +741,20 @@ export default function Dashboard() {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '4px' }}>
-            Bom dia, Cris! 👋
+            {saudacao}, Cris! 👋
           </h1>
           <p style={{ fontSize: '13px', color: 'var(--c-text-3)' }}>
             Aqui está o desempenho dos seus anúncios hoje.
           </p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            padding: '8px 14px', borderRadius: '10px',
-            border: '1.5px solid var(--c-border)', background: 'var(--c-card-bg)',
-            fontSize: '12px', fontWeight: 500, color: 'var(--c-text-2)', cursor: 'pointer',
-          }}>
-            <CalendarIcon2 />
-            Hoje, 14 de abril
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <button style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            padding: '8px 14px', borderRadius: '10px',
-            border: '1.5px solid var(--c-border)', background: 'var(--c-card-bg)',
-            fontSize: '12px', fontWeight: 500, color: 'var(--c-text-2)', cursor: 'pointer',
-          }}>
-            <RefreshIcon />
-            Comparar período
-          </button>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '6px',
+          padding: '8px 14px', borderRadius: '10px',
+          border: '1.5px solid var(--c-border)', background: 'var(--c-card-bg)',
+          fontSize: '12px', fontWeight: 500, color: 'var(--c-text-2)',
+        }}>
+          <CalendarIcon2 />
+          {labelHoje}
         </div>
       </div>
 
@@ -824,7 +831,10 @@ export default function Dashboard() {
         padding: '20px 24px',
         boxShadow: '0 2px 8px var(--c-shadow)',
       }}>
-        <MiniCalendar onViewFull={() => navigate('/calendario')} />
+        <MiniCalendar
+          onViewFull={() => navigate('/calendario')}
+          onPickCommercialDate={(entry) => navigate('/calendario', { state: { openCommercialKey: entry.key } })}
+        />
       </div>
     </div>
   );
