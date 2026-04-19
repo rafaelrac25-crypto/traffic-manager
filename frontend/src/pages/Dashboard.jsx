@@ -58,16 +58,45 @@ const MOCK_METRICS = [
   },
 ];
 
-/* Dados do gráfico — 7 dias */
-const CHART_DATA = [
-  { label: '08 Abr', value: 82 },
-  { label: '09 Abr', value: 95 },
-  { label: '10 Abr', value: 72 },
-  { label: '11 Abr', value: 118 },
-  { label: '12 Abr', value: 166 },
-  { label: '13 Abr', value: 148 },
-  { label: '14 Abr', value: 158 },
-];
+/* Dados do gráfico — 7 dias, um dataset por métrica */
+const CHART_DATASETS = {
+  Resultados: {
+    unit: 'resultados',
+    data: [
+      { label: '08 Abr', value: 82 },
+      { label: '09 Abr', value: 95 },
+      { label: '10 Abr', value: 72 },
+      { label: '11 Abr', value: 118 },
+      { label: '12 Abr', value: 166 },
+      { label: '13 Abr', value: 148 },
+      { label: '14 Abr', value: 158 },
+    ],
+  },
+  Cliques: {
+    unit: 'cliques',
+    data: [
+      { label: '08 Abr', value: 612 },
+      { label: '09 Abr', value: 748 },
+      { label: '10 Abr', value: 530 },
+      { label: '11 Abr', value: 891 },
+      { label: '12 Abr', value: 1204 },
+      { label: '13 Abr', value: 1087 },
+      { label: '14 Abr', value: 1156 },
+    ],
+  },
+  Investimento: {
+    unit: 'reais',
+    data: [
+      { label: '08 Abr', value: 40 },
+      { label: '09 Abr', value: 45 },
+      { label: '10 Abr', value: 35 },
+      { label: '11 Abr', value: 60 },
+      { label: '12 Abr', value: 85 },
+      { label: '13 Abr', value: 75 },
+      { label: '14 Abr', value: 80 },
+    ],
+  },
+};
 
 /* ── Ícones SVG ── */
 function WalletIcon() {
@@ -991,7 +1020,11 @@ export default function Dashboard() {
               ))}
             </select>
           </div>
-          <LineChart data={CHART_DATA} />
+          <LineChart
+            key={chartMetric}
+            data={(CHART_DATASETS[chartMetric] || CHART_DATASETS.Resultados).data}
+            unit={(CHART_DATASETS[chartMetric] || CHART_DATASETS.Resultados).unit}
+          />
         </div>
       </div>
 
