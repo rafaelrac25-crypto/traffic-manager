@@ -121,7 +121,7 @@ function AdRow({ ad, isLast, highCpc, onToggle, onDuplicate, onEdit, onRemove })
   const fmtCurrency = v => v != null ? `R$ ${v.toFixed(2).replace('.', ',')}` : '—';
 
   const rowBg = isEnded
-    ? (hovered ? 'var(--c-hover)' : 'var(--c-surface)')
+    ? (hovered ? '#ECEEF1' : '#F3F4F6')
     : highCpc
       ? (hovered ? '#FEF2F2' : '#FFF5F5')
       : (hovered ? 'var(--c-surface)' : 'var(--c-card-bg)');
@@ -135,9 +135,9 @@ function AdRow({ ad, isLast, highCpc, onToggle, onDuplicate, onEdit, onRemove })
         background: rowBg,
         transition: 'background .12s',
         borderLeft: highCpc ? '3px solid #EF4444' : '3px solid transparent',
-        opacity: isEnded ? 0.62 : 1,
-        color: isEnded ? 'var(--c-text-4)' : undefined,
-        filter: isEnded ? 'grayscale(0.7)' : 'none',
+        opacity: isEnded ? 0.55 : 1,
+        color: isEnded ? '#9CA3AF' : undefined,
+        filter: isEnded ? 'grayscale(1)' : 'none',
       }}
     >
       {/* Anúncio */}
