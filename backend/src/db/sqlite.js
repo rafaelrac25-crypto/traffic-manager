@@ -49,11 +49,6 @@ db.exec(`
     updated_at TEXT DEFAULT (datetime('now'))
   );
 
-  CREATE TABLE IF NOT EXISTS alert_state (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL
-  );
-
   CREATE TABLE IF NOT EXISTS activity_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     action TEXT NOT NULL,

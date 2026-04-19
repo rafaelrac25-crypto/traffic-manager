@@ -37,11 +37,6 @@ CREATE TABLE IF NOT EXISTS platform_credentials (
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS alert_state (
-  key VARCHAR(100) PRIMARY KEY,
-  value TEXT NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS activity_log (
   id SERIAL PRIMARY KEY,
   action VARCHAR(100) NOT NULL,

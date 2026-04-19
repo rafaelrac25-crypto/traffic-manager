@@ -32,13 +32,10 @@ traffic-manager/
 │       ├── db/                   # SQLite (dev) / PostgreSQL (prod) — auto-detecta
 │       ├── routes/
 │       │   ├── campaigns.js      # CRUD campanhas + sync plataformas
-│       │   ├── platforms.js      # Conectar/desconectar Meta/Google
-│       │   └── alerts.js        # Alertas de orçamento WhatsApp
+│       │   └── platforms.js      # Conectar/desconectar Meta/Google
 │       ├── middleware/auth.js    # JWT — NÃO usado nas rotas (auth removida)
 │       ├── services/
-│       │   ├── metaAds.js        # API Meta Ads (mock)
-│       │   ├── whatsapp.js       # CallMeBot — envia alertas
-│       │   └── budgetAlert.js    # Lógica: saldo < R$20, a cada R$5, 1 dia restante
+│       │   └── metaAds.js        # API Meta Ads (mock)
 └── frontend/
     └── src/
         ├── App.jsx               # BrowserRouter — sem PrivateRoute, sem login
@@ -81,11 +78,6 @@ traffic-manager/
 |---|---|
 | `DATABASE_URL` | Neon PostgreSQL (sslmode=require) |
 | `JWT_SECRET` | Configurado no Vercel |
-| `CRON_SECRET` | Configurado no Vercel |
-| `ALERT_PHONE_1` | Configurado no Vercel |
-| `ALERT_PHONE_2` | Configurado no Vercel |
-| `ALERT_APIKEY_1` | **PENDENTE** — aguardando cadastro no CallMeBot |
-| `ALERT_APIKEY_2` | **PENDENTE** — aguardando cadastro no CallMeBot |
 | `NODE_ENV` | production |
 | `FRONTEND_URL` | https://traffic-manager-five.vercel.app |
 
@@ -109,11 +101,6 @@ npm run dev       # Vite na porta 5173
 PORT=3001
 JWT_SECRET=qualquer_string_para_dev_local
 FRONTEND_URL=http://localhost:5173
-ALERT_PHONE_1=PREENCHER_TELEFONE_1
-ALERT_APIKEY_1=PREENCHER_APIKEY_1
-ALERT_PHONE_2=PREENCHER_TELEFONE_2
-ALERT_APIKEY_2=PREENCHER_APIKEY_2
-CRON_SECRET=troque_por_string_aleatoria_segura
 ```
 
 ---
@@ -134,4 +121,3 @@ CRON_SECRET=troque_por_string_aleatoria_segura
 - [ ] Integração real Google Ads
 - [ ] Gráficos de evolução temporal de métricas
 - [ ] Histórico de métricas (dados mock hoje)
-- [ ] API keys CallMeBot (aguardando cadastro dos destinatários)

@@ -37,7 +37,6 @@ Ao receber uma tarefa sobre X, abra apenas os arquivos da linha correspondente.
 | Splash screen                                  | `src/components/SplashScreen.jsx`                                                |
 | CSS global / classes responsivas               | `src/index.css`                                                                  |
 | Backend — CRUD campanhas                       | `backend/src/routes/campaigns.js`                                                |
-| Backend — alertas WhatsApp                     | `backend/src/routes/alerts.js` + `backend/src/services/whatsapp.js` + `backend/src/services/budgetAlert.js` |
 | Backend — IA (rota)                            | `backend/src/routes/ai.js`                                                       |
 | Banco de dados                                 | `backend/src/db/index.js` (auto-detecta) + `sqlite.js` / `schema.sql`            |
 
@@ -149,11 +148,6 @@ Contexto único para estado que atravessa páginas. Persiste em `localStorage`.
 |------------------|---------------------------------------------------|
 | `DATABASE_URL`   | ✅ Neon PostgreSQL                                |
 | `JWT_SECRET`     | ✅                                                |
-| `CRON_SECRET`    | ✅                                                |
-| `ALERT_PHONE_1`  | ✅ Configurado no Vercel                          |
-| `ALERT_PHONE_2`  | ✅ Configurado no Vercel                          |
-| `ALERT_APIKEY_1` | ⏳ PENDENTE — aguardando cadastro no CallMeBot    |
-| `ALERT_APIKEY_2` | ⏳ PENDENTE — aguardando cadastro no CallMeBot    |
 | `GEMINI_API_KEY` | ⏳ Pendente configurar                            |
 | `NODE_ENV`       | ✅ production                                     |
 
@@ -165,7 +159,6 @@ Contexto único para estado que atravessa páginas. Persiste em `localStorage`.
 |-------------------------------------------|----------------|----------------------------|
 | Integração real Meta Ads API              | Plataformas    | Alta                       |
 | Integração real Google Ads                | Plataformas    | Alta                       |
-| `ALERT_APIKEY_1` e `_2` no Vercel         | Alertas        | Alta (aguardando usuários) |
 | `GEMINI_API_KEY` no Vercel                | IA             | Média                      |
 | Gráficos de evolução temporal (reais)     | Dashboard      | Média                      |
 

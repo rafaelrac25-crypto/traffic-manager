@@ -22,7 +22,6 @@ app.use((req, res, next) => {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/campaigns', require('./routes/campaigns'));
 app.use('/api/platforms', require('./routes/platforms'));
-app.use('/api/alerts', require('./routes/alerts'));
 app.use('/api/history', require('./routes/history'));
 app.use('/api/ai', require('./routes/ai'));
 
