@@ -1638,9 +1638,11 @@ export default function CreateAd() {
   const DEFAULT_QUICK_BUDGET = 25;
   const initialBudget = (source && source.budgetValue !== undefined)
     ? String(source.budgetValue ?? '')
-    : (commercialDate?.suggestedBudget?.daily
-        ? String(commercialDate.suggestedBudget.daily)
-        : (canReview ? String(DEFAULT_QUICK_BUDGET) : ''));
+    : (commercialDate?.dailyBudget
+        ? String(commercialDate.dailyBudget)
+        : (commercialDate?.suggestedBudget?.daily
+            ? String(commercialDate.suggestedBudget.daily)
+            : (canReview ? String(DEFAULT_QUICK_BUDGET) : '')));
 
   /* Normalizar schema do audience reusado para o Step2Audience */
   const normalizedAudienceLocations = normalizeAudienceLocations(quickFillAudience?.locations);

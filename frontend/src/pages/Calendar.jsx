@@ -15,7 +15,148 @@ function formatDateLong(d) {
   return `${String(d.getDate()).padStart(2, '0')} de ${['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'][d.getMonth()]} de ${d.getFullYear()}`;
 }
 
+const QUICK_DAILY_PRESETS = [15, 20, 30, 50];
+
+function BudgetPicker({ entry, dailyBudget, setDailyBudget, period, setPeriod }) {
+  const suggested = entry.suggestedBudget.daily;
+  const campaignDays = entry.daysBefore;
+
+  const multiplier = period === 'weekly' ? 7 : period === 'monthly' ? 30 : 1;
+  const periodLabel = period === 'weekly' ? 'por semana' : period === 'monthly' ? 'por mês' : 'por dia';
+  const periodShort = period === 'weekly' ? 'SEMANAL' : period === 'monthly' ? 'MENSAL' : 'POR DIA';
+
+  const displayedValue = Math.round(dailyBudget * multiplier);
+  const totalCampaign = Math.round(dailyBudget * campaignDays);
+  const diffFromSuggested = dailyBudget - suggested;
+
+  function handleInput(raw) {
+    const n = Number(raw.replace(/\D/g, ''));
+    if (!Number.isFinite(n)) return;
+    const asDaily = period === 'weekly' ? n / 7 : period === 'monthly' ? n / 30 : n;
+    setDailyBudget(Math.max(1, Math.round(asDaily)));
+  }
+
+  return (
+    <div style={{
+      padding: '14px 16px',
+      background: 'linear-gradient(135deg, rgba(214,141,143,.08), rgba(125,74,94,.04))',
+      border: '1px solid var(--c-border)',
+      borderRadius: '12px',
+      display: 'flex', flexDirection: 'column', gap: '12px',
+    }}>
+      {/* Toggle de período */}
+      <div style={{ display: 'flex', gap: '4px', background: 'var(--c-surface)', padding: '3px', borderRadius: '9px', width: 'fit-content' }}>
+        {[['daily','Diário'], ['weekly','Semanal'], ['monthly','Mensal']].map(([k, label]) => (
+          <button
+            key={k}
+            onClick={() => setPeriod(k)}
+            style={{
+              padding: '6px 12px', borderRadius: '7px', border: 'none',
+              background: period === k ? 'var(--c-card-bg)' : 'transparent',
+              color: period === k ? 'var(--c-accent)' : 'var(--c-text-3)',
+              fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+              boxShadow: period === k ? '0 1px 3px rgba(0,0,0,.06)' : 'none',
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Input editável + sugestão original */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+        <div style={{
+          padding: '10px 12px',
+          background: 'var(--c-card-bg)',
+          border: '1.5px solid var(--c-accent)',
+          borderRadius: '10px',
+          minWidth: '140px',
+        }}>
+          <div style={{ fontSize: '9.5px', fontWeight: 700, color: 'var(--c-text-4)', letterSpacing: '.6px', marginBottom: '3px' }}>
+            {periodShort}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+            <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-accent)' }}>R$</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={displayedValue}
+              onChange={e => handleInput(e.target.value)}
+              style={{
+                width: '70px', border: 'none', outline: 'none',
+                background: 'transparent', fontSize: '20px', fontWeight: 800,
+                color: 'var(--c-accent)', fontFamily: 'inherit', padding: 0,
+              }}
+            />
+          </div>
+        </div>
+        <div style={{ fontSize: '11px', color: 'var(--c-text-3)', lineHeight: 1.5 }}>
+          <div>Sugerido: <strong style={{ color: 'var(--c-text-1)' }}>R$ {suggested}/dia</strong></div>
+          <div style={{ color: diffFromSuggested < 0 ? '#16A34A' : diffFromSuggested > 0 ? '#EA580C' : 'var(--c-text-4)' }}>
+            {diffFromSuggested === 0
+              ? '= sugestão'
+              : diffFromSuggested < 0
+                ? `↓ R$ ${Math.abs(diffFromSuggested)}/dia abaixo`
+                : `↑ R$ ${diffFromSuggested}/dia acima`}
+          </div>
+        </div>
+      </div>
+
+      {/* Presets rápidos */}
+      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <span style={{ fontSize: '10.5px', color: 'var(--c-text-4)', fontWeight: 600 }}>Atalhos diários:</span>
+        {QUICK_DAILY_PRESETS.map(v => (
+          <button
+            key={v}
+            onClick={() => setDailyBudget(v)}
+            style={{
+              padding: '4px 10px', borderRadius: '14px',
+              border: `1.5px solid ${dailyBudget === v ? 'var(--c-accent)' : 'var(--c-border)'}`,
+              background: dailyBudget === v ? 'var(--c-active-bg)' : 'var(--c-card-bg)',
+              color: dailyBudget === v ? 'var(--c-accent)' : 'var(--c-text-2)',
+              fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            R$ {v}
+          </button>
+        ))}
+        <button
+          onClick={() => setDailyBudget(suggested)}
+          style={{
+            padding: '4px 10px', borderRadius: '14px',
+            border: `1.5px solid ${dailyBudget === suggested ? 'var(--c-accent)' : 'var(--c-border)'}`,
+            background: dailyBudget === suggested ? 'var(--c-active-bg)' : 'var(--c-card-bg)',
+            color: dailyBudget === suggested ? 'var(--c-accent)' : 'var(--c-text-2)',
+            fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+          }}
+        >
+          Sugerido (R$ {suggested})
+        </button>
+      </div>
+
+      {/* Resumo */}
+      <div style={{ fontSize: '11.5px', color: 'var(--c-text-2)', lineHeight: 1.6, borderTop: '1px dashed var(--c-border)', paddingTop: '10px' }}>
+        <div>
+          Campanha de <strong>{campaignDays} dia{campaignDays > 1 ? 's' : ''}</strong>: investimento total{' '}
+          <strong style={{ color: 'var(--c-accent)' }}>R$ {totalCampaign}</strong>
+          {' '}(R$ {dailyBudget} {periodLabel === 'por dia' ? 'por dia' : `· equivalente a R$ ${displayedValue} ${periodLabel}`})
+        </div>
+        <div style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '4px' }}>
+          {entry.suggestedBudget.reason}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CommercialDateModal({ entry, onClose, onCreateAd }) {
+  const [dailyBudget, setDailyBudget] = useState(entry?.suggestedBudget?.daily || 20);
+  const [period, setPeriod] = useState('daily');
+  useEffect(() => {
+    if (entry?.suggestedBudget?.daily) setDailyBudget(entry.suggestedBudget.daily);
+    setPeriod('daily');
+  }, [entry?.id]);
+
   if (!entry) return null;
   return (
     <div
@@ -89,36 +230,14 @@ function CommercialDateModal({ entry, onClose, onCreateAd }) {
           </Section>
 
           {entry.suggestedBudget && (
-            <Section title="Orçamento sugerido">
-              <div style={{
-                padding: '14px 16px',
-                background: 'linear-gradient(135deg, rgba(214,141,143,.08), rgba(125,74,94,.04))',
-                border: '1px solid var(--c-border)',
-                borderRadius: '12px',
-                display: 'flex', alignItems: 'center', gap: '14px',
-              }}>
-                <div style={{
-                  minWidth: '96px',
-                  padding: '10px 12px',
-                  background: 'var(--c-card-bg)',
-                  border: '1.5px solid var(--c-accent)',
-                  borderRadius: '10px',
-                  textAlign: 'center',
-                }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--c-text-4)', letterSpacing: '.6px', marginBottom: '2px' }}>POR DIA</div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--c-accent)', lineHeight: 1 }}>
-                    R$ {entry.suggestedBudget.daily}
-                  </div>
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
-                    Investimento total: R$ {entry.suggestedBudget.daily * entry.daysBefore} em {entry.daysBefore} dias
-                  </div>
-                  <div style={{ fontSize: '11.5px', color: 'var(--c-text-3)', lineHeight: 1.55 }}>
-                    {entry.suggestedBudget.reason}
-                  </div>
-                </div>
-              </div>
+            <Section title="Orçamento — ajuste para sua realidade">
+              <BudgetPicker
+                entry={entry}
+                dailyBudget={dailyBudget}
+                setDailyBudget={setDailyBudget}
+                period={period}
+                setPeriod={setPeriod}
+              />
             </Section>
           )}
 
@@ -156,7 +275,7 @@ function CommercialDateModal({ entry, onClose, onCreateAd }) {
             }}
           >Fechar</button>
           <button
-            onClick={() => onCreateAd(entry)}
+            onClick={() => onCreateAd(entry, { dailyBudget })}
             style={{
               padding: '10px 18px', borderRadius: '10px',
               border: 'none', background: 'var(--c-accent)',
@@ -164,7 +283,7 @@ function CommercialDateModal({ entry, onClose, onCreateAd }) {
               display: 'flex', alignItems: 'center', gap: '6px',
             }}
           >
-            <PlusIcon /> Criar anúncio para esta data
+            <PlusIcon /> Criar anúncio · R$ {dailyBudget}/dia
           </button>
         </div>
       </div>
@@ -416,7 +535,8 @@ export default function Calendar() {
 
   function openCommercialModal(entry) { setModalEntry(entry); }
   function closeCommercialModal() { setModalEntry(null); }
-  function createAdForDate(entry) {
+  function createAdForDate(entry, overrides = {}) {
+    const dailyBudget = overrides.dailyBudget ?? entry.suggestedBudget?.daily;
     navigate('/criar-anuncio', { state: { commercialDate: {
       id: entry.id,
       name: entry.name,
@@ -424,6 +544,7 @@ export default function Calendar() {
       dateISO: entry.date.toISOString(),
       daysBefore: entry.daysBefore,
       preFill: entry.preFill,
+      dailyBudget,
     } } });
   }
 
