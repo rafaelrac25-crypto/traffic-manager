@@ -453,19 +453,19 @@ function DistrictAnalyzer() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
         <input
           type="text"
-          placeholder="Ex.: Saguaçu, Glória, Costa e Silva…"
+          placeholder="Digite um bairro de Joinville…"
           value={query}
           onChange={e => { setQuery(e.target.value); setNoMatch(false); }}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); runAnalyze(); } }}
           list="joinville-districts-datalist"
           style={{
-            flex: 1, minWidth: '200px', padding: '10px 14px',
-            border: '1.5px solid var(--c-border)', borderRadius: '10px',
-            background: 'var(--c-card-bg)', color: 'var(--c-text-1)',
-            fontSize: '13px', fontFamily: 'inherit', outline: 'none',
+            flex: 1, minWidth: '180px', padding: '7px 12px',
+            border: '1px solid var(--c-border)', borderRadius: '8px',
+            background: 'var(--c-surface)', color: 'var(--c-text-2)',
+            fontSize: '12px', fontFamily: 'inherit', outline: 'none',
           }}
         />
         <datalist id="joinville-districts-datalist">
@@ -474,30 +474,14 @@ function DistrictAnalyzer() {
         <button
           onClick={() => runAnalyze()}
           style={{
-            padding: '10px 18px', borderRadius: '10px',
-            border: 'none', background: 'var(--c-accent)',
-            color: '#fff', fontSize: '13px', fontWeight: 700,
+            padding: '7px 14px', borderRadius: '8px',
+            border: '1px solid var(--c-border)', background: 'var(--c-card-bg)',
+            color: 'var(--c-text-2)', fontSize: '12px', fontWeight: 600,
             cursor: 'pointer', whiteSpace: 'nowrap',
           }}
         >
           Analisar
         </button>
-      </div>
-
-      <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: '10px', color: 'var(--c-text-4)', marginRight: '4px', alignSelf: 'center' }}>Atalhos:</span>
-        {['Boa Vista', 'Glória', 'Saguaçu', 'América', 'Atiradores'].map(n => (
-          <button
-            key={n}
-            onClick={() => { setQuery(n); runAnalyze(n); }}
-            style={{
-              padding: '4px 10px', borderRadius: '16px',
-              border: '1px dashed var(--c-border)', background: 'transparent',
-              color: 'var(--c-text-3)', fontSize: '10.5px', fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >{n}</button>
-        ))}
       </div>
 
       {noMatch && (
