@@ -197,10 +197,10 @@ function LineChart({ data, unit = 'resultados' }) {
     ? `${pts[i0].label} → ${pts[i1].label}`
     : (lerpT < 0.5 ? pts[i0].label : pts[i1].label);
 
-  const TOOLTIP_W = showInterpolated ? 120 : 100;
-  const TOOLTIP_H = 44;
+  const TOOLTIP_W = showInterpolated ? 96 : 78;
+  const TOOLTIP_H = 36;
   const tooltipCenterX = Math.max(padL + TOOLTIP_W/2, Math.min(W - padR - TOOLTIP_W/2, activeX));
-  const tooltipY = Math.max(4, activeY - TOOLTIP_H - 14);
+  const tooltipY = Math.max(4, activeY - TOOLTIP_H - 12);
 
   return (
     <svg
@@ -306,43 +306,44 @@ function LineChart({ data, unit = 'resultados' }) {
         style={{ filter: 'drop-shadow(0 2px 6px rgba(214,141,143,.45))' }}
       />
 
-      {/* Tooltip diagramado com data e valor centralizados */}
-      <g>
+      {/* Tooltip refinado — compacto, tipografia leve, sombra suave */}
+      <g style={{ pointerEvents: 'none' }}>
         <rect
           x={tooltipCenterX - TOOLTIP_W/2}
           y={tooltipY}
           width={TOOLTIP_W}
           height={TOOLTIP_H}
-          rx="10"
+          rx="8"
           fill="#d68d8f"
-          style={{ filter: 'drop-shadow(0 6px 14px rgba(214,141,143,.4))' }}
+          style={{ filter: 'drop-shadow(0 3px 8px rgba(214,141,143,.28))' }}
         />
-        {/* Pequena flecha abaixo do retângulo, apontando pro ponto */}
+        {/* Flecha discreta abaixo do retângulo */}
         <path
-          d={`M ${activeX - 5} ${tooltipY + TOOLTIP_H} L ${activeX} ${tooltipY + TOOLTIP_H + 6} L ${activeX + 5} ${tooltipY + TOOLTIP_H} Z`}
+          d={`M ${activeX - 3.5} ${tooltipY + TOOLTIP_H - 0.5} L ${activeX} ${tooltipY + TOOLTIP_H + 4} L ${activeX + 3.5} ${tooltipY + TOOLTIP_H - 0.5} Z`}
           fill="#d68d8f"
         />
         <text
           x={tooltipCenterX}
-          y={tooltipY + 17}
-          fontSize="10.5"
+          y={tooltipY + 13.5}
+          fontSize="8.5"
           fill="white"
           textAnchor="middle"
-          fontWeight="800"
-          style={{ letterSpacing: '.3px' }}
+          fontWeight="600"
+          opacity="0.78"
+          style={{ letterSpacing: '.4px', textTransform: 'uppercase' }}
         >
           {activeLabel}
         </text>
         <text
           x={tooltipCenterX}
-          y={tooltipY + 34}
-          fontSize="12"
+          y={tooltipY + 27}
+          fontSize="11.5"
           fill="white"
           textAnchor="middle"
           fontWeight="700"
-          opacity="0.98"
         >
-          {activeValue} <tspan fontSize="10" fontWeight="500" opacity="0.85">{unit}</tspan>
+          {activeValue}
+          <tspan fontSize="8.5" fontWeight="500" opacity="0.72" dx="2.5">{unit}</tspan>
         </text>
       </g>
     </svg>
