@@ -245,7 +245,9 @@ function MapClickHandler({ onAdd, radius }) {
 function MapFlyTo({ center }) {
   const map = useMap();
   useEffect(() => {
-    if (center) map.flyTo(center, 11, { duration: 1 });
+    /* Pan suave até o novo ponto, mantendo o zoom atual
+       (antes usava flyTo com zoom 11, que tirava o usuário do nível em que estava). */
+    if (center) map.panTo(center, { animate: true, duration: 0.6 });
   }, [center?.[0], center?.[1]]);
   return null;
 }
@@ -829,11 +831,6 @@ function RingBudgetSplit({ locations, budgetValue, budgetType, split, setSplit }
         {balanced ? `✅ Total: 100% · R$\u00A0${value.toFixed(2).replace('.', ',')} distribuídos` : `⚠️ Total: ${total}% — ajuste para fechar 100%`}
       </div>
 
-      {buckets.fora.length > 0 && (
-        <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--c-text-4)', fontStyle: 'italic' }}>
-          ℹ️ {buckets.fora.length} localização(ões) fora do raio de 8 km ({buckets.fora.map(l => l.name).join(', ')}) — não entra no split por anel.
-        </div>
-      )}
     </div>
   );
 }

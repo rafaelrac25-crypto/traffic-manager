@@ -157,8 +157,8 @@ function ClockIcon() {
 }
 /* ── Gráfico de duas linhas (Investimento + Cliques) com escalas independentes ── */
 function DualLineChart({ series }) {
-  const W = 540, H = 200;
-  const padL = 40, padR = 20, padT = 20, padB = 30;
+  const W = 540, H = 160;
+  const padL = 34, padR = 14, padT = 10, padB = 22;
   const plotW = W - padL - padR;
   const plotH = H - padT - padB;
   const svgRef = useRef(null);
@@ -168,7 +168,7 @@ function DualLineChart({ series }) {
   const [isHovering, setIsHovering] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
-  /* Cada série é normalizada para seu próprio máximo */
+  /* Cada série normalizada para seu próprio máximo (com 10% de folga no topo) */
   const normalized = series.map(s => {
     const max = Math.max(...s.data.map(d => d.value)) * 1.1 || 1;
     const pts = s.data.map((d, i) => ({
@@ -189,6 +189,12 @@ function DualLineChart({ series }) {
       d += ` C ${cpx},${p0.y} ${cpx},${p1.y} ${p1.x},${p1.y}`;
     }
     return d;
+  }
+  function areaPath(points) {
+    const lp = smoothPath(points);
+    const last = points[points.length - 1];
+    const first = points[0];
+    return `${lp} L ${last.x},${padT + plotH} L ${first.x},${padT + plotH} Z`;
   }
 
   function updateCursor(clientX) {
@@ -214,19 +220,28 @@ function DualLineChart({ series }) {
     y: s.pts[i0].y + (s.pts[i1].y - s.pts[i0].y) * lerpT,
   }));
 
-  const TOOLTIP_W = 130;
-  const TOOLTIP_H = 52;
+  const TOOLTIP_W = 128;
+  const TOOLTIP_H = 48;
   const tooltipCenterX = Math.max(padL + TOOLTIP_W/2, Math.min(W - padR - TOOLTIP_W/2, activeX));
-  const tooltipY = Math.max(4, Math.min(...activeValues.map(v => v.y)) - TOOLTIP_H - 10);
+  const tooltipY = Math.max(4, Math.min(...activeValues.map(v => v.y)) - TOOLTIP_H - 8);
+
+  /* Cores de degradê por série */
+  const gradients = {
+    '#d68d8f': { from: '#E879A8', to: '#d68d8f' },
+    '#3B82F6': { from: '#60A5FA', to: '#2563EB' },
+  };
 
   return (
     <>
-      {/* Legenda */}
-      <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginBottom: '8px' }}>
+      {/* Legenda inline, compacta */}
+      <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '6px', padding: '0 2px' }}>
         {series.map(s => (
           <div key={s.name} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ width: '16px', height: '3px', borderRadius: '2px', background: s.color, display: 'inline-block' }} />
-            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--c-text-2)' }}>{s.name}</span>
+            <span style={{
+              width: '14px', height: '2.5px', borderRadius: '2px',
+              background: `linear-gradient(90deg, ${gradients[s.color]?.from || s.color}, ${gradients[s.color]?.to || s.color})`,
+            }} />
+            <span style={{ fontSize: '10.5px', fontWeight: 600, color: 'var(--c-text-3)' }}>{s.name}</span>
           </div>
         ))}
       </div>
@@ -244,44 +259,88 @@ function DualLineChart({ series }) {
         onTouchMove={e => { const t = e.touches[0]; if (t) updateCursor(t.clientX); }}
         onTouchEnd={() => setIsDragging(false)}
       >
-        {/* Grid horizontal */}
-        {[0, 0.25, 0.5, 0.75, 1].map(t => {
+        <defs>
+          {series.map(s => {
+            const g = gradients[s.color] || { from: s.color, to: s.color };
+            return (
+              <React.Fragment key={s.name}>
+                <linearGradient id={`line-${s.name}`} x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%"   stopColor={g.from}/>
+                  <stop offset="100%" stopColor={g.to}/>
+                </linearGradient>
+                <linearGradient id={`fill-${s.name}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%"   stopColor={s.color} stopOpacity="0.18"/>
+                  <stop offset="100%" stopColor={s.color} stopOpacity="0"/>
+                </linearGradient>
+              </React.Fragment>
+            );
+          })}
+        </defs>
+
+        {/* Grid horizontal muito sutil */}
+        {[0, 0.5, 1].map(t => {
           const y = padT + plotH - t * plotH;
-          return <line key={t} x1={padL} y1={y} x2={W - padR} y2={y} stroke="var(--c-border-lt)" strokeWidth="1" strokeDasharray="4,4"/>;
+          return <line key={t} x1={padL} y1={y} x2={W - padR} y2={y} stroke="var(--c-border-lt)" strokeWidth="1" strokeDasharray="3,5" opacity="0.6"/>;
         })}
 
-        {/* Linhas + área suave de cada série */}
+        {/* Áreas suaves (fill) embaixo de cada linha */}
+        {normalized.map(s => (
+          <path key={`fill-${s.name}`} d={areaPath(s.pts)} fill={`url(#fill-${s.name})`} />
+        ))}
+
+        {/* Linhas com degradê + pontos */}
         {normalized.map(s => (
           <g key={s.name}>
-            <path d={smoothPath(s.pts)} fill="none" stroke={s.color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path
+              d={smoothPath(s.pts)}
+              fill="none"
+              stroke={`url(#line-${s.name})`}
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
             {s.pts.map((pt, i) => {
               const dist = Math.abs(i - cursorFrac);
               const weight = Math.max(0, 1 - dist);
               return (
-                <circle key={i} cx={pt.x} cy={pt.y} r={2 + weight * 1.5} fill="#fff" stroke={s.color} strokeWidth={1.5 + weight * 0.6} />
+                <circle key={i} cx={pt.x} cy={pt.y} r={1.8 + weight * 1.4} fill="#fff" stroke={s.color} strokeWidth={1.3 + weight * 0.5} />
               );
             })}
           </g>
         ))}
 
         {/* Labels do eixo X */}
-        {normalized[0]?.pts.map((pt, i) => (
-          <text key={i} x={pt.x} y={H - 4} fontSize="9" fill="var(--c-text-4)" textAnchor="middle">
-            {pt.label}
-          </text>
-        ))}
+        {normalized[0]?.pts.map((pt, i) => {
+          const dist = Math.abs(i - cursorFrac);
+          const isNear = dist < 0.5;
+          return (
+            <text
+              key={i}
+              x={pt.x}
+              y={H - 4}
+              fontSize="9"
+              fill={isNear ? 'var(--c-text-2)' : 'var(--c-text-4)'}
+              fontWeight={isNear ? 600 : 400}
+              textAnchor="middle"
+              style={{ transition: 'fill .18s' }}
+            >
+              {pt.label}
+            </text>
+          );
+        })}
 
-        {/* Cursor vertical */}
+        {/* Cursor vertical fino */}
         <line
           x1={activeX} y1={padT}
           x2={activeX} y2={padT + plotH}
-          stroke="var(--c-text-4)" strokeWidth="1" strokeDasharray="3,3"
-          opacity={isHovering ? 0.6 : 0.3}
+          stroke="var(--c-text-4)" strokeWidth="1" strokeDasharray="2,3"
+          opacity={isHovering ? 0.45 : 0.2}
+          style={{ transition: 'opacity .18s' }}
         />
 
         {/* Pontos ativos em cada linha */}
         {activeValues.map(v => (
-          <circle key={v.name} cx={activeX} cy={v.y} r={5} fill={v.color} stroke="#fff" strokeWidth="2" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,.2))' }} />
+          <circle key={v.name} cx={activeX} cy={v.y} r={4} fill={v.color} stroke="#fff" strokeWidth="1.8" style={{ filter: 'drop-shadow(0 2px 3px rgba(0,0,0,.18))' }} />
         ))}
 
         {/* Tooltip com as 2 séries */}
@@ -293,18 +352,18 @@ function DualLineChart({ series }) {
             height={TOOLTIP_H}
             rx="8"
             fill="var(--c-text-1)"
-            style={{ filter: 'drop-shadow(0 3px 8px rgba(0,0,0,.18))' }}
+            style={{ filter: 'drop-shadow(0 3px 6px rgba(0,0,0,.16))' }}
           />
-          <text x={tooltipCenterX} y={tooltipY + 13} fontSize="8.5" fill="#fff" textAnchor="middle" fontWeight="600" opacity="0.75" style={{ letterSpacing: '.4px', textTransform: 'uppercase' }}>
+          <text x={tooltipCenterX} y={tooltipY + 12.5} fontSize="8.5" fill="#fff" textAnchor="middle" fontWeight="600" opacity="0.72" style={{ letterSpacing: '.4px', textTransform: 'uppercase' }}>
             {activeLabel}
           </text>
           {activeValues.map((v, idx) => (
             <g key={v.name}>
-              <circle cx={tooltipCenterX - TOOLTIP_W/2 + 10} cy={tooltipY + 26 + idx * 12} r="3" fill={v.color} />
-              <text x={tooltipCenterX - TOOLTIP_W/2 + 18} y={tooltipY + 29 + idx * 12} fontSize="10" fill="#fff" fontWeight="600">
-                {v.name}:
+              <circle cx={tooltipCenterX - TOOLTIP_W/2 + 10} cy={tooltipY + 24 + idx * 11} r="2.5" fill={v.color} />
+              <text x={tooltipCenterX - TOOLTIP_W/2 + 17} y={tooltipY + 27 + idx * 11} fontSize="9.5" fill="#fff" fontWeight="600">
+                {v.name}
                 <tspan fontWeight="700" dx="4">{v.unit === 'reais' ? 'R$\u00A0' : ''}{v.value.toLocaleString('pt-BR')}</tspan>
-                <tspan fontSize="8.5" fontWeight="500" opacity="0.75" dx="3">{v.unit !== 'reais' ? v.unit : ''}</tspan>
+                <tspan fontSize="8" fontWeight="500" opacity="0.7" dx="3">{v.unit !== 'reais' ? v.unit : ''}</tspan>
               </text>
             </g>
           ))}
