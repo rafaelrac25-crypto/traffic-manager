@@ -21,6 +21,15 @@ import {
   distanceKm,
   ringByDistance,
 } from '../data/joinvilleDistricts';
+import { toMetaPayload, newMetaIds } from '../utils/metaNormalize';
+
+// Geofence: aceita localizações até 60km da clínica (Joinville + região metropolitana)
+const JOINVILLE_MAX_RADIUS_KM = 60;
+
+function isWithinJoinville(lat, lng) {
+  const d = distanceKm(HOME_COORDS, { lat, lng });
+  return { ok: d <= JOINVILLE_MAX_RADIUS_KM, distance: d };
+}
 
 /* ── Fix Leaflet icons no Vite ── */
 delete L.Icon.Default.prototype._getIconUrl;
@@ -222,9 +231,14 @@ function StepIndicator({ steps, current }) {
    MAPA — sub-componentes internos
 ══════════════════════════════════════════ */
 
-function MapClickHandler({ onAdd, radius }) {
+function MapClickHandler({ onAdd, radius, onReject }) {
   useMapEvents({
     click: async ({ latlng: { lat, lng } }) => {
+      const geo = isWithinJoinville(lat, lng);
+      if (!geo.ok) {
+        onReject?.(geo.distance);
+        return;
+      }
       try {
         const r = await fetch(
           `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
@@ -308,6 +322,7 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
   const [customRadius, setCustomRadius] = useState('');
   const [editingRadius, setEditingRadius] = useState(false);
   const [newInt, setNewInt]         = useState('');
+  const [locationError, setLocationError] = useState('');
   const debounceRef                 = useRef(null);
 
   const activeRadius = editingRadius ? (Number(customRadius) || radius) : radius;
@@ -339,14 +354,27 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
   }
 
   function addFromResult(r) {
+    const lat = parseFloat(r.lat);
+    const lng = parseFloat(r.lon);
+    const geo = isWithinJoinville(lat, lng);
+    if (!geo.ok) {
+      setLocationError(`Essa localização está a ${geo.distance.toFixed(0)}km de Joinville. A Cris atende apenas Joinville e região (até ${JOINVILLE_MAX_RADIUS_KM}km).`);
+      setTimeout(() => setLocationError(''), 5000);
+      return;
+    }
     setLocations(prev => [...prev, {
       id: Date.now(),
       name: r.display_name.split(',').slice(0, 2).join(',').trim(),
-      lat: parseFloat(r.lat),
-      lng: parseFloat(r.lon),
+      lat,
+      lng,
       radius: activeRadius,
     }]);
     setQuery(''); setResults([]); setHighlighted(0);
+  }
+
+  function rejectOutOfBounds(distance) {
+    setLocationError(`Clique fora da área atendida (${distance.toFixed(0)}km de Joinville). Limite: ${JOINVILLE_MAX_RADIUS_KM}km.`);
+    setTimeout(() => setLocationError(''), 5000);
   }
 
   function onKeyDown(e) {
@@ -385,6 +413,17 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
         <SectionLabel sub="Digite o nome do bairro ou cidade — pressione Enter ou ↑↓ para navegar e selecionar. Você também pode clicar diretamente no mapa.">
           Localização
         </SectionLabel>
+
+        {locationError && (
+          <div role="alert" style={{
+            padding: '10px 12px', marginBottom: '10px', borderRadius: '10px',
+            background: 'rgba(220, 38, 38, 0.08)', border: '1px solid rgba(220, 38, 38, 0.3)',
+            color: '#B91C1C', fontSize: '12px', fontWeight: 600,
+            display: 'flex', alignItems: 'center', gap: '8px',
+          }}>
+            🚫 {locationError}
+          </div>
+        )}
 
         {/* Barra de busca + raio */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
@@ -521,7 +560,7 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
               attribution='© <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            <MapClickHandler onAdd={loc => setLocations(prev => [...prev, loc])} radius={activeRadius} />
+            <MapClickHandler onAdd={loc => setLocations(prev => [...prev, loc])} radius={activeRadius} onReject={rejectOutOfBounds} />
             <MapFlyTo center={mapCenter} />
 
             {/* Anéis de potencial centrados na clínica (Boa Vista) */}
@@ -1592,7 +1631,7 @@ export default function CreateAd() {
     cta: referenceRef.cta === 'Enviar mensagem' ? 'WhatsApp' : referenceRef.cta,
   } : null);
   const reviewMode = !!location.state?.reviewMode || !!referenceRef;
-  const { addNotification, addAd, updateAd, getAdById, audiences, creatives, addCreative, markCreativeUsed, removeRejectedAd, logHistory } = useAppState();
+  const { addNotification, addAd, updateAd, getAdById, audiences, creatives, addCreative, markCreativeUsed, removeRejectedAd, logHistory, pixel, metaAccount } = useAppState();
   const editId = location.state?.editId || null;
   const editingAd = editId ? getAdById(editId) : null;
 
@@ -1711,9 +1750,14 @@ export default function CreateAd() {
   function validateStep(s) {
     const errs = {};
     if (s === 0 && !objective) errs.objective = 'Selecione um objetivo para continuar.';
+    if (s === 1 && (!locations || locations.length === 0)) {
+      errs.locations = 'Adicione ao menos uma localização (Joinville ou região).';
+    }
     if (s === 2 && (!budgetValue || Number(budgetValue) <= 0)) errs.budgetValue = 'Defina um valor de orçamento maior que zero.';
     if (s === 3) {
+      if (!adFormat) errs.adFormat = 'Escolha o formato do anúncio.';
       if (!primaryText.trim()) errs.primaryText = 'O texto principal é obrigatório.';
+      if (!headline.trim()) errs.headline = 'O título é obrigatório.';
       const messageCTAs = ['WhatsApp', 'Enviar mensagem', 'Mande uma mensagem', 'Chamar agora'];
       const needsUrl = !messageCTAs.includes(ctaButton);
       if (needsUrl && !destUrl.trim()) errs.destUrl = 'Com este CTA é preciso informar um destino.';
@@ -1722,24 +1766,101 @@ export default function CreateAd() {
     return errs;
   }
 
+  // Revalidação completa de todos os steps antes de publicar.
+  // Evita estado inconsistente quando usuário volta, muda campos e pula pra Review.
+  function validateAll() {
+    const all = {};
+    for (let i = 0; i <= 3; i++) Object.assign(all, validateStep(i));
+    return all;
+  }
+
   const todayISO = new Date().toISOString().split('T')[0];
   const isScheduled = !!startDate && startDate > todayISO;
 
   function handlePublish() {
+    // Revalidação final — evita estado inválido após navegar entre steps.
+    const finalErrs = validateAll();
+    if (Object.keys(finalErrs).length > 0) {
+      setErrors(finalErrs);
+      const firstStepWithError = [0, 1, 2, 3].find(i => Object.keys(validateStep(i)).length > 0);
+      if (firstStepWithError !== undefined) setStep(firstStepWithError);
+      addNotification({
+        kind: 'warning',
+        title: 'Faltam campos obrigatórios',
+        message: 'Revise os passos destacados antes de publicar.',
+      });
+      return;
+    }
+
+    // Validar conta Meta conectada
+    if (!metaAccount?.connected && !metaAccount?.pageId) {
+      addNotification({
+        kind: 'warning',
+        title: 'Conta Meta não conectada',
+        message: 'Conecte sua conta Meta em Plataformas antes de publicar. O anúncio será salvo como rascunho.',
+      });
+    }
+
     setPublishing(true);
     const adName = (headline || primaryText.slice(0, 40) || (commercialDate?.name ?? 'Novo anúncio')).trim();
+
+    // IDs Meta fake (serão substituídos pelos reais no primeiro sync).
+    // No edit, mantém os IDs anteriores.
+    const metaIds = editingAd?.metaCampaignId
+      ? {
+          metaCampaignId: editingAd.metaCampaignId,
+          metaAdSetId:    editingAd.metaAdSetId,
+          metaAdId:       editingAd.metaAdId,
+          metaCreativeId: editingAd.metaCreativeId,
+          imageHash:      editingAd.imageHash,
+        }
+      : newMetaIds();
+
+    // Serializa mediaFiles pra state — File objects perdem ao reload,
+    // guardamos só os metadados + URLs temporárias pra preview.
+    const serializedMedia = (mediaFiles || []).map(m => ({
+      id:   m.id,
+      url:  m.url,
+      type: m.type,
+      name: m.name,
+    }));
+
+    // Referências (em vez de duplicar) quando o user reusa audience/creative
+    const audienceId = reuseAudience?.id || null;
+    const creativeId = reuseCreative?.id || null;
+    const referenceId = referenceRef?.id || null;
+
     const adPayload = {
       name: adName,
       platform: 'instagram',
       status: isScheduled ? 'review' : 'review',
+
+      // Orçamento (local)
       budget: Number(budgetValue) || 0,
       budgetValue: Number(budgetValue) || 0,
       budgetType, startDate, endDate,
       budgetRingSplit,
+
+      // Público (local)
       objective, locations, ageRange, gender, interests,
+
+      // Criativo (local)
       adFormat, primaryText, headline, destUrl, ctaButton,
+      mediaFiles: serializedMedia,
+
+      // Referências a outras entidades salvas
+      audienceId, creativeId, referenceId,
       commercialDateId: commercialDate?.id || null,
+
+      // Integração Meta
+      pixelId:       pixel?.enabled ? pixel.pixelId : null,
+      metaAccountId: metaAccount?.pageId || null,
+      ...metaIds,
     };
+
+    // Anexa o payload no schema Meta v20 (pronto pra sync real)
+    adPayload.meta = toMetaPayload(adPayload);
+
     let publishedAd = null;
     if (editingAd) {
       updateAd(editingAd.id, adPayload);
@@ -1747,8 +1868,11 @@ export default function CreateAd() {
     } else {
       publishedAd = addAd(adPayload);
     }
-    if (primaryText && headline) {
+    // Cria criativo reutilizável apenas se o user NÃO reusou um existente
+    if (!reuseCreative && primaryText && headline) {
       addCreative({ name: headline, primaryText, headline, destUrl, ctaButton, adFormat });
+    } else if (reuseCreative?.id) {
+      markCreativeUsed?.(reuseCreative.id);
     }
     logHistory({
       type: fixMode ? 'ad-corrected' : (editingAd ? 'ad-updated' : 'ad-published'),
