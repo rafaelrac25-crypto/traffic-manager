@@ -522,3 +522,96 @@ input[type="range"] { accent-color: #d68d8f; }
     grid-template-columns: 1fr !important;
   }
 }
+
+/* ============================================================
+   MELHORIAS GLOBAIS MOBILE
+   Regras que garantem uma boa experiência em telas < 768px
+   ============================================================ */
+
+@media (max-width: 768px) {
+  /* Padding confortável sem desperdiçar espaço */
+  .page-container {
+    padding: 14px 12px !important;
+  }
+
+  /* Headings menores em mobile (evita quebras feias) */
+  .page-container h1 {
+    font-size: 19px !important;
+    line-height: 1.25;
+  }
+
+  /* Cards com menos padding */
+  .ccb-card {
+    padding: 14px !important;
+  }
+
+  /* Tabelas: scroll horizontal com indicador de borda */
+  .ads-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 12px;
+    position: relative;
+  }
+  .ads-table-wrapper::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 14px; height: 100%;
+    pointer-events: none;
+    background: linear-gradient(to right, transparent, rgba(0,0,0,.06));
+    border-radius: 0 12px 12px 0;
+  }
+
+  /* Botões de ação com área tocável mínima (Apple HIG / Material) */
+  .page-container button:not(.no-touch) {
+    min-height: 40px;
+  }
+
+  /* Modais ocupam quase a tela inteira em mobile */
+  [data-modal="true"] {
+    max-width: 96vw !important;
+    max-height: 92vh !important;
+  }
+
+  /* Grids auto-fit com minmax alto quebram — força 1 coluna */
+  .auto-fit-mobile {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Inputs maiores, fontes legíveis sem zoom automático no iOS */
+  .page-container input,
+  .page-container select,
+  .page-container textarea {
+    font-size: 16px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-container h1 {
+    font-size: 18px !important;
+  }
+  .page-container h2 {
+    font-size: 15px !important;
+  }
+}
+
+/* Reports: ring-mini-row vira empilhado em mobile */
+@media (max-width: 640px) {
+  .ring-mini-row {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 4px 10px !important;
+    font-size: 11.5px !important;
+  }
+  .ring-mini-row > :first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Esconde scrollbar mas mantém rolagem em tabelas mobile */
+.ads-table-wrapper::-webkit-scrollbar {
+  height: 6px;
+}
+.ads-table-wrapper::-webkit-scrollbar-thumb {
+  background: var(--c-border);
+  border-radius: 4px;
+}

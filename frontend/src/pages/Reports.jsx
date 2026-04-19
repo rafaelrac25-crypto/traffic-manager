@@ -152,7 +152,7 @@ function MiniStat({ label, value, sub, emphasize, warning }) {
 function RingMiniRow({ ring, isBest, totalConversions }) {
   const convShare = totalConversions > 0 ? (ring.conversions / totalConversions) * 100 : 0;
   return (
-    <div style={{
+    <div className="ring-mini-row" style={{
       display: 'grid',
       gridTemplateColumns: 'minmax(120px,1.2fr) 70px 70px 90px 80px',
       alignItems: 'center',
