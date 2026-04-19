@@ -354,6 +354,8 @@ export default function Campaigns() {
   const [platformFilter, setPlatformFilter] = useState('');
   const [page, setPage] = useState(1);
   const [reportOpen, setReportOpen] = useState(true);
+  const [sortKey, setSortKey] = useState(null);
+  const [sortDir, setSortDir] = useState('desc');
 
   const allAds = [...userAds, ...MOCK_ADS];
   const TOTAL = allAds.length;
@@ -362,11 +364,40 @@ export default function Campaigns() {
     navigate('/criar-anuncio', { state: { editId: ad.id } });
   }
 
+  function handleSort(key) {
+    if (!key) return;
+    if (sortKey === key) {
+      setSortDir(d => d === 'desc' ? 'asc' : 'desc');
+    } else {
+      setSortKey(key);
+      setSortDir('desc');
+    }
+  }
+
   const filtered = allAds.filter(ad => {
     if (statusFilter && ad.status !== statusFilter) return false;
     if (platformFilter && ad.platform !== platformFilter) return false;
     return true;
   });
+
+  const sorted = sortKey
+    ? [...filtered].sort((a, b) => {
+        const va = a[sortKey];
+        const vb = b[sortKey];
+        const aNull = va == null;
+        const bNull = vb == null;
+        if (aNull && bNull) return 0;
+        if (aNull) return 1;
+        if (bNull) return -1;
+        let cmp;
+        if (typeof va === 'number' && typeof vb === 'number') {
+          cmp = va - vb;
+        } else {
+          cmp = String(va).localeCompare(String(vb), 'pt-BR', { sensitivity: 'base' });
+        }
+        return sortDir === 'desc' ? -cmp : cmp;
+      })
+    : filtered;
 
   const validCostPerResult = allAds.map(a => a.costPerResult).filter(v => v != null);
   const avgCostPerResult = validCostPerResult.length
@@ -463,27 +494,50 @@ export default function Campaigns() {
           <thead>
             <tr style={{ background: 'var(--c-surface)', borderBottom: '1px solid var(--c-border)' }}>
               {[
-                { label: 'ANÚNCIO',           w: 'auto' },
-                { label: 'PLATAFORMA',        w: '120px' },
-                { label: 'SITUAÇÃO',          w: '130px' },
-                { label: 'INVESTIMENTO',      w: '130px' },
-                { label: 'RESULTADOS',        w: '110px' },
-                { label: 'CLIQUES',           w: '90px' },
-                { label: 'CUSTO POR RESULT.', w: '140px' },
-                { label: 'AÇÕES',             w: '140px' },
-              ].map(({ label, w }) => (
-                <th key={label} style={{
-                  padding: '12px 16px', textAlign: 'left', fontSize: '10px',
-                  fontWeight: 700, color: 'var(--c-text-4)',
-                  letterSpacing: '.7px', whiteSpace: 'nowrap', width: w,
-                }}>
-                  {label}
-                </th>
-              ))}
+                { label: 'ANÚNCIO',           w: 'auto',   key: 'name' },
+                { label: 'PLATAFORMA',        w: '120px',  key: 'platform' },
+                { label: 'SITUAÇÃO',          w: '130px',  key: 'status' },
+                { label: 'INVESTIMENTO',      w: '130px',  key: 'budget' },
+                { label: 'RESULTADOS',        w: '110px',  key: 'results' },
+                { label: 'CLIQUES',           w: '90px',   key: 'clicks' },
+                { label: 'CUSTO POR RESULT.', w: '140px',  key: 'costPerResult' },
+                { label: 'AÇÕES',             w: '140px',  key: null },
+              ].map(({ label, w, key }) => {
+                const isActive = sortKey === key && key != null;
+                return (
+                  <th
+                    key={label}
+                    onClick={() => handleSort(key)}
+                    title={key ? 'Clique para ordenar' : undefined}
+                    style={{
+                      padding: '12px 16px', textAlign: 'left', fontSize: '10px',
+                      fontWeight: 700,
+                      color: isActive ? 'var(--c-accent)' : 'var(--c-text-4)',
+                      letterSpacing: '.7px', whiteSpace: 'nowrap', width: w,
+                      cursor: key ? 'pointer' : 'default',
+                      userSelect: 'none',
+                      transition: 'color .15s',
+                    }}
+                  >
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      {label}
+                      {key && (
+                        <span style={{
+                          fontSize: '11px',
+                          opacity: isActive ? 1 : 0.35,
+                          transition: 'opacity .15s',
+                        }}>
+                          {isActive ? (sortDir === 'desc' ? '↓' : '↑') : '↕'}
+                        </span>
+                      )}
+                    </span>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {sorted.length === 0 ? (
               <tr>
                 <td colSpan={8} style={{ padding: '60px', textAlign: 'center' }}>
                   <div style={{ fontSize: '32px', marginBottom: '10px', opacity: .4 }}>📣</div>
@@ -492,13 +546,13 @@ export default function Campaigns() {
                 </td>
               </tr>
             ) : (
-              filtered.map((ad, i) => {
+              sorted.map((ad, i) => {
                 const isUserAd = userAds.some(u => u.id === ad.id);
                 return (
                   <AdRow
                     key={ad.id}
                     ad={ad}
-                    isLast={i === filtered.length - 1}
+                    isLast={i === sorted.length - 1}
                     highCpc={ad.costPerResult != null && ad.costPerResult > HIGH_CPR_THRESHOLD}
                     onToggle={isUserAd ? (a) => toggleAdStatus(a.id) : null}
                     onDuplicate={isUserAd ? (a) => duplicateAd(a.id) : null}
