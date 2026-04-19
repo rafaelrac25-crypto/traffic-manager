@@ -36,13 +36,24 @@ if (fs.existsSync(frontendDist)) {
     immutable: true,
   }));
 
-  // Demais arquivos estáticos sem cache agressivo
-  app.use(express.static(frontendDist, { maxAge: 0 }));
+  // Demais arquivos estáticos — index: false garante que "/" caia
+  // no app.get('*') abaixo (pra garantir no-store no index.html)
+  app.use(express.static(frontendDist, {
+    maxAge: 0,
+    index: false,
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+      }
+    },
+  }));
 
   // SPA fallback: index.html nunca cacheado — garante que o browser
-  // sempre busca o HTML atual após novo deploy
+  // sempre busca o HTML atual após novo deploy (inclui "/" graças ao index:false acima)
   app.get('*', (req, res) => {
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     res.sendFile(path.join(frontendDist, 'index.html'));
