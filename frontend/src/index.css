@@ -529,9 +529,42 @@ input[type="range"] { accent-color: #d68d8f; }
    ============================================================ */
 
 @media (max-width: 768px) {
-  /* Padding confortável sem desperdiçar espaço */
+  /* Evita qualquer filho vazar horizontalmente */
+  html, body, #root {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
   .page-container {
+    overflow-x: hidden;
+    max-width: 100%;
+    box-sizing: border-box;
     padding: 14px 12px !important;
+  }
+  /* Todos os elementos respeitam a largura do pai */
+  .page-container * {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  /* Cards inline com padding 20/22/24/28 ficam 14px em mobile */
+  .page-container div[style*="padding: 28px"],
+  .page-container div[style*="padding: 24px"],
+  .page-container div[style*="padding: 22px"],
+  .page-container div[style*="padding: '28px'"],
+  .page-container div[style*="padding: '24px'"],
+  .page-container div[style*="padding: '22px'"] {
+    padding: 16px !important;
+  }
+  /* Inputs e textarea nunca maiores que o container */
+  .page-container input,
+  .page-container textarea,
+  .page-container select {
+    width: 100%;
+    max-width: 100%;
+  }
+  /* Blocos de código não estouram */
+  .page-container pre {
+    overflow-x: auto;
+    word-break: break-word;
   }
 
   /* Headings menores em mobile (evita quebras feias) */
