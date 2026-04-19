@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import api from '../services/api';
+import { playBubble } from '../utils/sounds';
 
 const RobotIcon = ({ size = 24 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -144,9 +145,11 @@ export default function AIAssistant() {
         })),
       });
       setMessages(m => [...m, { role: 'assistant', content: res.data.reply }]);
+      playBubble();
     } catch (err) {
       const errMsg = err.response?.data?.error || err.message || 'Erro ao conectar com a IA';
       setMessages(m => [...m, { role: 'assistant', content: `⚠️ ${errMsg}`, error: true }]);
+      playBubble();
     } finally {
       setLoading(false);
     }

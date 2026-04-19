@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { getRelevantCommercialDatesInWindow } from '../data/commercialDates';
+import { playBell } from '../utils/sounds';
 
 /**
  * AppStateContext — estado global do painel.
@@ -175,6 +176,7 @@ export function AppStateProvider({ children }) {
   useEffect(() => save(KEY_DISMISSED_DATES, dismissedDates), [dismissedDates]);
   useEffect(() => save(KEY_HISTORY,   history),       [history]);
 
+  const mountedAtRef = useRef(Date.now());
   const addNotification = useCallback((notif) => {
     setNotifications(prev => [{
       id: Date.now() + Math.random(),
@@ -182,6 +184,10 @@ export function AppStateProvider({ children }) {
       read: false,
       ...notif,
     }, ...prev].slice(0, 50));
+    // Evita tocar som durante a rehidratação inicial (primeiros 1.5s após montar)
+    if (!notif.silent && Date.now() - mountedAtRef.current > 1500) {
+      playBell();
+    }
   }, []);
 
   /* ─── Histórico (log de ações principais + undo) ─── */

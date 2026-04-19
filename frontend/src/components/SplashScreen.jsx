@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import marcaColorida from '../assets/marca-colorida.png';
+import { playWelcome } from '../utils/sounds';
 
 /* Duração total: HOLD_MS + EXIT_MS ≈ 3 s */
 const HOLD_MS = 2400;
@@ -10,10 +11,11 @@ export default function SplashScreen({ onDone }) {
   const [phase, setPhase] = useState('enter');
 
   useEffect(() => {
+    const t0 = setTimeout(() => playWelcome(), 200);
     const t1 = setTimeout(() => setPhase('hold'), 600);
     const t2 = setTimeout(() => setPhase('exit'), HOLD_MS);
     const t3 = setTimeout(() => onDone(), HOLD_MS + EXIT_MS);
-    return () => [t1, t2, t3].forEach(clearTimeout);
+    return () => [t0, t1, t2, t3].forEach(clearTimeout);
   }, []);
 
   return (

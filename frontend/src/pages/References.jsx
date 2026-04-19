@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AD_REFERENCES, REFERENCE_FILTERS, isRelevantForCris } from '../data/adReferences';
 
@@ -13,6 +13,32 @@ const OBJECTIVE_LABEL = {
   traffic:    'Tráfego',
   engagement: 'Engajamento',
 };
+
+const SORT_OPTIONS = [
+  { id: 'score',      label: 'Ranking (melhor → pior)' },
+  { id: 'activeDays', label: 'Dias ativo (maior → menor)' },
+  { id: 'engagement', label: 'Engajamento (maior → menor)' },
+  { id: 'favorites',  label: 'Favoritas primeiro' },
+];
+
+const FAV_KEY = 'ccb_reference_favorites';
+
+function loadFavorites() {
+  try {
+    const raw = localStorage.getItem(FAV_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch { return new Set(); }
+}
+
+function saveFavorites(favs) {
+  try { localStorage.setItem(FAV_KEY, JSON.stringify([...favs])); } catch {}
+}
+
+// converte "4.8%" -> 4.8
+function engagementNumeric(str) {
+  const n = parseFloat(String(str).replace(',', '.'));
+  return Number.isNaN(n) ? 0 : n;
+}
 
 function ScoreBadge({ score }) {
   const tier = score >= 90 ? 'ouro' : score >= 85 ? 'prata' : 'bronze';
@@ -31,11 +57,35 @@ function ScoreBadge({ score }) {
   );
 }
 
-function ReferenceCard({ ref, position, onOpen }) {
-  const fmt = FORMAT_META[ref.format] || FORMAT_META.image;
+function FavoriteButton({ active, onClick, size = 18 }) {
+  return (
+    <button
+      onClick={e => { e.stopPropagation(); onClick(); }}
+      title={active ? 'Remover dos favoritos' : 'Favoritar'}
+      aria-label={active ? 'Remover dos favoritos' : 'Favoritar'}
+      style={{
+        background: 'transparent',
+        border: 'none',
+        cursor: 'pointer',
+        fontSize: `${size}px`,
+        lineHeight: 1,
+        padding: '4px',
+        color: active ? '#F59E0B' : 'var(--c-text-4)',
+        transition: 'transform .15s',
+      }}
+      onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.2)'}
+      onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+    >
+      {active ? '★' : '☆'}
+    </button>
+  );
+}
+
+function ReferenceCard({ item, position, onOpen, isFavorite, onToggleFavorite }) {
+  const fmt = FORMAT_META[item.format] || FORMAT_META.image;
   return (
     <div
-      onClick={() => onOpen(ref)}
+      onClick={() => onOpen(item)}
       style={{
         background: 'var(--c-card-bg)',
         border: '1px solid var(--c-border)',
@@ -44,6 +94,7 @@ function ReferenceCard({ ref, position, onOpen }) {
         cursor: 'pointer',
         transition: 'all .18s',
         display: 'flex', flexDirection: 'column', gap: '10px',
+        position: 'relative',
       }}
       onMouseEnter={e => {
         e.currentTarget.style.borderColor = 'var(--c-accent)';
@@ -56,7 +107,7 @@ function ReferenceCard({ ref, position, onOpen }) {
         e.currentTarget.style.boxShadow = 'none';
       }}
     >
-      {/* Header: posição + marca + score */}
+      {/* Header: posição + marca + favorito + score */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
         <span style={{
           width: '28px', height: '28px', borderRadius: '50%',
@@ -67,23 +118,24 @@ function ReferenceCard({ ref, position, onOpen }) {
         }}>
           #{position}
         </span>
-        <span style={{ fontSize: '20px' }}>{ref.brandLogo}</span>
+        <span style={{ fontSize: '20px' }}>{item.brandLogo}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--c-text-4)', letterSpacing: '.3px', textTransform: 'uppercase' }}>
-            {ref.brand}
+            {item.brand}
           </div>
           <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', lineHeight: 1.3 }}>
-            {ref.title}
+            {item.title}
           </div>
         </div>
-        <ScoreBadge score={ref.score} />
+        <FavoriteButton active={isFavorite} onClick={onToggleFavorite} />
+        <ScoreBadge score={item.score} />
       </div>
 
       {/* Preview visual: placeholder com paleta */}
       <div style={{
         height: '120px', borderRadius: '10px', overflow: 'hidden',
         position: 'relative',
-        background: `linear-gradient(135deg, ${ref.colorPalette.join(', ')})`,
+        background: `linear-gradient(135deg, ${item.colorPalette.join(', ')})`,
       }}>
         <div style={{
           position: 'absolute', top: '8px', left: '10px',
@@ -100,13 +152,13 @@ function ReferenceCard({ ref, position, onOpen }) {
           background: 'rgba(0,0,0,.55)', color: '#fff',
           fontSize: '9px', fontWeight: 600,
         }}>
-          {ref.activeDays}d ativo · {ref.engagementRate}
+          {item.activeDays}d ativo · {item.engagementRate}
         </div>
         <div style={{
           position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
           fontSize: '34px', opacity: .85,
         }}>
-          {ref.brandLogo}
+          {item.brandLogo}
         </div>
       </div>
 
@@ -116,21 +168,48 @@ function ReferenceCard({ ref, position, onOpen }) {
         background: 'var(--c-surface)',
         fontSize: '11.5px', color: 'var(--c-text-2)', lineHeight: 1.45,
       }}>
-        <strong style={{ color: 'var(--c-accent)' }}>Gancho:</strong> {ref.hook}
+        <strong style={{ color: 'var(--c-accent)' }}>Gancho:</strong> {item.hook}
       </div>
 
       {/* Footer: objetivo + CTA visual */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '10.5px', color: 'var(--c-text-3)' }}>
-        <span>🎯 {OBJECTIVE_LABEL[ref.objective]}</span>
+        <span>🎯 {OBJECTIVE_LABEL[item.objective]}</span>
         <span style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Ver detalhes →</span>
       </div>
     </div>
   );
 }
 
-function ReferenceModal({ ref, onClose, onUse }) {
-  if (!ref) return null;
-  const fmt = FORMAT_META[ref.format] || FORMAT_META.image;
+function CopyButton({ text, label = 'Copiar' }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setCopied(false);
+    }
+  };
+  return (
+    <button
+      onClick={handleCopy}
+      style={{
+        padding: '4px 10px', borderRadius: '7px',
+        border: '1px solid var(--c-border)', background: 'var(--c-card-bg)',
+        fontSize: '10.5px', fontWeight: 600, color: copied ? 'var(--c-accent)' : 'var(--c-text-3)',
+        cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px',
+        transition: 'all .15s',
+      }}
+    >
+      {copied ? '✓ Copiado!' : `📋 ${label}`}
+    </button>
+  );
+}
+
+function ReferenceModal({ item, onClose, onUse, isFavorite, onToggleFavorite }) {
+  if (!item) return null;
+  const fmt = FORMAT_META[item.format] || FORMAT_META.image;
 
   return (
     <div
@@ -155,7 +234,7 @@ function ReferenceModal({ ref, onClose, onUse }) {
         {/* Hero */}
         <div style={{
           height: '180px',
-          background: `linear-gradient(135deg, ${ref.colorPalette.join(', ')})`,
+          background: `linear-gradient(135deg, ${item.colorPalette.join(', ')})`,
           position: 'relative', borderRadius: '18px 18px 0 0',
         }}>
           <button
@@ -181,7 +260,7 @@ function ReferenceModal({ ref, onClose, onUse }) {
             position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
             fontSize: '64px', opacity: .9,
           }}>
-            {ref.brandLogo}
+            {item.brandLogo}
           </div>
         </div>
 
@@ -190,44 +269,47 @@ function ReferenceModal({ ref, onClose, onUse }) {
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '14px' }}>
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--c-text-4)', letterSpacing: '.4px', textTransform: 'uppercase', marginBottom: '2px' }}>
-                {ref.brand}
+                {item.brand}
               </div>
               <h2 style={{ fontSize: '17px', fontWeight: 700, color: 'var(--c-text-1)', margin: 0, lineHeight: 1.3 }}>
-                {ref.title}
+                {item.title}
               </h2>
             </div>
-            <ScoreBadge score={ref.score} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <FavoriteButton active={isFavorite} onClick={onToggleFavorite} size={22} />
+              <ScoreBadge score={item.score} />
+            </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px', marginBottom: '16px' }}>
-            <Stat label="Engajamento" value={ref.engagementRate} />
-            <Stat label="Dias ativo" value={`${ref.activeDays}d`} />
-            <Stat label="Objetivo" value={OBJECTIVE_LABEL[ref.objective]} />
+            <Stat label="Engajamento" value={item.engagementRate} />
+            <Stat label="Dias ativo" value={`${item.activeDays}d`} />
+            <Stat label="Objetivo" value={OBJECTIVE_LABEL[item.objective]} />
           </div>
 
           <Section title="Por que funciona">
             <p style={{ fontSize: '12.5px', color: 'var(--c-text-2)', lineHeight: 1.65, margin: 0 }}>
-              {ref.whyWorks}
+              {item.whyWorks}
             </p>
           </Section>
 
-          <Section title="Texto do anúncio">
+          <Section title="Texto do anúncio" action={<CopyButton text={item.primaryText} label="Copiar texto" />}>
             <div style={{
               padding: '12px 14px', borderRadius: '10px',
               background: 'var(--c-surface)', border: '1px solid var(--c-border-lt)',
               fontSize: '12.5px', color: 'var(--c-text-1)', lineHeight: 1.55,
             }}>
-              {ref.primaryText}
+              {item.primaryText}
             </div>
           </Section>
 
-          <Section title="Título">
+          <Section title="Título" action={<CopyButton text={item.headline} label="Copiar título" />}>
             <div style={{
               padding: '10px 14px', borderRadius: '10px',
               background: 'var(--c-surface)', border: '1px solid var(--c-border-lt)',
               fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)',
             }}>
-              {ref.headline}
+              {item.headline}
             </div>
           </Section>
 
@@ -237,31 +319,36 @@ function ReferenceModal({ ref, onClose, onUse }) {
               background: 'var(--c-accent)', color: '#fff',
               fontSize: '12px', fontWeight: 700,
             }}>
-              {ref.cta}
+              {item.cta}
             </span>
           </Section>
 
           <Section title="Público-alvo sugerido">
             <p style={{ fontSize: '12px', color: 'var(--c-text-3)', margin: 0, lineHeight: 1.55 }}>
-              {ref.targetAudience}
+              {item.targetAudience}
             </p>
           </Section>
 
           <Section title="Estilo visual">
             <p style={{ fontSize: '12px', color: 'var(--c-text-3)', margin: '0 0 8px', lineHeight: 1.55 }}>
-              {ref.mediaStyle}
+              {item.mediaStyle}
             </p>
-            <div style={{ display: 'flex', gap: '6px' }}>
-              {ref.colorPalette.map(c => (
-                <div key={c} style={{
-                  width: '32px', height: '32px', borderRadius: '6px',
-                  background: c, border: '1px solid var(--c-border)',
-                  display: 'flex', alignItems: 'end', justifyContent: 'center',
-                  fontSize: '8px', color: 'rgba(0,0,0,.5)', fontWeight: 600,
-                  padding: '2px',
-                }} title={c}>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {item.colorPalette.map(c => (
+                <button
+                  key={c}
+                  onClick={() => navigator.clipboard?.writeText(c)}
+                  title={`Clique pra copiar ${c}`}
+                  style={{
+                    width: '44px', height: '44px', borderRadius: '8px',
+                    background: c, border: '1px solid var(--c-border)',
+                    display: 'flex', alignItems: 'end', justifyContent: 'center',
+                    fontSize: '8px', color: 'rgba(0,0,0,.65)', fontWeight: 700,
+                    padding: '2px', cursor: 'pointer',
+                  }}
+                >
                   {c}
-                </div>
+                </button>
               ))}
             </div>
           </Section>
@@ -285,7 +372,7 @@ function ReferenceModal({ ref, onClose, onUse }) {
             Fechar
           </button>
           <button
-            onClick={() => onUse(ref)}
+            onClick={() => onUse(item)}
             style={{
               padding: '9px 18px', borderRadius: '9px',
               border: 'none', background: 'var(--c-accent)',
@@ -316,14 +403,20 @@ function Stat({ label, value }) {
   );
 }
 
-function Section({ title, children }) {
+function Section({ title, children, action }) {
   return (
     <div style={{ marginBottom: '14px' }}>
       <div style={{
-        fontSize: '10px', fontWeight: 700, color: 'var(--c-text-4)',
-        letterSpacing: '.5px', textTransform: 'uppercase', marginBottom: '6px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        gap: '8px', marginBottom: '6px',
       }}>
-        {title}
+        <div style={{
+          fontSize: '10px', fontWeight: 700, color: 'var(--c-text-4)',
+          letterSpacing: '.5px', textTransform: 'uppercase',
+        }}>
+          {title}
+        </div>
+        {action}
       </div>
       {children}
     </div>
@@ -335,32 +428,80 @@ export default function References() {
   const [format, setFormat] = useState('all');
   const [objective, setObjective] = useState('all');
   const [onlyCris, setOnlyCris] = useState(false);
+  const [sortBy, setSortBy] = useState('score');
+  const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(null);
   const [visibleCount, setVisibleCount] = useState(9);
+  const [favorites, setFavorites] = useState(() => loadFavorites());
+
+  useEffect(() => { saveFavorites(favorites); }, [favorites]);
+
+  const toggleFavorite = useCallback((id) => {
+    setFavorites(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const resetFilters = useCallback(() => {
+    setFormat('all'); setObjective('all'); setOnlyCris(false); setQuery('');
+  }, []);
 
   const filtered = useMemo(() => {
     let list = [...AD_REFERENCES];
     if (format !== 'all') list = list.filter(r => r.format === format);
     if (objective !== 'all') list = list.filter(r => r.objective === objective);
     if (onlyCris) list = list.filter(isRelevantForCris);
-    return list.sort((a, b) => b.score - a.score);
-  }, [format, objective, onlyCris]);
+
+    const q = query.trim().toLowerCase();
+    if (q) {
+      list = list.filter(r =>
+        r.brand.toLowerCase().includes(q) ||
+        r.title.toLowerCase().includes(q) ||
+        r.hook.toLowerCase().includes(q) ||
+        r.headline.toLowerCase().includes(q)
+      );
+    }
+
+    switch (sortBy) {
+      case 'activeDays':
+        list.sort((a, b) => b.activeDays - a.activeDays);
+        break;
+      case 'engagement':
+        list.sort((a, b) => engagementNumeric(b.engagementRate) - engagementNumeric(a.engagementRate));
+        break;
+      case 'favorites':
+        list.sort((a, b) => {
+          const fa = favorites.has(a.id) ? 1 : 0;
+          const fb = favorites.has(b.id) ? 1 : 0;
+          if (fa !== fb) return fb - fa;
+          return b.score - a.score;
+        });
+        break;
+      case 'score':
+      default:
+        list.sort((a, b) => b.score - a.score);
+    }
+    return list;
+  }, [format, objective, onlyCris, sortBy, query, favorites]);
 
   const visible = filtered.slice(0, visibleCount);
+  const favoriteCount = favorites.size;
 
-  function handleUseReference(ref) {
+  function handleUseReference(item) {
     navigate('/criar-anuncio', {
       state: {
         referenceRef: {
-          id: ref.id,
-          brand: ref.brand,
-          title: ref.title,
-          primaryText: ref.primaryText,
-          headline: ref.headline,
-          cta: ref.cta,
-          objective: ref.objective,
-          targetAudience: ref.targetAudience,
-          format: ref.format,
+          id: item.id,
+          brand: item.brand,
+          title: item.title,
+          primaryText: item.primaryText,
+          headline: item.headline,
+          cta: item.cta,
+          objective: item.objective,
+          targetAudience: item.targetAudience,
+          format: item.format,
         },
       },
     });
@@ -368,22 +509,52 @@ export default function References() {
 
   return (
     <div className="page-container">
-      <div style={{ marginBottom: '18px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
-          Referências
-        </h1>
-        <p style={{ fontSize: '12.5px', color: 'var(--c-text-3)', lineHeight: 1.5, maxWidth: '640px' }}>
-          Anúncios de marcas renomadas de estética e beleza que estão performando muito bem na biblioteca de anúncios do Meta.
-          Ranking do melhor pro pior. Clique em um card para ver o criativo completo e criar um anúncio inspirado nele.
-        </p>
+      <div style={{ marginBottom: '18px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
+            Referências
+          </h1>
+          <p style={{ fontSize: '12.5px', color: 'var(--c-text-3)', lineHeight: 1.5, maxWidth: '640px' }}>
+            Anúncios de marcas renomadas de estética e beleza que estão performando muito bem na biblioteca de anúncios do Meta.
+            Ranking do melhor pro pior. Clique em um card para ver o criativo completo e criar um anúncio inspirado nele.
+          </p>
+        </div>
+        {favoriteCount > 0 && (
+          <div style={{
+            padding: '8px 14px', borderRadius: '10px',
+            background: '#FEF3C7', color: '#A16207',
+            fontSize: '11.5px', fontWeight: 700,
+            display: 'inline-flex', alignItems: 'center', gap: '6px',
+          }}>
+            ★ {favoriteCount} favorita{favoriteCount > 1 ? 's' : ''}
+          </div>
+        )}
       </div>
 
-      {/* Filtros */}
+      {/* Barra de busca + filtros */}
       <div style={{
         display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center',
         padding: '10px 12px', marginBottom: '16px',
         background: 'var(--c-card-bg)', border: '1px solid var(--c-border)', borderRadius: '12px',
       }}>
+        <div style={{ position: 'relative', flex: '1 1 220px', minWidth: '180px' }}>
+          <span style={{
+            position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)',
+            fontSize: '12px', color: 'var(--c-text-4)', pointerEvents: 'none',
+          }}>🔍</span>
+          <input
+            type="text"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Buscar por marca, gancho, título..."
+            style={{
+              width: '100%', padding: '7px 10px 7px 30px', borderRadius: '7px',
+              border: '1px solid var(--c-border)', background: 'var(--c-surface)',
+              color: 'var(--c-text-1)', fontSize: '11.5px', fontFamily: 'inherit',
+              outline: 'none',
+            }}
+          />
+        </div>
         <select
           value={format}
           onChange={e => setFormat(e.target.value)}
@@ -406,6 +577,17 @@ export default function References() {
         >
           {REFERENCE_FILTERS.objective.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
         </select>
+        <select
+          value={sortBy}
+          onChange={e => setSortBy(e.target.value)}
+          style={{
+            padding: '6px 10px', borderRadius: '7px',
+            border: '1px solid var(--c-border)', background: 'var(--c-surface)',
+            color: 'var(--c-text-2)', fontSize: '11.5px', fontFamily: 'inherit', cursor: 'pointer',
+          }}
+        >
+          {SORT_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+        </select>
         <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: 'var(--c-text-2)', cursor: 'pointer' }}>
           <input
             type="checkbox"
@@ -413,10 +595,10 @@ export default function References() {
             onChange={e => setOnlyCris(e.target.checked)}
             style={{ cursor: 'pointer' }}
           />
-          Apenas relevantes para Cris Costa Beauty
+          Relevantes p/ Cris
         </label>
         <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--c-text-4)' }}>
-          {filtered.length} referências
+          {filtered.length} referência{filtered.length !== 1 ? 's' : ''}
         </span>
       </div>
 
@@ -428,9 +610,19 @@ export default function References() {
           borderRadius: '14px',
         }}>
           <div style={{ fontSize: '34px', marginBottom: '8px', opacity: .6 }}>🔍</div>
-          <div style={{ fontSize: '13px', color: 'var(--c-text-3)', fontWeight: 600 }}>
+          <div style={{ fontSize: '13px', color: 'var(--c-text-3)', fontWeight: 600, marginBottom: '12px' }}>
             Nenhuma referência com esses filtros.
           </div>
+          <button
+            onClick={resetFilters}
+            style={{
+              padding: '8px 16px', borderRadius: '8px',
+              border: '1.5px solid var(--c-accent)', background: 'transparent',
+              color: 'var(--c-accent)', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            🧹 Limpar filtros
+          </button>
         </div>
       ) : (
         <>
@@ -443,8 +635,15 @@ export default function References() {
               marginBottom: '18px',
             }}
           >
-            {visible.map((ref, i) => (
-              <ReferenceCard key={ref.id} ref={ref} position={i + 1} onOpen={setSelected} />
+            {visible.map((item, i) => (
+              <ReferenceCard
+                key={item.id}
+                item={item}
+                position={i + 1}
+                onOpen={setSelected}
+                isFavorite={favorites.has(item.id)}
+                onToggleFavorite={() => toggleFavorite(item.id)}
+              />
             ))}
           </div>
 
@@ -466,9 +665,11 @@ export default function References() {
       )}
 
       <ReferenceModal
-        ref={selected}
+        item={selected}
         onClose={() => setSelected(null)}
         onUse={handleUseReference}
+        isFavorite={selected ? favorites.has(selected.id) : false}
+        onToggleFavorite={() => selected && toggleFavorite(selected.id)}
       />
     </div>
   );
