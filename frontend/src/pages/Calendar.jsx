@@ -809,19 +809,21 @@ export default function Calendar() {
                     }} />
 
                     {/* Info */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '11px', color: 'var(--c-text-4)', marginBottom: '3px' }}>{item.time}</div>
-                      <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-text-1)', marginBottom: '5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <span style={{
+                          fontSize: '10px', fontWeight: 700,
+                          background: badge.bg, color: badge.color,
+                          padding: '2px 8px', borderRadius: '20px',
+                          whiteSpace: 'nowrap',
+                        }}>
+                          {badge.label}
+                        </span>
+                        <span style={{ fontSize: '11px', color: 'var(--c-text-4)', fontWeight: 500 }}>{item.time}</span>
+                      </div>
+                      <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {item.name}
                       </div>
-                      <span style={{
-                        fontSize: '10px', fontWeight: 600,
-                        background: badge.bg, color: badge.color,
-                        padding: '2px 8px', borderRadius: '20px',
-                        display: 'inline-block',
-                      }}>
-                        {badge.label}
-                      </span>
                     </div>
                   </div>
                 );
