@@ -225,6 +225,14 @@ export function AppStateProvider({ children }) {
     setNotifications(prev => prev.filter(n => n.id !== id));
   }, []);
 
+  const markNotificationRead = useCallback((id) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true, readAt: new Date().toISOString() } : n));
+  }, []);
+
+  const markAllNotificationsRead = useCallback(() => {
+    setNotifications(prev => prev.map(n => n.read ? n : { ...n, read: true, readAt: new Date().toISOString() }));
+  }, []);
+
   const clearAllNotifications = useCallback(() => setNotifications([]), []);
 
   const addRejectedAd = useCallback((ad) => {
@@ -437,6 +445,8 @@ export function AppStateProvider({ children }) {
     unreadCount: notifications.filter(n => !n.read).length,
     addNotification,
     removeNotification,
+    markNotificationRead,
+    markAllNotificationsRead,
     clearAllNotifications,
 
     rejectedAds,

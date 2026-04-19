@@ -54,9 +54,27 @@ function timeAgo(iso) {
   return `${Math.floor(diff / 86400)} d atrás`;
 }
 
+/* Fallback de rota por tipo — garante que toda notificação leve a algum lugar */
+const FALLBACK_LINK = {
+  approved: '/anuncios',
+  rejected: '/reprovados',
+  'low-balance': '/investimento',
+  'high-cpc': '/anuncios',
+  funds: '/investimento',
+  'commercial-date': '/criar-anuncio',
+  info: '/',
+};
+
 function NotificationDropdown({ open, onClose }) {
   const navigate = useNavigate();
-  const { notifications, removeNotification, clearAllNotifications, dismissCommercialDate } = useAppState();
+  const {
+    notifications,
+    removeNotification,
+    markNotificationRead,
+    markAllNotificationsRead,
+    clearAllNotifications,
+    dismissCommercialDate,
+  } = useAppState();
   const ref = useRef(null);
 
   useEffect(() => {
@@ -92,18 +110,29 @@ function NotificationDropdown({ open, onClose }) {
         animation: 'bellOpen .28s cubic-bezier(.22,1,.36,1)',
       }}
     >
-      <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--c-border-lt)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--c-border-lt)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
         <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)' }}>
           Notificações {notifications.length > 0 && <span style={{ color: 'var(--c-text-4)', fontWeight: 500 }}>({notifications.length})</span>}
         </div>
-        {notifications.length > 0 && (
-          <button
-            onClick={clearAllNotifications}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', color: 'var(--c-accent)', fontWeight: 600 }}
-          >
-            Limpar todas
-          </button>
-        )}
+        <div style={{ display: 'flex', gap: '10px' }}>
+          {notifications.some(n => !n.read) && (
+            <button
+              onClick={markAllNotificationsRead}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', color: 'var(--c-text-3)', fontWeight: 600 }}
+              title="Marcar todas como lidas"
+            >
+              Marcar lidas
+            </button>
+          )}
+          {notifications.length > 0 && (
+            <button
+              onClick={clearAllNotifications}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', color: 'var(--c-accent)', fontWeight: 600 }}
+            >
+              Limpar todas
+            </button>
+          )}
+        </div>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -115,69 +144,95 @@ function NotificationDropdown({ open, onClose }) {
         ) : notifications.map(n => {
           const style = colors[n.kind] || colors.info;
           const isCommercial = n.kind === 'commercial-date' && n.dateKey;
+          const isRead = !!n.read;
+          const readBg = 'transparent';
+          const unreadBg = style.bg;
+          const target = n.link || FALLBACK_LINK[n.kind] || '/';
+
           return (
             <div
               key={n.id}
               onClick={() => {
-                if (n.link) {
-                  if (n.commercialDate) {
-                    navigate(n.link, { state: { commercialDate: n.commercialDate } });
-                  } else {
-                    navigate(n.link);
-                  }
+                if (!isRead) markNotificationRead(n.id);
+                if (n.commercialDate) {
+                  navigate(target, { state: { commercialDate: n.commercialDate } });
+                } else {
+                  navigate(target);
                 }
-                removeNotification(n.id);
                 onClose();
               }}
               style={{
                 padding: '12px 16px', borderBottom: '1px solid var(--c-border-lt)',
                 cursor: 'pointer', display: 'flex', gap: '10px',
-                background: n.read ? 'transparent' : style.bg,
-                borderLeft: `3px solid ${style.border}`,
+                background: isRead ? readBg : unreadBg,
+                borderLeft: `3px solid ${isRead ? '#E5E7EB' : style.border}`,
+                filter: isRead ? 'grayscale(1)' : 'none',
+                opacity: isRead ? 0.72 : 1,
                 transition: 'background .16s ease, transform .22s cubic-bezier(.22,1,.36,1), box-shadow .22s ease',
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.background = 'var(--c-hover)';
+                e.currentTarget.style.background = isRead ? '#F3F4F6' : 'var(--c-hover)';
                 e.currentTarget.style.transform = 'translateY(-2px)';
                 e.currentTarget.style.boxShadow = '0 8px 20px rgba(214,141,143,.14)';
                 e.currentTarget.style.position = 'relative';
                 e.currentTarget.style.zIndex = '1';
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.background = n.read ? 'transparent' : style.bg;
+                e.currentTarget.style.background = isRead ? readBg : unreadBg;
                 e.currentTarget.style.transform = 'translateY(0)';
                 e.currentTarget.style.boxShadow = 'none';
                 e.currentTarget.style.zIndex = 'auto';
               }}
             >
-              <span style={{ fontSize: '18px', flexShrink: 0 }}>{style.emoji}</span>
+              <span style={{ fontSize: '18px', flexShrink: 0, color: isRead ? '#9CA3AF' : undefined }}>{style.emoji}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '2px' }}>
+                <div style={{
+                  fontSize: '13px', fontWeight: isRead ? 500 : 700,
+                  color: isRead ? '#9CA3AF' : 'var(--c-text-1)', marginBottom: '2px',
+                }}>
                   {n.title}
                 </div>
-                <div style={{ fontSize: '12px', color: 'var(--c-text-3)', lineHeight: 1.5, marginBottom: '4px' }}>
+                <div style={{
+                  fontSize: '12px',
+                  color: isRead ? '#B0B4BB' : 'var(--c-text-3)',
+                  lineHeight: 1.5, marginBottom: '4px',
+                }}>
                   {n.message}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                  <div style={{ fontSize: '10px', color: 'var(--c-text-4)' }}>{timeAgo(n.createdAt)}</div>
-                  {isCommercial && (
+                  <div style={{ fontSize: '10px', color: isRead ? '#B0B4BB' : 'var(--c-text-4)' }}>{timeAgo(n.createdAt)}</div>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    {isCommercial && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const title = n.title?.replace(/^[\p{Emoji}\s]+/u, '').replace(/ (hoje|amanhã|em \d+ dias).*$/, '');
+                          dismissCommercialDate(n.dateKey, { name: title });
+                        }}
+                        style={{
+                          background: 'transparent', border: '1px solid var(--c-border)',
+                          color: 'var(--c-text-3)', borderRadius: '6px',
+                          padding: '3px 8px', fontSize: '10px', fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                        title="Não tenho interesse nesta data — pode ser restaurada no histórico"
+                      >
+                        Dispensar
+                      </button>
+                    )}
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const title = n.title?.replace(/^[\p{Emoji}\s]+/u, '').replace(/ (hoje|amanhã|em \d+ dias).*$/, '');
-                        dismissCommercialDate(n.dateKey, { name: title });
-                      }}
+                      onClick={(e) => { e.stopPropagation(); removeNotification(n.id); }}
+                      title="Remover notificação"
                       style={{
-                        background: 'transparent', border: '1px solid var(--c-border)',
-                        color: 'var(--c-text-3)', borderRadius: '6px',
-                        padding: '3px 8px', fontSize: '10px', fontWeight: 600,
-                        cursor: 'pointer',
+                        background: 'transparent', border: 'none',
+                        color: isRead ? '#9CA3AF' : 'var(--c-text-4)',
+                        cursor: 'pointer', fontSize: '14px', lineHeight: 1,
+                        padding: '2px 4px',
                       }}
-                      title="Não tenho interesse nesta data — pode ser restaurada no histórico"
                     >
-                      Dispensar
+                      ×
                     </button>
-                  )}
+                  </div>
                 </div>
               </div>
             </div>
