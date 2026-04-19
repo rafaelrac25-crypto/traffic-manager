@@ -155,6 +155,165 @@ function ClockIcon() {
     </svg>
   );
 }
+/* ── Gráfico de duas linhas (Investimento + Cliques) com escalas independentes ── */
+function DualLineChart({ series }) {
+  const W = 540, H = 200;
+  const padL = 40, padR = 20, padT = 20, padB = 30;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+  const svgRef = useRef(null);
+
+  const length = series[0]?.data.length || 0;
+  const [cursorFrac, setCursorFrac] = useState(length - 1);
+  const [isHovering, setIsHovering] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+
+  /* Cada série é normalizada para seu próprio máximo */
+  const normalized = series.map(s => {
+    const max = Math.max(...s.data.map(d => d.value)) * 1.1 || 1;
+    const pts = s.data.map((d, i) => ({
+      x: padL + (i / (length - 1)) * plotW,
+      y: padT + plotH - (d.value / max) * plotH,
+      ...d,
+    }));
+    return { ...s, max, pts };
+  });
+
+  function smoothPath(points) {
+    if (points.length < 2) return '';
+    let d = `M ${points[0].x},${points[0].y}`;
+    for (let i = 1; i < points.length; i++) {
+      const p0 = points[i - 1];
+      const p1 = points[i];
+      const cpx = (p0.x + p1.x) / 2;
+      d += ` C ${cpx},${p0.y} ${cpx},${p1.y} ${p1.x},${p1.y}`;
+    }
+    return d;
+  }
+
+  function updateCursor(clientX) {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const svgX = ((clientX - rect.left) / rect.width) * W;
+    const frac = Math.max(0, Math.min(length - 1, ((svgX - padL) / plotW) * (length - 1)));
+    setCursorFrac(frac);
+    setIsHovering(true);
+  }
+
+  const i0 = Math.floor(cursorFrac);
+  const i1 = Math.min(length - 1, i0 + 1);
+  const lerpT = cursorFrac - i0;
+  const activeX = normalized[0]?.pts[i0]?.x + (normalized[0]?.pts[i1]?.x - normalized[0]?.pts[i0]?.x) * lerpT;
+  const activeLabel = normalized[0]?.pts[Math.round(cursorFrac)]?.label || '';
+  const activeValues = normalized.map(s => ({
+    name: s.name,
+    color: s.color,
+    unit: s.unit,
+    value: Math.round(s.data[i0].value + (s.data[i1].value - s.data[i0].value) * lerpT),
+    y: s.pts[i0].y + (s.pts[i1].y - s.pts[i0].y) * lerpT,
+  }));
+
+  const TOOLTIP_W = 130;
+  const TOOLTIP_H = 52;
+  const tooltipCenterX = Math.max(padL + TOOLTIP_W/2, Math.min(W - padR - TOOLTIP_W/2, activeX));
+  const tooltipY = Math.max(4, Math.min(...activeValues.map(v => v.y)) - TOOLTIP_H - 10);
+
+  return (
+    <>
+      {/* Legenda */}
+      <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginBottom: '8px' }}>
+        {series.map(s => (
+          <div key={s.name} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ width: '16px', height: '3px', borderRadius: '2px', background: s.color, display: 'inline-block' }} />
+            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--c-text-2)' }}>{s.name}</span>
+          </div>
+        ))}
+      </div>
+
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${W} ${H}`}
+        width="100%"
+        style={{ display: 'block', overflow: 'visible', cursor: isDragging ? 'grabbing' : 'grab', touchAction: 'none', userSelect: 'none' }}
+        onMouseMove={e => updateCursor(e.clientX)}
+        onMouseDown={e => { setIsDragging(true); updateCursor(e.clientX); }}
+        onMouseUp={() => setIsDragging(false)}
+        onMouseLeave={() => { setIsHovering(false); setIsDragging(false); }}
+        onTouchStart={e => { setIsDragging(true); const t = e.touches[0]; if (t) updateCursor(t.clientX); }}
+        onTouchMove={e => { const t = e.touches[0]; if (t) updateCursor(t.clientX); }}
+        onTouchEnd={() => setIsDragging(false)}
+      >
+        {/* Grid horizontal */}
+        {[0, 0.25, 0.5, 0.75, 1].map(t => {
+          const y = padT + plotH - t * plotH;
+          return <line key={t} x1={padL} y1={y} x2={W - padR} y2={y} stroke="var(--c-border-lt)" strokeWidth="1" strokeDasharray="4,4"/>;
+        })}
+
+        {/* Linhas + área suave de cada série */}
+        {normalized.map(s => (
+          <g key={s.name}>
+            <path d={smoothPath(s.pts)} fill="none" stroke={s.color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            {s.pts.map((pt, i) => {
+              const dist = Math.abs(i - cursorFrac);
+              const weight = Math.max(0, 1 - dist);
+              return (
+                <circle key={i} cx={pt.x} cy={pt.y} r={2 + weight * 1.5} fill="#fff" stroke={s.color} strokeWidth={1.5 + weight * 0.6} />
+              );
+            })}
+          </g>
+        ))}
+
+        {/* Labels do eixo X */}
+        {normalized[0]?.pts.map((pt, i) => (
+          <text key={i} x={pt.x} y={H - 4} fontSize="9" fill="var(--c-text-4)" textAnchor="middle">
+            {pt.label}
+          </text>
+        ))}
+
+        {/* Cursor vertical */}
+        <line
+          x1={activeX} y1={padT}
+          x2={activeX} y2={padT + plotH}
+          stroke="var(--c-text-4)" strokeWidth="1" strokeDasharray="3,3"
+          opacity={isHovering ? 0.6 : 0.3}
+        />
+
+        {/* Pontos ativos em cada linha */}
+        {activeValues.map(v => (
+          <circle key={v.name} cx={activeX} cy={v.y} r={5} fill={v.color} stroke="#fff" strokeWidth="2" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,.2))' }} />
+        ))}
+
+        {/* Tooltip com as 2 séries */}
+        <g style={{ pointerEvents: 'none' }}>
+          <rect
+            x={tooltipCenterX - TOOLTIP_W/2}
+            y={tooltipY}
+            width={TOOLTIP_W}
+            height={TOOLTIP_H}
+            rx="8"
+            fill="var(--c-text-1)"
+            style={{ filter: 'drop-shadow(0 3px 8px rgba(0,0,0,.18))' }}
+          />
+          <text x={tooltipCenterX} y={tooltipY + 13} fontSize="8.5" fill="#fff" textAnchor="middle" fontWeight="600" opacity="0.75" style={{ letterSpacing: '.4px', textTransform: 'uppercase' }}>
+            {activeLabel}
+          </text>
+          {activeValues.map((v, idx) => (
+            <g key={v.name}>
+              <circle cx={tooltipCenterX - TOOLTIP_W/2 + 10} cy={tooltipY + 26 + idx * 12} r="3" fill={v.color} />
+              <text x={tooltipCenterX - TOOLTIP_W/2 + 18} y={tooltipY + 29 + idx * 12} fontSize="10" fill="#fff" fontWeight="600">
+                {v.name}:
+                <tspan fontWeight="700" dx="4">{v.unit === 'reais' ? 'R$\u00A0' : ''}{v.value.toLocaleString('pt-BR')}</tspan>
+                <tspan fontSize="8.5" fontWeight="500" opacity="0.75" dx="3">{v.unit !== 'reais' ? v.unit : ''}</tspan>
+              </text>
+            </g>
+          ))}
+        </g>
+      </svg>
+    </>
+  );
+}
+
 /* ── Gráfico de linha SVG (interativo com slide suave) ── */
 function LineChart({ data, unit = 'resultados' }) {
   const W = 540, H = 190;
@@ -909,7 +1068,6 @@ function saudacaoPorHora() {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [chartMetric, setChartMetric] = useState('Resultados');
   const { funds, lowBalance, LOW_BALANCE_THRESHOLD, ads } = useAppState();
 
   const hoje = new Date();
@@ -996,34 +1154,19 @@ export default function Dashboard() {
           padding: '20px 24px 16px',
           boxShadow: '0 2px 8px var(--c-shadow)',
         }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <div>
-              <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '3px' }}>
-                Resultados ao longo do tempo
-              </div>
-              <div style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>
-                Acompanhe a evolução dos seus anúncios
-              </div>
+          <div style={{ marginBottom: '12px' }}>
+            <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '3px' }}>
+              Resultados ao longo do tempo
             </div>
-            <select
-              value={chartMetric}
-              onChange={e => setChartMetric(e.target.value)}
-              style={{
-                padding: '6px 10px', borderRadius: '8px',
-                border: '1.5px solid var(--c-border)', background: 'var(--c-surface)',
-                fontSize: '12px', color: 'var(--c-text-2)', cursor: 'pointer',
-                fontFamily: 'inherit',
-              }}
-            >
-              {['Resultados','Cliques','Investimento'].map(opt => (
-                <option key={opt}>{opt}</option>
-              ))}
-            </select>
+            <div style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>
+              Investimento × Cliques — últimos 7 dias
+            </div>
           </div>
-          <LineChart
-            key={chartMetric}
-            data={(CHART_DATASETS[chartMetric] || CHART_DATASETS.Resultados).data}
-            unit={(CHART_DATASETS[chartMetric] || CHART_DATASETS.Resultados).unit}
+          <DualLineChart
+            series={[
+              { name: 'Investimento', color: '#d68d8f', unit: 'reais', data: CHART_DATASETS.Investimento.data },
+              { name: 'Cliques',      color: '#3B82F6', unit: 'cliques', data: CHART_DATASETS.Cliques.data },
+            ]}
           />
         </div>
       </div>
