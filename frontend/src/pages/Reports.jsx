@@ -24,7 +24,7 @@ const PERIODS = [
 
 function fmtBRL(n) {
   if (!Number.isFinite(n)) return '—';
-  return `R$ ${Number(n).toFixed(2).replace('.', ',')}`;
+  return `R$\u00A0${Number(n).toFixed(2).replace('.', ',')}`;
 }
 
 function fmtNum(n) {
@@ -72,7 +72,7 @@ function Stat({ label, value, sub, emphasize }) {
       <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--c-text-4)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: '4px' }}>
         {label}
       </div>
-      <div style={{ fontSize: '16px', fontWeight: 800, color: emphasize ? 'var(--c-accent)' : 'var(--c-text-1)', lineHeight: 1.2 }}>
+      <div style={{ fontSize: '16px', fontWeight: 700, color: emphasize ? 'var(--c-accent)' : 'var(--c-text-1)', lineHeight: 1.2 }}>
         {value}
       </div>
       {sub && <div style={{ fontSize: '10.5px', color: 'var(--c-text-3)', marginTop: '2px' }}>{sub}</div>}
@@ -98,7 +98,7 @@ function RingCard({ ring, isBest, isWorst, totalSpend, totalConversions }) {
         <div style={{
           position: 'absolute', top: '-9px', right: '10px',
           background: ring.color, color: '#fff',
-          fontSize: '10px', fontWeight: 800,
+          fontSize: '10px', fontWeight: 700,
           padding: '2px 8px', borderRadius: '12px',
           display: 'inline-flex', alignItems: 'center', gap: '4px',
         }}>
@@ -106,7 +106,7 @@ function RingCard({ ring, isBest, isWorst, totalSpend, totalConversions }) {
         </div>
       )}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
-        <div style={{ fontSize: '12.5px', fontWeight: 800, color: 'var(--c-text-1)' }}>
+        <div style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--c-text-1)' }}>
           {ring.label}
         </div>
         <div style={{ fontSize: '11px', fontWeight: 700, color: ring.color }}>
@@ -141,7 +141,7 @@ function MiniStat({ label, value, sub, emphasize, warning }) {
       <div style={{ fontSize: '9.5px', color: 'var(--c-text-4)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.3px', marginBottom: '2px' }}>
         {label}
       </div>
-      <div style={{ fontSize: '13px', fontWeight: 800, color, lineHeight: 1.1 }}>
+      <div style={{ fontSize: '13px', fontWeight: 700, color, lineHeight: 1.1 }}>
         {value}
       </div>
       {sub && <div style={{ fontSize: '10px', color: 'var(--c-text-4)', marginTop: '1px' }}>{sub}</div>}
@@ -165,7 +165,7 @@ function RingMiniRow({ ring, isBest, totalConversions }) {
       fontSize: '11.5px',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-        <span style={{ fontWeight: 800, color: ring.color, whiteSpace: 'nowrap' }}>{ring.label}</span>
+        <span style={{ fontWeight: 700, color: ring.color, whiteSpace: 'nowrap' }}>{ring.label}</span>
         {isBest && <span title="Melhor CPR" style={{ fontSize: '12px' }}>🏆</span>}
       </div>
       <div><strong style={{ color: 'var(--c-text-1)' }}>{fmtNum(ring.conversions)}</strong> <span style={{ color: 'var(--c-text-4)', fontSize: '10px' }}>conv</span></div>
@@ -224,7 +224,7 @@ function AdReportCard({ analysis, onOpenNewWithSplit, onEdit }) {
       {/* Header compacto */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '10px' }}>
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: '13.5px', fontWeight: 800, color: 'var(--c-text-1)', lineHeight: 1.25 }}>
+          <div style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--c-text-1)', lineHeight: 1.25 }}>
             {analysis.ad.name}
           </div>
           <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)' }}>
@@ -385,7 +385,7 @@ export default function Reports() {
       {/* Cabeçalho */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', marginBottom: '22px' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '4px' }}>
+          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
             Desempenho
           </h1>
           <p style={{ fontSize: '13px', color: 'var(--c-text-3)', margin: 0 }}>

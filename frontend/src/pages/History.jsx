@@ -154,7 +154,7 @@ export default function History() {
   return (
     <div className="page-container">
       <div style={{ marginBottom: '18px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '4px' }}>
+        <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
           Histórico
         </h1>
         <p style={{ fontSize: '12.5px', color: 'var(--c-text-3)' }}>
@@ -229,7 +229,7 @@ export default function History() {
           {Object.entries(grouped).map(([groupLabel, entries]) => (
             <div key={groupLabel}>
               <div style={{
-                fontSize: '10.5px', fontWeight: 800, color: 'var(--c-text-4)',
+                fontSize: '10.5px', fontWeight: 700, color: 'var(--c-text-4)',
                 textTransform: 'uppercase', letterSpacing: '.7px',
                 padding: '0 12px', marginBottom: '4px',
                 display: 'flex', alignItems: 'center', gap: '8px',

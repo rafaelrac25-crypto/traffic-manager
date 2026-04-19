@@ -496,7 +496,7 @@ function MetricCard({ label, value, trend, trendUp, sub, icon, iconBg, iconColor
           {label}
         </div>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', flexWrap: 'wrap' }}>
-          <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--c-text-1)', lineHeight: 1.1 }}>
+          <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--c-text-1)', lineHeight: 1.1 }}>
             {value}
           </div>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
@@ -572,11 +572,11 @@ function BalanceCard({ funds, lowBalance, threshold, onAdd }) {
       </div>
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        <div style={{ fontSize: '22px', fontWeight: 800, color: lowBalance ? '#DC2626' : 'var(--c-text-1)', lineHeight: 1 }}>
+        <div style={{ fontSize: '22px', fontWeight: 700, color: lowBalance ? '#DC2626' : 'var(--c-text-1)', lineHeight: 1 }}>
           R$ {funds.toFixed(2).replace('.', ',')}
         </div>
         <div style={{ fontSize: '10px', color: 'var(--c-text-4)', marginTop: '3px' }}>
-          {lowBalance ? `Abaixo do mínimo de R$ ${threshold},00` : 'Disponível para veicular anúncios'}
+          {lowBalance ? `Abaixo do mínimo de R$\u00A0${threshold},00` : 'Disponível para veicular anúncios'}
         </div>
       </div>
 
@@ -628,7 +628,7 @@ function RingPerformanceTeaser({ ads, onOpen }) {
       {hasData ? (
         <>
           <div>
-            <div style={{ fontSize: '14px', fontWeight: 800, color: perf.best.color, lineHeight: 1.2, marginBottom: '2px' }}>
+            <div style={{ fontSize: '14px', fontWeight: 700, color: perf.best.color, lineHeight: 1.2, marginBottom: '2px' }}>
               {perf.best.shortLabel}
             </div>
             <div style={{ fontSize: '11px', color: 'var(--c-text-3)' }}>
@@ -735,7 +735,7 @@ function HistoricalComparisonCard({ onViewCalendar }) {
         }}>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontSize: '10px', color: 'var(--c-text-4)', fontWeight: 600 }}>Resultados</span>
-            <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--c-text-1)', lineHeight: 1.1 }}>
+            <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--c-text-1)', lineHeight: 1.1 }}>
               {item.current.results} <span style={{ fontSize: '10px', fontWeight: 500, color: 'var(--c-text-4)' }}>vs {item.previous.results}</span>
             </span>
           </div>
@@ -743,7 +743,7 @@ function HistoricalComparisonCard({ onViewCalendar }) {
             padding: '3px 8px', borderRadius: '6px',
             background: resultsDelta >= 0 ? '#DCFCE7' : '#FEE2E2',
             color: resultsDelta >= 0 ? '#16A34A' : '#DC2626',
-            fontSize: '11px', fontWeight: 800,
+            fontSize: '11px', fontWeight: 700,
           }}>
             {resultsDelta >= 0 ? '▲' : '▼'} {Math.abs(resultsDelta).toFixed(1)}%
           </span>
@@ -755,7 +755,7 @@ function HistoricalComparisonCard({ onViewCalendar }) {
         }}>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontSize: '10px', color: 'var(--c-text-4)', fontWeight: 600 }}>Custo por resultado</span>
-            <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--c-text-1)', lineHeight: 1.1 }}>
+            <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--c-text-1)', lineHeight: 1.1 }}>
               R$ {item.current.cpr.toFixed(2).replace('.', ',')} <span style={{ fontSize: '10px', fontWeight: 500, color: 'var(--c-text-4)' }}>vs R$ {item.previous.cpr.toFixed(2).replace('.', ',')}</span>
             </span>
           </div>
@@ -763,7 +763,7 @@ function HistoricalComparisonCard({ onViewCalendar }) {
             padding: '3px 8px', borderRadius: '6px',
             background: cprDelta <= 0 ? '#DCFCE7' : '#FEE2E2',
             color: cprDelta <= 0 ? '#16A34A' : '#DC2626',
-            fontSize: '11px', fontWeight: 800,
+            fontSize: '11px', fontWeight: 700,
           }}>
             {cprDelta <= 0 ? '▼' : '▲'} {Math.abs(cprDelta).toFixed(1)}%
           </span>
@@ -900,7 +900,7 @@ export default function Dashboard() {
       {/* ── Cabeçalho ── */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '4px' }}>
+          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
             {saudacao}, Cris! 👋
           </h1>
           <p style={{ fontSize: '13px', color: 'var(--c-text-3)' }}>

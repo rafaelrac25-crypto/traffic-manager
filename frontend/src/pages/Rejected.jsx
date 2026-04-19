@@ -142,7 +142,7 @@ export default function Rejected() {
     <div className="page-container">
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '4px' }}>
+          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
             Anúncios reprovados
           </h1>
           <p style={{ fontSize: '13px', color: 'var(--c-text-3)' }}>

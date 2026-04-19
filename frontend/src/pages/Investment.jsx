@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAppState } from '../contexts/AppStateContext';
 
 function formatBRL(v) {
-  return `R$ ${Number(v || 0).toFixed(2).replace('.', ',')}`;
+  return `R$\u00A0${Number(v || 0).toFixed(2).replace('.', ',')}`;
 }
 
 function maskCard(v) {
@@ -85,7 +85,7 @@ export default function Investment() {
   return (
     <div className="page-container">
       <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '4px' }}>
+        <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
           Investimento
         </h1>
         <p style={{ fontSize: '13px', color: 'var(--c-text-3)' }}>
@@ -106,7 +106,7 @@ export default function Investment() {
           <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-text-3)', marginBottom: '6px', letterSpacing: '.5px', textTransform: 'uppercase' }}>
             Saldo disponível
           </div>
-          <div style={{ fontSize: '36px', fontWeight: 800, color: lowBalance ? '#DC2626' : 'var(--c-accent)', lineHeight: 1 }}>
+          <div style={{ fontSize: '36px', fontWeight: 700, color: lowBalance ? '#DC2626' : 'var(--c-accent)', lineHeight: 1 }}>
             {formatBRL(funds)}
           </div>
           {lowBalance && (

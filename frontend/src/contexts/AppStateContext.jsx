@@ -259,12 +259,12 @@ export function AppStateProvider({ children }) {
       addNotification({
         kind: 'funds',
         title: 'Saldo adicionado',
-        message: `R$ ${amount.toFixed(2).replace('.', ',')} adicionados. Saldo atual: R$ ${next.toFixed(2).replace('.', ',')}.`,
+        message: `R$\u00A0${amount.toFixed(2).replace('.', ',')} adicionados. Saldo atual: R$\u00A0${next.toFixed(2).replace('.', ',')}.`,
       });
       logHistory({
         type: 'funds-added',
-        title: `Saldo +R$ ${amount.toFixed(2).replace('.', ',')}`,
-        description: `Novo saldo: R$ ${next.toFixed(2).replace('.', ',')}`,
+        title: `Saldo +R$\u00A0${amount.toFixed(2).replace('.', ',')}`,
+        description: `Novo saldo: R$\u00A0${next.toFixed(2).replace('.', ',')}`,
       });
       return next;
     });
@@ -277,7 +277,7 @@ export function AppStateProvider({ children }) {
         addNotification({
           kind: 'low-balance',
           title: 'Saldo baixo de investimento',
-          message: `Seu saldo está em R$ ${funds.toFixed(2).replace('.', ',')}. Adicione fundos para continuar com seus anúncios.`,
+          message: `Seu saldo está em R$\u00A0${funds.toFixed(2).replace('.', ',')}. Adicione fundos para continuar com seus anúncios.`,
           link: '/investimento',
         });
       }

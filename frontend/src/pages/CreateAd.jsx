@@ -826,7 +826,7 @@ function RingBudgetSplit({ locations, budgetValue, budgetType, split, setSplit }
         color: balanced ? '#16A34A' : '#DC2626',
         textAlign: 'center',
       }}>
-        {balanced ? `✅ Total: 100% · R$ ${value.toFixed(2).replace('.', ',')} distribuídos` : `⚠️ Total: ${total}% — ajuste para fechar 100%`}
+        {balanced ? `✅ Total: 100% · R$\u00A0${value.toFixed(2).replace('.', ',')} distribuídos` : `⚠️ Total: ${total}% — ajuste para fechar 100%`}
       </div>
 
       {buckets.fora.length > 0 && (
@@ -1299,7 +1299,7 @@ function Step6Review({ data, onGoTo }) {
       step: 2,
       label: 'Orçamento',
       rows: [
-        data.budgetValue ? `💰 R$ ${Number(data.budgetValue).toFixed(2).replace('.', ',')} / ${{ daily: 'dia', weekly: 'semana', total: 'campanha' }[data.budgetType] || 'campanha'}` : '💰 — valor não definido',
+        data.budgetValue ? `💰 R$\u00A0${Number(data.budgetValue).toFixed(2).replace('.', ',')} / ${{ daily: 'dia', weekly: 'semana', total: 'campanha' }[data.budgetType] || 'campanha'}` : '💰 — valor não definido',
         `📅 Início: ${data.startDate || 'hoje'} ${data.endDate ? `· Término: ${data.endDate}` : '· Sem data de término'}`,
       ].filter(Boolean),
     },
@@ -1389,7 +1389,7 @@ function Step6Review({ data, onGoTo }) {
                       </div>
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <div style={{ fontSize: '13px', fontWeight: 800, color: meta.color }}>{pct}%</div>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: meta.color }}>{pct}%</div>
                       <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--c-text-2)' }}>R$ {share}{unit}</div>
                     </div>
                   </div>
@@ -1551,7 +1551,7 @@ function PublishModal({ onClose, scheduled, startDate }) {
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
       <div style={{ background: 'var(--c-card-bg)', border: '1px solid var(--c-border)', borderRadius: '20px', padding: '40px 36px', maxWidth: '440px', width: '100%', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,.3)', animation: 'fadeIn .25s ease' }}>
         <div style={{ fontSize: '54px', marginBottom: '16px' }}>{scheduled ? '📅' : '🎉'}</div>
-        <h2 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '10px' }}>
+        <h2 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '10px' }}>
           {scheduled ? 'Campanha agendada!' : 'Anúncio enviado para revisão!'}
         </h2>
         <p style={{ fontSize: '14px', color: 'var(--c-text-2)', lineHeight: 1.7, marginBottom: '10px' }}>
@@ -1792,7 +1792,7 @@ export default function CreateAd() {
       {/* ── Cabeçalho ── */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '4px' }}>
+          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
             {fixMode ? 'Corrigir anúncio reprovado' : 'Criar anúncio'}
           </h1>
           <p style={{ fontSize: '13px', color: 'var(--c-text-3)' }}>

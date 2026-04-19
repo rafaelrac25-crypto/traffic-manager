@@ -118,7 +118,7 @@ function AdRow({ ad, isLast, highCpc, onToggle, onDuplicate, onEdit, onRemove })
   const isEnded  = ad.status === 'ended';
 
   const fmt = v => v != null ? v.toLocaleString('pt-BR') : '—';
-  const fmtCurrency = v => v != null ? `R$ ${v.toFixed(2).replace('.', ',')}` : '—';
+  const fmtCurrency = v => v != null ? `R$\u00A0${v.toFixed(2).replace('.', ',')}` : '—';
 
   const rowBg = isEnded
     ? (hovered ? '#ECEEF1' : '#F3F4F6')
@@ -411,7 +411,7 @@ export default function Campaigns() {
       {/* ── Cabeçalho ── */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '22px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '4px' }}>Anúncios</h1>
+          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>Anúncios</h1>
           <p style={{ fontSize: '13px', color: 'var(--c-text-3)' }}>Gerencie seus anúncios e acompanhe os resultados.</p>
         </div>
         <button

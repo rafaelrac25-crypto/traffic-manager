@@ -194,7 +194,7 @@ export default function Sidebar({ open = false, isMobile = false }) {
                 <span>{label}</span>
                 {isCreate && (
                   <span style={{
-                    fontSize: '9px', fontWeight: 800, color: '#fff',
+                    fontSize: '9px', fontWeight: 700, color: '#fff',
                     background: 'var(--c-accent)',
                     padding: '2px 7px', borderRadius: '999px', letterSpacing: '.3px',
                   }}>
@@ -232,7 +232,7 @@ export default function Sidebar({ open = false, isMobile = false }) {
                 <div
                   title={entry.description}
                   style={{
-                    fontSize: '10px', fontWeight: 800, letterSpacing: '.8px',
+                    fontSize: '10px', fontWeight: 700, letterSpacing: '.8px',
                     textTransform: 'uppercase',
                     color: anyActive ? 'var(--c-accent)' : 'var(--c-text-4)',
                     padding: '0 8px 6px', display: 'flex', alignItems: 'center', gap: '6px',

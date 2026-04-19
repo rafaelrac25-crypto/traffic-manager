@@ -429,7 +429,7 @@ function DistrictAnalyzer() {
     setNoMatch(false);
   }
 
-  function fmtBRL(n) { return `R$ ${Number(n).toFixed(2).replace('.', ',')}`; }
+  function fmtBRL(n) { return `R$\u00A0${Number(n).toFixed(2).replace('.', ',')}`; }
 
   return (
     <div style={{
@@ -444,7 +444,7 @@ function DistrictAnalyzer() {
       gap: '14px',
     }}>
       <div>
-        <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '3px' }}>
+        <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '3px' }}>
           🎯 Analisador de bairro
         </div>
         <div style={{ fontSize: '12px', color: 'var(--c-text-3)', lineHeight: 1.5 }}>
@@ -561,7 +561,7 @@ function StatBlock({ label, value, sub, accent }) {
       <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--c-text-4)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: '4px' }}>
         {label}
       </div>
-      <div style={{ fontSize: '14px', fontWeight: 800, color: accent || 'var(--c-text-1)', lineHeight: 1.2, marginBottom: '3px' }}>
+      <div style={{ fontSize: '14px', fontWeight: 700, color: accent || 'var(--c-text-1)', lineHeight: 1.25, marginBottom: '3px', wordBreak: 'keep-all' }}>
         {value}
       </div>
       {sub && <div style={{ fontSize: '10.5px', color: 'var(--c-text-3)', lineHeight: 1.4 }}>{sub}</div>}
@@ -607,7 +607,7 @@ export default function Audiences() {
     <div className="page-container">
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', gap: '16px', flexWrap: 'wrap' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '4px' }}>
+          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
             Públicos salvos
           </h1>
           <p style={{ fontSize: '13px', color: 'var(--c-text-3)', margin: 0 }}>

@@ -83,7 +83,7 @@ function BudgetPicker({ entry, dailyBudget, setDailyBudget, period, setPeriod })
               onChange={e => handleInput(e.target.value)}
               style={{
                 width: '140px', border: 'none', outline: 'none',
-                background: 'transparent', fontSize: '28px', fontWeight: 800,
+                background: 'transparent', fontSize: '28px', fontWeight: 700,
                 color: 'var(--c-accent)', fontFamily: 'inherit', padding: 0,
               }}
             />
@@ -95,8 +95,8 @@ function BudgetPicker({ entry, dailyBudget, setDailyBudget, period, setPeriod })
             {diffFromSuggested === 0
               ? '= sugestão'
               : diffFromSuggested < 0
-                ? `↓ R$ ${Math.abs(diffFromSuggested)}/dia abaixo`
-                : `↑ R$ ${diffFromSuggested}/dia acima`}
+                ? `↓ R$\u00A0${Math.abs(diffFromSuggested)}/dia abaixo`
+                : `↑ R$\u00A0${diffFromSuggested}/dia acima`}
           </div>
         </div>
       </div>
@@ -106,7 +106,7 @@ function BudgetPicker({ entry, dailyBudget, setDailyBudget, period, setPeriod })
         <div>
           Campanha de <strong>{campaignDays} dia{campaignDays > 1 ? 's' : ''}</strong>: investimento total{' '}
           <strong style={{ color: 'var(--c-accent)' }}>R$ {totalCampaign}</strong>
-          {' '}(R$ {dailyBudget} {periodLabel === 'por dia' ? 'por dia' : `· equivalente a R$ ${displayedValue} ${periodLabel}`})
+          {' '}(R$ {dailyBudget} {periodLabel === 'por dia' ? 'por dia' : `· equivalente a R$\u00A0${displayedValue} ${periodLabel}`})
         </div>
         <div style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '4px' }}>
           {entry.suggestedBudget.reason}
@@ -157,7 +157,7 @@ function CommercialDateModal({ entry, onClose, onCreateAd }) {
             fontSize: '24px',
           }}>{entry.emoji}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '17px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '4px' }}>
+            <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
               {entry.name}
             </div>
             <div style={{ fontSize: '12px', color: 'var(--c-text-3)' }}>
@@ -293,7 +293,7 @@ function DayDetailsModal({ dateStr, events, commercial, onClose, onOpenCommercia
             <div style={{ fontSize: '10.5px', fontWeight: 700, color: 'var(--c-text-4)', letterSpacing: '.6px', textTransform: 'uppercase', marginBottom: '2px' }}>
               Detalhes do dia
             </div>
-            <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--c-text-1)' }}>
+            <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--c-text-1)' }}>
               {title}
             </div>
           </div>
@@ -316,13 +316,13 @@ function DayDetailsModal({ dateStr, events, commercial, onClose, onOpenCommercia
               borderRadius: '12px',
               padding: '12px 14px',
             }}>
-              <div style={{ fontSize: '10px', fontWeight: 800, color: 'var(--c-accent)', textTransform: 'uppercase', letterSpacing: '.6px', marginBottom: '6px' }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--c-accent)', textTransform: 'uppercase', letterSpacing: '.6px', marginBottom: '6px' }}>
                 Data comercial
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
                 <span style={{ fontSize: '22px' }}>{commercial.emoji}</span>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--c-text-1)', lineHeight: 1.3 }}>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-1)', lineHeight: 1.3 }}>
                     {commercial.name}
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--c-text-3)', marginTop: '2px' }}>
@@ -362,7 +362,7 @@ function DayDetailsModal({ dateStr, events, commercial, onClose, onOpenCommercia
 
           {events.length > 0 && (
             <div>
-              <div style={{ fontSize: '10px', fontWeight: 800, color: 'var(--c-text-4)', textTransform: 'uppercase', letterSpacing: '.6px', marginBottom: '8px' }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--c-text-4)', textTransform: 'uppercase', letterSpacing: '.6px', marginBottom: '8px' }}>
                 Anúncios agendados ({events.length})
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -437,7 +437,7 @@ function Section({ title, children }) {
   return (
     <div style={{ marginBottom: '18px' }}>
       <div style={{
-        fontSize: '11px', fontWeight: 800, letterSpacing: '.8px',
+        fontSize: '11px', fontWeight: 700, letterSpacing: '.8px',
         color: 'var(--c-text-4)', textTransform: 'uppercase', marginBottom: '8px',
       }}>{title}</div>
       {children}
@@ -553,7 +553,7 @@ export default function Calendar() {
 
       {/* ── Cabeçalho ── */}
       <div style={{ marginBottom: '22px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '4px' }}>Calendário</h1>
+        <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>Calendário</h1>
         <p style={{ fontSize: '13px', color: 'var(--c-text-3)' }}>
           Visualize e <span style={{ color: 'var(--c-accent)', fontWeight: 600 }}>planeje</span> suas campanhas.
         </p>
@@ -765,7 +765,7 @@ export default function Calendar() {
                       textAlign: 'center', flexShrink: 0,
                       minWidth: '44px',
                     }}>
-                      <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--c-accent)', lineHeight: 1 }}>{item.day}</div>
+                      <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--c-accent)', lineHeight: 1 }}>{item.day}</div>
                       <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--c-text-4)', letterSpacing: '1px' }}>{item.month}</div>
                     </div>
 
@@ -844,7 +844,7 @@ export default function Calendar() {
                       textAlign: 'center', flexShrink: 0,
                       minWidth: '40px',
                     }}>
-                      <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--c-accent)', lineHeight: 1 }}>
+                      <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-accent)', lineHeight: 1 }}>
                         {String(entry.date.getDate()).padStart(2, '0')}
                       </div>
                       <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--c-text-4)', letterSpacing: '1px' }}>
