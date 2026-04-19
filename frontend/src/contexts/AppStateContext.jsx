@@ -261,9 +261,14 @@ export function AppStateProvider({ children }) {
         title: 'Saldo adicionado',
         message: `R$ ${amount.toFixed(2).replace('.', ',')} adicionados. Saldo atual: R$ ${next.toFixed(2).replace('.', ',')}.`,
       });
+      logHistory({
+        type: 'funds-added',
+        title: `Saldo +R$ ${amount.toFixed(2).replace('.', ',')}`,
+        description: `Novo saldo: R$ ${next.toFixed(2).replace('.', ',')}`,
+      });
       return next;
     });
-  }, [addNotification]);
+  }, [addNotification, logHistory]);
 
   useEffect(() => {
     if (funds < LOW_BALANCE_THRESHOLD) {
@@ -295,12 +300,26 @@ export function AppStateProvider({ children }) {
       ...ad,
     };
     setAds(prev => [newAd, ...prev]);
+    logHistory({
+      type: 'ad-created',
+      title: `Anúncio criado: ${newAd.name || 'sem nome'}`,
+      description: newAd.platform ? `Plataforma: ${newAd.platform}` : null,
+    });
     return newAd;
-  }, []);
+  }, [logHistory]);
 
   const updateAd = useCallback((id, patch) => {
-    setAds(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a));
-  }, []);
+    setAds(prev => prev.map(a => {
+      if (a.id !== id) return a;
+      const fields = Object.keys(patch).filter(k => k !== 'updatedAt').join(', ');
+      logHistory({
+        type: 'ad-updated',
+        title: `Anúncio editado: ${a.name || 'sem nome'}`,
+        description: fields ? `Campos: ${fields}` : null,
+      });
+      return { ...a, ...patch };
+    }));
+  }, [logHistory]);
 
   const removeAd = useCallback((id) => {
     setAds(prev => {
@@ -338,16 +357,27 @@ export function AppStateProvider({ children }) {
       title: 'Anúncio duplicado',
       message: `"${src.name}" foi duplicado como "${dup.name}". Ajuste e ative quando quiser.`,
     });
+    logHistory({
+      type: 'ad-duplicated',
+      title: `Anúncio duplicado: ${src.name}`,
+      description: `Nova cópia: ${dup.name}`,
+    });
     return dup;
-  }, [ads, addNotification]);
+  }, [ads, addNotification, logHistory]);
 
   const toggleAdStatus = useCallback((id) => {
     setAds(prev => prev.map(a => {
       if (a.id !== id) return a;
       const next = a.status === 'active' ? 'paused' : a.status === 'paused' ? 'active' : a.status;
+      if (next !== a.status) {
+        logHistory({
+          type: next === 'active' ? 'ad-activated' : 'ad-paused',
+          title: `${next === 'active' ? 'Ativado' : 'Pausado'}: ${a.name || 'anúncio'}`,
+        });
+      }
       return { ...a, status: next };
     }));
-  }, []);
+  }, [logHistory]);
 
   const getAdById = useCallback((id) => ads.find(a => a.id === id) || null, [ads]);
 
@@ -359,12 +389,23 @@ export function AppStateProvider({ children }) {
       ...audience,
     };
     setAudiences(prev => [newAudience, ...prev]);
+    logHistory({
+      type: 'audience-created',
+      title: `Público criado: ${newAudience.name || 'sem nome'}`,
+    });
     return newAudience;
-  }, []);
+  }, [logHistory]);
 
   const updateAudience = useCallback((id, patch) => {
-    setAudiences(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a));
-  }, []);
+    setAudiences(prev => prev.map(a => {
+      if (a.id !== id) return a;
+      logHistory({
+        type: 'audience-updated',
+        title: `Público editado: ${a.name || 'sem nome'}`,
+      });
+      return { ...a, ...patch };
+    }));
+  }, [logHistory]);
 
   const removeAudience = useCallback((id) => {
     setAudiences(prev => {
@@ -391,8 +432,12 @@ export function AppStateProvider({ children }) {
       ...creative,
     };
     setCreatives(prev => [newCreative, ...prev]);
+    logHistory({
+      type: 'creative-created',
+      title: `Criativo criado: ${newCreative.name || newCreative.headline || 'sem nome'}`,
+    });
     return newCreative;
-  }, []);
+  }, [logHistory]);
 
   const markCreativeUsed = useCallback((id) => {
     setCreatives(prev => prev.map(c => c.id === id ? { ...c, usedCount: (c.usedCount || 0) + 1 } : c));
