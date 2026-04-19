@@ -13,7 +13,6 @@ import { useAppState } from '../contexts/AppStateContext';
 import {
   analyzeAllAds,
   suggestOptimizedSplit,
-  globalRingPerformance,
   RING_META,
 } from '../data/performanceMock';
 
@@ -150,8 +149,35 @@ function MiniStat({ label, value, sub, emphasize, warning }) {
   );
 }
 
+function RingMiniRow({ ring, isBest, totalConversions }) {
+  const convShare = totalConversions > 0 ? (ring.conversions / totalConversions) * 100 : 0;
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'minmax(120px,1.2fr) 70px 70px 90px 80px',
+      alignItems: 'center',
+      gap: '10px',
+      padding: '8px 10px',
+      borderRadius: '8px',
+      background: isBest ? `${ring.color}0f` : 'var(--c-surface)',
+      border: `1px solid ${isBest ? ring.color : 'var(--c-border-lt)'}`,
+      borderLeft: `4px solid ${ring.color}`,
+      fontSize: '11.5px',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+        <span style={{ fontWeight: 800, color: ring.color, whiteSpace: 'nowrap' }}>{ring.label}</span>
+        {isBest && <span title="Melhor CPR" style={{ fontSize: '12px' }}>🏆</span>}
+      </div>
+      <div><strong style={{ color: 'var(--c-text-1)' }}>{fmtNum(ring.conversions)}</strong> <span style={{ color: 'var(--c-text-4)', fontSize: '10px' }}>conv</span></div>
+      <div style={{ color: 'var(--c-text-3)' }}>{convShare.toFixed(0)}%</div>
+      <div>CPR <strong style={{ color: 'var(--c-text-1)' }}>{fmtBRL(ring.cpr)}</strong></div>
+      <div style={{ color: 'var(--c-text-3)' }}>{fmtBRL(ring.spend)}</div>
+    </div>
+  );
+}
+
 function AdReportCard({ analysis, onOpenNewWithSplit, onEdit }) {
-  const [showSuggestion, setShowSuggestion] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const optimized = useMemo(() => suggestOptimizedSplit(analysis), [analysis]);
 
   if (!analysis.hasSplit) {
@@ -159,26 +185,23 @@ function AdReportCard({ analysis, onOpenNewWithSplit, onEdit }) {
       <div className="ccb-card" style={{
         background: 'var(--c-card-bg)',
         border: '1px solid var(--c-border)',
-        borderRadius: '14px',
-        padding: '16px 18px',
-        boxShadow: '0 2px 8px var(--c-shadow)',
+        borderRadius: '12px',
+        padding: '10px 14px',
+        boxShadow: '0 1px 4px var(--c-shadow)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-          <div>
-            <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '3px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)' }}>
               {analysis.ad.name}
             </div>
-            <div style={{ fontSize: '11.5px', color: 'var(--c-text-4)' }}>
-              Sem split por anel — anúncio com 1 conjunto apenas
+            <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)' }}>
+              Sem split — 1 conjunto
             </div>
           </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-accent)' }}>
-              {fmtBRL(analysis.totalSpend)} gastos em {analysis.daysActive}d
-            </div>
-            <div style={{ fontSize: '11px', color: 'var(--c-text-3)' }}>
-              {analysis.totalConversions} conversões · {fmtNum(analysis.totalClicks)} cliques
-            </div>
+          <div style={{ display: 'flex', gap: '14px', fontSize: '11.5px', color: 'var(--c-text-2)', flexWrap: 'wrap' }}>
+            <span><strong>{analysis.totalConversions}</strong> conv</span>
+            <span>{fmtNum(analysis.totalClicks)} cliq</span>
+            <span>{fmtBRL(analysis.totalSpend)} · {analysis.daysActive}d</span>
           </div>
         </div>
       </div>
@@ -187,52 +210,76 @@ function AdReportCard({ analysis, onOpenNewWithSplit, onEdit }) {
 
   const best = analysis.bestRing;
   const worst = analysis.worstRing;
+  const sortedRings = [...analysis.rings].sort((a, b) => b.conversions - a.conversions);
+  const cprMedio = analysis.totalConversions > 0 ? analysis.totalSpend / analysis.totalConversions : 0;
 
   return (
     <div className="ccb-card" style={{
       background: 'var(--c-card-bg)',
       border: '1px solid var(--c-border)',
-      borderRadius: '14px',
-      padding: '18px 20px',
-      boxShadow: '0 2px 8px var(--c-shadow)',
+      borderRadius: '12px',
+      padding: '12px 14px',
+      boxShadow: '0 1px 4px var(--c-shadow)',
     }}>
-      {/* Header do anúncio */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '14px' }}>
+      {/* Header compacto */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '10px' }}>
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '3px' }}>
+          <div style={{ fontSize: '13.5px', fontWeight: 800, color: 'var(--c-text-1)', lineHeight: 1.25 }}>
             {analysis.ad.name}
           </div>
-          <div style={{ fontSize: '11.5px', color: 'var(--c-text-3)' }}>
-            Últimos {analysis.daysActive} dias · {analysis.rings.length} conjuntos ativos
+          <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)' }}>
+            {analysis.daysActive}d · {analysis.rings.length} anéis · melhor: <strong style={{ color: best.color }}>{best.label}</strong>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-          <Stat label="Gasto total" value={fmtBRL(analysis.totalSpend)} />
-          <Stat label="Conversões" value={fmtNum(analysis.totalConversions)} />
-          <Stat
-            label="CPR médio"
-            value={fmtBRL(analysis.totalConversions > 0 ? analysis.totalSpend / analysis.totalConversions : 0)}
-            emphasize
-          />
+        <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap', fontSize: '11.5px' }}>
+          <span style={{ color: 'var(--c-text-2)' }}><strong style={{ color: 'var(--c-text-1)' }}>{fmtNum(analysis.totalConversions)}</strong> conv</span>
+          <span style={{ color: 'var(--c-text-2)' }}>{fmtBRL(analysis.totalSpend)}</span>
+          <span style={{ color: 'var(--c-accent)', fontWeight: 700 }}>CPR {fmtBRL(cprMedio)}</span>
+          <button
+            onClick={() => setExpanded(v => !v)}
+            style={{
+              padding: '5px 10px', borderRadius: '7px',
+              background: expanded ? 'var(--c-accent)' : 'var(--c-surface)',
+              color: expanded ? '#fff' : 'var(--c-text-2)',
+              border: `1.5px solid ${expanded ? 'var(--c-accent)' : 'var(--c-border)'}`,
+              fontSize: '10.5px', fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            {expanded ? 'Ocultar' : 'Ver mais'}
+          </button>
         </div>
       </div>
 
-      {/* Cards por anel */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '10px', marginBottom: '14px' }}>
-        {analysis.rings.map(r => (
-          <RingCard
+      {/* Mini-linhas por anel — sempre visíveis, ordenadas por conversões desc */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+        {sortedRings.map(r => (
+          <RingMiniRow
             key={r.key}
             ring={r}
             isBest={r.key === best?.key}
-            isWorst={r.key === worst?.key && analysis.rings.length > 1}
-            totalSpend={analysis.totalSpend}
             totalConversions={analysis.totalConversions}
           />
         ))}
       </div>
 
-      {/* Recomendação acionável */}
-      {best && optimized && (
+      {/* Detalhes expandidos */}
+      {expanded && (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '10px', marginTop: '14px' }}>
+            {sortedRings.map(r => (
+              <RingCard
+                key={r.key}
+                ring={r}
+                isBest={r.key === best?.key}
+                isWorst={r.key === worst?.key && analysis.rings.length > 1}
+                totalSpend={analysis.totalSpend}
+                totalConversions={analysis.totalConversions}
+              />
+            ))}
+          </div>
+
+          {/* Recomendação acionável */}
+          {best && optimized && (
         <div style={{
           background: 'linear-gradient(135deg, rgba(22,163,74,.06), rgba(22,163,74,.01))',
           border: '1px solid rgba(22,163,74,.25)',
@@ -288,6 +335,8 @@ function AdReportCard({ analysis, onOpenNewWithSplit, onEdit }) {
             </button>
           </div>
         </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -299,10 +348,17 @@ export default function Reports() {
   const [days, setDays] = useState(7);
 
   const analyses = useMemo(() => analyzeAllAds(ads, { daysActive: days }), [ads, days]);
-  const global = useMemo(() => globalRingPerformance(ads, { daysActive: days }), [ads, days]);
 
-  const withSplit = analyses.filter(a => a.hasSplit);
-  const withoutSplit = analyses.filter(a => !a.hasSplit);
+  const byConversionsDesc = (a, b) => {
+    const diff = (b.totalConversions || 0) - (a.totalConversions || 0);
+    if (diff !== 0) return diff;
+    const cprA = a.totalConversions > 0 ? a.totalSpend / a.totalConversions : Infinity;
+    const cprB = b.totalConversions > 0 ? b.totalSpend / b.totalConversions : Infinity;
+    return cprA - cprB;
+  };
+
+  const withSplit = analyses.filter(a => a.hasSplit).sort(byConversionsDesc);
+  const withoutSplit = analyses.filter(a => !a.hasSplit).sort(byConversionsDesc);
 
   function handleOpenNewWithSplit(sourceAd, optimizedSplit) {
     navigate('/criar-anuncio', {
@@ -379,57 +435,6 @@ export default function Reports() {
           >
             Criar anúncio
           </button>
-        </div>
-      )}
-
-      {/* Resumo geral por anel */}
-      {global.adCount > 0 && (
-        <div style={{
-          background: 'var(--c-card-bg)',
-          border: '1.5px solid var(--c-border)',
-          borderLeft: '4px solid var(--c-accent)',
-          borderRadius: '14px',
-          padding: '18px 20px',
-          marginBottom: '22px',
-        }}>
-          <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '12px' }}>
-            📈 Performance consolidada ({global.adCount} anúncio(s) com split)
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px' }}>
-            {global.rings.map(r => (
-              <div
-                key={r.key}
-                style={{
-                  background: 'var(--c-surface)',
-                  border: `1.5px solid ${r.key === global.best?.key ? r.color : 'var(--c-border-lt)'}`,
-                  borderLeft: `4px solid ${r.color}`,
-                  borderRadius: '10px',
-                  padding: '10px 12px',
-                  position: 'relative',
-                }}
-              >
-                {r.key === global.best?.key && (
-                  <div style={{
-                    position: 'absolute', top: '-9px', right: '10px',
-                    background: r.color, color: '#fff',
-                    fontSize: '10px', fontWeight: 800,
-                    padding: '2px 8px', borderRadius: '12px',
-                  }}>
-                    🏆 Vencedor
-                  </div>
-                )}
-                <div style={{ fontSize: '11.5px', fontWeight: 700, color: r.color, marginBottom: '4px' }}>
-                  {r.label}
-                </div>
-                <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '2px' }}>
-                  CPR {fmtBRL(r.cpr)}
-                </div>
-                <div style={{ fontSize: '10.5px', color: 'var(--c-text-3)' }}>
-                  {r.conversions} conv. · {fmtNum(r.clicks)} cliq. · {fmtBRL(r.spend)} gasto
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       )}
 
