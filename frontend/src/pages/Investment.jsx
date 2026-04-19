@@ -40,6 +40,7 @@ export default function Investment() {
   const [pixKey,  setPixKey]    = useState('');
   const [topupValue, setTopupValue] = useState(50);
   const [msg, setMsg] = useState('');
+  const [pixelOpen, setPixelOpen] = useState(false);
 
   const quickValues = [20, 50, 100, 200, 500];
 
@@ -115,12 +116,54 @@ export default function Investment() {
           )}
         </div>
         {paymentMethod && (
-          <div style={{ padding: '10px 14px', background: 'var(--c-card-bg)', borderRadius: '12px', border: '1px solid var(--c-border)' }}>
+          <div style={{ padding: '10px 14px', background: 'var(--c-card-bg)', borderRadius: '12px', border: '1px solid var(--c-border)', minWidth: '220px' }}>
             <div style={{ fontSize: '11px', color: 'var(--c-text-4)', marginBottom: '3px' }}>Método cadastrado</div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)' }}>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '8px' }}>
               {paymentMethod.type === 'card'
                 ? `💳 •••• ${paymentMethod.last4}`
                 : `⚡ PIX: ${paymentMethod.key}`}
+            </div>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button
+                onClick={() => {
+                  setTab(paymentMethod.type);
+                  if (paymentMethod.type === 'pix') {
+                    setPixKey(paymentMethod.key || '');
+                  } else {
+                    setCardName(paymentMethod.name || '');
+                    setCardNumber('');
+                    setCardExp(paymentMethod.exp || '');
+                    setCardCvv('');
+                  }
+                  setMsg('Edite os campos abaixo e salve novamente.');
+                }}
+                style={{
+                  flex: 1, padding: '6px 10px', borderRadius: '7px',
+                  border: '1.5px solid var(--c-border)', background: 'var(--c-surface)',
+                  color: 'var(--c-text-2)', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                ✎ Editar
+              </button>
+              <button
+                onClick={() => {
+                  if (!window.confirm('Excluir método cadastrado? Você vai precisar cadastrar outro antes de adicionar fundos.')) return;
+                  setPaymentMethod(null);
+                  setPixKey('');
+                  setCardName('');
+                  setCardNumber('');
+                  setCardExp('');
+                  setCardCvv('');
+                  setMsg('Método de pagamento excluído.');
+                }}
+                style={{
+                  padding: '6px 10px', borderRadius: '7px',
+                  border: '1.5px solid #FCA5A5', background: '#FEF2F2',
+                  color: '#DC2626', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+                }}
+              >
+                🗑 Excluir
+              </button>
             </div>
           </div>
         )}
@@ -255,52 +298,81 @@ export default function Investment() {
         </div>
       )}
 
-      {/* ── Pixel / Rastreamento de conversão ── */}
+      {/* ── Pixel / Rastreamento de conversão (minimizado por padrão) ── */}
       <div className="ccb-card" style={{
         marginTop: '24px',
         background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',
-        borderRadius: '16px', padding: '22px', boxShadow: '0 2px 8px var(--c-shadow)',
+        borderRadius: '16px', boxShadow: '0 2px 8px var(--c-shadow)',
+        overflow: 'hidden',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px', gap: '12px', flexWrap: 'wrap' }}>
-          <div>
-            <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--c-text-1)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <button
+          type="button"
+          onClick={() => setPixelOpen(v => !v)}
+          style={{
+            width: '100%', textAlign: 'left',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: '12px', flexWrap: 'wrap',
+            padding: '14px 18px',
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            fontFamily: 'inherit',
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+            <span style={{
+              display: 'inline-block', fontSize: '13px',
+              color: 'var(--c-text-4)',
+              transform: pixelOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+              transition: 'transform .18s',
+            }}>›</span>
+            <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-1)' }}>
               📊 Pixel de rastreamento
-              {pixel?.enabled && (
-                <span style={{
-                  padding: '2px 8px', fontSize: '10px', fontWeight: 700,
-                  background: '#DCFCE7', color: '#16A34A',
-                  borderRadius: '6px', letterSpacing: '.3px',
-                }}>
-                  ATIVO
-                </span>
-              )}
-            </h3>
-            <p style={{ fontSize: '12px', color: 'var(--c-text-3)', margin: '4px 0 0', maxWidth: '560px', lineHeight: 1.5 }}>
+            </span>
+            {pixel?.enabled && (
+              <span style={{
+                padding: '2px 8px', fontSize: '10px', fontWeight: 700,
+                background: '#DCFCE7', color: '#16A34A',
+                borderRadius: '6px', letterSpacing: '.3px',
+              }}>
+                ATIVO
+              </span>
+            )}
+            {!pixelOpen && !pixel?.enabled && (
+              <span style={{
+                fontSize: '11px', color: 'var(--c-text-4)',
+                fontWeight: 500,
+              }}>
+                — opcional, use apenas se tiver site/LP
+              </span>
+            )}
+          </span>
+        </button>
+
+        {pixelOpen && (
+          <div style={{ padding: '4px 22px 22px' }}>
+            <p style={{ fontSize: '12px', color: 'var(--c-text-3)', margin: '0 0 14px', maxWidth: '560px', lineHeight: 1.5 }}>
               Rastreie conversões (agendamentos, contatos, compras) no seu site ou landing page para otimizar seus anúncios.
             </p>
-          </div>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
-            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-text-3)' }}>
-              {pixel?.enabled ? 'Ativado' : 'Desativado'}
-            </span>
-            <div
-              onClick={() => setPixel({ ...pixel, enabled: !pixel?.enabled })}
-              style={{
-                width: '38px', height: '22px', borderRadius: '22px',
-                background: pixel?.enabled ? 'var(--c-accent)' : 'var(--c-border)',
-                position: 'relative', transition: 'background .2s',
-              }}
-            >
-              <div style={{
-                position: 'absolute',
-                width: '16px', height: '16px', background: '#fff',
-                borderRadius: '50%', top: '3px',
-                left: pixel?.enabled ? '19px' : '3px',
-                transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,.3)',
-              }} />
-            </div>
-          </label>
-        </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginBottom: '4px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-text-3)' }}>
+                {pixel?.enabled ? 'Ativado' : 'Desativado'}
+              </span>
+              <div
+                onClick={() => setPixel({ ...pixel, enabled: !pixel?.enabled })}
+                style={{
+                  width: '38px', height: '22px', borderRadius: '22px',
+                  background: pixel?.enabled ? 'var(--c-accent)' : 'var(--c-border)',
+                  position: 'relative', transition: 'background .2s',
+                }}
+              >
+                <div style={{
+                  position: 'absolute',
+                  width: '16px', height: '16px', background: '#fff',
+                  borderRadius: '50%', top: '3px',
+                  left: pixel?.enabled ? '19px' : '3px',
+                  transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,.3)',
+                }} />
+              </div>
+            </label>
 
         {pixel?.enabled && (
           <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -386,6 +458,8 @@ export default function Investment() {
 </script>`}</pre>
               </div>
             )}
+          </div>
+        )}
           </div>
         )}
       </div>
