@@ -32,8 +32,8 @@ export default function SplashScreen({ onDone }) {
       {/* ── Círculo decorativo atrás da logo ── */}
       <div style={{
         position:     'absolute',
-        width:        '340px',
-        height:       '340px',
+        width:        'min(240px, 70vw)',
+        height:       'min(240px, 70vw)',
         borderRadius: '50%',
         background:   'radial-gradient(circle, rgba(214,141,143,.1) 0%, rgba(214,141,143,0) 70%)',
         animation:    'splashLogoIn .9s cubic-bezier(.22,1,.36,1) forwards',
@@ -44,7 +44,8 @@ export default function SplashScreen({ onDone }) {
       <div style={{
         display:    'flex',
         alignItems: 'center',
-        gap:        '24px',
+        gap:        '18px',
+        maxWidth:   '88vw',
         animation:  'splashLogoIn .7s cubic-bezier(.22,1,.36,1) forwards',
         opacity:    0,
       }}>
@@ -52,13 +53,19 @@ export default function SplashScreen({ onDone }) {
         <img
           src={marcaColorida}
           alt="Cris Costa Beauty"
-          style={{ height: '100px', width: 'auto', objectFit: 'contain' }}
+          style={{
+            height:    'clamp(56px, 14vw, 72px)',
+            width:     'auto',
+            maxWidth:  '60vw',
+            objectFit: 'contain',
+            flexShrink: 1,
+          }}
         />
 
         {/* Traço vertical */}
         <div style={{
           width:      '1px',
-          height:     '56px',
+          height:     '42px',
           background: '#d68d8f',
           flexShrink: 0,
         }} />
@@ -68,19 +75,20 @@ export default function SplashScreen({ onDone }) {
           display:       'flex',
           flexDirection: 'column',
           gap:           '3px',
+          flexShrink:    0,
         }}>
           <span style={{
-            fontSize:      '11px',
+            fontSize:      '10px',
             fontWeight:    700,
-            letterSpacing: '4px',
+            letterSpacing: '3px',
             textTransform: 'uppercase',
             color:         '#d68d8f',
             lineHeight:    1,
           }}>Gestor de</span>
           <span style={{
-            fontSize:      '11px',
+            fontSize:      '10px',
             fontWeight:    700,
-            letterSpacing: '4px',
+            letterSpacing: '3px',
             textTransform: 'uppercase',
             color:         '#d68d8f',
             lineHeight:    1,
