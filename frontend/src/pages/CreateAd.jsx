@@ -1581,8 +1581,17 @@ export default function CreateAd() {
   const commercialDate = location.state?.commercialDate;
   const rejectedAd = location.state?.rejectedAd || null;
   const reuseAudience = location.state?.reuseAudience || null;
-  const reuseCreative = location.state?.reuseCreative || null;
-  const reviewMode = !!location.state?.reviewMode;
+  const referenceRef = location.state?.referenceRef || null;
+  /* Referência externa (biblioteca de marcas) vira um reuseCreative
+     padronizado para aproveitar todo o fluxo existente de quick-start. */
+  const reuseCreative = location.state?.reuseCreative || (referenceRef ? {
+    id: referenceRef.id,
+    name: `${referenceRef.brand} — ${referenceRef.title}`,
+    primaryText: referenceRef.primaryText,
+    headline: referenceRef.headline,
+    cta: referenceRef.cta === 'Enviar mensagem' ? 'WhatsApp' : referenceRef.cta,
+  } : null);
+  const reviewMode = !!location.state?.reviewMode || !!referenceRef;
   const { addNotification, addAd, updateAd, getAdById, audiences, creatives, addCreative, markCreativeUsed, removeRejectedAd, logHistory } = useAppState();
   const editId = location.state?.editId || null;
   const editingAd = editId ? getAdById(editId) : null;

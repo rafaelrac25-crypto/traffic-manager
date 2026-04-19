@@ -100,8 +100,9 @@ const NAV = [
   { to: '/reprovados',    label: 'Reprovados',    Icon: IconRejected, badgeKey: 'rejectedCount' },
   { to: '/calendario',    label: 'Calendário',    Icon: IconCalendar },
   { kind: 'group', label: 'Biblioteca', description: 'Reutilize contexto, narrativa e público', items: [
-    { to: '/publicos',  label: 'Públicos',  Icon: IconAudiences },
-    { to: '/criativos', label: 'Criativos', Icon: IconCreatives },
+    { to: '/publicos',   label: 'Públicos',     Icon: IconAudiences },
+    { to: '/criativos',  label: 'Criativos',    Icon: IconCreatives },
+    { to: '/referencias', label: 'Referências', Icon: IconReports },
   ]},
   { to: '/desempenho',    label: 'Desempenho',    Icon: IconReports },
   { to: '/investimento',  label: 'Investimento',  Icon: IconInvestment },

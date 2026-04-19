@@ -9,6 +9,7 @@ import Rejected from './pages/Rejected';
 import Investment from './pages/Investment';
 import Audiences from './pages/Audiences';
 import CreativeLibrary from './pages/CreativeLibrary';
+import References from './pages/References';
 import History from './pages/History';
 import Reports from './pages/Reports';
 import AIAssistant from './components/AIAssistant';
@@ -483,6 +484,7 @@ function Layout() {
             <Route path="/investimento"  element={<Investment />} />
             <Route path="/publicos"      element={<Audiences />} />
             <Route path="/criativos"     element={<CreativeLibrary />} />
+            <Route path="/referencias"   element={<References />} />
             <Route path="/criar-anuncio" element={<CreateAd />} />
             <Route path="/historico"     element={<History />} />
             <Route path="/desempenho"    element={<Reports />} />

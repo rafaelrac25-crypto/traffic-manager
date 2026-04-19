@@ -343,7 +343,8 @@ function DualLineChart({ series }) {
           <circle key={v.name} cx={activeX} cy={v.y} r={4} fill={v.color} stroke="#fff" strokeWidth="1.8" style={{ filter: 'drop-shadow(0 2px 3px rgba(0,0,0,.18))' }} />
         ))}
 
-        {/* Tooltip com as 2 séries */}
+        {/* Tooltip com as 2 séries — cor fixa semi-transparente que funciona
+            em tema claro e escuro com alto contraste no texto */}
         <g style={{ pointerEvents: 'none' }}>
           <rect
             x={tooltipCenterX - TOOLTIP_W/2}
@@ -351,19 +352,21 @@ function DualLineChart({ series }) {
             width={TOOLTIP_W}
             height={TOOLTIP_H}
             rx="8"
-            fill="var(--c-text-1)"
-            style={{ filter: 'drop-shadow(0 3px 6px rgba(0,0,0,.16))' }}
+            fill="rgba(20,22,30,0.88)"
+            stroke="rgba(255,255,255,0.08)"
+            strokeWidth="1"
+            style={{ filter: 'drop-shadow(0 4px 10px rgba(0,0,0,.22))', backdropFilter: 'blur(6px)' }}
           />
-          <text x={tooltipCenterX} y={tooltipY + 12.5} fontSize="8.5" fill="#fff" textAnchor="middle" fontWeight="600" opacity="0.72" style={{ letterSpacing: '.4px', textTransform: 'uppercase' }}>
+          <text x={tooltipCenterX} y={tooltipY + 13} fontSize="9" fill="rgba(255,255,255,0.7)" textAnchor="middle" fontWeight="700" style={{ letterSpacing: '.5px', textTransform: 'uppercase' }}>
             {activeLabel}
           </text>
           {activeValues.map((v, idx) => (
             <g key={v.name}>
-              <circle cx={tooltipCenterX - TOOLTIP_W/2 + 10} cy={tooltipY + 24 + idx * 11} r="2.5" fill={v.color} />
-              <text x={tooltipCenterX - TOOLTIP_W/2 + 17} y={tooltipY + 27 + idx * 11} fontSize="9.5" fill="#fff" fontWeight="600">
+              <circle cx={tooltipCenterX - TOOLTIP_W/2 + 11} cy={tooltipY + 25 + idx * 12} r="3" fill={v.color} stroke="rgba(255,255,255,0.9)" strokeWidth="0.6" />
+              <text x={tooltipCenterX - TOOLTIP_W/2 + 19} y={tooltipY + 28 + idx * 12} fontSize="10" fill="#fff" fontWeight="600">
                 {v.name}
-                <tspan fontWeight="700" dx="4">{v.unit === 'reais' ? 'R$\u00A0' : ''}{v.value.toLocaleString('pt-BR')}</tspan>
-                <tspan fontSize="8" fontWeight="500" opacity="0.7" dx="3">{v.unit !== 'reais' ? v.unit : ''}</tspan>
+                <tspan fontWeight="700" dx="4" fill="#fff">{v.unit === 'reais' ? 'R$\u00A0' : ''}{v.value.toLocaleString('pt-BR')}</tspan>
+                <tspan fontSize="8.5" fontWeight="500" fill="rgba(255,255,255,0.7)" dx="3">{v.unit !== 'reais' ? v.unit : ''}</tspan>
               </text>
             </g>
           ))}
