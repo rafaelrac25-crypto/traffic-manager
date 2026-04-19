@@ -172,6 +172,164 @@ function CommercialDateModal({ entry, onClose, onCreateAd }) {
   );
 }
 
+function DayDetailsModal({ dateStr, events, commercial, onClose, onOpenCommercial, onCreateForDate }) {
+  if (!dateStr) return null;
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dateObj = new Date(y, m - 1, d);
+  const title = formatDateLong(dateObj);
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 200, padding: '20px',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: 'var(--c-card-bg)',
+          borderRadius: '16px',
+          border: '1px solid var(--c-border)',
+          boxShadow: '0 20px 60px rgba(0,0,0,.4)',
+          width: '100%', maxWidth: '480px',
+          maxHeight: '85vh', overflow: 'auto',
+        }}
+      >
+        <div style={{
+          padding: '18px 20px',
+          borderBottom: '1px solid var(--c-border)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px',
+        }}>
+          <div>
+            <div style={{ fontSize: '10.5px', fontWeight: 700, color: 'var(--c-text-4)', letterSpacing: '.6px', textTransform: 'uppercase', marginBottom: '2px' }}>
+              Detalhes do dia
+            </div>
+            <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--c-text-1)' }}>
+              {title}
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              width: '28px', height: '28px', borderRadius: '8px',
+              border: '1px solid var(--c-border)', background: 'var(--c-surface)',
+              cursor: 'pointer', color: 'var(--c-text-3)', fontSize: '15px', lineHeight: 1,
+            }}
+          >×</button>
+        </div>
+
+        <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+          {commercial && (
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(214,141,143,.10), rgba(125,74,94,.04))',
+              border: '1px solid var(--c-accent)',
+              borderRadius: '12px',
+              padding: '12px 14px',
+            }}>
+              <div style={{ fontSize: '10px', fontWeight: 800, color: 'var(--c-accent)', textTransform: 'uppercase', letterSpacing: '.6px', marginBottom: '6px' }}>
+                Data comercial
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                <span style={{ fontSize: '22px' }}>{commercial.emoji}</span>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--c-text-1)', lineHeight: 1.3 }}>
+                    {commercial.name}
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--c-text-3)', marginTop: '2px' }}>
+                    Postar com <strong style={{ color: 'var(--c-accent)' }}>{commercial.daysBefore} dias</strong> de antecedência
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => onOpenCommercial(commercial)}
+                style={{
+                  padding: '8px 12px', borderRadius: '8px',
+                  background: 'var(--c-accent)', color: '#fff',
+                  border: 'none', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer',
+                }}
+              >
+                Ver estratégia completa →
+              </button>
+            </div>
+          )}
+
+          {events.length > 0 && (
+            <div>
+              <div style={{ fontSize: '10px', fontWeight: 800, color: 'var(--c-text-4)', textTransform: 'uppercase', letterSpacing: '.6px', marginBottom: '8px' }}>
+                Anúncios agendados ({events.length})
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {events.map(ev => {
+                  const badge = PLAT_BADGE[ev.platform] || PLAT_BADGE.instagram;
+                  return (
+                    <div key={ev.id} style={{
+                      display: 'flex', alignItems: 'center', gap: '10px',
+                      padding: '10px 12px', borderRadius: '10px',
+                      background: 'var(--c-surface)',
+                      border: '1px solid var(--c-border-lt)',
+                      borderLeft: `3px solid ${PLAT_DOT[ev.platform]}`,
+                    }}>
+                      <div style={{
+                        width: '36px', height: '36px', borderRadius: '8px',
+                        background: ev.thumb, flexShrink: 0,
+                      }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', marginBottom: '1px' }}>
+                          {ev.time}
+                        </div>
+                        <div style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--c-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {ev.name}
+                        </div>
+                      </div>
+                      <span style={{
+                        fontSize: '10px', fontWeight: 600,
+                        background: badge.bg, color: badge.color,
+                        padding: '2px 8px', borderRadius: '20px',
+                        flexShrink: 0,
+                      }}>{badge.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div style={{
+          padding: '14px 20px',
+          borderTop: '1px solid var(--c-border)',
+          background: 'var(--c-surface)',
+          display: 'flex', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap',
+        }}>
+          <button
+            onClick={onClose}
+            style={{
+              padding: '9px 14px', borderRadius: '9px',
+              border: '1.5px solid var(--c-border)', background: 'var(--c-card-bg)',
+              fontSize: '12px', fontWeight: 600, color: 'var(--c-text-2)', cursor: 'pointer',
+            }}
+          >Fechar</button>
+          <button
+            onClick={() => onCreateForDate(dateStr)}
+            style={{
+              padding: '9px 16px', borderRadius: '9px',
+              border: 'none', background: 'var(--c-accent)',
+              fontSize: '12px', fontWeight: 700, color: '#fff', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '6px',
+            }}
+          >
+            <PlusIcon /> Agendar para este dia
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Section({ title, children }) {
   return (
     <div style={{ marginBottom: '18px' }}>
@@ -238,6 +396,7 @@ export default function Calendar() {
   const [year,  setYear]  = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [modalEntry, setModalEntry] = useState(null);
+  const [dayDetails, setDayDetails] = useState(null);
 
   const upcomingCommercial = useMemo(() => getUpcomingCommercialDates(new Date(), 45), []);
 
@@ -351,10 +510,15 @@ export default function Calendar() {
               const isToday = key === todayStr;
               const isLastRow = idx >= cells.length - 7;
 
+              const hasContent = cell.current && (events.length > 0 || !!commercial);
+
               return (
                 <div
                   key={idx}
-                  onClick={() => commercial && openCommercialModal(commercial)}
+                  onClick={() => {
+                    if (!hasContent) return;
+                    setDayDetails({ dateStr: key, events, commercial });
+                  }}
                   style={{
                     minHeight: '100px',
                     padding: '8px 6px 6px',
@@ -362,11 +526,11 @@ export default function Calendar() {
                     borderRight: (idx + 1) % 7 !== 0 ? '1px solid var(--c-border-lt)' : 'none',
                     borderBottom: !isLastRow ? '1px solid var(--c-border-lt)' : 'none',
                     background: !cell.current ? 'var(--c-surface)' : isToday ? 'var(--c-active-bg)' : 'var(--c-card-bg)',
-                    cursor: cell.current ? 'pointer' : 'default',
+                    cursor: hasContent ? 'pointer' : 'default',
                     transition: 'background .12s',
                   }}
-                  onMouseEnter={e => { if (cell.current && !isToday) e.currentTarget.style.background = 'var(--c-hover)'; }}
-                  onMouseLeave={e => { if (cell.current && !isToday) e.currentTarget.style.background = 'var(--c-card-bg)'; }}
+                  onMouseEnter={e => { if (hasContent && !isToday) e.currentTarget.style.background = 'var(--c-hover)'; }}
+                  onMouseLeave={e => { if (hasContent && !isToday) e.currentTarget.style.background = 'var(--c-card-bg)'; }}
                 >
                   {/* Número do dia */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
@@ -604,6 +768,18 @@ export default function Calendar() {
           </div>
         </div>
       </div>
+
+      <DayDetailsModal
+        dateStr={dayDetails?.dateStr}
+        events={dayDetails?.events || []}
+        commercial={dayDetails?.commercial}
+        onClose={() => setDayDetails(null)}
+        onOpenCommercial={(entry) => { setDayDetails(null); openCommercialModal(entry); }}
+        onCreateForDate={(dateStr) => {
+          setDayDetails(null);
+          navigate('/criar-anuncio', { state: { scheduledFor: dateStr } });
+        }}
+      />
 
       <CommercialDateModal
         entry={modalEntry}
