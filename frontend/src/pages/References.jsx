@@ -171,10 +171,27 @@ function ReferenceCard({ item, position, onOpen, isFavorite, onToggleFavorite })
         <strong style={{ color: 'var(--c-accent)' }}>Gancho:</strong> {item.hook}
       </div>
 
-      {/* Footer: objetivo + CTA visual */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '10.5px', color: 'var(--c-text-3)' }}>
+      {/* Footer: objetivo + biblioteca Meta + CTA visual */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '10.5px', color: 'var(--c-text-3)', gap: '8px' }}>
         <span>🎯 {OBJECTIVE_LABEL[item.objective]}</span>
-        <span style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Ver detalhes →</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {item.adLibraryUrl && (
+            <a
+              href={item.adLibraryUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
+              title="Abrir na Meta Ad Library"
+              style={{
+                color: 'var(--c-text-3)', textDecoration: 'none', fontWeight: 600,
+                display: 'inline-flex', alignItems: 'center', gap: '3px',
+              }}
+            >
+              🔗 Ver anúncio
+            </a>
+          )}
+          <span style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Detalhes →</span>
+        </div>
       </div>
     </div>
   );
@@ -371,6 +388,21 @@ function ReferenceModal({ item, onClose, onUse, isFavorite, onToggleFavorite }) 
           >
             Fechar
           </button>
+          {item.adLibraryUrl && (
+            <a
+              href={item.adLibraryUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                padding: '9px 14px', borderRadius: '9px',
+                border: '1.5px solid var(--c-border)', background: 'var(--c-card-bg)',
+                fontSize: '12px', fontWeight: 600, color: 'var(--c-text-2)',
+                textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px',
+              }}
+            >
+              🔗 Ver anúncio real
+            </a>
+          )}
           <button
             onClick={() => onUse(item)}
             style={{
