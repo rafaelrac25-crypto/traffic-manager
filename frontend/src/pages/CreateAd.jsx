@@ -1928,11 +1928,17 @@ export default function CreateAd() {
                   const errs = validateStep(step);
                   if (Object.keys(errs).length > 0) { setErrors(errs); return; }
                   setErrors({});
-                  setStep(s => s + 1);
+                  /* Quando veio de data comercial/quick-start e só quer ajustar um item,
+                     pula direto para a revisão final em vez de avançar passo a passo. */
+                  if (canReview) {
+                    setStep(STEPS.length - 1);
+                  } else {
+                    setStep(s => s + 1);
+                  }
                 }}
                 style={{ padding: '10px 26px', background: 'var(--c-accent)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
               >
-                Próximo →
+                {canReview ? '✓ Atualizar e voltar à revisão' : 'Próximo →'}
               </button>
             ) : (
               <button

@@ -376,6 +376,23 @@ function DayDetailsModal({ dateStr, events, commercial, onClose, onOpenCommercia
             </div>
           )}
 
+          {!commercial && events.length === 0 && (
+            <div style={{
+              padding: '18px 16px', textAlign: 'center',
+              background: 'var(--c-surface)',
+              border: '1px dashed var(--c-border)',
+              borderRadius: '12px',
+            }}>
+              <div style={{ fontSize: '24px', marginBottom: '6px', opacity: 0.7 }}>📅</div>
+              <div style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
+                Dia livre
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--c-text-3)', lineHeight: 1.5 }}>
+                Nenhum anúncio agendado nem data comercial. Use o botão abaixo para criar um anúncio para este dia.
+              </div>
+            </div>
+          )}
+
           {events.length > 0 && (
             <div>
               <div style={{ fontSize: '10px', fontWeight: 800, color: 'var(--c-text-4)', textTransform: 'uppercase', letterSpacing: '.6px', marginBottom: '8px' }}>
@@ -631,13 +648,13 @@ export default function Calendar() {
               const isToday = key === todayStr;
               const isLastRow = idx >= cells.length - 7;
 
-              const hasContent = cell.current && (events.length > 0 || !!commercial);
+              const isClickable = cell.current;
 
               return (
                 <div
                   key={idx}
                   onClick={() => {
-                    if (!hasContent) return;
+                    if (!isClickable) return;
                     setDayDetails({ dateStr: key, events, commercial });
                   }}
                   style={{
@@ -647,11 +664,11 @@ export default function Calendar() {
                     borderRight: (idx + 1) % 7 !== 0 ? '1px solid var(--c-border-lt)' : 'none',
                     borderBottom: !isLastRow ? '1px solid var(--c-border-lt)' : 'none',
                     background: !cell.current ? 'var(--c-surface)' : isToday ? 'var(--c-active-bg)' : 'var(--c-card-bg)',
-                    cursor: hasContent ? 'pointer' : 'default',
+                    cursor: isClickable ? 'pointer' : 'default',
                     transition: 'background .12s',
                   }}
-                  onMouseEnter={e => { if (hasContent && !isToday) e.currentTarget.style.background = 'var(--c-hover)'; }}
-                  onMouseLeave={e => { if (hasContent && !isToday) e.currentTarget.style.background = 'var(--c-card-bg)'; }}
+                  onMouseEnter={e => { if (isClickable && !isToday) e.currentTarget.style.background = 'var(--c-hover)'; }}
+                  onMouseLeave={e => { if (isClickable && !isToday) e.currentTarget.style.background = 'var(--c-card-bg)'; }}
                 >
                   {/* Número do dia */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
