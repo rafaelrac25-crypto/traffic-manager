@@ -86,7 +86,8 @@ function AdThumb({ grad }) {
 /* ── Cálculo de CPC e baixa performance ── */
 function getCpc(ad) {
   if (!ad.clicks || ad.clicks === 0) return null;
-  return (ad.budget * (ad.results != null ? 1 : 1)) / ad.clicks;
+  const spent = Number(ad.spent ?? ad.budget) || 0;
+  return spent / ad.clicks;
 }
 
 function getAvgCpc(ads) {

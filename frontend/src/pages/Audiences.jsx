@@ -158,7 +158,7 @@ function AudienceCard({ audience, onEdit, onRemove, onReuseQuick, onReuseAdjust 
           <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
             {audience.locations.map((l, i) => {
               const label = locName(l);
-              return <Chip key={label || i} label={`📍 ${label}`} active={false} />;
+              return <Chip key={l.id || `loc-${i}-${label}`} label={`📍 ${label}`} active={false} />;
             })}
           </div>
         </div>
@@ -341,7 +341,7 @@ function AudienceForm({ initial, onSave, onCancel }) {
         <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginBottom: '8px' }}>
           {data.locations.map((l, i) => {
             const label = locName(l);
-            return <Chip key={label || i} label={`📍 ${label}`} onRemove={() => removeLocation(l)} />;
+            return <Chip key={l.id || `loc-${i}-${label}`} label={`📍 ${label}`} onRemove={() => removeLocation(l)} />;
           })}
         </div>
         <div style={{ fontSize: '10px', color: 'var(--c-text-4)', marginBottom: '4px' }}>Sugestões:</div>
