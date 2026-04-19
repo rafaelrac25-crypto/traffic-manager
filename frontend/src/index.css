@@ -628,6 +628,14 @@ input[type="range"] { accent-color: #d68d8f; }
   }
 }
 
+/* ── Utilitários mobile ── */
+@media (max-width: 768px) {
+  .hide-mobile { display: none !important; }
+  .stack-on-mobile { grid-template-columns: 1fr !important; }
+  .grid-compact-mobile { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important; }
+  .searchbar-mobile { max-width: 100% !important; }
+}
+
 /* Reports: ring-mini-row vira empilhado em mobile */
 @media (max-width: 640px) {
   .ring-mini-row {

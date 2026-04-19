@@ -949,26 +949,30 @@ function HistoricalComparisonCard({ onViewCalendar }) {
       display: 'flex', flexDirection: 'column', gap: '8px',
       height: '100%', justifyContent: 'space-between',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-          <span style={{ fontSize: '14px' }}>📊</span>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flex: 1 }}>
+          <span style={{ fontSize: '14px', flexShrink: 0 }}>📊</span>
           <span style={{
             fontSize: '10px', fontWeight: 700, color: 'var(--c-text-3)',
             letterSpacing: '.4px', textTransform: 'uppercase',
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            minWidth: 0,
+            lineHeight: 1.3,
           }}>
             {item.event} {item.current.year} vs {item.previous.year}
           </span>
         </div>
-        <div style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', gap: '4px', flexShrink: 0, padding: '2px 0' }}>
           {HISTORICAL_COMPARISON.map((_, i) => (
             <button
               key={i}
               onClick={() => setIdx(i)}
+              aria-label={`Ver item ${i + 1}`}
               style={{
-                width: '6px', height: '6px', borderRadius: '50%',
+                width: '8px', height: '8px', borderRadius: '50%',
                 background: i === idx ? 'var(--c-accent)' : 'var(--c-border)',
                 border: 'none', cursor: 'pointer', padding: 0,
+                transition: 'background .15s, transform .15s',
+                transform: i === idx ? 'scale(1.2)' : 'scale(1)',
               }}
             />
           ))}
@@ -1153,7 +1157,7 @@ export default function Dashboard() {
             Aqui está o desempenho dos seus anúncios hoje.
           </p>
         </div>
-        <div style={{
+        <div className="hide-mobile" style={{
           display: 'flex', alignItems: 'center',
           padding: '8px 14px', borderRadius: '10px',
           border: '1.5px solid var(--c-border)', background: 'var(--c-card-bg)',

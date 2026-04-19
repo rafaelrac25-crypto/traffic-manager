@@ -169,7 +169,7 @@ export default function Investment() {
         )}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px,1fr) minmax(280px,1fr)', gap: '18px' }}>
+      <div className="stack-on-mobile" style={{ display: 'grid', gridTemplateColumns: 'minmax(280px,1fr) minmax(280px,1fr)', gap: '18px' }}>
         {/* Cadastro */}
         <div className="ccb-card" style={{
           background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',

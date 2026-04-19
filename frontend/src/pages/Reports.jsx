@@ -265,7 +265,7 @@ function AdReportCard({ analysis, onOpenNewWithSplit, onEdit }) {
       {/* Detalhes expandidos */}
       {expanded && (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '10px', marginTop: '14px' }}>
+          <div className="grid-compact-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '10px', marginTop: '14px' }}>
             {sortedRings.map(r => (
               <RingCard
                 key={r.key}

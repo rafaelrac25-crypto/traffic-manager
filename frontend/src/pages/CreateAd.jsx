@@ -274,7 +274,7 @@ function Step1Objective({ objective, setObjective, errors = {} }) {
               {category}
             </span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: '10px' }}>
+          <div className="grid-compact-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: '10px' }}>
             {items.map(obj => (
               <RadioCard key={obj.id} selected={objective === obj.id} onClick={() => setObjective(obj.id)}>
                 <div style={{ fontSize: '24px', marginBottom: '8px' }}>{obj.icon}</div>

@@ -152,7 +152,7 @@ export default function Sidebar({ open = false, isMobile = false }) {
         padding: '22px 20px 18px',
         borderBottom: '1px solid var(--c-border-lt)',
       }}>
-        <Logo isDark={isDark} onClick={() => navigate('/')} />
+        <Logo isDark={isDark} onClick={() => { window.location.href = '/'; }} />
       </div>
 
       {/* ── Navegação ── */}
