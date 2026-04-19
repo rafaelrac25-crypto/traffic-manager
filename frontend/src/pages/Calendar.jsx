@@ -15,8 +15,6 @@ function formatDateLong(d) {
   return `${String(d.getDate()).padStart(2, '0')} de ${['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'][d.getMonth()]} de ${d.getFullYear()}`;
 }
 
-const QUICK_DAILY_PRESETS = [15, 20, 30, 50];
-
 function BudgetPicker({ entry, dailyBudget, setDailyBudget, period, setPeriod }) {
   const suggested = entry.suggestedBudget.daily;
   const campaignDays = entry.daysBefore;
@@ -63,34 +61,35 @@ function BudgetPicker({ entry, dailyBudget, setDailyBudget, period, setPeriod })
         ))}
       </div>
 
-      {/* Input editável + sugestão original */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+      {/* Input editável grande + sugestão ao lado */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
         <div style={{
-          padding: '10px 12px',
+          padding: '14px 18px',
           background: 'var(--c-card-bg)',
-          border: '1.5px solid var(--c-accent)',
-          borderRadius: '10px',
-          minWidth: '140px',
+          border: '2px solid var(--c-accent)',
+          borderRadius: '12px',
+          minWidth: '200px',
+          flex: '1 1 200px',
         }}>
-          <div style={{ fontSize: '9.5px', fontWeight: 700, color: 'var(--c-text-4)', letterSpacing: '.6px', marginBottom: '3px' }}>
+          <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--c-text-4)', letterSpacing: '.6px', marginBottom: '4px' }}>
             {periodShort}
           </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-            <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-accent)' }}>R$</span>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+            <span style={{ fontSize: '18px', fontWeight: 700, color: 'var(--c-accent)' }}>R$</span>
             <input
               type="text"
               inputMode="numeric"
               value={displayedValue}
               onChange={e => handleInput(e.target.value)}
               style={{
-                width: '70px', border: 'none', outline: 'none',
-                background: 'transparent', fontSize: '20px', fontWeight: 800,
+                width: '140px', border: 'none', outline: 'none',
+                background: 'transparent', fontSize: '28px', fontWeight: 800,
                 color: 'var(--c-accent)', fontFamily: 'inherit', padding: 0,
               }}
             />
           </div>
         </div>
-        <div style={{ fontSize: '11px', color: 'var(--c-text-3)', lineHeight: 1.5 }}>
+        <div style={{ fontSize: '11.5px', color: 'var(--c-text-3)', lineHeight: 1.5 }}>
           <div>Sugerido: <strong style={{ color: 'var(--c-text-1)' }}>R$ {suggested}/dia</strong></div>
           <div style={{ color: diffFromSuggested < 0 ? '#16A34A' : diffFromSuggested > 0 ? '#EA580C' : 'var(--c-text-4)' }}>
             {diffFromSuggested === 0
@@ -100,38 +99,6 @@ function BudgetPicker({ entry, dailyBudget, setDailyBudget, period, setPeriod })
                 : `↑ R$ ${diffFromSuggested}/dia acima`}
           </div>
         </div>
-      </div>
-
-      {/* Presets rápidos */}
-      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-        <span style={{ fontSize: '10.5px', color: 'var(--c-text-4)', fontWeight: 600 }}>Atalhos diários:</span>
-        {QUICK_DAILY_PRESETS.map(v => (
-          <button
-            key={v}
-            onClick={() => setDailyBudget(v)}
-            style={{
-              padding: '4px 10px', borderRadius: '14px',
-              border: `1.5px solid ${dailyBudget === v ? 'var(--c-accent)' : 'var(--c-border)'}`,
-              background: dailyBudget === v ? 'var(--c-active-bg)' : 'var(--c-card-bg)',
-              color: dailyBudget === v ? 'var(--c-accent)' : 'var(--c-text-2)',
-              fontSize: '11px', fontWeight: 700, cursor: 'pointer',
-            }}
-          >
-            R$ {v}
-          </button>
-        ))}
-        <button
-          onClick={() => setDailyBudget(suggested)}
-          style={{
-            padding: '4px 10px', borderRadius: '14px',
-            border: `1.5px solid ${dailyBudget === suggested ? 'var(--c-accent)' : 'var(--c-border)'}`,
-            background: dailyBudget === suggested ? 'var(--c-active-bg)' : 'var(--c-card-bg)',
-            color: dailyBudget === suggested ? 'var(--c-accent)' : 'var(--c-text-2)',
-            fontSize: '11px', fontWeight: 700, cursor: 'pointer',
-          }}
-        >
-          Sugerido (R$ {suggested})
-        </button>
       </div>
 
       {/* Resumo */}
