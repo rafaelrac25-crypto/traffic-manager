@@ -106,6 +106,7 @@ traffic-manager/
 
 - **Escopo geográfico:** apenas Joinville/SC — geofence de 60km aplicado no CreateAd (busca + mapa)
 - **Orçamento real da Cris:** R$ 15-20/dia (valores em referências de marcas famosas são ilustrativos)
+- **Canal único:** Instagram + Direct/WhatsApp. **Sem landing page, sem site, sem Pixel por enquanto.** Objetivo padrão "Mensagens".
 - **Sempre PT-BR** nas respostas
 - Uso interno — sem tela de login
 

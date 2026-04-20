@@ -8,18 +8,26 @@
 
 ## 1. Pré-requisitos externos (fora do código — Rafa precisa preparar)
 
-- [ ] **Business Manager** (business.facebook.com) com Cris Costa Beauty cadastrada
-- [ ] **Ad Account** (`act_XXXXXXXXXX`) com cartão/Pix ativo, moeda BRL
-- [ ] **Fan Page** FB + **Instagram Business** conectados ao Business Manager
-- [ ] **App Facebook** em developers.facebook.com, **modo Live** (não Dev), com Business Verification
+**Contexto (2026-04-20):** A Cris NÃO tem landing page, NÃO tem site, NÃO usa analytics externos. Canal principal é **Instagram** com CTA pra **Direct / WhatsApp**. Por isso **Pixel e Domínio verificado não são necessários agora** — ficam como opcionais pro futuro (quando tiver LP).
+
+### Obrigatório
+
+- [x] **Business Manager** (business.facebook.com) já existe (empresa antiga usava)
+- [x] **Ad Account** com cartão/Pix ativo, moeda BRL — já existe
+- [x] **Fan Page** + **Instagram Business** conectados — já existe
+- [ ] **Acesso de admin garantido** pra Rafa/Cris ANTES do gestor antigo sair
+- [ ] **App Facebook** em developers.facebook.com, **modo Live**, com Business Verification
 - [ ] **App Review aprovado** com permissões:
       `ads_management`, `ads_read`, `business_management`, `pages_show_list`,
       `pages_read_engagement`, `instagram_basic`, `pages_manage_ads`
-- [ ] **Pixel do Meta** instalado no destino (site/WhatsApp link) + Events Manager verificado
-- [ ] **Domínio verificado** no Business (Brand Safety → Domains) — pós-iOS14 (AEM)
-- [ ] **System User** no Business → gerar **token de longa duração (never-expire)** (melhor que token de usuário de 60d)
-- [ ] **Webhook subscription** pros eventos `adaccount`, `application/ads`, `ad_review`
-- [ ] (Opcional) **CAPI — Conversions API** server-side pra enviar conversões fora do browser
+- [ ] **System User** no Business → token de longa duração (never-expire) — mais estável
+
+### Opcional (fica pra depois)
+
+- [ ] ~~Pixel do Meta~~ — só se criar landing page no futuro
+- [ ] ~~Domínio verificado~~ — só se criar site próprio
+- [ ] ~~CAPI (Conversions API)~~ — sem Pixel, não tem o que mandar
+- [ ] ~~Webhook subscription~~ — inicialmente podemos fazer sync por polling; adicionar depois
 
 ---
 
