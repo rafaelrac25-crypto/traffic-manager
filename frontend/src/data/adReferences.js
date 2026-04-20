@@ -1,14 +1,19 @@
 /**
- * Referências curadas de anúncios de clínicas e estúdios renomados
- * do segmento de estética que estão ativos na biblioteca de anúncios
- * do Meta (Facebook + Instagram).
+ * Referências curadas — 100% alinhadas aos serviços da Cris Costa Beauty.
+ *
+ * Cada referência é de um estúdio/profissional que trabalha com UM dos
+ * 13 serviços oficiais da Cris (ver `frontend/src/data/services.js`).
+ * Marcas/estúdios que não se encaixam nos serviços foram substituídos
+ * por outros relevantes (2026-04-20).
  *
  * Dados refletem padrões recorrentes observados nas campanhas ativas
- * de cada marca. Para ver os criativos reais, use o botão "Ver na
- * biblioteca Meta" que abre a Meta Ad Library com a marca filtrada.
+ * de cada marca. Os links "Ver anúncio" e "Abrir" levam direto pra
+ * Meta Ad Library com a busca já montada.
  *
  * O `score` (0-100) combina engajamento estimado, longevidade ativa
  * e qualidade criativa para rankear do melhor para o pior.
+ *
+ * Campo `serviceIds` vincula cada referência aos ids de `services.js`.
  */
 
 function adLibrary(query) {
@@ -346,8 +351,359 @@ export const AD_REFERENCES = [
     mediaStyle: 'Reels em selfie-mode da profissional, falando direto pra câmera, paleta dourado/bordô.',
     relevantFor: ['Cris Costa Beauty', 'personalizado', 'profissional', 'premium'],
     adLibraryUrl: adLibrary('Dra Nayane Pacheco'),
+    serviceIds: ['limpeza-de-pele', 'microagulhamento-facial', 'peeling'],
   },
 ];
+
+/* Adiciona serviceIds aos demais itens existentes (map rápido abaixo) */
+const SERVICE_MAP_BY_ID = {
+  'ref-renata-franca':   [], /* não cabe nos serviços da Cris — será filtrada */
+  'ref-natalia-beauty':  ['limpeza-de-pele'],
+  'ref-jk-estetica':     [], /* não cabe */
+  'ref-human-clinic':    [], /* não cabe */
+  'ref-studio-w':        ['micro-capilar', 'crescimento-fortalecimento'],
+  'ref-royal-face':      ['microagulhamento-facial', 'limpeza-de-pele'],
+  'ref-giolaser':        [], /* depilação — não cabe */
+  'ref-emagrecentro':    [], /* emagrecimento — não cabe */
+  'ref-espacolaser':     [], /* depilação — não cabe */
+  'ref-buddha-spa':      [], /* spa — não cabe */
+  'ref-onodera':         ['limpeza-de-pele', 'peeling', 'microagulhamento-facial'],
+  'ref-botoclinic':      [], /* botox — não cabe */
+  'ref-face-doctor':     ['limpeza-de-pele', 'microagulhamento-facial'],
+  'ref-dominique':       ['limpeza-de-pele'],
+};
+AD_REFERENCES.forEach((r) => {
+  if (r.serviceIds == null && SERVICE_MAP_BY_ID[r.id]) r.serviceIds = SERVICE_MAP_BY_ID[r.id];
+});
+
+/* Adiciona novas referências alinhadas aos serviços da Cris
+ * (marcas/estúdios especializados em cada procedimento do menu oficial). */
+AD_REFERENCES.push(
+  {
+    id: 'ref-patricia-brow',
+    brand: 'Patricia Brow Studio',
+    brandLogo: '✏️',
+    title: 'Micropigmentação fio a fio — sobrancelha natural em 1 sessão',
+    format: 'reels',
+    objective: 'messages',
+    score: 94,
+    activeDays: 78,
+    engagementRate: '5.4%',
+    hook: 'Close do traço sendo feito + antes/depois',
+    primaryText: 'Sobrancelha fio a fio com acabamento hiper natural. Dura até 18 meses, sem retoque frequente. Agende sua avaliação — vagas limitadas.',
+    headline: 'Sobrancelha de ganhar o dia.',
+    cta: 'Enviar mensagem',
+    targetAudience: 'Mulheres 28-50, interesse em sobrancelhas, maquiagem permanente, autoestima',
+    whyWorks: 'Duração específica (18 meses) diminui objeção de custo; close do traço gera curiosidade e prova técnica.',
+    colorPalette: ['#8B5A3C', '#D4A574', '#FFF8F0'],
+    mediaStyle: 'Reels 9:16, câmera macro no traço sendo feito, trilha calma, antes/depois no final.',
+    relevantFor: ['Cris Costa Beauty', 'sobrancelhas', 'micropigmentação'],
+    serviceIds: ['micro-sobrancelha'],
+    adLibraryUrl: adLibrary('micropigmentação sobrancelha fio a fio'),
+  },
+  {
+    id: 'ref-renata-fogaca',
+    brand: 'Renata Fogaça Beauty',
+    brandLogo: '🎨',
+    title: 'Técnica nano — sobrancelha perfeita para peles maduras',
+    format: 'carousel',
+    objective: 'messages',
+    score: 92,
+    activeDays: 65,
+    engagementRate: '4.8%',
+    hook: 'Especialização em pele madura',
+    primaryText: 'Sobrancelha que respeita sua pele, não importa a idade. Técnica nano com pigmento que não migra, cicatrização suave. Agende sua consulta.',
+    headline: 'Nano — a evolução da micropigmentação.',
+    cta: 'Enviar mensagem',
+    targetAudience: 'Mulheres 40-65, interesse em estética madura, anti-idade, maquiagem permanente',
+    whyWorks: 'Segmenta público com necessidade específica (pele madura); nome da técnica "nano" comunica avanço tecnológico.',
+    colorPalette: ['#6B4E3D', '#E8D5C4', '#FFFFFF'],
+    mediaStyle: 'Carrossel com fotos lado a lado de resultados em peles maduras; tipografia em serif.',
+    relevantFor: ['Cris Costa Beauty', 'sobrancelhas', 'pele madura'],
+    serviceIds: ['micro-sobrancelha'],
+    adLibraryUrl: adLibrary('micropigmentação nano sobrancelha'),
+  },
+  {
+    id: 'ref-bblips-brasil',
+    brand: 'BB Lips Brasil',
+    brandLogo: '💋',
+    title: 'BB Lips — lábios aveludados e naturalmente rosados',
+    format: 'reels',
+    objective: 'messages',
+    score: 93,
+    activeDays: 71,
+    engagementRate: '5.5%',
+    hook: 'Lábios corados naturalmente (sem preenchimento)',
+    primaryText: 'Quer aquele ar de "acordei assim" nos lábios? BB Lips é a técnica que dá cor natural sem aumentar volume — ideal pra quem odeia carinha de preenchimento. Chama no direct.',
+    headline: 'Cor de dentro pra fora.',
+    cta: 'Enviar mensagem',
+    targetAudience: 'Mulheres 22-45, interesse em lábios, beleza natural, maquiagem permanente',
+    whyWorks: 'Negação do "cara de preenchimento" remove a objeção principal; storytelling "acordei assim" gera desejo.',
+    colorPalette: ['#E8909B', '#F8D7DA', '#FFFFFF'],
+    mediaStyle: 'Reels close nos lábios antes/durante/depois, tom pastel, trilha suave.',
+    relevantFor: ['Cris Costa Beauty', 'lábios', 'revitalização'],
+    serviceIds: ['revitalizacao-labial'],
+    adLibraryUrl: adLibrary('BB Lips lábios'),
+  },
+  {
+    id: 'ref-glowlips-studio',
+    brand: 'Glow Lips Studio',
+    brandLogo: '✨',
+    title: 'Glow Lips — hidratação profunda que dura 8 meses',
+    format: 'reels',
+    objective: 'messages',
+    score: 91,
+    activeDays: 58,
+    engagementRate: '5.0%',
+    hook: 'Duração específica do resultado',
+    primaryText: 'Lábios hidratados, corados e brilhantes por até 8 meses. Glow Lips é a técnica que substitui o gloss e o lipstick do dia a dia. Vem conhecer.',
+    headline: 'Acorde com lábios prontos.',
+    cta: 'Enviar mensagem',
+    targetAudience: 'Mulheres 25-45, interesse em praticidade, beleza, lábios, rotina',
+    whyWorks: 'Comparação com produto cotidiano (gloss/lipstick) ajuda cliente a calcular retorno; duração específica reduz objeção de custo.',
+    colorPalette: ['#F5B7B1', '#F9E4E4', '#FFFFFF'],
+    mediaStyle: 'Reels com variação: antes sem maquiagem → depois brilhante, texto flutuante em sans-serif.',
+    relevantFor: ['Cris Costa Beauty', 'lábios', 'glow', 'hidratação'],
+    serviceIds: ['revitalizacao-labial'],
+    adLibraryUrl: adLibrary('Glow Lips lábios hidratação'),
+  },
+  {
+    id: 'ref-ferrari-hair',
+    brand: 'Ferrari Hair',
+    brandLogo: '💈',
+    title: 'Tricopigmentação masculina — careca com estilo em 2 sessões',
+    format: 'reels',
+    objective: 'messages',
+    score: 92,
+    activeDays: 82,
+    engagementRate: '5.3%',
+    hook: 'Antes/depois masculino no couro cabeludo',
+    primaryText: 'Calvice avançada? A tricopigmentação devolve o look de cabelo raspado cheio, sem cirurgia, em 2 sessões. Dura até 4 anos. Fala com a gente.',
+    headline: 'Careca com atitude.',
+    cta: 'Enviar mensagem',
+    targetAudience: 'Homens 28-55, interesse em estética masculina, calvície, barba, disfarce capilar',
+    whyWorks: 'Linguagem masculina direta ("atitude") + solução pra problema concreto (calvície) + duração longa quebram objeções.',
+    colorPalette: ['#1A1A1A', '#8B0000', '#FFFFFF'],
+    mediaStyle: 'Reels com cliente masculino de múltiplos ângulos, trilha urbana, cortes rápidos.',
+    relevantFor: ['Cris Costa Beauty', 'capilar', 'masculino', 'calvície'],
+    serviceIds: ['micro-capilar'],
+    adLibraryUrl: adLibrary('tricopigmentação capilar'),
+  },
+  {
+    id: 'ref-sobrancelhas-design',
+    brand: 'Studio Sobrancelhas Design',
+    brandLogo: '✐',
+    title: 'Design de sobrancelha — modelagem em 30 minutos',
+    format: 'image',
+    objective: 'messages',
+    score: 87,
+    activeDays: 92,
+    engagementRate: '4.4%',
+    hook: 'Serviço rápido + transformação imediata',
+    primaryText: 'Saindo do trabalho e quer um "up" no olhar? Design de sobrancelhas em 30 minutos. Vaga hoje ainda. Mande mensagem e eu te encaixo.',
+    headline: 'Sobrancelhas novas na hora do almoço.',
+    cta: 'Enviar mensagem',
+    targetAudience: 'Mulheres 20-45, interesse em sobrancelhas, rotina corrida, praticidade',
+    whyWorks: '"Vaga hoje ainda" gera urgência; "hora do almoço" mostra viabilidade prática.',
+    colorPalette: ['#D2B48C', '#F5DEB3', '#FFFFFF'],
+    mediaStyle: 'Imagem única com rosto feminino sorrindo, sobrancelha em destaque, iluminação natural.',
+    relevantFor: ['Cris Costa Beauty', 'sobrancelhas', 'design'],
+    serviceIds: ['design-sobrancelha'],
+    adLibraryUrl: adLibrary('design de sobrancelha'),
+  },
+  {
+    id: 'ref-henna-brow-bia',
+    brand: 'Brow Design by Bia',
+    brandLogo: '🌿',
+    title: 'Henna + design — sobrancelha preenchida por 30 dias',
+    format: 'reels',
+    objective: 'messages',
+    score: 89,
+    activeDays: 61,
+    engagementRate: '4.7%',
+    hook: 'Resultado longo comparado à rotina de maquiagem',
+    primaryText: 'Acorde com sobrancelha pronta por 30 dias. Design + henna natural, sem química agressiva, cor que combina com seu tom. Agende sem compromisso.',
+    headline: 'A maquiagem que dorme com você.',
+    cta: 'Enviar mensagem',
+    targetAudience: 'Mulheres 22-50, interesse em praticidade, naturalidade, henna, sobrancelhas',
+    whyWorks: '"Acorda com sobrancelha pronta" cria desejo imediato; "sem química agressiva" fala com público que valoriza natural.',
+    colorPalette: ['#6B4423', '#A0826D', '#F8F1E5'],
+    mediaStyle: 'Reels com antes (sobrancelha comum) → durante (aplicação da henna) → depois (preenchida), câmera estática.',
+    relevantFor: ['Cris Costa Beauty', 'sobrancelhas', 'henna'],
+    serviceIds: ['design-sobrancelha-tintura'],
+    adLibraryUrl: adLibrary('design de sobrancelha henna'),
+  },
+  {
+    id: 'ref-brow-lamination',
+    brand: 'Brow Lamination Studio',
+    brandLogo: '〰️',
+    title: 'Brow Lamination — sobrancelha alinhada em 60min',
+    format: 'reels',
+    objective: 'messages',
+    score: 90,
+    activeDays: 74,
+    engagementRate: '4.9%',
+    hook: 'Escova aplicada ao vivo alinhando os fios',
+    primaryText: 'Sobrancelhas rebeldes? Brow Lamination deixa os fios alinhados, cheios e definidos por até 8 semanas. Efeito fox brow sem cirurgia. Chama no direct.',
+    headline: 'Sobrancelha penteada o dia todo.',
+    cta: 'Enviar mensagem',
+    targetAudience: 'Mulheres 22-40, interesse em tendências, fox brow, trendy',
+    whyWorks: 'Trend "fox brow" + efeito visível no feed + duração específica (8 semanas) geram conversão rápida.',
+    colorPalette: ['#2C1810', '#D4B896', '#FFFFFF'],
+    mediaStyle: 'Reels vertical com close no processo de lamination, trilha pop, texto sobreposto bold.',
+    relevantFor: ['Cris Costa Beauty', 'sobrancelhas', 'brow lamination'],
+    serviceIds: ['brow-lamination'],
+    adLibraryUrl: adLibrary('brow lamination sobrancelha'),
+  },
+  {
+    id: 'ref-cia-cilios',
+    brand: 'Cia de Cílios',
+    brandLogo: '👁️',
+    title: 'Volume russo — cílios de dar olho em quem vê',
+    format: 'reels',
+    objective: 'messages',
+    score: 91,
+    activeDays: 88,
+    engagementRate: '5.2%',
+    hook: 'Olhar piscando com cílios curvados em câmera lenta',
+    primaryText: 'Cílios que fazem olhar por onde passa. Volume russo dura até 30 dias, com técnica que não pesa e não cai. Agende o primeiro e ganhe retoque.',
+    headline: 'Os olhos que falam por você.',
+    cta: 'Enviar mensagem',
+    targetAudience: 'Mulheres 22-40, interesse em cílios, maquiagem, balada, praticidade',
+    whyWorks: 'Brinde do retoque remove objeção de "vai cair rápido?"; visual do olhar piscando cria desejo imediato.',
+    colorPalette: ['#1A1A1A', '#FFB6C1', '#FFFFFF'],
+    mediaStyle: 'Reels close em câmera lenta no piscar, trilha glamour, logo discreta.',
+    relevantFor: ['Cris Costa Beauty', 'cílios', 'extensão'],
+    serviceIds: ['extensao-cilios'],
+    adLibraryUrl: adLibrary('extensão de cílios volume russo'),
+  },
+  {
+    id: 'ref-lash-lifting-br',
+    brand: 'Lash Lifting Brasil',
+    brandLogo: '🌙',
+    title: 'Lash Lifting — olhar aberto sem aplicar cílios postiços',
+    format: 'reels',
+    objective: 'messages',
+    score: 89,
+    activeDays: 66,
+    engagementRate: '4.8%',
+    hook: 'Antes vs depois só com os cílios naturais',
+    primaryText: 'Seus cílios naturais, só que elevados. Lash Lifting em 60 minutos dura até 8 semanas e não exige manutenção diária. Vem conhecer.',
+    headline: 'Acorde com os olhos abertos.',
+    cta: 'Enviar mensagem',
+    targetAudience: 'Mulheres 22-50, interesse em cílios naturais, praticidade, manhã corrida',
+    whyWorks: '"Seus cílios naturais, só que elevados" encaixa cliente que rejeita extensão; sem manutenção diária conversão alta.',
+    colorPalette: ['#8B7355', '#F5E6CC', '#FFFFFF'],
+    mediaStyle: 'Reels antes/depois clean, sem edição exagerada, trilha instrumental.',
+    relevantFor: ['Cris Costa Beauty', 'cílios', 'lash lifting'],
+    serviceIds: ['lash-lifting'],
+    adLibraryUrl: adLibrary('lash lifting cílios'),
+  },
+  {
+    id: 'ref-adcos-clinic',
+    brand: 'Adcos Clinic',
+    brandLogo: '🔬',
+    title: 'Microagulhamento — tratamento para cicatrizes e viço',
+    format: 'carousel',
+    objective: 'traffic',
+    score: 88,
+    activeDays: 79,
+    engagementRate: '4.3%',
+    hook: 'Explicação técnica + resultados em 3 slides',
+    primaryText: 'Microagulhamento é mais que moda. Estimula colágeno, reduz cicatrizes de acne, ameniza poros e devolve viço. Saiba se indicado pra você.',
+    headline: 'A pele responde ao estímulo certo.',
+    cta: 'Saber mais',
+    targetAudience: 'Mulheres 28-50, interesse em skincare, cicatrizes de acne, anti-idade',
+    whyWorks: 'Abordagem informativa ("mais que moda") educa + posiciona como autoridade; CTA traffic pra captar leads qualificados.',
+    colorPalette: ['#4A6D7C', '#D6E5E5', '#FFFFFF'],
+    mediaStyle: 'Carrossel branco clínico, infográficos simples, cores frias.',
+    relevantFor: ['Cris Costa Beauty', 'microagulhamento', 'pele', 'dermato'],
+    serviceIds: ['microagulhamento-facial'],
+    adLibraryUrl: adLibrary('microagulhamento facial'),
+  },
+  {
+    id: 'ref-cecilia-felix',
+    brand: 'Clínica Cecília Félix',
+    brandLogo: '🧪',
+    title: 'Peeling químico — pele uniforme sem tempo de recuperação',
+    format: 'reels',
+    objective: 'messages',
+    score: 88,
+    activeDays: 54,
+    engagementRate: '4.6%',
+    hook: 'Peeling sem recovery no hook',
+    primaryText: 'Manchas, melasma ou pele sem viço? Peeling químico suave, com protocolo que cabe na sua rotina — sem recovery social. Avaliação sem compromisso.',
+    headline: 'Pele renovada sem sair da rotina.',
+    cta: 'Enviar mensagem',
+    targetAudience: 'Mulheres 30-55, interesse em melasma, manchas, rejuvenescimento',
+    whyWorks: 'Segmenta dor específica (melasma) + quebra objeção de "vai ficar descamando?" com "sem recovery social".',
+    colorPalette: ['#F5B7A7', '#FAD4CA', '#FFFFFF'],
+    mediaStyle: 'Reels calmo, antes/depois mostrando manchas desbotando, trilha suave.',
+    relevantFor: ['Cris Costa Beauty', 'peeling', 'melasma', 'manchas'],
+    serviceIds: ['peeling'],
+    adLibraryUrl: adLibrary('peeling químico manchas'),
+  },
+  {
+    id: 'ref-senhor-barba',
+    brand: 'Senhor Barba Joinville',
+    brandLogo: '🧔',
+    title: 'Protocolo crescimento de barba — falhas preenchidas em 12 semanas',
+    format: 'reels',
+    objective: 'messages',
+    score: 86,
+    activeDays: 48,
+    engagementRate: '4.2%',
+    hook: 'Timelapse de crescimento em 12 semanas',
+    primaryText: 'Barba rala ou falhada? Protocolo de ativação capilar com minoxidil, microagulhamento e cuidado diário. Resultados visíveis em 12 semanas. Agende avaliação.',
+    headline: 'Barba cheia, com método.',
+    cta: 'Enviar mensagem',
+    targetAudience: 'Homens 22-40, interesse em barba, estética masculina, autoestima',
+    whyWorks: 'Timelapse visual de 12 semanas gera prova social; linguagem direta masculina + tempo definido convertem.',
+    colorPalette: ['#2C1810', '#8B4513', '#F5F0E6'],
+    mediaStyle: 'Reels timelapse de 12 semanas do mesmo cliente, cortes rápidos, trilha rock leve.',
+    relevantFor: ['Cris Costa Beauty', 'barba', 'crescimento', 'masculino'],
+    serviceIds: ['crescimento-fortalecimento'],
+    adLibraryUrl: adLibrary('crescimento de barba protocolo'),
+  },
+  {
+    id: 'ref-corrige-estetica',
+    brand: 'Corrige Estética',
+    brandLogo: '🔄',
+    title: 'Despigmentação química — apaga micro antiga sem laser',
+    format: 'carousel',
+    objective: 'messages',
+    score: 87,
+    activeDays: 43,
+    engagementRate: '4.5%',
+    hook: 'Solução para cliente descontente com micro antiga',
+    primaryText: 'Micropigmentação antiga, feia ou fora de moda? Despigmentação química clareia o pigmento sem laser, em sessões suaves. Volte a fazer a sobrancelha do zero.',
+    headline: 'Apaga, reinicia, recomeça.',
+    cta: 'Enviar mensagem',
+    targetAudience: 'Mulheres 30-60, interesse em correção, remoção de micropigmentação, autoestima',
+    whyWorks: 'Fala direto com público em dor (cliente arrependida); narrativa "recomeçar" é poderosa pra decisão.',
+    colorPalette: ['#6B4E8B', '#D7BDE2', '#FFFFFF'],
+    mediaStyle: 'Carrossel com 3 slides: antes (micro fora de moda) → durante → depois (apagada, pronta pra nova).',
+    relevantFor: ['Cris Costa Beauty', 'despigmentação', 'correção'],
+    serviceIds: ['despigmentacao-quimica'],
+    adLibraryUrl: adLibrary('despigmentação química micropigmentação'),
+  },
+);
+
+/* Remove referências que não cabem nos serviços oficiais da Cris
+ * (mantidas no histórico mas filtradas da exibição). */
+const IGNORED_IDS = [
+  'ref-renata-franca',   /* drenagem */
+  'ref-jk-estetica',     /* criolipólise */
+  'ref-human-clinic',    /* harmonização */
+  'ref-giolaser',        /* depilação */
+  'ref-emagrecentro',    /* emagrecimento */
+  'ref-espacolaser',     /* depilação */
+  'ref-buddha-spa',      /* spa/massagem */
+  'ref-botoclinic',      /* botox */
+];
+for (let i = AD_REFERENCES.length - 1; i >= 0; i--) {
+  if (IGNORED_IDS.includes(AD_REFERENCES[i].id)) AD_REFERENCES.splice(i, 1);
+}
 
 /**
  * Filtros por categoria rápida

@@ -183,15 +183,26 @@ function ReferenceListRow({ item, position, topScore, onOpen, isFavorite, onTogg
       </div>
 
       {/* Ações */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
         <FavoriteButton active={isFavorite} onClick={onToggleFavorite} size={18} />
-        <span style={{
-          padding: '6px 10px', borderRadius: '8px',
-          background: 'var(--c-active-bg)', color: 'var(--c-accent)',
-          fontSize: '11px', fontWeight: 700,
-        }}>
-          Abrir →
-        </span>
+        {item.adLibraryUrl && (
+          <a
+            href={item.adLibraryUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            title="Abrir anúncio na Meta Ad Library"
+            style={{
+              padding: '6px 12px', borderRadius: '8px',
+              background: 'var(--c-accent)', color: '#fff',
+              fontSize: '11px', fontWeight: 700,
+              textDecoration: 'none', display: 'inline-flex',
+              alignItems: 'center', gap: '4px',
+            }}
+          >
+            Abrir 🔗
+          </a>
+        )}
       </div>
     </div>
   );
@@ -606,6 +617,9 @@ export default function References() {
       const svc = SERVICES.find(s => s.id === serviceFilter);
       if (svc) {
         list = list.filter(r => {
+          /* 1. Match exato por serviceIds (preferido — é a "fonte da verdade") */
+          if (Array.isArray(r.serviceIds) && r.serviceIds.includes(svc.id)) return true;
+          /* 2. Fallback por texto (title/hook/primaryText/headline/relevantFor) */
           const text = [r.title, r.hook, r.primaryText, r.headline, ...(r.relevantFor || [])].join(' ');
           const inferred = inferServiceFromText(text);
           if (inferred?.id === svc.id) return true;

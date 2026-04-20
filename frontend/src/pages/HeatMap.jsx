@@ -11,8 +11,10 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapContainer, TileLayer, CircleMarker, Circle, Tooltip } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, Tooltip, useMap } from 'react-leaflet';
+import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet.heat';
 import { useAppState } from '../contexts/AppStateContext';
 import { buildHeatMapData, METRIC_CONFIG } from '../data/districtPerformance';
 import { HOME_COORDS } from '../data/joinvilleDistricts';
@@ -33,6 +35,59 @@ function daysSince(startDate) {
 }
 
 const METRICS = ['conversions', 'cpr', 'cpc'];
+
+/* Gradiente térmico estilo radar meteorológico */
+const HEAT_GRADIENT = {
+  0.0:  '#1E3A8A',
+  0.25: '#0EA5E9',
+  0.5:  '#84CC16',
+  0.65: '#FACC15',
+  0.85: '#F97316',
+  1.0:  '#DC2626',
+};
+
+/* Camada de heatmap com radius adaptativo ao zoom (evita blob gigante em zoom out) */
+function HeatLayer({ points }) {
+  const map = useMap();
+  const layerRef = useRef(null);
+
+  useEffect(() => {
+    if (!map || !L.heatLayer) return;
+
+    const build = () => {
+      if (layerRef.current) { map.removeLayer(layerRef.current); layerRef.current = null; }
+      if (!points || points.length === 0) return;
+
+      const z = map.getZoom();
+      /* radius em pixels cresce com o zoom (mais zoom → bolha maior em px pra manter área geográfica) */
+      const radius = Math.round(22 + (z - 11) * 10);   /* z=11 → 22; z=13 → 42; z=15 → 62 */
+      const blur   = Math.round(radius * 0.85);
+
+      const heatPoints = points.map((p) => [
+        p.coords.lat,
+        p.coords.lng,
+        Math.max(0.25, Math.min(1, p.intensity || 0)),
+      ]);
+
+      layerRef.current = L.heatLayer(heatPoints, {
+        radius,
+        blur,
+        max: 1.0,
+        minOpacity: 0.45,
+        gradient: HEAT_GRADIENT,
+      }).addTo(map);
+    };
+
+    build();
+    map.on('zoomend', build);
+    return () => {
+      map.off('zoomend', build);
+      if (layerRef.current) { map.removeLayer(layerRef.current); layerRef.current = null; }
+    };
+  }, [map, points]);
+
+  return null;
+}
 
 function colorForIntensity(t) {
   const stops = [
@@ -583,23 +638,8 @@ export default function HeatMap() {
                   attribution='&copy; OpenStreetMap'
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-                {/* Bolha térmica em metros — cor FIXA por bairro, sem agregação por zoom */}
-                {data.map((d) => {
-                  const color = colorForIntensity(d.intensity);
-                  return (
-                    <Circle
-                      key={`area-${d.name}`}
-                      center={[d.coords.lat, d.coords.lng]}
-                      radius={700}
-                      pathOptions={{
-                        color,
-                        fillColor: color,
-                        fillOpacity: 0.38,
-                        weight: 0,
-                      }}
-                    />
-                  );
-                })}
+                {/* Camada térmica com blending suave (estilo radar meteorológico) */}
+                <HeatLayer points={data} />
                 {/* Ponto central + tooltip */}
                 {data.map((d) => {
                   const color = colorForIntensity(d.intensity);
