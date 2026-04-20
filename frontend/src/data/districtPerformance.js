@@ -10,6 +10,22 @@
  */
 
 import { DISTRICTS, HOME_COORDS, distanceKm } from './joinvilleDistricts';
+
+/**
+ * Verifica se as coordenadas de um bairro caem dentro de QUALQUER uma das
+ * localizações delimitadas nos anúncios (lat/lng + radius em km).
+ * Se `ads` não tem `locations` definidas, retorna true (sem filtro espacial).
+ */
+function isDistrictInAdLocations(districtCoords, ads) {
+  const allLocations = (ads || []).flatMap((a) => Array.isArray(a.locations) ? a.locations : []);
+  if (allLocations.length === 0) return true;
+  return allLocations.some((loc) => {
+    if (loc.lat == null || loc.lng == null) return false;
+    const km = distanceKm(districtCoords, { lat: loc.lat, lng: loc.lng });
+    const radius = Number(loc.radius) || 5;
+    return km <= radius;
+  });
+}
 import { analyzeAdPerformance, analyzeAllAds } from './performanceMock';
 
 function hashString(s) {
@@ -184,7 +200,12 @@ export const METRIC_CONFIG = {
  */
 export function buildHeatMapData(ads, { campaignId, metric = 'conversions', daysActive = 7 } = {}) {
   const filtered = campaignId ? (ads || []).filter((a) => String(a.id) === String(campaignId)) : (ads || []);
-  const districts = aggregateDistrictMetrics(filtered, { daysActive });
+  const allDistricts = aggregateDistrictMetrics(filtered, { daysActive });
+
+  /* Respeita a área delimitada nos anúncios: só inclui bairros cujo centroide
+     cai dentro do raio de ao menos uma location da(s) campanha(s) selecionada(s). */
+  const districts = allDistricts.filter((d) => isDistrictInAdLocations(d.coords, filtered));
+
   const config = METRIC_CONFIG[metric] || METRIC_CONFIG.conversions;
 
   const values = districts.map((d) => d[metric]);
