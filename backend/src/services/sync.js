@@ -1,3 +1,24 @@
+/* ⚡ TRIGGER AUTOMÁTICO — NÃO APAGAR
+ *
+ * Quando este arquivo for convertido de stub pra sync real (agregando insights
+ * por bairro/localização do Meta), lembrar Rafa DA FEATURE PENDENTE:
+ *
+ *   .planning/pending-features/bairro-recomendacao-investimento.md
+ *
+ * Pré-requisitos pra ativar:
+ *   1. Este sync traz insights por localização (breakdowns: region/city/DMA)
+ *   2. Rafa enviou a lista de serviços (micropigmentação labial, lash
+ *      lamination, microagulhamento de sobrancelha, extensão de cílios, etc)
+ *
+ * Passos pra implementar (resumo):
+ *   - Adicionar campo `ads.service` (string)
+ *   - Criar tabela `insights_by_district`
+ *   - Criar `frontend/src/data/serviceInsights.js`
+ *   - Banner resumido no Step2 do CreateAd (sugestão de bairros)
+ *   - Painel no CampaignDetailPanel do HeatMap (top 3 bairros)
+ *   - Notificação `insight-high-performer` / `insight-low-performer` no sino
+ */
+
 const db = require('../db');
 const googleAds = require('./googleAds');
 const metaAds = require('./metaAds');

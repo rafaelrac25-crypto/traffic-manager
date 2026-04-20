@@ -4,6 +4,16 @@ Painel de gestão de tráfego pago para a cliente Cris Costa Beauty (estúdio de
 
 **Sempre responder em português do Brasil.**
 
+## ⚡ Triggers automáticos (NÃO IGNORAR)
+
+Ao iniciar qualquer sessão neste projeto, verificar:
+
+1. **Sync Meta real ativado?** Se `backend/src/services/sync.js` deixou de ser stub (retorna `count > 0`) OU o usuário mencionar que conectou/sincronizou com o Meta, **proativamente lembrar Rafa** da feature pendente em `.planning/pending-features/bairro-recomendacao-investimento.md` e perguntar se quer começar a implementar.
+
+2. **Lista de serviços da Cris já foi enviada?** Se o usuário mencionar serviços específicos (micropigmentação labial, lash lamination, microagulhamento de sobrancelha, extensão de cílios, etc.) pela primeira vez → salvar num arquivo `frontend/src/data/services.js` e amarrar ao trigger acima.
+
+Esses triggers existem porque Rafa pediu em 2026-04-20 pra ser lembrado quando estas condições fossem verdadeiras.
+
 ## Fluxo obrigatório
 
 1. Ler `PROJECT_MAP.md` antes de qualquer tarefa
