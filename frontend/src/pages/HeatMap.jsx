@@ -20,10 +20,19 @@ import { buildHeatMapData, METRIC_CONFIG } from '../data/districtPerformance';
 import { HOME_COORDS } from '../data/joinvilleDistricts';
 
 const PERIODS = [
-  { v: 7,  l: '7 dias'  },
-  { v: 14, l: '14 dias' },
-  { v: 30, l: '30 dias' },
+  { v: 7,         l: '7 dias'  },
+  { v: 30,        l: '30 dias' },
+  { v: 'current', l: 'Atual'   },
 ];
+
+/* Calcula dias decorridos do startDate da campanha até agora */
+function daysSince(startDate) {
+  if (!startDate) return null;
+  const startMs = new Date(startDate + 'T00:00:00').getTime();
+  if (!Number.isFinite(startMs)) return null;
+  const diff = Date.now() - startMs;
+  return Math.max(1, Math.round(diff / 86400000));
+}
 
 const METRICS = ['conversions', 'cpr', 'cpc'];
 
@@ -456,7 +465,7 @@ function DistrictTable({ data, metric }) {
 export default function HeatMap() {
   const navigate = useNavigate();
   const { ads, updateAd, history } = useAppState();
-  const [days, setDays] = useState(7);
+  const [periodKey, setPeriodKey] = useState(7);
   const [metric, setMetric] = useState('conversions');
   const [campaignId, setCampaignId] = useState('all');
 
@@ -465,6 +474,15 @@ export default function HeatMap() {
     if (campaignId === 'all') return null;
     return activeAds.find((a) => String(a.id) === String(campaignId)) || null;
   }, [activeAds, campaignId]);
+
+  /* Resolve "Atual" → número de dias. Se não houver startDate, fallback pra 7 */
+  const days = useMemo(() => {
+    if (periodKey !== 'current') return periodKey;
+    if (selectedAd) return daysSince(selectedAd.startDate) ?? 7;
+    /* Resumo geral + Atual → usa a campanha ativa mais antiga */
+    const dys = activeAds.map((a) => daysSince(a.startDate)).filter(Number.isFinite);
+    return dys.length > 0 ? Math.max(...dys) : 7;
+  }, [periodKey, selectedAd, activeAds]);
 
   const data = useMemo(() => {
     return buildHeatMapData(activeAds, {
@@ -491,21 +509,25 @@ export default function HeatMap() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-          {PERIODS.map((p) => (
-            <button
-              key={p.v}
-              onClick={() => setDays(p.v)}
-              style={{
-                padding: '8px 14px', borderRadius: '10px',
-                border: `1.5px solid ${days === p.v ? 'var(--c-accent)' : 'var(--c-border)'}`,
-                background: days === p.v ? 'var(--c-active-bg)' : 'var(--c-surface)',
-                color: days === p.v ? 'var(--c-accent)' : 'var(--c-text-2)',
-                fontSize: '12px', fontWeight: 700, cursor: 'pointer',
-              }}
-            >
-              {p.l}
-            </button>
-          ))}
+          {PERIODS.map((p) => {
+            const active = periodKey === p.v;
+            const label = p.v === 'current' ? `Atual (${days}d)` : p.l;
+            return (
+              <button
+                key={p.v}
+                onClick={() => setPeriodKey(p.v)}
+                style={{
+                  padding: '8px 14px', borderRadius: '10px',
+                  border: `1.5px solid ${active ? 'var(--c-accent)' : 'var(--c-border)'}`,
+                  background: active ? 'var(--c-active-bg)' : 'var(--c-surface)',
+                  color: active ? 'var(--c-accent)' : 'var(--c-text-2)',
+                  fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
