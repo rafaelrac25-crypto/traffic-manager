@@ -11,10 +11,8 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapContainer, TileLayer, CircleMarker, Tooltip, useMap } from 'react-leaflet';
-import L from 'leaflet';
+import { MapContainer, TileLayer, CircleMarker, Circle, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import 'leaflet.heat';
 import { useAppState } from '../contexts/AppStateContext';
 import { buildHeatMapData, METRIC_CONFIG } from '../data/districtPerformance';
 import { HOME_COORDS } from '../data/joinvilleDistricts';
@@ -36,59 +34,30 @@ function daysSince(startDate) {
 
 const METRICS = ['conversions', 'cpr', 'cpc'];
 
-/* Gradiente térmico vivo — transições curtas pra cores saturadas */
-const HEAT_GRADIENT = {
-  0.0:  '#1D4ED8',
-  0.2:  '#06B6D4',
-  0.4:  '#22C55E',
-  0.55: '#EAB308',
-  0.7:  '#F97316',
-  0.85: '#EF4444',
-  1.0:  '#B91C1C',
-};
-
-/* Camada de heatmap com radius adaptativo ao zoom (evita blob gigante em zoom out) */
-function HeatLayer({ points }) {
-  const map = useMap();
-  const layerRef = useRef(null);
-
-  useEffect(() => {
-    if (!map || !L.heatLayer) return;
-
-    const build = () => {
-      if (layerRef.current) { map.removeLayer(layerRef.current); layerRef.current = null; }
-      if (!points || points.length === 0) return;
-
-      const z = map.getZoom();
-      /* Raio generoso + blur baixo = cores fortes e definidas */
-      const radius = Math.round(35 + (z - 11) * 14);   /* z=11 → 35; z=13 → 63; z=15 → 91 */
-      const blur   = Math.round(radius * 0.35);        /* bem menos blur */
-
-      /* Gamma agressivo: t^0.4 empurra quase tudo pra zona quente */
-      const heatPoints = points.map((p) => {
-        const t = Math.min(1, Math.max(0, p.intensity || 0));
-        const boosted = Math.pow(t, 0.4);
-        return [p.coords.lat, p.coords.lng, Math.max(0.55, boosted)];
-      });
-
-      layerRef.current = L.heatLayer(heatPoints, {
-        radius,
-        blur,
-        max: 0.8,          /* max < 1 → satura as cores mais cedo */
-        minOpacity: 0.92,  /* quase opaco */
-        gradient: HEAT_GRADIENT,
-      }).addTo(map);
-    };
-
-    build();
-    map.on('zoomend', build);
-    return () => {
-      map.off('zoomend', build);
-      if (layerRef.current) { map.removeLayer(layerRef.current); layerRef.current = null; }
-    };
-  }, [map, points]);
-
-  return null;
+/* Camadas térmicas sobrepostas por bairro — cada bairro tem sua cor própria
+ * baseada na intensidade da métrica selecionada. Círculos concêntricos com
+ * opacidade decrescente criam degradê radial que se mescla nas bordas com
+ * os bairros vizinhos, formando um mapa térmico contínuo. */
+function DistrictHeat({ points }) {
+  return (
+    <>
+      {points.map((d) => {
+        const color = colorForIntensity(d.intensity);
+        return (
+          <React.Fragment key={`heat-${d.name}`}>
+            <Circle center={[d.coords.lat, d.coords.lng]} radius={1400}
+              pathOptions={{ color, fillColor: color, fillOpacity: 0.10, weight: 0 }} />
+            <Circle center={[d.coords.lat, d.coords.lng]} radius={1000}
+              pathOptions={{ color, fillColor: color, fillOpacity: 0.18, weight: 0 }} />
+            <Circle center={[d.coords.lat, d.coords.lng]} radius={650}
+              pathOptions={{ color, fillColor: color, fillOpacity: 0.28, weight: 0 }} />
+            <Circle center={[d.coords.lat, d.coords.lng]} radius={350}
+              pathOptions={{ color, fillColor: color, fillOpacity: 0.42, weight: 0 }} />
+          </React.Fragment>
+        );
+      })}
+    </>
+  );
 }
 
 function colorForIntensity(t) {
@@ -640,8 +609,8 @@ export default function HeatMap() {
                   attribution='&copy; OpenStreetMap'
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-                {/* Camada térmica com blending suave (estilo radar meteorológico) */}
-                <HeatLayer points={data} />
+                {/* Camada térmica — cada bairro com sua cor própria, sobreposições suaves */}
+                <DistrictHeat points={data} />
                 {/* Ponto central + tooltip */}
                 {data.map((d) => {
                   const color = colorForIntensity(d.intensity);
