@@ -14,32 +14,33 @@
  */
 
 export const HOME_DISTRICT = 'Boa Vista';
-export const HOME_COORDS = { lat: -26.2481, lng: -48.8697 };
+export const HOME_COORDS = { lat: -26.2980, lng: -48.8224 };
 export const HOME_RADIUS_KM = 8;
 
 /**
  * Bairros de Joinville com coords (centroide aproximado) e estimativas
  * de renda/perfil. Pode ser estendido facilmente.
  */
+/* Centroides atualizados 2026-04-20 via OpenStreetMap Nominatim. */
 export const DISTRICTS = [
   { name: 'Joinville',       coords: { lat: -26.3044, lng: -48.8487 }, tier: 'mix',       incomeMin: 3000, incomeMax: 7000, note: 'Cidade toda — mix de perfis' },
-  { name: 'Centro',          coords: { lat: -26.3044, lng: -48.8487 }, tier: 'alto',      incomeMin: 5000, incomeMax: 7000, note: 'Área comercial consolidada, boa infraestrutura' },
-  { name: 'América',         coords: { lat: -26.3021, lng: -48.8431 }, tier: 'alto',      incomeMin: 7000, incomeMax: 9000, note: 'Bairro estruturado, baixa vulnerabilidade social' },
-  { name: 'Glória',          coords: { lat: -26.3028, lng: -48.8656 }, tier: 'alto',      incomeMin: 6000, incomeMax: 8000, note: 'Renda média familiar R$ 6,5k (NSC Total)' },
-  { name: 'Saguaçu',         coords: { lat: -26.2914, lng: -48.8181 }, tier: 'alto',      incomeMin: 5000, incomeMax: 7000, note: 'Renda média familiar R$ 5,5k (NSC Total)' },
-  { name: 'Anita Garibaldi', coords: { lat: -26.2711, lng: -48.8447 }, tier: 'alto',      incomeMin: 6000, incomeMax: 8000, note: 'Bom acesso a serviços, perfil consolidado' },
-  { name: 'Costa e Silva',   coords: { lat: -26.2850, lng: -48.8553 }, tier: 'alto',      incomeMin: 5000, incomeMax: 6500, note: 'Boa infraestrutura + atividade econômica' },
-  { name: 'Atiradores',      coords: { lat: -26.2861, lng: -48.8339 }, tier: 'alto',      incomeMin: 7000, incomeMax: 9000, note: 'Mais estruturado, classe A/B1 predominante' },
-  { name: 'Boa Vista',       coords: { lat: -26.2481, lng: -48.8697 }, tier: 'medio-alto',incomeMin: 4500, incomeMax: 6500, note: 'Sede da Cris Costa Beauty' },
-  { name: 'Bom Retiro',      coords: { lat: -26.2781, lng: -48.8197 }, tier: 'medio',     incomeMin: 4000, incomeMax: 5000, note: 'Residencial, perfil médio' },
-  { name: 'Floresta',        coords: { lat: -26.2686, lng: -48.8133 }, tier: 'medio',     incomeMin: 4000, incomeMax: 5000, note: 'Residencial, perfil médio' },
-  { name: 'Jardim Sofia',    coords: { lat: -26.2794, lng: -48.8094 }, tier: 'medio',     incomeMin: 4000, incomeMax: 5000, note: 'Residencial, perfil médio' },
-  { name: 'Bucarein',        coords: { lat: -26.3208, lng: -48.8478 }, tier: 'medio',     incomeMin: 3500, incomeMax: 4500, note: 'Misto residencial/comercial' },
-  { name: 'Guanabara',       coords: { lat: -26.3156, lng: -48.8378 }, tier: 'medio',     incomeMin: 3500, incomeMax: 4500, note: 'Residencial perto do centro' },
-  { name: 'Iririú',          coords: { lat: -26.3014, lng: -48.8058 }, tier: 'medio',     incomeMin: 3000, incomeMax: 4000, note: 'Bairro popular, boa densidade' },
-  { name: 'Santo Antônio',   coords: { lat: -26.3322, lng: -48.8775 }, tier: 'medio-baixo',incomeMin: 2500, incomeMax: 3500, note: 'Zona sul, perfil de entrada' },
-  { name: 'Itaum',           coords: { lat: -26.3406, lng: -48.8617 }, tier: 'medio-baixo',incomeMin: 2500, incomeMax: 3500, note: 'Zona sul, mais distante da clínica' },
-  { name: 'Aventureiro',     coords: { lat: -26.3586, lng: -48.8153 }, tier: 'medio-baixo',incomeMin: 2500, incomeMax: 3500, note: 'Zona sudeste, alto volume populacional' },
+  { name: 'Centro',          coords: { lat: -26.3016, lng: -48.8462 }, tier: 'alto',      incomeMin: 5000, incomeMax: 7000, note: 'Área comercial consolidada, boa infraestrutura' },
+  { name: 'América',         coords: { lat: -26.2904, lng: -48.8536 }, tier: 'alto',      incomeMin: 7000, incomeMax: 9000, note: 'Bairro estruturado, baixa vulnerabilidade social' },
+  { name: 'Glória',          coords: { lat: -26.2961, lng: -48.8742 }, tier: 'alto',      incomeMin: 6000, incomeMax: 8000, note: 'Renda média familiar R$ 6,5k (NSC Total)' },
+  { name: 'Saguaçu',         coords: { lat: -26.2863, lng: -48.8387 }, tier: 'alto',      incomeMin: 5000, incomeMax: 7000, note: 'Renda média familiar R$ 5,5k (NSC Total)' },
+  { name: 'Anita Garibaldi', coords: { lat: -26.3184, lng: -48.8563 }, tier: 'alto',      incomeMin: 6000, incomeMax: 8000, note: 'Bom acesso a serviços, perfil consolidado' },
+  { name: 'Costa e Silva',   coords: { lat: -26.2747, lng: -48.8799 }, tier: 'alto',      incomeMin: 5000, incomeMax: 6500, note: 'Boa infraestrutura + atividade econômica' },
+  { name: 'Atiradores',      coords: { lat: -26.3102, lng: -48.8638 }, tier: 'alto',      incomeMin: 7000, incomeMax: 9000, note: 'Mais estruturado, classe A/B1 predominante' },
+  { name: 'Boa Vista',       coords: { lat: -26.2980, lng: -48.8224 }, tier: 'medio-alto',incomeMin: 4500, incomeMax: 6500, note: 'Sede da Cris Costa Beauty' },
+  { name: 'Bom Retiro',      coords: { lat: -26.2609, lng: -48.8419 }, tier: 'medio',     incomeMin: 4000, incomeMax: 5000, note: 'Residencial, perfil médio' },
+  { name: 'Floresta',        coords: { lat: -26.3345, lng: -48.8494 }, tier: 'medio',     incomeMin: 4000, incomeMax: 5000, note: 'Residencial, perfil médio' },
+  { name: 'Jardim Sofia',    coords: { lat: -26.2385, lng: -48.8410 }, tier: 'medio',     incomeMin: 4000, incomeMax: 5000, note: 'Residencial, perfil médio' },
+  { name: 'Bucarein',        coords: { lat: -26.3147, lng: -48.8382 }, tier: 'medio',     incomeMin: 3500, incomeMax: 4500, note: 'Misto residencial/comercial' },
+  { name: 'Guanabara',       coords: { lat: -26.3222, lng: -48.8287 }, tier: 'medio',     incomeMin: 3500, incomeMax: 4500, note: 'Residencial perto do centro' },
+  { name: 'Iririú',          coords: { lat: -26.2755, lng: -48.8237 }, tier: 'medio',     incomeMin: 3000, incomeMax: 4000, note: 'Bairro popular, boa densidade' },
+  { name: 'Santo Antônio',   coords: { lat: -26.2692, lng: -48.8563 }, tier: 'medio-baixo',incomeMin: 2500, incomeMax: 3500, note: 'Zona norte' },
+  { name: 'Itaum',           coords: { lat: -26.3330, lng: -48.8294 }, tier: 'medio-baixo',incomeMin: 2500, incomeMax: 3500, note: 'Zona sul' },
+  { name: 'Aventureiro',     coords: { lat: -26.2435, lng: -48.8105 }, tier: 'medio-baixo',incomeMin: 2500, incomeMax: 3500, note: 'Zona nordeste, alto volume populacional' },
 ];
 
 /* ── Haversine — distância em km entre dois pontos lat/lng ── */
