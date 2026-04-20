@@ -1364,8 +1364,20 @@ function Step5Creative({ adFormat, setAdFormat, mediaFiles, setMediaFiles, prima
           {CTA_OPTIONS.map(cta => (
             <Pill key={cta} selected={ctaButton === cta} onClick={() => { setCtaButton(cta); setCustomCta(''); }}>{cta}</Pill>
           ))}
-          <Pill selected={!CTA_OPTIONS.includes(ctaButton) && ctaButton !== ''} onClick={() => {}}>
-            <span style={{ color: 'var(--c-text-4)', fontSize: '11px' }}>Personalizado</span>
+          <Pill
+            selected={!CTA_OPTIONS.includes(ctaButton) && ctaButton !== ''}
+            onClick={() => {
+              const current = CTA_OPTIONS.includes(ctaButton) ? '' : ctaButton;
+              const custom = window.prompt('Qual CTA personalizado você quer usar?', current || '');
+              if (custom != null) {
+                const trimmed = custom.trim();
+                if (trimmed) { setCtaButton(trimmed); setCustomCta(trimmed); }
+              }
+            }}
+          >
+            <span style={{ color: 'var(--c-text-4)', fontSize: '11px' }}>
+              {!CTA_OPTIONS.includes(ctaButton) && ctaButton ? `✏️ ${ctaButton}` : 'Personalizado'}
+            </span>
           </Pill>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -1882,7 +1894,7 @@ export default function CreateAd() {
     const adPayload = {
       name: adName,
       platform: 'instagram',
-      status: isScheduled ? 'review' : 'review',
+      status: 'review', /* Meta revê todo anúncio antes de ativar */
 
       // Orçamento (local)
       budget: Number(budgetValue) || 0,
