@@ -188,6 +188,7 @@ FRONTEND_URL=http://localhost:5173
 - [ ] Histórico de métricas persistido
 - [ ] Rate limiting e retry nos services de plataforma
 - [ ] Encriptar tokens no DB
+- [ ] **Relatório de recomendação de investimento por bairro** (ver `.planning/pending-features/bairro-recomendacao-investimento.md`) — após sync real, analisar performance histórica por bairro × serviço, recomendar onde investir mais. Sugestão resumida no Step 2 do CreateAd + seção no Mapa de Calor + alerta via sino quando houver insight forte.
 
 ### Baixo
 - [ ] Code-splitting do bundle (hoje ~670kB)
