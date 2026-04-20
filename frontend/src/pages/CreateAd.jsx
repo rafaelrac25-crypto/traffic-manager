@@ -299,30 +299,45 @@ function Step1Objective({ objective, setObjective, errors = {} }) {
           }}>
             {items.map((obj) => {
               const sel = objective === obj.id;
+              const preferred = obj.id === 'messages';
               return (
                 <div
                   key={obj.id}
                   onClick={() => setObjective(obj.id)}
-                  title={obj.desc}
+                  title={preferred ? `${obj.desc}\n⭐ Preferido da Cris (leads via WhatsApp)` : obj.desc}
                   style={{
                     display: 'flex', alignItems: 'center', gap: '8px',
                     padding: '8px 10px',
-                    border: `1.5px solid ${sel ? color : 'var(--c-border)'}`,
-                    background: sel ? `${color}12` : 'var(--c-card-bg)',
+                    border: `1.5px solid ${sel ? color : preferred ? '#F59E0B' : 'var(--c-border)'}`,
+                    background: sel ? `${color}12` : preferred ? '#FEF3C711' : 'var(--c-card-bg)',
                     borderRadius: '9px', cursor: 'pointer',
                     transition: 'all .12s',
+                    position: 'relative',
                   }}
                   onMouseEnter={(e) => { if (!sel) e.currentTarget.style.borderColor = color; }}
-                  onMouseLeave={(e) => { if (!sel) e.currentTarget.style.borderColor = 'var(--c-border)'; }}
+                  onMouseLeave={(e) => { if (!sel) e.currentTarget.style.borderColor = preferred ? '#F59E0B' : 'var(--c-border)'; }}
                 >
                   <span style={{ fontSize: '18px', lineHeight: 1, flexShrink: 0 }}>{obj.icon}</span>
                   <span style={{
                     fontSize: '12px', fontWeight: sel ? 700 : 600,
                     color: sel ? color : 'var(--c-text-1)',
                     lineHeight: 1.25,
+                    flex: 1, minWidth: 0,
                   }}>
                     {obj.label}
                   </span>
+                  {preferred && (
+                    <span
+                      title="Preferido da Cris"
+                      style={{
+                        fontSize: '10px', fontWeight: 800, color: '#A16207',
+                        background: '#FEF3C7', padding: '1px 6px', borderRadius: '8px',
+                        flexShrink: 0,
+                      }}
+                    >
+                      ⭐
+                    </span>
+                  )}
                 </div>
               );
             })}
@@ -1736,7 +1751,8 @@ export default function CreateAd() {
   const normalizedAudienceGender = normalizeAudienceGender(quickFillAudience?.gender);
 
   /* ── Estado do formulário ── */
-  const [objective,          setObjective]          = useState(source?.objective || (quickFill ? 'messages' : ''));
+  /* Default 'messages' — objetivo preferido da Cris (leads via WhatsApp) */
+  const [objective,          setObjective]          = useState(source?.objective || 'messages');
   const [locations,          setLocations]          = useState(source?.locations || (quickFillAudience ? normalizedAudienceLocations : []));
   const [ageRange,           setAgeRange]           = useState(source?.ageRange || (quickFillAudience ? [quickFillAudience.ageMin, quickFillAudience.ageMax] : [18, 65]));
   const [gender,             setGender]             = useState(source?.gender || (quickFillAudience ? normalizedAudienceGender : 'all'));
