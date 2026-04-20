@@ -59,21 +59,23 @@ function HeatLayer({ points }) {
       if (!points || points.length === 0) return;
 
       const z = map.getZoom();
-      /* radius em pixels cresce com o zoom (mais zoom → bolha maior em px pra manter área geográfica) */
-      const radius = Math.round(22 + (z - 11) * 10);   /* z=11 → 22; z=13 → 42; z=15 → 62 */
-      const blur   = Math.round(radius * 0.85);
+      /* radius maior + blur menor = cores mais saturadas e definidas */
+      const radius = Math.round(28 + (z - 11) * 12);   /* z=11 → 28; z=13 → 52; z=15 → 76 */
+      const blur   = Math.round(radius * 0.55);         /* menos blur = cor mais forte */
 
-      const heatPoints = points.map((p) => [
-        p.coords.lat,
-        p.coords.lng,
-        Math.max(0.25, Math.min(1, p.intensity || 0)),
-      ]);
+      /* Gamma curve (expoente < 1) empurra intensidade pra cima →
+         valores médios ficam mais "quentes", contraste fica mais vivo */
+      const heatPoints = points.map((p) => {
+        const t = Math.min(1, Math.max(0, p.intensity || 0));
+        const boosted = Math.pow(t, 0.6);
+        return [p.coords.lat, p.coords.lng, Math.max(0.35, boosted)];
+      });
 
       layerRef.current = L.heatLayer(heatPoints, {
         radius,
         blur,
         max: 1.0,
-        minOpacity: 0.45,
+        minOpacity: 0.75,
         gradient: HEAT_GRADIENT,
       }).addTo(map);
     };
