@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS campaigns (
   live_at TIMESTAMP,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW(),
+  payload TEXT, -- JSON completo do anúncio (locations, criativo, IDs Meta, splits)
   UNIQUE (platform, platform_campaign_id)
 );
 

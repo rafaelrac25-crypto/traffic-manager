@@ -10,6 +10,20 @@ async function log(action, entity, entity_id, description, meta) {
   } catch {}
 }
 
+/* Transforma row do banco em objeto com payload deserializado */
+function rowToAd(row) {
+  if (!row) return null;
+  const out = { ...row };
+  if (out.payload && typeof out.payload === 'string') {
+    try { out.payload = JSON.parse(out.payload); } catch { /* leave as is */ }
+  }
+  /* Merge de campos do payload na raiz pra consumo direto no frontend */
+  if (out.payload && typeof out.payload === 'object') {
+    return { ...out.payload, ...out, payload: undefined };
+  }
+  return out;
+}
+
 router.get('/', async (req, res) => {
   const { platform, status } = req.query;
   let query = 'SELECT * FROM campaigns WHERE 1=1';
@@ -19,7 +33,7 @@ router.get('/', async (req, res) => {
   query += ' ORDER BY created_at DESC';
   try {
     const result = await db.query(query, params);
-    res.json(result.rows);
+    res.json(result.rows.map(rowToAd));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Erro ao buscar campanhas' });
@@ -27,26 +41,25 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { name, platform, budget, start_date, end_date, publish_mode, scheduled_for } = req.body;
+  const { name, platform, budget, start_date, end_date, publish_mode, scheduled_for, status: statusIn, payload } = req.body;
   if (!name || !platform) return res.status(400).json({ error: 'Nome e plataforma obrigatórios' });
 
   const mode = publish_mode || 'immediate';
-  // Se imediato: submitted_at = agora, status = 'review'
-  // Se agendado: status = 'scheduled', submitted_at = null (será preenchido quando disparar)
   const isImmediate = mode === 'immediate';
-  const status = isImmediate ? 'review' : 'scheduled';
+  const status = statusIn || (isImmediate ? 'review' : 'scheduled');
   const submitted_at = isImmediate ? new Date().toISOString() : null;
   const sched = (!isImmediate && scheduled_for) ? scheduled_for : null;
+  const payloadStr = payload ? JSON.stringify(payload) : null;
 
   try {
     const result = await db.query(
       `INSERT INTO campaigns
-        (name, platform, budget, start_date, end_date, publish_mode, status, scheduled_for, submitted_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
+        (name, platform, budget, start_date, end_date, publish_mode, status, scheduled_for, submitted_at, payload)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
       [name, platform, budget || null, start_date || null, end_date || null,
-       mode, status, sched, submitted_at]
+       mode, status, sched, submitted_at, payloadStr]
     );
-    const camp = result.rows[0];
+    const camp = rowToAd(result.rows[0]);
     const desc = mode === 'scheduled'
       ? `Campanha "${name}" agendada para ${sched}`
       : `Campanha "${name}" criada na plataforma ${platform}`;
@@ -59,7 +72,8 @@ router.post('/', async (req, res) => {
 });
 
 router.put('/:id', async (req, res) => {
-  const { name, budget, start_date, end_date, spent, clicks, impressions, conversions } = req.body;
+  const { name, budget, start_date, end_date, spent, clicks, impressions, conversions, status, payload } = req.body;
+  const payloadStr = payload !== undefined ? (payload ? JSON.stringify(payload) : null) : undefined;
   try {
     const result = await db.query(
       `UPDATE campaigns SET
@@ -71,12 +85,14 @@ router.put('/:id', async (req, res) => {
         clicks = COALESCE(?, clicks),
         impressions = COALESCE(?, impressions),
         conversions = COALESCE(?, conversions),
+        status = COALESCE(?, status),
+        payload = COALESCE(?, payload),
         updated_at = datetime('now')
        WHERE id = ? RETURNING *`,
-      [name, budget, start_date, end_date, spent, clicks, impressions, conversions, req.params.id]
+      [name, budget, start_date, end_date, spent, clicks, impressions, conversions, status, payloadStr, req.params.id]
     );
     if (!result.rows[0]) return res.status(404).json({ error: 'Campanha não encontrada' });
-    res.json(result.rows[0]);
+    res.json(rowToAd(result.rows[0]));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Erro ao atualizar campanha' });

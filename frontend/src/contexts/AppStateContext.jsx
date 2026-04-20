@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { getRelevantCommercialDatesInWindow } from '../data/commercialDates';
 import { playBell } from '../utils/sounds';
+import * as adsApi from '../services/adsApi';
 
 /**
  * AppStateContext — estado global do painel.
@@ -127,6 +128,17 @@ export function AppStateProvider({ children }) {
     ping();
     const id = setInterval(ping, 30000);
     return () => { cancelled = true; clearInterval(id); };
+  }, []);
+
+  /* Hidrata ads do backend no mount. Se API falhar, segue com localStorage. */
+  useEffect(() => {
+    let cancelled = false;
+    adsApi.fetchAds().then((remote) => {
+      if (cancelled || !remote) return;
+      if (remote.length === 0) return; /* mantém localStorage se servidor está vazio */
+      setAds(remote.map(r => ({ ...r, serverId: r.id })));
+    });
+    return () => { cancelled = true; };
   }, []);
 
   /* ─── Alertas de datas comerciais relevantes em janela de 45 dias (no mount) ─── */
@@ -306,6 +318,13 @@ export function AppStateProvider({ children }) {
       title: `Anúncio criado: ${newAd.name || 'sem nome'}`,
       description: newAd.platform ? `Plataforma: ${newAd.platform}` : null,
     });
+    /* Persiste no backend em paralelo — se API estiver offline, segue só localStorage */
+    adsApi.createAd(newAd).then((serverAd) => {
+      if (serverAd && serverAd.id && serverAd.id !== newAd.id) {
+        /* Adota o id real do banco, preservando o restante do estado local */
+        setAds(prev => prev.map(a => a.id === newAd.id ? { ...a, id: serverAd.id, serverId: serverAd.id } : a));
+      }
+    });
     return newAd;
   }, [logHistory]);
 
@@ -318,7 +337,9 @@ export function AppStateProvider({ children }) {
         title: `Anúncio editado: ${a.name || 'sem nome'}`,
         description: fields ? `Campos: ${fields}` : null,
       });
-      return { ...a, ...patch };
+      const merged = { ...a, ...patch };
+      adsApi.updateAd(a.serverId || a.id, merged);
+      return merged;
     }));
   }, [logHistory]);
 
@@ -333,6 +354,7 @@ export function AppStateProvider({ children }) {
           restorable: true,
           payload: target,
         });
+        adsApi.deleteAd(target.serverId || target.id);
       }
       return prev.filter(a => a.id !== id);
     });

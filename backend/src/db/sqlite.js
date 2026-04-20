@@ -35,6 +35,7 @@ db.exec(`
     submitted_at TEXT,
     review_started_at TEXT,
     live_at TEXT,
+    payload TEXT,
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now')),
     UNIQUE(platform, platform_campaign_id)
@@ -67,6 +68,7 @@ const newCols = [
   'ALTER TABLE campaigns ADD COLUMN submitted_at TEXT',
   'ALTER TABLE campaigns ADD COLUMN review_started_at TEXT',
   'ALTER TABLE campaigns ADD COLUMN live_at TEXT',
+  'ALTER TABLE campaigns ADD COLUMN payload TEXT',
 ];
 for (const sql of newCols) {
   try { db.exec(sql); } catch {}
