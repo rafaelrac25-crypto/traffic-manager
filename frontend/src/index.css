@@ -274,12 +274,15 @@ body {
 
 /* Leaflet */
 .leaflet-map-container {
-  height: 300px;
+  height: 400px;
+  min-height: 240px;
+  max-height: 820px;
   width: 100%;
   border-radius: 12px;
   overflow: hidden;
   border: 1.5px solid var(--c-border);
   z-index: 0;
+  resize: vertical;
 }
 .leaflet-top, .leaflet-bottom { z-index: 1 !important; }
 [data-theme="dark"] .leaflet-tile { filter: brightness(.85) saturate(.8); }

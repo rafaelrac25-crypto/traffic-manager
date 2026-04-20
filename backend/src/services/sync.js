@@ -7,8 +7,9 @@
  *
  * Pré-requisitos pra ativar:
  *   1. Este sync traz insights por localização (breakdowns: region/city/DMA)
- *   2. Rafa enviou a lista de serviços (micropigmentação labial, lash
- *      lamination, microagulhamento de sobrancelha, extensão de cílios, etc)
+ *   2. ✅ Lista de serviços da Cris RECEBIDA 2026-04-20 — ver
+ *      `frontend/src/data/services.js` (13 serviços, cada um com id, tier,
+ *      ticketRange, interests, keywords). USAR ESSA LISTA COMO FONTE OFICIAL.
  *
  * Passos pra implementar (resumo):
  *   - Adicionar campo `ads.service` (string)

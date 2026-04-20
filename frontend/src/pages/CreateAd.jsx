@@ -112,9 +112,21 @@ const CTA_OPTIONS = [
 ];
 
 const INTEREST_SUGGESTIONS = [
+  /* Genéricos de beleza */
   'Beleza e cosméticos', 'Cuidados com a pele', 'Moda feminina', 'Bem-estar',
-  'Saúde e fitness', 'Manicure e unhas', 'Cabelo e penteados', 'Maquiagem',
-  'Estética e spa', 'Autoestima', 'Salão de beleza', 'Produtos naturais',
+  'Saúde e fitness', 'Autoestima', 'Estética e spa', 'Autocuidado',
+  /* Sobrancelhas */
+  'Sobrancelhas', 'Maquiagem permanente', 'Brow lamination', 'Henna',
+  /* Lábios */
+  'Lábios',
+  /* Cílios */
+  'Cílios', 'Lash lifting', 'Extensão de cílios',
+  /* Pele */
+  'Skincare', 'Limpeza de pele', 'Dermatologia estética', 'Anti-idade',
+  /* Cabelo / capilar */
+  'Cabelo e penteados', 'Barba', 'Tratamentos capilares', 'Beleza masculina',
+  /* Outros */
+  'Maquiagem', 'Salão de beleza', 'Cuidados pessoais',
 ];
 
 const RADIUS_KM = [1, 2, 3, 5, 8, 10];
@@ -253,6 +265,21 @@ function MapClickHandler({ onAdd, radius, onReject }) {
       }
     },
   });
+  return null;
+}
+
+/* Recalcula tiles do Leaflet quando o container é redimensionado (CSS resize: vertical) */
+function MapResizeObserver() {
+  const map = useMap();
+  useEffect(() => {
+    if (!map) return;
+    const container = map.getContainer();
+    const parent = container?.parentElement;
+    if (!parent || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => { map.invalidateSize(); });
+    ro.observe(parent);
+    return () => ro.disconnect();
+  }, [map]);
   return null;
 }
 
@@ -617,6 +644,7 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
               attribution='© <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
+            <MapResizeObserver />
             <MapClickHandler onAdd={loc => setLocations(prev => [...prev, loc])} radius={activeRadius} onReject={rejectOutOfBounds} />
             <MapFlyTo center={mapCenter} />
 

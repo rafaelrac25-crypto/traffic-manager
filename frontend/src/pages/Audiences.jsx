@@ -32,10 +32,14 @@ function genderLabel(g) {
 }
 
 const INTEREST_SUGGESTIONS = [
-  'Estética', 'Skincare', 'Autocuidado', 'Beleza', 'Bem-estar',
-  'Casamento', 'Eventos', 'Maquiagem', 'Cabelo', 'Unhas',
-  'Depilação', 'Massagem', 'Spa', 'Yoga', 'Fitness',
-  'Moda', 'Shopping', 'Viagens', 'Gastronomia', 'Noiva',
+  /* Serviços da Cris */
+  'Sobrancelhas', 'Maquiagem permanente', 'Brow lamination', 'Lash lifting',
+  'Extensão de cílios', 'Cílios', 'Lábios', 'Henna',
+  'Limpeza de pele', 'Skincare', 'Microagulhamento', 'Peeling',
+  'Anti-idade', 'Dermatologia estética', 'Tricopigmentação',
+  /* Genéricos */
+  'Estética', 'Autocuidado', 'Beleza', 'Bem-estar', 'Maquiagem',
+  'Casamento', 'Noiva', 'Cabelo', 'Barba', 'Cuidados pessoais',
 ];
 
 const IconPlus = () => (
