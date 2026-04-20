@@ -119,21 +119,29 @@ function colorForIntensity(t) {
 
 function LegendBar({ metric, minValue, maxValue }) {
   const config = METRIC_CONFIG[metric];
-  const leftLabel  = config.invert ? 'Melhor (quente)' : 'Menor (frio)';
-  const rightLabel = config.invert ? 'Pior (frio)'     : 'Maior (quente)';
-  /* Se invertido, visualmente a esquerda é "quente". Mas a barra térmica SEMPRE
-     cresce de frio → quente (azul → vermelho), porque a intensidade já foi
-     invertida na normalização. Então a interpretação do valor bruto inverte. */
+  /* Regra fixa: azul = frio = RUIM pro negócio, vermelho = quente = BOM pro negócio.
+     - Conversões: menos = frio (ruim)         | mais = quente (bom)
+     - CPR/CPC:    mais caro = frio (ruim)     | mais barato = quente (bom)
+     A barra de cor é sempre a mesma — o que muda é qual valor bruto cada ponta representa. */
+  const coldValue = config.invert ? maxValue : minValue;
+  const hotValue  = config.invert ? minValue : maxValue;
+  const coldLabel = metric === 'conversions' ? 'menos conversões' : 'mais caro';
+  const hotLabel  = metric === 'conversions' ? 'mais conversões'  : 'mais barato';
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '220px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '260px' }}>
       <div style={{
         height: '14px', borderRadius: '7px',
-        background: 'linear-gradient(90deg, #1E3A8A 0%, #0EA5E9 25%, #FACC15 50%, #F97316 75%, #DC2626 100%)',
+        background: 'linear-gradient(90deg, #1E40AF 0%, #22D3EE 25%, #FACC15 50%, #FB923C 75%, #DC2626 100%)',
         border: '1px solid var(--c-border)',
       }} />
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--c-text-4)', fontWeight: 600 }}>
-        <span>{config.invert ? `${config.format(maxValue)} (pior)` : `${config.format(minValue)}`}</span>
-        <span>{config.invert ? `${config.format(minValue)} (melhor)` : `${config.format(maxValue)}`}</span>
+        <span title={`${coldLabel} — pior performance`}>
+          ❄️ {config.format(coldValue)} <span style={{ color: 'var(--c-text-4)', fontWeight: 400 }}>({coldLabel})</span>
+        </span>
+        <span title={`${hotLabel} — melhor performance`}>
+          <span style={{ color: 'var(--c-text-4)', fontWeight: 400 }}>({hotLabel})</span> {config.format(hotValue)} 🔥
+        </span>
       </div>
     </div>
   );
