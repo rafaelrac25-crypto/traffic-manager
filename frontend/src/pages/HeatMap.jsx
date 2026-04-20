@@ -61,12 +61,11 @@ function DistrictHeat({ points }) {
 }
 
 function colorForIntensity(t) {
+  /* Paleta simples 3 cores: azul (frio) → laranja (morno) → vermelho (quente) */
   const stops = [
-    [0.0, [30, 58, 138]],
-    [0.25, [14, 165, 233]],
-    [0.5, [250, 204, 21]],
-    [0.75, [249, 115, 22]],
-    [1.0, [220, 38, 38]],
+    [0.0, [30, 64, 175]],   /* #1E40AF — azul */
+    [0.5, [249, 115, 22]],  /* #F97316 — laranja */
+    [1.0, [220, 38, 38]],   /* #DC2626 — vermelho */
   ];
   const v = Math.max(0, Math.min(1, t));
   for (let i = 0; i < stops.length - 1; i++) {
@@ -96,7 +95,7 @@ function LegendBar({ metric, minValue, maxValue }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '260px' }}>
       <div style={{
         height: '14px', borderRadius: '7px',
-        background: 'linear-gradient(90deg, #1E40AF 0%, #22D3EE 25%, #FACC15 50%, #FB923C 75%, #DC2626 100%)',
+        background: 'linear-gradient(90deg, #1E40AF 0%, #F97316 50%, #DC2626 100%)',
         border: '1px solid var(--c-border)',
       }} />
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--c-text-4)', fontWeight: 600 }}>
