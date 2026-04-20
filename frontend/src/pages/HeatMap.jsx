@@ -36,14 +36,15 @@ function daysSince(startDate) {
 
 const METRICS = ['conversions', 'cpr', 'cpc'];
 
-/* Gradiente térmico estilo radar meteorológico */
+/* Gradiente térmico vivo — transições curtas pra cores saturadas */
 const HEAT_GRADIENT = {
-  0.0:  '#1E3A8A',
-  0.25: '#0EA5E9',
-  0.5:  '#84CC16',
-  0.65: '#FACC15',
-  0.85: '#F97316',
-  1.0:  '#DC2626',
+  0.0:  '#1D4ED8',
+  0.2:  '#06B6D4',
+  0.4:  '#22C55E',
+  0.55: '#EAB308',
+  0.7:  '#F97316',
+  0.85: '#EF4444',
+  1.0:  '#B91C1C',
 };
 
 /* Camada de heatmap com radius adaptativo ao zoom (evita blob gigante em zoom out) */
@@ -59,23 +60,22 @@ function HeatLayer({ points }) {
       if (!points || points.length === 0) return;
 
       const z = map.getZoom();
-      /* radius maior + blur menor = cores mais saturadas e definidas */
-      const radius = Math.round(28 + (z - 11) * 12);   /* z=11 → 28; z=13 → 52; z=15 → 76 */
-      const blur   = Math.round(radius * 0.55);         /* menos blur = cor mais forte */
+      /* Raio generoso + blur baixo = cores fortes e definidas */
+      const radius = Math.round(35 + (z - 11) * 14);   /* z=11 → 35; z=13 → 63; z=15 → 91 */
+      const blur   = Math.round(radius * 0.35);        /* bem menos blur */
 
-      /* Gamma curve (expoente < 1) empurra intensidade pra cima →
-         valores médios ficam mais "quentes", contraste fica mais vivo */
+      /* Gamma agressivo: t^0.4 empurra quase tudo pra zona quente */
       const heatPoints = points.map((p) => {
         const t = Math.min(1, Math.max(0, p.intensity || 0));
-        const boosted = Math.pow(t, 0.6);
-        return [p.coords.lat, p.coords.lng, Math.max(0.35, boosted)];
+        const boosted = Math.pow(t, 0.4);
+        return [p.coords.lat, p.coords.lng, Math.max(0.55, boosted)];
       });
 
       layerRef.current = L.heatLayer(heatPoints, {
         radius,
         blur,
-        max: 1.0,
-        minOpacity: 0.75,
+        max: 0.8,          /* max < 1 → satura as cores mais cedo */
+        minOpacity: 0.92,  /* quase opaco */
         gradient: HEAT_GRADIENT,
       }).addTo(map);
     };
