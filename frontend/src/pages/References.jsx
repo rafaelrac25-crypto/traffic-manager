@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AD_REFERENCES, REFERENCE_FILTERS, isRelevantForCris } from '../data/adReferences';
+import { AD_REFERENCES, REFERENCE_FILTERS, isRelevantForCris, adLibraryForService } from '../data/adReferences';
+import { SERVICES, inferServiceFromText } from '../data/services';
 
 const FORMAT_META = {
   reels:    { label: 'Reels',     emoji: '🎬', color: '#E91E63' },
@@ -580,6 +581,7 @@ export default function References() {
   const [selected, setSelected] = useState(null);
   const [visibleCount, setVisibleCount] = useState(10);
   const [favorites, setFavorites] = useState(() => loadFavorites());
+  const [serviceFilter, setServiceFilter] = useState('all');
 
   useEffect(() => { saveFavorites(favorites); }, [favorites]);
 
@@ -600,6 +602,18 @@ export default function References() {
     if (format !== 'all') list = list.filter(r => r.format === format);
     if (objective !== 'all') list = list.filter(r => r.objective === objective);
     if (onlyCris) list = list.filter(isRelevantForCris);
+    if (serviceFilter !== 'all') {
+      const svc = SERVICES.find(s => s.id === serviceFilter);
+      if (svc) {
+        list = list.filter(r => {
+          const text = [r.title, r.hook, r.primaryText, r.headline, ...(r.relevantFor || [])].join(' ');
+          const inferred = inferServiceFromText(text);
+          if (inferred?.id === svc.id) return true;
+          const lowTerms = [svc.label, ...(svc.keywords || []), ...(svc.synonyms || []), svc.category].map(t => t.toLowerCase());
+          return lowTerms.some(t => text.toLowerCase().includes(t));
+        });
+      }
+    }
 
     const q = query.trim().toLowerCase();
     if (q) {
@@ -631,7 +645,7 @@ export default function References() {
         list.sort((a, b) => b.score - a.score);
     }
     return list;
-  }, [format, objective, onlyCris, sortBy, query, favorites]);
+  }, [format, objective, onlyCris, sortBy, query, favorites, serviceFilter]);
 
   const visible = filtered.slice(0, visibleCount);
   const favoriteCount = favorites.size;
@@ -677,6 +691,84 @@ export default function References() {
             ★ {favoriteCount} favorita{favoriteCount > 1 ? 's' : ''}
           </div>
         )}
+      </div>
+
+      {/* Chips de serviços — abrem Meta Ad Library ou filtram a lista local */}
+      <div style={{
+        marginBottom: '14px',
+        background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',
+        borderRadius: '12px', padding: '10px 12px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--c-text-3)', textTransform: 'uppercase', letterSpacing: '.5px' }}>
+            Serviços da Cris — filtrar referências e buscar na Meta Ad Library
+          </div>
+          {serviceFilter !== 'all' && (
+            <button
+              onClick={() => setServiceFilter('all')}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                fontSize: '11px', fontWeight: 600, color: 'var(--c-accent)',
+              }}
+            >Limpar filtro de serviço</button>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setServiceFilter('all')}
+            style={{
+              padding: '5px 10px', borderRadius: '20px',
+              border: `1.5px solid ${serviceFilter === 'all' ? 'var(--c-accent)' : 'var(--c-border)'}`,
+              background: serviceFilter === 'all' ? 'var(--c-active-bg)' : 'var(--c-surface)',
+              color: serviceFilter === 'all' ? 'var(--c-accent)' : 'var(--c-text-3)',
+              fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            Todos
+          </button>
+          {SERVICES.map((s) => {
+            const active = serviceFilter === s.id;
+            const libUrl = adLibraryForService(s);
+            return (
+              <span key={s.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                <button
+                  onClick={() => setServiceFilter(active ? 'all' : s.id)}
+                  title={`Filtrar referências por ${s.label}`}
+                  style={{
+                    padding: '5px 10px', borderRadius: '20px 0 0 20px',
+                    border: `1.5px solid ${active ? 'var(--c-accent)' : 'var(--c-border)'}`,
+                    borderRight: 'none',
+                    background: active ? 'var(--c-active-bg)' : 'var(--c-surface)',
+                    color: active ? 'var(--c-accent)' : 'var(--c-text-3)',
+                    fontSize: '11px', fontWeight: active ? 700 : 500,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {s.label}
+                </button>
+                <a
+                  href={libUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={`Abrir Meta Ad Library buscando "${s.label}"`}
+                  style={{
+                    padding: '5px 8px', borderRadius: '0 20px 20px 0',
+                    border: `1.5px solid ${active ? 'var(--c-accent)' : 'var(--c-border)'}`,
+                    background: active ? 'var(--c-active-bg)' : 'var(--c-card-bg)',
+                    color: 'var(--c-text-3)',
+                    fontSize: '11px', textDecoration: 'none',
+                    display: 'inline-flex', alignItems: 'center',
+                  }}
+                >
+                  🔗
+                </a>
+              </span>
+            );
+          })}
+        </div>
+        <div style={{ marginTop: '8px', fontSize: '10.5px', color: 'var(--c-text-4)' }}>
+          Clique no nome pra filtrar referências locais · clique em 🔗 pra abrir a Meta Ad Library buscando aquele serviço
+        </div>
       </div>
 
       {/* Barra de busca + filtros */}

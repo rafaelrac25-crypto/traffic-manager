@@ -23,6 +23,14 @@ function adLibrary(query) {
   return `https://www.facebook.com/ads/library/?${params.toString()}`;
 }
 
+/** Gera URL de busca na Meta Ad Library pra um serviço específico */
+export function adLibraryForService(service) {
+  if (!service) return null;
+  /* Combina label + keywords principais separados por OR pra ampliar o match */
+  const terms = [service.label, ...(service.keywords || []).slice(0, 2)].join(' ');
+  return adLibrary(terms);
+}
+
 export const AD_REFERENCES = [
   {
     id: 'ref-renata-franca',
