@@ -11,7 +11,7 @@ import Audiences from './pages/Audiences';
 import CreativeLibrary from './pages/CreativeLibrary';
 import References from './pages/References';
 import History from './pages/History';
-import Reports from './pages/Reports';
+import HeatMap from './pages/HeatMap';
 import AIAssistant from './components/AIAssistant';
 import SplashScreen from './components/SplashScreen';
 import { useTheme } from './contexts/ThemeContext';
@@ -487,7 +487,8 @@ function Layout() {
             <Route path="/referencias"   element={<References />} />
             <Route path="/criar-anuncio" element={<CreateAd />} />
             <Route path="/historico"     element={<History />} />
-            <Route path="/desempenho"    element={<Reports />} />
+            <Route path="/mapa-de-calor" element={<HeatMap />} />
+            <Route path="/desempenho"    element={<Navigate to="/mapa-de-calor" replace />} />
             <Route path="/novo"          element={<Navigate to="/criar-anuncio" replace />} />
             <Route path="*"              element={<Dashboard />} />
           </Routes>

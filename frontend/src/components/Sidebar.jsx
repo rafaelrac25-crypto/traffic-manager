@@ -104,7 +104,7 @@ const NAV = [
     { to: '/criativos',  label: 'Criativos',    Icon: IconCreatives },
     { to: '/referencias', label: 'Referências', Icon: IconReports },
   ]},
-  { to: '/desempenho',    label: 'Desempenho',    Icon: IconReports },
+  { to: '/mapa-de-calor', label: 'Mapa de Calor', Icon: IconReports },
   { to: '/investimento',  label: 'Investimento',  Icon: IconInvestment },
   { to: '/historico',     label: 'Histórico',     Icon: IconHistory },
 ];

@@ -909,7 +909,7 @@ function RingPerformanceTeaser({ ads, onOpen }) {
               padding: '6px', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
             }}
           >
-            Abrir Desempenho
+            Abrir Mapa de Calor
           </button>
         </>
       )}
@@ -1207,7 +1207,7 @@ export default function Dashboard() {
           benchmarkLabel={CPC_BENCHMARK_LABEL}
           onOpenAds={() => navigate('/anuncios')}
         />
-        <RingPerformanceTeaser ads={ads} onOpen={() => navigate('/desempenho')} />
+        <RingPerformanceTeaser ads={ads} onOpen={() => navigate('/mapa-de-calor')} />
         <HistoricalComparisonCard onViewCalendar={() => navigate('/calendario')} />
       </div>
 
