@@ -55,6 +55,20 @@ const DotsIcon = () => (
     <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
   </svg>
 );
+const TrashIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="3 6 5 6 21 6"/>
+    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+    <path d="M10 11v6M14 11v6"/>
+    <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/>
+  </svg>
+);
+const EyeIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+    <circle cx="12" cy="12" r="3"/>
+  </svg>
+);
 const ChevronDown = () => (
   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
 );
@@ -69,16 +83,163 @@ const PlusIcon = () => (
   </svg>
 );
 
-/* ── Thumbnail placeholder ── */
-function AdThumb({ grad }) {
+/* ── Thumbnail (miniatura do criativo) ── */
+function AdThumb({ ad }) {
+  const grad = ad.thumbGrad || 'linear-gradient(135deg,#FECDD3,#FDA4AF,#FB7185)';
+  const format = ad.adFormat || ad.format;
+  const mediaUrl = ad.mediaFiles?.[0]?.url || ad.mediaUrl;
+  const formatIcon = {
+    reels: '🎬', stories: '📱', carousel: '🔄', video: '▶', image: '🖼️',
+  }[format] || '🌸';
+
   return (
     <div style={{
-      width: '52px', height: '52px', borderRadius: '10px',
-      background: grad, flexShrink: 0,
+      width: '42px', height: '42px', borderRadius: '9px',
+      background: mediaUrl ? `url(${mediaUrl}) center/cover` : grad,
+      flexShrink: 0,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: '18px', opacity: 0.85,
+      fontSize: '16px', opacity: 0.95,
+      position: 'relative', overflow: 'hidden',
     }}>
-      <span>🌸</span>
+      {!mediaUrl && <span>{formatIcon}</span>}
+      {format && mediaUrl && (
+        <span style={{
+          position: 'absolute', bottom: '2px', right: '2px',
+          fontSize: '10px', background: 'rgba(0,0,0,.55)', color: '#fff',
+          width: '14px', height: '14px', borderRadius: '4px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>{formatIcon}</span>
+      )}
+    </div>
+  );
+}
+
+/* ── Modal de preview do criativo ── */
+function AdPreviewModal({ ad, onClose }) {
+  if (!ad) return null;
+  const platLabel = PLAT[ad.platform]?.label || 'Meta';
+  const format = ad.adFormat || ad.format || 'image';
+  const media = ad.mediaFiles || [];
+  const grad = ad.thumbGrad || 'linear-gradient(135deg,#FECDD3,#FDA4AF,#FB7185)';
+
+  const formatLabel = {
+    reels: '🎬 Reels', stories: '📱 Stories', carousel: '🔄 Carrossel',
+    video: '▶ Vídeo', image: '🖼️ Imagem',
+  }[format] || format;
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 200, padding: '20px',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: 'var(--c-card-bg)', borderRadius: '16px',
+          border: '1px solid var(--c-border)', width: '100%', maxWidth: '420px',
+          maxHeight: '90vh', overflow: 'auto',
+          boxShadow: '0 20px 60px rgba(0,0,0,.4)',
+        }}
+      >
+        {/* Header estilo Instagram/Meta */}
+        <div style={{
+          padding: '12px 16px', borderBottom: '1px solid var(--c-border-lt)',
+          display: 'flex', alignItems: 'center', gap: '10px',
+        }}>
+          <div style={{
+            width: '32px', height: '32px', borderRadius: '50%',
+            background: 'linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#fff', fontWeight: 700, fontSize: '14px',
+          }}>C</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--c-text-1)' }}>cris.costabeauty</div>
+            <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)' }}>Patrocinado · {platLabel} · {formatLabel}</div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'transparent', border: 'none',
+              fontSize: '22px', lineHeight: 1, color: 'var(--c-text-3)',
+              cursor: 'pointer', padding: '4px 8px',
+            }}
+          >×</button>
+        </div>
+
+        {/* Mídia — se tiver mediaFiles renderiza; se não, placeholder colorido */}
+        <div style={{
+          width: '100%',
+          aspectRatio: format === 'stories' || format === 'reels' ? '9/16' : '1',
+          maxHeight: '540px',
+          background: media.length > 0 ? '#000' : grad,
+          position: 'relative',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          overflow: 'hidden',
+        }}>
+          {media.length === 0 && (
+            <div style={{ textAlign: 'center', color: 'rgba(255,255,255,.85)' }}>
+              <div style={{ fontSize: '56px', marginBottom: '8px' }}>
+                {formatLabel.split(' ')[0]}
+              </div>
+              <div style={{ fontSize: '11.5px', fontWeight: 600, textShadow: '0 1px 3px rgba(0,0,0,.4)' }}>
+                Sem mídia salva — pré-visualização
+              </div>
+            </div>
+          )}
+          {media.length > 0 && media[0].type?.startsWith('video') ? (
+            <video src={media[0].url} controls style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          ) : media[0] ? (
+            <img src={media[0].url} alt={ad.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          ) : null}
+          {format === 'carousel' && media.length > 1 && (
+            <div style={{
+              position: 'absolute', top: '10px', right: '10px',
+              background: 'rgba(0,0,0,.6)', color: '#fff',
+              padding: '3px 8px', borderRadius: '10px', fontSize: '10.5px', fontWeight: 600,
+            }}>
+              1 / {media.length}
+            </div>
+          )}
+        </div>
+
+        {/* Corpo: texto do anúncio */}
+        <div style={{ padding: '12px 16px' }}>
+          <div style={{ fontSize: '12.5px', color: 'var(--c-text-1)', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
+            {ad.primaryText || ad.description || <span style={{ color: 'var(--c-text-4)', fontStyle: 'italic' }}>Sem texto principal.</span>}
+          </div>
+          {ad.headline && (
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', marginTop: '10px' }}>
+              {ad.headline}
+            </div>
+          )}
+          {ad.ctaButton && (
+            <button style={{
+              marginTop: '12px', width: '100%',
+              padding: '10px', borderRadius: '8px',
+              background: 'var(--c-accent)', color: '#fff',
+              border: 'none', fontSize: '12.5px', fontWeight: 700,
+              cursor: 'pointer',
+            }}>
+              {ad.ctaButton}
+            </button>
+          )}
+        </div>
+
+        {/* Footer de métricas */}
+        <div style={{
+          padding: '10px 16px', borderTop: '1px solid var(--c-border-lt)',
+          display: 'flex', gap: '14px', fontSize: '11px', color: 'var(--c-text-3)',
+          background: 'var(--c-surface)',
+        }}>
+          <span><strong style={{ color: 'var(--c-text-1)' }}>{ad.results ?? 0}</strong> resultados</span>
+          <span><strong style={{ color: 'var(--c-text-1)' }}>{ad.clicks ?? 0}</strong> cliques</span>
+          {ad.costPerResult != null && <span>CPR <strong style={{ color: 'var(--c-text-1)' }}>R$&nbsp;{ad.costPerResult.toFixed(2)}</strong></span>}
+        </div>
+      </div>
     </div>
   );
 }
@@ -110,8 +271,8 @@ function getPerformanceIssues(ad, avgCostPerResult) {
   return issues;
 }
 
-/* ── Linha da tabela ── */
-function AdRow({ ad, isLast, highCpc, onToggle, onDuplicate, onEdit, onRemove }) {
+/* ── Linha da tabela (compacta — clique abre preview) ── */
+function AdRow({ ad, isLast, highCpc, onPreview, onToggle, onDuplicate, onEdit, onRemove }) {
   const [hovered, setHovered] = useState(false);
   const plat   = PLAT[ad.platform]   || PLAT.instagram;
   const status = STATUS[ad.status]   || STATUS.ended;
@@ -127,37 +288,49 @@ function AdRow({ ad, isLast, highCpc, onToggle, onDuplicate, onEdit, onRemove })
       ? (hovered ? '#FEF2F2' : '#FFF5F5')
       : (hovered ? 'var(--c-surface)' : 'var(--c-card-bg)');
 
+  const btn = {
+    width: '26px', height: '26px', borderRadius: '7px',
+    border: '1px solid var(--c-border)', background: 'var(--c-card-bg)',
+    color: 'var(--c-text-3)', cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    transition: 'all .12s',
+  };
+
+  const stop = (fn) => (e) => { e.stopPropagation(); fn(); };
+
   return (
     <tr
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onClick={() => onPreview && onPreview(ad)}
       style={{
         borderBottom: isLast ? 'none' : '1px solid var(--c-border-lt)',
         background: rowBg,
         transition: 'background .12s',
         borderLeft: highCpc ? '3px solid #EF4444' : '3px solid transparent',
-        opacity: isEnded ? 0.55 : 1,
+        opacity: isEnded ? 0.6 : 1,
         color: isEnded ? '#9CA3AF' : undefined,
         filter: isEnded ? 'grayscale(1)' : 'none',
+        cursor: onPreview ? 'pointer' : 'default',
       }}
     >
       {/* Anúncio */}
-      <td style={{ padding: '14px 20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <AdThumb grad={ad.thumbGrad} />
-          <div>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--c-text-1)', marginBottom: '2px' }}>{ad.name}</div>
-            <div style={{ fontSize: '10px', color: 'var(--c-text-4)' }}>ID: {ad.adId}</div>
+      <td style={{ padding: '8px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <AdThumb ad={ad} />
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--c-text-1)', lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ad.name}</div>
+            <div style={{ fontSize: '9.5px', color: 'var(--c-text-4)' }}>ID: {ad.adId}</div>
           </div>
         </div>
       </td>
 
       {/* Plataforma */}
-      <td style={{ padding: '14px 16px' }}>
+      <td style={{ padding: '8px 10px' }}>
         <span style={{
-          fontSize: '11px', fontWeight: 600,
+          fontSize: '10.5px', fontWeight: 600,
           background: plat.bg, color: plat.color,
-          padding: '4px 10px', borderRadius: '20px',
+          padding: '2px 8px', borderRadius: '14px',
           display: 'inline-block',
         }}>
           {plat.label}
@@ -165,82 +338,58 @@ function AdRow({ ad, isLast, highCpc, onToggle, onDuplicate, onEdit, onRemove })
       </td>
 
       {/* Situação */}
-      <td style={{ padding: '14px 16px' }}>
+      <td style={{ padding: '8px 10px' }}>
         <span style={{
-          display: 'inline-flex', alignItems: 'center', gap: '5px',
-          fontSize: '11px', fontWeight: 600,
+          display: 'inline-flex', alignItems: 'center', gap: '4px',
+          fontSize: '10.5px', fontWeight: 600,
           background: status.bg, color: status.color,
-          padding: '4px 10px', borderRadius: '20px',
+          padding: '2px 8px', borderRadius: '14px',
         }}>
-          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: status.dot, display: 'inline-block', flexShrink: 0 }} />
+          <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: status.dot, display: 'inline-block', flexShrink: 0 }} />
           {status.label}
         </span>
       </td>
 
       {/* Investimento */}
-      <td style={{ padding: '14px 16px', fontSize: '13px', color: 'var(--c-text-2)', whiteSpace: 'nowrap' }}>
-        R$ {ad.budget},00 / dia
+      <td style={{ padding: '8px 10px', fontSize: '12px', color: 'var(--c-text-2)', whiteSpace: 'nowrap' }}>
+        R$ {ad.budget},00 /dia
       </td>
 
       {/* Resultados */}
-      <td style={{ padding: '14px 16px', fontSize: '13px', color: 'var(--c-text-2)', fontWeight: ad.results ? 600 : 400 }}>
+      <td style={{ padding: '8px 10px', fontSize: '12px', color: 'var(--c-text-2)', fontWeight: ad.results ? 600 : 400 }}>
         {fmt(ad.results)}
       </td>
 
       {/* Cliques */}
-      <td style={{ padding: '14px 16px', fontSize: '13px', color: 'var(--c-text-2)', fontWeight: ad.clicks ? 600 : 400 }}>
+      <td style={{ padding: '8px 10px', fontSize: '12px', color: 'var(--c-text-2)', fontWeight: ad.clicks ? 600 : 400 }}>
         {fmt(ad.clicks)}
       </td>
 
       {/* Custo por resultado */}
-      <td style={{ padding: '14px 16px', fontSize: '13px', whiteSpace: 'nowrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ color: highCpc ? '#DC2626' : 'var(--c-text-2)', fontWeight: highCpc ? 700 : 400 }}>
-            {fmtCurrency(ad.costPerResult)}
-          </span>
-          {highCpc && (
-            <span title="Custo por resultado acima da média" style={{
-              background: '#FEE2E2', color: '#DC2626',
-              padding: '2px 6px', borderRadius: '10px',
-              fontSize: '10px', fontWeight: 700,
-              display: 'inline-flex', alignItems: 'center', gap: '3px',
-            }}>
-              ⚠ alto
-            </span>
-          )}
-        </div>
+      <td style={{ padding: '8px 10px', fontSize: '12px', whiteSpace: 'nowrap' }}>
+        <span style={{ color: highCpc ? '#DC2626' : 'var(--c-text-2)', fontWeight: highCpc ? 700 : 400 }}>
+          {fmtCurrency(ad.costPerResult)}
+        </span>
+        {highCpc && <span title="Custo por resultado acima da média" style={{ marginLeft: '4px', color: '#DC2626' }}>⚠</span>}
       </td>
 
-      {/* Ações */}
-      <td style={{ padding: '14px 20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+      {/* Ações — sempre visíveis pra deixar claro */}
+      <td style={{ padding: '8px 14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <button title="Ver criativo" onClick={stop(() => onPreview && onPreview(ad))} style={btn}><EyeIcon /></button>
           {(isActive || ad.status === 'paused') && onToggle && (
-            <button
-              title={isActive ? 'Pausar anúncio' : 'Reativar anúncio'}
-              onClick={() => onToggle(ad)}
-              style={{ width: '30px', height: '30px', borderRadius: '8px', border: '1.5px solid var(--c-border)', background: 'var(--c-surface)', color: 'var(--c-text-3)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            >{isActive ? <PauseIcon /> : <PlayIcon />}</button>
+            <button title={isActive ? 'Pausar' : 'Reativar'} onClick={stop(() => onToggle(ad))} style={btn}>
+              {isActive ? <PauseIcon /> : <PlayIcon />}
+            </button>
           )}
-          {onDuplicate && (
-            <button
-              title="Duplicar anúncio"
-              onClick={() => onDuplicate(ad)}
-              style={{ width: '30px', height: '30px', borderRadius: '8px', border: '1.5px solid var(--c-border)', background: 'var(--c-surface)', color: 'var(--c-text-3)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            ><CopyIcon /></button>
-          )}
-          {onEdit && (
-            <button
-              title="Editar anúncio"
-              onClick={() => onEdit(ad)}
-              style={{ width: '30px', height: '30px', borderRadius: '8px', border: '1.5px solid var(--c-border)', background: 'var(--c-surface)', color: 'var(--c-text-3)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            ><EditIcon /></button>
-          )}
+          {onEdit && <button title="Editar" onClick={stop(() => onEdit(ad))} style={btn}><EditIcon /></button>}
+          {onDuplicate && <button title="Duplicar" onClick={stop(() => onDuplicate(ad))} style={btn}><CopyIcon /></button>}
           {onRemove && (
             <button
               title="Remover"
-              onClick={() => { if (confirm(`Remover "${ad.name}"?`)) onRemove(ad); }}
-              style={{ width: '30px', height: '30px', borderRadius: '8px', border: '1.5px solid var(--c-border)', background: 'var(--c-surface)', color: 'var(--c-text-3)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            ><DotsIcon /></button>
+              onClick={stop(() => { if (confirm(`Remover "${ad.name}"?`)) onRemove(ad); })}
+              style={{ ...btn, color: '#DC2626', borderColor: '#FCA5A5' }}
+            ><TrashIcon /></button>
           )}
         </div>
       </td>
@@ -357,6 +506,7 @@ export default function Campaigns() {
   const [reportOpen, setReportOpen] = useState(true);
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState('desc');
+  const [previewAd, setPreviewAd] = useState(null);
 
   const allAds = [...userAds, ...MOCK_ADS];
   const TOTAL = allAds.length;
@@ -555,6 +705,7 @@ export default function Campaigns() {
                     ad={ad}
                     isLast={i === sorted.length - 1}
                     highCpc={ad.costPerResult != null && ad.costPerResult > HIGH_CPR_THRESHOLD}
+                    onPreview={setPreviewAd}
                     onToggle={isUserAd ? (a) => toggleAdStatus(a.id) : null}
                     onDuplicate={isUserAd ? (a) => duplicateAd(a.id) : null}
                     onEdit={isUserAd ? handleEdit : null}
@@ -619,6 +770,8 @@ export default function Campaigns() {
           </div>
         </div>
       </div>
+
+      <AdPreviewModal ad={previewAd} onClose={() => setPreviewAd(null)} />
     </div>
   );
 }
