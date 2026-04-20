@@ -11,10 +11,8 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapContainer, TileLayer, CircleMarker, Tooltip, useMap } from 'react-leaflet';
-import L from 'leaflet';
+import { MapContainer, TileLayer, CircleMarker, Circle, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import 'leaflet.heat';
 import { useAppState } from '../contexts/AppStateContext';
 import { buildHeatMapData, METRIC_CONFIG } from '../data/districtPerformance';
 import { HOME_COORDS } from '../data/joinvilleDistricts';
@@ -36,15 +34,6 @@ function daysSince(startDate) {
 
 const METRICS = ['conversions', 'cpr', 'cpc'];
 
-/* Gradiente azul → ciano → amarelo → laranja → vermelho (estilo radar meteorológico) */
-const HEAT_GRADIENT = {
-  0.0: '#1E3A8A',
-  0.25: '#0EA5E9',
-  0.5: '#FACC15',
-  0.75: '#F97316',
-  1.0: '#DC2626',
-};
-
 function colorForIntensity(t) {
   const stops = [
     [0.0, [30, 58, 138]],
@@ -64,43 +53,6 @@ function colorForIntensity(t) {
     }
   }
   return '#94A3B8';
-}
-
-/* Componente interno que gerencia a camada leaflet.heat */
-function HeatLayer({ points }) {
-  const map = useMap();
-  const layerRef = useRef(null);
-
-  useEffect(() => {
-    if (!map) return;
-
-    const heatPoints = points.map((p) => [p.coords.lat, p.coords.lng, Math.max(p.intensity, 0.05)]);
-
-    if (layerRef.current) {
-      map.removeLayer(layerRef.current);
-      layerRef.current = null;
-    }
-
-    if (heatPoints.length > 0 && L.heatLayer) {
-      layerRef.current = L.heatLayer(heatPoints, {
-        radius: 55,
-        blur: 45,
-        maxZoom: 14,
-        max: 1.0,
-        minOpacity: 0.35,
-        gradient: HEAT_GRADIENT,
-      }).addTo(map);
-    }
-
-    return () => {
-      if (layerRef.current) {
-        map.removeLayer(layerRef.current);
-        layerRef.current = null;
-      }
-    };
-  }, [map, points]);
-
-  return null;
 }
 
 function LegendBar({ metric, minValue, maxValue }) {
@@ -631,30 +583,50 @@ export default function HeatMap() {
                   attribution='&copy; OpenStreetMap'
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-                <HeatLayer points={data} />
-                {data.map((d) => (
-                  <CircleMarker
-                    key={d.name}
-                    center={[d.coords.lat, d.coords.lng]}
-                    radius={6}
-                    pathOptions={{
-                      color: colorForIntensity(d.intensity),
-                      fillColor: colorForIntensity(d.intensity),
-                      fillOpacity: 0.95,
-                      weight: 2,
-                    }}
-                  >
-                    <Tooltip direction="top" offset={[0, -6]} opacity={1} sticky>
-                      <div style={{ fontSize: '11px', lineHeight: 1.4 }}>
-                        <strong>{d.name}</strong><br/>
-                        {METRIC_CONFIG[metric].label}: <strong>{METRIC_CONFIG[metric].format(d.metricValue)}</strong><br/>
-                        <span style={{ color: '#666' }}>
-                          {d.conversions} conv · {d.clicks} cliq · R$&nbsp;{d.spend.toFixed(2)}
-                        </span>
-                      </div>
-                    </Tooltip>
-                  </CircleMarker>
-                ))}
+                {/* Bolha térmica em metros — cor FIXA por bairro, sem agregação por zoom */}
+                {data.map((d) => {
+                  const color = colorForIntensity(d.intensity);
+                  return (
+                    <Circle
+                      key={`area-${d.name}`}
+                      center={[d.coords.lat, d.coords.lng]}
+                      radius={700}
+                      pathOptions={{
+                        color,
+                        fillColor: color,
+                        fillOpacity: 0.38,
+                        weight: 0,
+                      }}
+                    />
+                  );
+                })}
+                {/* Ponto central + tooltip */}
+                {data.map((d) => {
+                  const color = colorForIntensity(d.intensity);
+                  return (
+                    <CircleMarker
+                      key={`pt-${d.name}`}
+                      center={[d.coords.lat, d.coords.lng]}
+                      radius={6}
+                      pathOptions={{
+                        color: '#fff',
+                        fillColor: color,
+                        fillOpacity: 1,
+                        weight: 2,
+                      }}
+                    >
+                      <Tooltip direction="top" offset={[0, -6]} opacity={1} sticky>
+                        <div style={{ fontSize: '11px', lineHeight: 1.4 }}>
+                          <strong>{d.name}</strong><br/>
+                          {METRIC_CONFIG[metric].label}: <strong>{METRIC_CONFIG[metric].format(d.metricValue)}</strong><br/>
+                          <span style={{ color: '#666' }}>
+                            {d.conversions} conv · {d.clicks} cliq · R$&nbsp;{d.spend.toFixed(2)}
+                          </span>
+                        </div>
+                      </Tooltip>
+                    </CircleMarker>
+                  );
+                })}
               </MapContainer>
             </div>
           </div>
