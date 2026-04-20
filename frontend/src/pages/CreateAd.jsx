@@ -271,39 +271,81 @@ function MapFlyTo({ center }) {
 ══════════════════════════════════════════ */
 
 function Step1Objective({ objective, setObjective, errors = {} }) {
+  const allItems = META_OBJECTIVES.flatMap((g) => g.items.map((i) => ({ ...i, category: g.category, color: g.color })));
+  const selected = allItems.find((i) => i.id === objective);
+
   return (
     <div>
       <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
         Qual é o objetivo da campanha?
       </h2>
-      <p style={{ fontSize: '13px', color: 'var(--c-text-3)', marginBottom: '24px' }}>
-        O Meta vai otimizar a entrega do anúncio com base no que você escolher.
+      <p style={{ fontSize: '12.5px', color: 'var(--c-text-3)', marginBottom: '16px' }}>
+        O Meta vai otimizar a entrega com base no que você escolher.
       </p>
 
       {META_OBJECTIVES.map(({ category, color, items }) => (
-        <div key={category} style={{ marginBottom: '22px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+        <div key={category} style={{ marginBottom: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: color, flexShrink: 0 }} />
-            <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--c-text-3)' }}>
+            <span style={{ fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.5px', color: 'var(--c-text-3)' }}>
               {category}
             </span>
+            <div style={{ flex: 1, height: '1px', background: 'var(--c-border-lt)' }} />
           </div>
-          <div className="grid-compact-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: '10px' }}>
-            {items.map(obj => (
-              <RadioCard key={obj.id} selected={objective === obj.id} onClick={() => setObjective(obj.id)}>
-                <div style={{ fontSize: '24px', marginBottom: '8px' }}>{obj.icon}</div>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: objective === obj.id ? 'var(--c-accent)' : 'var(--c-text-1)', marginBottom: '4px' }}>
-                  {obj.label}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(165px, 1fr))',
+            gap: '6px',
+          }}>
+            {items.map((obj) => {
+              const sel = objective === obj.id;
+              return (
+                <div
+                  key={obj.id}
+                  onClick={() => setObjective(obj.id)}
+                  title={obj.desc}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    padding: '8px 10px',
+                    border: `1.5px solid ${sel ? color : 'var(--c-border)'}`,
+                    background: sel ? `${color}12` : 'var(--c-card-bg)',
+                    borderRadius: '9px', cursor: 'pointer',
+                    transition: 'all .12s',
+                  }}
+                  onMouseEnter={(e) => { if (!sel) e.currentTarget.style.borderColor = color; }}
+                  onMouseLeave={(e) => { if (!sel) e.currentTarget.style.borderColor = 'var(--c-border)'; }}
+                >
+                  <span style={{ fontSize: '18px', lineHeight: 1, flexShrink: 0 }}>{obj.icon}</span>
+                  <span style={{
+                    fontSize: '12px', fontWeight: sel ? 700 : 600,
+                    color: sel ? color : 'var(--c-text-1)',
+                    lineHeight: 1.25,
+                  }}>
+                    {obj.label}
+                  </span>
                 </div>
-                <div style={{ fontSize: '11px', color: 'var(--c-text-4)', lineHeight: 1.4 }}>{obj.desc}</div>
-              </RadioCard>
-            ))}
+              );
+            })}
           </div>
         </div>
       ))}
 
+      {/* Descrição do selecionado aparece abaixo, sem poluir os cards */}
+      {selected && (
+        <div style={{
+          marginTop: '10px', padding: '10px 12px',
+          background: `${selected.color}0d`,
+          border: `1px solid ${selected.color}40`,
+          borderLeft: `3px solid ${selected.color}`,
+          borderRadius: '8px',
+          fontSize: '12px', color: 'var(--c-text-2)', lineHeight: 1.5,
+        }}>
+          <strong style={{ color: selected.color }}>{selected.icon} {selected.label}</strong> — {selected.desc}
+        </div>
+      )}
+
       {errors.objective && (
-        <p style={{ fontSize: '13px', color: '#EF4444', fontWeight: 600, marginTop: '4px' }}>⚠ {errors.objective}</p>
+        <p style={{ fontSize: '13px', color: '#EF4444', fontWeight: 600, marginTop: '8px' }}>⚠ {errors.objective}</p>
       )}
     </div>
   );
