@@ -81,6 +81,121 @@ function FavoriteButton({ active, onClick, size = 18 }) {
   );
 }
 
+function ReferenceListRow({ item, position, topScore, onOpen, isFavorite, onToggleFavorite }) {
+  const fmt = FORMAT_META[item.format] || FORMAT_META.image;
+  const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : null;
+  const tierColor = item.score >= 90 ? '#A16207' : item.score >= 85 ? '#4B5563' : '#9A3412';
+  const barPct = Math.max(8, (item.score / Math.max(topScore || item.score, 1)) * 100);
+
+  return (
+    <div
+      onClick={() => onOpen(item)}
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '42px 1fr auto auto auto',
+        gap: '12px',
+        alignItems: 'center',
+        padding: '10px 14px',
+        background: 'var(--c-card-bg)',
+        border: '1px solid var(--c-border)',
+        borderLeft: `4px solid ${tierColor}`,
+        borderRadius: '10px',
+        cursor: 'pointer',
+        transition: 'all .15s',
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--c-accent)'; e.currentTarget.style.borderLeftColor = tierColor; }}
+      onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--c-border)'; e.currentTarget.style.borderLeftColor = tierColor; }}
+    >
+      {/* Posição / medalha */}
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        gap: '2px', textAlign: 'center',
+      }}>
+        <span style={{ fontSize: '22px', lineHeight: 1 }}>{medal || <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-3)' }}>#{position}</span>}</span>
+        {medal && <span style={{ fontSize: '9.5px', fontWeight: 700, color: 'var(--c-text-4)' }}>#{position}</span>}
+      </div>
+
+      {/* Coluna principal: marca + título + hook + barra */}
+      <div style={{ minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '18px', lineHeight: 1 }}>{item.brandLogo}</span>
+          <span style={{
+            fontSize: '10.5px', fontWeight: 700, color: 'var(--c-text-4)',
+            letterSpacing: '.3px', textTransform: 'uppercase',
+          }}>{item.brand}</span>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: '3px',
+            padding: '1px 7px', borderRadius: '10px',
+            background: `${fmt.color}15`, color: fmt.color,
+            fontSize: '9.5px', fontWeight: 700,
+          }}>
+            {fmt.emoji} {fmt.label}
+          </span>
+        </div>
+        <div style={{
+          fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)',
+          lineHeight: 1.3, marginBottom: '4px',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>
+          {item.title}
+        </div>
+        <div style={{
+          fontSize: '11px', color: 'var(--c-text-3)', lineHeight: 1.4,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '6px',
+        }}>
+          💡 {item.hook}
+        </div>
+        {/* Barra de performance proporcional ao topo */}
+        <div style={{
+          height: '6px', borderRadius: '3px', background: 'var(--c-surface)',
+          border: '1px solid var(--c-border-lt)', overflow: 'hidden', maxWidth: '320px',
+        }}>
+          <div style={{
+            height: '100%',
+            width: `${barPct}%`,
+            background: `linear-gradient(90deg, ${tierColor}88, ${tierColor})`,
+            transition: 'width .3s',
+          }} />
+        </div>
+      </div>
+
+      {/* Métricas */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', minWidth: '56px' }}>
+        <div style={{ fontSize: '17px', fontWeight: 800, color: tierColor, lineHeight: 1 }}>
+          {item.score}
+        </div>
+        <div style={{ fontSize: '9.5px', color: 'var(--c-text-4)', fontWeight: 700, textTransform: 'uppercase' }}>
+          score
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', minWidth: '64px' }}>
+        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', lineHeight: 1.1 }}>
+          {item.engagementRate}
+        </div>
+        <div style={{ fontSize: '9.5px', color: 'var(--c-text-4)', fontWeight: 700, textTransform: 'uppercase' }}>
+          engaj.
+        </div>
+        <div style={{ fontSize: '10px', color: 'var(--c-text-3)' }}>
+          {item.activeDays}d ativo
+        </div>
+      </div>
+
+      {/* Ações */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <FavoriteButton active={isFavorite} onClick={onToggleFavorite} size={18} />
+        <span style={{
+          padding: '6px 10px', borderRadius: '8px',
+          background: 'var(--c-active-bg)', color: 'var(--c-accent)',
+          fontSize: '11px', fontWeight: 700,
+        }}>
+          Abrir →
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function ReferenceCard({ item, position, onOpen, isFavorite, onToggleFavorite }) {
   const fmt = FORMAT_META[item.format] || FORMAT_META.image;
   return (
@@ -463,7 +578,7 @@ export default function References() {
   const [sortBy, setSortBy] = useState('score');
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(null);
-  const [visibleCount, setVisibleCount] = useState(9);
+  const [visibleCount, setVisibleCount] = useState(10);
   const [favorites, setFavorites] = useState(() => loadFavorites());
 
   useEffect(() => { saveFavorites(favorites); }, [favorites]);
@@ -520,6 +635,7 @@ export default function References() {
 
   const visible = filtered.slice(0, visibleCount);
   const favoriteCount = favorites.size;
+  const topScore = filtered.length > 0 ? filtered[0].score : 100;
 
   function handleUseReference(item) {
     navigate('/criar-anuncio', {
@@ -658,20 +774,15 @@ export default function References() {
         </div>
       ) : (
         <>
-          <div
-            className="grid-compact-mobile"
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-              gap: '14px',
-              marginBottom: '18px',
-            }}
-          >
+          <div style={{
+            display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '18px',
+          }}>
             {visible.map((item, i) => (
-              <ReferenceCard
+              <ReferenceListRow
                 key={item.id}
                 item={item}
                 position={i + 1}
+                topScore={topScore}
                 onOpen={setSelected}
                 isFavorite={favorites.has(item.id)}
                 onToggleFavorite={() => toggleFavorite(item.id)}
@@ -682,7 +793,7 @@ export default function References() {
           {visible.length < filtered.length && (
             <div style={{ textAlign: 'center' }}>
               <button
-                onClick={() => setVisibleCount(c => c + 9)}
+                onClick={() => setVisibleCount(c => c + 10)}
                 style={{
                   padding: '9px 18px', borderRadius: '9px',
                   border: '1.5px solid var(--c-border)', background: 'var(--c-card-bg)',
