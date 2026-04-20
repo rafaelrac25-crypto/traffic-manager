@@ -1711,41 +1711,8 @@ export default function CreateAd() {
   const [destUrl,            setDestUrl]            = useState(source?.destUrl || 'https://wa.me/5547997071161');
   const [ctaButton,          setCtaButton]          = useState(source?.ctaButton || quickFillCreative?.cta || 'WhatsApp');
 
-  useEffect(() => {
-    if (fixMode) {
-      addNotification({
-        kind: 'info',
-        title: `Corrigindo: ${rejectedAd.name || 'anúncio reprovado'}`,
-        message: `Abrimos o anúncio no passo "${STEPS[rejectionInfo.step] || '—'}". Ajuste o que o Meta apontou e publique novamente — os demais passos permanecem como antes.`,
-      });
-      return;
-    }
-    if (commercialDate) {
-      addNotification({
-        kind: 'info',
-        title: `Pré-preenchendo: ${commercialDate.name}`,
-        message: `Texto e data de início sugeridos para ${commercialDate.name}. Ajuste o criativo e revise antes de publicar.`,
-      });
-      return;
-    }
-    if (reuseCreative) {
-      addNotification({
-        kind: 'info',
-        title: `Reaproveitando criativo: ${reuseCreative.name}`,
-        message: canReview ? 'Levei você direto para a revisão. Público e orçamento foram preenchidos com os padrões — ajuste se quiser.' : 'Texto e título já preenchidos. Escolha objetivo, público e orçamento.',
-      });
-      return;
-    }
-    if (reuseAudience) {
-      addNotification({
-        kind: 'info',
-        title: `Usando público: ${reuseAudience.name}`,
-        message: canReview ? 'Levei você direto para a revisão. Texto e orçamento foram preenchidos com os padrões — ajuste se quiser.' : 'Público já selecionado. Escolha objetivo, criativo e orçamento.',
-      });
-      return;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  /* Contexto da abertura do CreateAd (fixMode, data comercial, reuso) já é
+     visível no próprio Wizard — notificações no sino são apenas para alertas. */
 
   function validateStep(s) {
     const errs = {};
@@ -1784,11 +1751,7 @@ export default function CreateAd() {
       setErrors(finalErrs);
       const firstStepWithError = [0, 1, 2, 3].find(i => Object.keys(validateStep(i)).length > 0);
       if (firstStepWithError !== undefined) setStep(firstStepWithError);
-      addNotification({
-        kind: 'warning',
-        title: 'Faltam campos obrigatórios',
-        message: 'Revise os passos destacados antes de publicar.',
-      });
+      /* Sino é só pra alertas — formulário já destaca campos inline */
       return;
     }
 
@@ -1889,22 +1852,8 @@ export default function CreateAd() {
     });
     if (fixMode) {
       removeRejectedAd(rejectedAd.id);
-      addNotification({
-        kind: 'info',
-        title: 'Correção enviada ao Meta',
-        message: `"${adName}" foi reenviado com as correções e está em nova revisão.`,
-        link: '/anuncios',
-      });
-    } else {
-      addNotification({
-        kind: 'info',
-        title: isScheduled ? 'Campanha agendada' : 'Anúncio enviado para revisão',
-        message: isScheduled
-          ? `Sua campanha foi agendada para ${new Date(startDate + 'T12:00:00').toLocaleDateString('pt-BR')} e está em revisão pelo Meta.`
-          : 'Assim que o Meta aprovar, sua campanha será publicada automaticamente.',
-        link: '/anuncios',
-      });
     }
+    /* Publicação/correção já aparece no histórico — não vira notificação */
   }
 
   const reviewData = { objective, locations, ageRange, gender, interests, budgetType, budgetValue, startDate, endDate, adFormat, mediaFiles, primaryText, headline, destUrl, ctaButton, budgetRingSplit };

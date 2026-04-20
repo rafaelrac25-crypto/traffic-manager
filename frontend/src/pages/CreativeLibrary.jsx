@@ -275,11 +275,6 @@ export default function CreativeLibrary() {
       .filter(Boolean).join('\n\n');
     if (navigator.clipboard) {
       navigator.clipboard.writeText(text);
-      addNotification({
-        kind: 'info',
-        title: 'Texto copiado',
-        message: `Texto do criativo "${creative.name}" copiado para a área de transferência.`,
-      });
     }
   }
 

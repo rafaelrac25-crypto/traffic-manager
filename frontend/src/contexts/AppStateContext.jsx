@@ -262,11 +262,6 @@ export function AppStateProvider({ children }) {
   const addFunds = useCallback((amount) => {
     setFunds(prev => {
       const next = Number((prev + amount).toFixed(2));
-      addNotification({
-        kind: 'funds',
-        title: 'Saldo adicionado',
-        message: `R$\u00A0${amount.toFixed(2).replace('.', ',')} adicionados. Saldo atual: R$\u00A0${next.toFixed(2).replace('.', ',')}.`,
-      });
       logHistory({
         type: 'funds-added',
         title: `Saldo +R$\u00A0${amount.toFixed(2).replace('.', ',')}`,
@@ -274,7 +269,7 @@ export function AppStateProvider({ children }) {
       });
       return next;
     });
-  }, [addNotification, logHistory]);
+  }, [logHistory]);
 
   useEffect(() => {
     if (funds < LOW_BALANCE_THRESHOLD) {
@@ -358,11 +353,6 @@ export function AppStateProvider({ children }) {
       costPerResult: null,
     };
     setAds(prev => [dup, ...prev]);
-    addNotification({
-      kind: 'info',
-      title: 'Anúncio duplicado',
-      message: `"${src.name}" foi duplicado como "${dup.name}". Ajuste e ative quando quiser.`,
-    });
     logHistory({
       type: 'ad-duplicated',
       title: `Anúncio duplicado: ${src.name}`,
