@@ -11,10 +11,8 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapContainer, TileLayer, CircleMarker, Tooltip, useMap } from 'react-leaflet';
-import L from 'leaflet';
+import { MapContainer, TileLayer, CircleMarker, Circle, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import 'leaflet.heat';
 import { useAppState } from '../contexts/AppStateContext';
 import { buildHeatMapData, METRIC_CONFIG } from '../data/districtPerformance';
 import { HOME_COORDS } from '../data/joinvilleDistricts';
@@ -36,64 +34,30 @@ function daysSince(startDate) {
 
 const METRICS = ['conversions', 'cpr', 'cpc'];
 
-/* Gradiente térmico estilo radar meteorológico — suave, com transparência
- * para o mapa de fundo permanecer visível. */
-const HEAT_GRADIENT = {
-  0.0:  '#1E40AF',
-  0.2:  '#22D3EE',
-  0.4:  '#4ADE80',
-  0.6:  '#FACC15',
-  0.8:  '#FB923C',
-  1.0:  '#DC2626',
-};
-
-/* Camada térmica uniforme e mesclada. `max` > 1 evita que 2 bairros
- * próximos saturem tudo no vermelho automaticamente. Transparência
- * adicional via CSS `opacity` no canvas deixa o mapa visível. */
-function HeatLayer({ points }) {
-  const map = useMap();
-  const layerRef = useRef(null);
-
-  useEffect(() => {
-    if (!map || !L.heatLayer) return;
-
-    const build = () => {
-      if (layerRef.current) { map.removeLayer(layerRef.current); layerRef.current = null; }
-      if (!points || points.length === 0) return;
-
-      const z = map.getZoom();
-      const radius = Math.round(45 + (z - 11) * 16);   /* z=11 → 45; z=13 → 77; z=15 → 109 */
-      const blur   = Math.round(radius * 0.85);         /* blur alto = mescla uniforme e suave */
-
-      const heatPoints = points.map((p) => {
-        const t = Math.min(1, Math.max(0, p.intensity || 0));
-        return [p.coords.lat, p.coords.lng, Math.max(0.25, t)];
-      });
-
-      const layer = L.heatLayer(heatPoints, {
-        radius,
-        blur,
-        max: 2.2,          /* soma de ~2-3 pontos próximos chega no topo do gradiente */
-        minOpacity: 0.30,  /* áreas fracas bem transparentes */
-        gradient: HEAT_GRADIENT,
-      }).addTo(map);
-
-      /* Transparência extra via CSS — deixa o mapa aparecer por baixo */
-      const canvas = layer?._canvas;
-      if (canvas) canvas.style.opacity = '0.72';
-
-      layerRef.current = layer;
-    };
-
-    build();
-    map.on('zoomend', build);
-    return () => {
-      map.off('zoomend', build);
-      if (layerRef.current) { map.removeLayer(layerRef.current); layerRef.current = null; }
-    };
-  }, [map, points]);
-
-  return null;
+/* Camadas térmicas sobrepostas por bairro — cada bairro tem sua cor própria
+ * baseada na intensidade da métrica selecionada. Círculos concêntricos com
+ * opacidade decrescente criam degradê radial que se mescla nas bordas com
+ * os bairros vizinhos, formando um mapa térmico contínuo e transparente. */
+function DistrictHeat({ points }) {
+  return (
+    <>
+      {points.map((d) => {
+        const color = colorForIntensity(d.intensity);
+        return (
+          <React.Fragment key={`heat-${d.name}`}>
+            <Circle center={[d.coords.lat, d.coords.lng]} radius={1400}
+              pathOptions={{ color, fillColor: color, fillOpacity: 0.10, weight: 0 }} />
+            <Circle center={[d.coords.lat, d.coords.lng]} radius={1000}
+              pathOptions={{ color, fillColor: color, fillOpacity: 0.18, weight: 0 }} />
+            <Circle center={[d.coords.lat, d.coords.lng]} radius={650}
+              pathOptions={{ color, fillColor: color, fillOpacity: 0.28, weight: 0 }} />
+            <Circle center={[d.coords.lat, d.coords.lng]} radius={350}
+              pathOptions={{ color, fillColor: color, fillOpacity: 0.42, weight: 0 }} />
+          </React.Fragment>
+        );
+      })}
+    </>
+  );
 }
 
 function colorForIntensity(t) {
@@ -653,8 +617,8 @@ export default function HeatMap() {
                   attribution='&copy; OpenStreetMap'
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-                {/* Camada térmica suave estilo radar meteorológico com transparência */}
-                <HeatLayer points={data} />
+                {/* Camada térmica — cada bairro com sua cor própria, sobreposições suaves */}
+                <DistrictHeat points={data} />
                 {/* Ponto central + tooltip */}
                 {data.map((d) => {
                   const color = colorForIntensity(d.intensity);
