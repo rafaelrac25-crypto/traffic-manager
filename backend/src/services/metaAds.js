@@ -108,6 +108,8 @@ async function fetchAccountInsights(creds, { since, until, level = 'campaign', b
     params.set('date_preset', 'maximum');
   }
   if (breakdowns) params.set('breakdowns', breakdowns);
+  /* Action attribution unificada (necessária pra conversations_started em OUTCOME_ENGAGEMENT) */
+  params.set('action_attribution_windows', JSON.stringify(['7d_click', '1d_view']));
 
   const url = `${GRAPH}/${accountId}/insights?${params.toString()}`;
   const json = await httpsGet(url);

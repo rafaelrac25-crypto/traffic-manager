@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import { getRelevantCommercialDatesInWindow } from '../data/commercialDates';
 import { playBell } from '../utils/sounds';
 import * as adsApi from '../services/adsApi';
+import { fetchDistrictInsights, strongInsightAlert } from '../data/districtInsights';
 
 /**
  * AppStateContext — estado global do painel.
@@ -244,6 +245,32 @@ export function AppStateProvider({ children }) {
 
     checkConnection();
     const id = setInterval(checkConnection, 3 * 60 * 1000);
+    return () => { cancelled = true; clearInterval(id); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* ─── Watcher de insights de bairro: alerta se algum bairro está convertendo
+     ≥30% melhor que a média. Roda a cada 4h (oportunidade é slow-moving). ─── */
+  useEffect(() => {
+    let cancelled = false;
+    const ALERTED_KEY = 'ccb_insight_alerted_at';
+    const COOLDOWN = 24 * 60 * 60 * 1000; /* 1 alerta de insight por dia no máx */
+
+    async function checkInsights() {
+      if (cancelled) return;
+      try {
+        const lastAt = Number(localStorage.getItem(ALERTED_KEY) || 0);
+        if (Date.now() - lastAt < COOLDOWN) return;
+        const data = await fetchDistrictInsights();
+        const alert = strongInsightAlert(data);
+        if (alert && !cancelled) {
+          addNotification(alert);
+          localStorage.setItem(ALERTED_KEY, String(Date.now()));
+        }
+      } catch {}
+    }
+    checkInsights();
+    const id = setInterval(checkInsights, 4 * 60 * 60 * 1000);
     return () => { cancelled = true; clearInterval(id); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

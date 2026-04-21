@@ -11,6 +11,7 @@ import { MapContainer, TileLayer, Circle, useMapEvents, useMap } from 'react-lea
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useAppState } from '../contexts/AppStateContext';
+import { fetchDistrictInsights, recommendationLine } from '../data/districtInsights';
 import { getRejectionInfo } from '../data/rejectionRules';
 import {
   DISTRICT_COORDS,
@@ -661,6 +662,47 @@ function LocationPresetBar({ locations, setLocations, ringsMode, setRingsMode })
   );
 }
 
+/* Banner discreto com recomendação de bairros baseada em dados reais.
+   Fica silencioso até a primeira campanha acumular ≥10 conversões. */
+function DistrictInsightsBanner() {
+  const [insight, setInsight] = useState(null);
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchDistrictInsights().then(data => {
+      if (cancelled) return;
+      const line = recommendationLine(data);
+      if (line) setInsight({ line, top: data.districts.slice(0, 3) });
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  if (!insight || dismissed) return null;
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '10px',
+      padding: '10px 14px', marginBottom: '10px',
+      background: 'rgba(193, 53, 132, 0.06)',
+      border: '1px solid rgba(193, 53, 132, 0.25)',
+      borderRadius: '10px',
+      fontSize: '12px', color: 'var(--c-text-2)', lineHeight: 1.5,
+    }}>
+      <span style={{ flex: 1 }}>{insight.line}</span>
+      <button
+        onClick={() => setDismissed(true)}
+        style={{
+          background: 'none', border: 'none', cursor: 'pointer',
+          color: 'var(--c-text-4)', fontSize: '14px',
+          padding: '0 4px', lineHeight: 1,
+        }}
+        title="Fechar"
+      >✕</button>
+    </div>
+  );
+}
+
 function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender, setGender, interests, setInterests, ringsMode, setRingsMode }) {
   const [query, setQuery]           = useState('');
   const [results, setResults]       = useState([]);
@@ -768,6 +810,8 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
           ringsMode={ringsMode}
           setRingsMode={setRingsMode}
         />
+
+        <DistrictInsightsBanner />
 
         {locationError && (
           <div role="alert" style={{
@@ -1279,7 +1323,7 @@ function RingBudgetSplit({ locations, budgetValue, budgetType, split, setSplit, 
   );
 }
 
-function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, startDate, setStartDate, endDate, setEndDate, errors = {}, locations = [], budgetRingSplit, setBudgetRingSplit, ringsMode = 'auto', setRingsMode }) {
+function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, startDate, setStartDate, endDate, setEndDate, errors = {}, locations = [], budgetRingSplit, setBudgetRingSplit, ringsMode = 'auto', setRingsMode, budgetOptimization = 'adset', setBudgetOptimization }) {
   const today = new Date().toISOString().split('T')[0];
 
   return (
@@ -1334,6 +1378,58 @@ function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, s
             {' · '}diário: <b>R$ {(Number(budgetValue) / 7).toFixed(2).replace('.', ',')}</b>
           </p>
         )}
+      </div>
+
+      {/* Modelo de orçamento — ABO (manual por anel) ou CBO (Meta otimiza) */}
+      <div style={{
+        border: '1.5px solid var(--c-border)',
+        borderRadius: '12px', padding: '14px 18px',
+        background: 'var(--c-surface)',
+      }}>
+        <div style={{ marginBottom: '10px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '2px' }}>
+            💼 Como distribuir o orçamento?
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--c-text-4)', lineHeight: 1.5 }}>
+            Escolha se você controla manualmente por anel, ou se deixa o Meta otimizar automaticamente entre os anéis.
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px' }}>
+          {[
+            { v: 'adset',    l: 'Manual (por anel)',    d: 'Você define quanto vai em cada anel. Melhor pra testar qual distância funciona.', tag: 'Recomendado pra teste' },
+            { v: 'campaign', l: 'Meta otimiza (CBO)',   d: 'Meta realoca entre anéis em tempo real pelo que está convertendo. Melhor quando você já sabe o que funciona.', tag: 'Pra campanhas otimizadas' },
+          ].map(o => {
+            const selected = budgetOptimization === o.v;
+            return (
+              <button
+                key={o.v}
+                type="button"
+                onClick={() => setBudgetOptimization && setBudgetOptimization(o.v)}
+                style={{
+                  padding: '12px 14px', borderRadius: '10px',
+                  border: `1.5px solid ${selected ? 'var(--c-accent)' : 'var(--c-border)'}`,
+                  background: selected ? 'rgba(193,53,132,.08)' : 'var(--c-card-bg)',
+                  cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
+                  transition: 'all .15s',
+                }}
+              >
+                <div style={{ fontSize: '12.5px', fontWeight: 700, color: selected ? 'var(--c-accent)' : 'var(--c-text-1)', marginBottom: '3px' }}>
+                  {o.l}
+                </div>
+                <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', lineHeight: 1.45, marginBottom: '4px' }}>
+                  {o.d}
+                </div>
+                <div style={{
+                  display: 'inline-block', fontSize: '9.5px', fontWeight: 700,
+                  textTransform: 'uppercase', letterSpacing: '.5px',
+                  color: selected ? 'var(--c-accent)' : 'var(--c-text-4)',
+                  background: selected ? 'rgba(193,53,132,.12)' : 'var(--c-surface)',
+                  padding: '2px 6px', borderRadius: '4px',
+                }}>{o.tag}</div>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Seletor — quantos anéis (ad sets) criar */}
@@ -2183,6 +2279,7 @@ export default function CreateAd() {
       ? source.ringsMode
       : source?.ringsEnabled === false ? '1' : 'auto'
   );
+  const [budgetOptimization, setBudgetOptimization] = useState(source?.budgetOptimization || 'adset');
   const [startDate,          setStartDate]          = useState(initialStart);
   const [endDate,            setEndDate]            = useState(initialEnd);
   const [adFormat,           setAdFormat]           = useState(source?.adFormat || 'image');
@@ -2314,6 +2411,7 @@ export default function CreateAd() {
       budgetType, startDate, endDate,
       budgetRingSplit,
       ringsMode,
+      budgetOptimization,
 
       // Público (local)
       objective, locations, ageRange, gender, interests,
@@ -2368,12 +2466,12 @@ export default function CreateAd() {
     /* Publicação/correção já aparece no histórico — não vira notificação */
   }
 
-  const reviewData = { objective, locations, ageRange, gender, interests, budgetType, budgetValue, startDate, endDate, adFormat, mediaFiles, primaryText, headline, destUrl, ctaButton, budgetRingSplit, ringsMode };
+  const reviewData = { objective, locations, ageRange, gender, interests, budgetType, budgetValue, startDate, endDate, adFormat, mediaFiles, primaryText, headline, destUrl, ctaButton, budgetRingSplit, ringsMode, budgetOptimization };
 
   const stepComponents = [
     <Step1Objective objective={objective} setObjective={setObjective} errors={errors} />,
     <Step2Audience  locations={locations} setLocations={setLocations} ageRange={ageRange} setAgeRange={setAgeRange} gender={gender} setGender={setGender} interests={interests} setInterests={setInterests} ringsMode={ringsMode} setRingsMode={setRingsMode} />,
-    <Step4Budget budgetType={budgetType} setBudgetType={setBudgetType} budgetValue={budgetValue} setBudgetValue={setBudgetValue} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} errors={errors} locations={locations} budgetRingSplit={budgetRingSplit} setBudgetRingSplit={setBudgetRingSplit} ringsMode={ringsMode} setRingsMode={setRingsMode} />,
+    <Step4Budget budgetType={budgetType} setBudgetType={setBudgetType} budgetValue={budgetValue} setBudgetValue={setBudgetValue} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} errors={errors} locations={locations} budgetRingSplit={budgetRingSplit} setBudgetRingSplit={setBudgetRingSplit} ringsMode={ringsMode} setRingsMode={setRingsMode} budgetOptimization={budgetOptimization} setBudgetOptimization={setBudgetOptimization} />,
     <Step5Creative adFormat={adFormat} setAdFormat={setAdFormat} mediaFiles={mediaFiles} setMediaFiles={setMediaFiles} primaryText={primaryText} setPrimaryText={setPrimaryText} headline={headline} setHeadline={setHeadline} destUrl={destUrl} setDestUrl={setDestUrl} ctaButton={ctaButton} setCtaButton={setCtaButton} errors={errors} />,
     <Step6Review data={reviewData} onGoTo={(s) => { setErrors({}); setStep(s); }} />,
   ];

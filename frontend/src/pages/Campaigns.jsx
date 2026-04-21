@@ -496,7 +496,31 @@ function AdRow({ ad, isLast, highCpc, onPreview, onToggle, onDuplicate, onEdit, 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <AdThumb ad={ad} />
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--c-text-1)', lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ad.name}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--c-text-1)', lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ad.name}</span>
+              {ad.budgetOptimization === 'campaign' && (
+                <span
+                  title="CBO — Meta otimiza orçamento entre anéis automaticamente"
+                  style={{
+                    fontSize: '9px', fontWeight: 700, letterSpacing: '.3px',
+                    padding: '2px 5px', borderRadius: '4px',
+                    background: 'rgba(14, 165, 233, 0.12)', color: '#0369A1',
+                    flexShrink: 0,
+                  }}
+                >CBO</span>
+              )}
+              {ad.budgetOptimization === 'adset' && (
+                <span
+                  title="ABO — Você controla o orçamento manualmente por anel"
+                  style={{
+                    fontSize: '9px', fontWeight: 700, letterSpacing: '.3px',
+                    padding: '2px 5px', borderRadius: '4px',
+                    background: 'rgba(147, 51, 234, 0.10)', color: '#7E22CE',
+                    flexShrink: 0,
+                  }}
+                >ABO</span>
+              )}
+            </div>
             <div style={{ fontSize: '9.5px', color: 'var(--c-text-4)' }}>ID: {ad.adId}</div>
           </div>
         </div>

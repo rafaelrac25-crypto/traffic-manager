@@ -143,6 +143,9 @@ export function toMetaPayload(ad) {
   const genders = GENDER_TO_META[ad.gender] ?? [];
   const budgetCents = toMetaBudgetCents(ad.budgetValue);
 
+  /* CBO = budget no nível da Campaign, Meta redistribui entre ad_sets.
+     ABO (padrão) = budget no nível do ad_set, controle manual. */
+  const useCBO = ad.budgetOptimization === 'campaign';
   const campaign = {
     id:                     ad.metaCampaignId,
     name:                   ad.name,
@@ -150,9 +153,8 @@ export function toMetaPayload(ad) {
     status:                 'PAUSED',
     buying_type:            'AUCTION',
     special_ad_categories:  [],
-    /* Budget vai no nível do ad_set quando há anéis (ABO) */
-    daily_budget:           null,
-    lifetime_budget:        null,
+    daily_budget:           useCBO && ad.budgetType === 'daily' ? budgetCents : null,
+    lifetime_budget:        useCBO && ad.budgetType === 'total' ? budgetCents : null,
   };
 
   const creative = {
@@ -225,8 +227,9 @@ export function toMetaPayload(ad) {
         id:   null, /* será preenchido pelo Meta no create */
         name: `${ad.name} — Anel ${RING_LABEL[key]}`,
         ...adSetCommon,
-        daily_budget:   ad.budgetType === 'daily' ? ringBudget : null,
-        lifetime_budget: ad.budgetType === 'total' ? ringBudget : null,
+        /* CBO: Meta aloca; ABO: cada anel tem fatia fixa */
+        daily_budget:   useCBO ? null : (ad.budgetType === 'daily' ? ringBudget : null),
+        lifetime_budget: useCBO ? null : (ad.budgetType === 'total' ? ringBudget : null),
         targeting: {
           ...baseTargeting,
           geo_locations: {
