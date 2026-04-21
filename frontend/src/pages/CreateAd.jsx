@@ -12,6 +12,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useAppState } from '../contexts/AppStateContext';
 import { fetchDistrictInsights, recommendationLine } from '../data/districtInsights';
+import { processMediaFile } from '../utils/mediaProcessor';
 import { getRejectionInfo } from '../data/rejectionRules';
 import {
   DISTRICT_COORDS,
@@ -1686,16 +1687,34 @@ function Step5Creative({ adFormat, setAdFormat, mediaFiles, setMediaFiles, prima
   const fileRef  = useRef(null);
   const [drag, setDrag] = useState(false);
   const [customCta, setCustomCta] = useState('');
+  const [uploadError, setUploadError] = useState('');
+  const [processing, setProcessing] = useState(false);
 
-  function handleFiles(files) {
-    const arr = Array.from(files).map(f => ({
-      id: Date.now() + Math.random(),
-      file: f,
-      url: URL.createObjectURL(f),
-      type: f.type.startsWith('video') ? 'video' : 'image',
-      name: f.name,
-    }));
-    setMediaFiles(prev => [...prev, ...arr]);
+  async function handleFiles(files) {
+    setUploadError('');
+    setProcessing(true);
+    const processed = [];
+    const errors = [];
+    for (const f of Array.from(files)) {
+      const result = await processMediaFile(f);
+      if (result.error) {
+        errors.push(`${f.name}: ${result.error}`);
+        continue;
+      }
+      processed.push({
+        id: Date.now() + Math.random(),
+        file: result.file,
+        url: URL.createObjectURL(result.file),
+        type: result.type,
+        name: result.name,
+        originalSize: result.originalSize,
+        finalSize: result.finalSize,
+        wasCompressed: result.wasCompressed,
+      });
+    }
+    if (errors.length > 0) setUploadError(errors.join(' · '));
+    if (processed.length > 0) setMediaFiles(prev => [...prev, ...processed]);
+    setProcessing(false);
   }
 
   return (
@@ -1728,7 +1747,7 @@ function Step5Creative({ adFormat, setAdFormat, mediaFiles, setMediaFiles, prima
         <SectionLabel>Mídia</SectionLabel>
         <input ref={fileRef} type="file" accept="image/*,video/*" multiple style={{ display: 'none' }} onChange={e => handleFiles(e.target.files)} />
 
-        {/* Previews */}
+        {/* Previews com indicador de compressão */}
         {mediaFiles.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '10px' }}>
             {mediaFiles.map(m => (
@@ -1741,8 +1760,40 @@ function Step5Creative({ adFormat, setAdFormat, mediaFiles, setMediaFiles, prima
                   onClick={() => setMediaFiles(prev => prev.filter(x => x.id !== m.id))}
                   style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,.65)', color: '#fff', border: 'none', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
                 >×</button>
+                {m.finalSize && (
+                  <div style={{
+                    position: 'absolute', bottom: '2px', left: '2px', right: '2px',
+                    fontSize: '9px', fontWeight: 700, color: '#fff',
+                    background: 'rgba(0,0,0,.65)', padding: '2px 4px', borderRadius: '4px',
+                    textAlign: 'center',
+                  }} title={m.wasCompressed ? `Otimizado de ${m.originalSize} MB → ${m.finalSize} MB` : `${m.finalSize} MB`}>
+                    {m.wasCompressed && '✓ '}{m.finalSize} MB
+                  </div>
+                )}
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Loading durante processamento */}
+        {processing && (
+          <div style={{
+            padding: '10px 14px', marginBottom: '8px',
+            background: 'rgba(193, 53, 132, 0.08)', border: '1px solid rgba(193, 53, 132, 0.25)',
+            borderRadius: '10px', fontSize: '12px', color: 'var(--c-text-2)',
+          }}>
+            ⚙️ Otimizando mídia…
+          </div>
+        )}
+
+        {/* Erro de upload — mostra motivo específico */}
+        {uploadError && (
+          <div style={{
+            padding: '10px 14px', marginBottom: '8px',
+            background: 'rgba(220, 38, 38, 0.08)', border: '1px solid rgba(220, 38, 38, 0.35)',
+            borderRadius: '10px', fontSize: '12px', color: '#B91C1C', fontWeight: 600, lineHeight: 1.5,
+          }}>
+            🚫 {uploadError}
           </div>
         )}
 
@@ -1758,7 +1809,10 @@ function Step5Creative({ adFormat, setAdFormat, mediaFiles, setMediaFiles, prima
           <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--c-text-1)', marginBottom: '4px' }}>
             {adFormat === 'carousel' ? 'Adicionar cartões (2–10 imagens)' : 'Clique ou arraste o arquivo aqui'}
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>JPG, PNG, MP4, MOV · Máx 30 MB por arquivo</div>
+          <div style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>
+            Imagem: JPG, PNG — otimizada automaticamente pra até 1080 px<br/>
+            Vídeo: MP4, MOV — máx 8 MB (comprima se maior em freeconvert.com/video-compressor)
+          </div>
         </div>
       </div>
 
