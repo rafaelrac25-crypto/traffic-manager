@@ -24,6 +24,23 @@ const STATUS = {
   ended:   { label: 'Inativo',     dot: '#94A3B8', bg: 'var(--c-surface)', color: 'var(--c-text-4)' },
 };
 
+/* Estado efetivo vindo do Meta — qual o REAL status de entrega.
+   O Meta retorna effective_status via Graph API (sync-meta-status a cada 90s). */
+const DELIVERY_STATUS = {
+  ACTIVE:               { label: '🟢 Entregando',      color: '#16A34A', bg: '#F0FDF4', help: 'Ad está rodando e gastando orçamento no Meta.' },
+  PAUSED:               { label: '⏸️ Pausado no Meta',  color: '#EA580C', bg: '#FFF7ED', help: 'Pausado — não está entregando.' },
+  PENDING_REVIEW:       { label: '🟡 Aguardando Meta',  color: '#CA8A04', bg: '#FEFCE8', help: 'Meta ainda está analisando o ad. Não entrega até aprovar (pode levar até 24h).' },
+  PREAPPROVED:          { label: '🟡 Quase liberado',   color: '#CA8A04', bg: '#FEFCE8', help: 'Aprovação preliminar do Meta — entrega em breve.' },
+  WITH_ISSUES:          { label: '🔴 Com problema',     color: '#DC2626', bg: '#FEF2F2', help: 'Meta detectou algo que impede a entrega. Veja detalhes no Ads Manager.' },
+  DISAPPROVED:          { label: '🔴 Reprovado',        color: '#DC2626', bg: '#FEF2F2', help: 'Meta rejeitou o ad.' },
+  CAMPAIGN_PAUSED:      { label: '⏸️ Campanha pausada', color: '#EA580C', bg: '#FFF7ED', help: 'A campanha inteira foi pausada.' },
+  ADSET_PAUSED:         { label: '⏸️ Conjunto pausado', color: '#EA580C', bg: '#FFF7ED', help: 'O ad set (anel) específico está pausado.' },
+  PENDING_BILLING_INFO: { label: '💳 Aguardando pagto', color: '#D97706', bg: '#FFF7ED', help: 'Problema no método de pagamento — resolva no Ads Manager.' },
+  IN_PROCESS:           { label: '⏳ Processando',       color: '#64748B', bg: 'var(--c-surface)', help: 'Meta está processando o ad.' },
+  ARCHIVED:             { label: '📦 Arquivado',        color: '#94A3B8', bg: 'var(--c-surface)', help: 'Campanha arquivada no Meta.' },
+  DELETED:              { label: '🗑️ Deletado no Meta', color: '#94A3B8', bg: 'var(--c-surface)', help: 'Campanha foi deletada no Meta.' },
+};
+
 /* ── Ícones ── */
 const PauseIcon = () => (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
@@ -521,7 +538,25 @@ function AdRow({ ad, isLast, highCpc, onPreview, onToggle, onDuplicate, onEdit, 
                 >ABO</span>
               )}
             </div>
-            <div style={{ fontSize: '9.5px', color: 'var(--c-text-4)' }}>ID: {ad.adId}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px', flexWrap: 'wrap' }}>
+              <div style={{ fontSize: '9.5px', color: 'var(--c-text-4)' }}>ID: {ad.adId}</div>
+              {(() => {
+                const es = ad.effective_status;
+                const meta = es && DELIVERY_STATUS[es];
+                if (!meta) return null;
+                return (
+                  <span
+                    title={meta.help}
+                    style={{
+                      fontSize: '9.5px', fontWeight: 700,
+                      padding: '1px 6px', borderRadius: '4px',
+                      background: meta.bg, color: meta.color,
+                      border: `1px solid ${meta.color}33`,
+                    }}
+                  >{meta.label}</span>
+                );
+              })()}
+            </div>
           </div>
         </div>
       </td>
@@ -720,7 +755,7 @@ function PerformanceReport({ ads, avgCostPerResult }) {
 /* ── Página Anúncios ── */
 export default function Campaigns() {
   const navigate = useNavigate();
-  const { ads: userAds, toggleAdStatus, duplicateAd, removeAd } = useAppState();
+  const { ads: userAds, toggleAdStatus, duplicateAd, removeAd, runMetaSync, metaSyncedAt, metaSyncing } = useAppState();
   const [statusFilter, setStatusFilter] = useState('');
   const [platformFilter, setPlatformFilter] = useState('');
   const [page, setPage] = useState(1);
@@ -784,7 +819,36 @@ export default function Campaigns() {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '22px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>Anúncios</h1>
-          <p style={{ fontSize: '13px', color: 'var(--c-text-3)' }}>Gerencie seus anúncios e acompanhe os resultados.</p>
+          <p style={{ fontSize: '13px', color: 'var(--c-text-3)' }}>
+            Gerencie seus anúncios e acompanhe os resultados.
+            {metaSyncedAt && (
+              <>
+                {' · '}
+                <span style={{ fontSize: '11.5px', color: 'var(--c-text-4)' }}>
+                  Sincronizado com Meta {(() => {
+                    const m = Math.round((Date.now() - new Date(metaSyncedAt).getTime()) / 60000);
+                    if (m < 1) return 'agora mesmo';
+                    if (m === 1) return 'há 1 min';
+                    return `há ${m} min`;
+                  })()}
+                </span>
+                <button
+                  onClick={() => runMetaSync && runMetaSync()}
+                  disabled={metaSyncing}
+                  title="Buscar status atual do Meta agora"
+                  style={{
+                    marginLeft: '6px', padding: '2px 6px',
+                    background: 'var(--c-surface)', border: '1px solid var(--c-border)',
+                    borderRadius: '5px', fontSize: '11px', color: 'var(--c-accent)',
+                    cursor: metaSyncing ? 'wait' : 'pointer', fontFamily: 'inherit',
+                  }}
+                >
+                  <span style={{ display: 'inline-block', animation: metaSyncing ? 'spin 0.9s linear infinite' : 'none' }}>↻</span>
+                  {' Sincronizar'}
+                </button>
+              </>
+            )}
+          </p>
         </div>
         <button
           onClick={() => navigate('/criar-anuncio')}

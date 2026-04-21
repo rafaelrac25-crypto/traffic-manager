@@ -130,29 +130,45 @@ export function AppStateProvider({ children }) {
   }, []);
 
   /* Polling de status Meta: pega aprovação/rejeição/métricas dos ads publicados.
-     Roda no mount + a cada 90s. Aplica diffs in-place, preservando payload local. */
+     Roda no mount + a cada 90s. Aplica diffs in-place, preservando payload local.
+     Também grava effective_status (PENDING_REVIEW/ACTIVE/WITH_ISSUES/...) pra UI
+     mostrar claramente se ad está entregando de verdade ou só aprovado-em-espera. */
+  const [metaSyncedAt, setMetaSyncedAt] = useState(null);
+  const [metaSyncing, setMetaSyncing] = useState(false);
+
+  const runMetaSync = useCallback(async () => {
+    setMetaSyncing(true);
+    try {
+      const updates = await adsApi.syncMetaStatus();
+      if (Array.isArray(updates) && updates.length > 0) {
+        setAds(prev => prev.map(a => {
+          const diff = updates.find(u => u.id === a.id || u.id === a.serverId || u.platform_campaign_id === a.metaCampaignId);
+          if (!diff) return a;
+          return {
+            ...a,
+            status: diff.status || a.status,
+            effective_status: diff.effective_status || a.effective_status,
+            spent: diff.spent ?? a.spent,
+            clicks: diff.clicks ?? a.clicks,
+            impressions: diff.impressions ?? a.impressions,
+            conversions: diff.conversions ?? a.conversions,
+            meta_synced_at: new Date().toISOString(),
+          };
+        }));
+      }
+      setMetaSyncedAt(new Date().toISOString());
+    } finally {
+      setMetaSyncing(false);
+    }
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
-    async function poll() {
-      const updates = await adsApi.syncMetaStatus();
-      if (cancelled || !Array.isArray(updates) || updates.length === 0) return;
-      setAds(prev => prev.map(a => {
-        const diff = updates.find(u => u.id === a.id || u.id === a.serverId || u.platform_campaign_id === a.metaCampaignId);
-        if (!diff) return a;
-        return {
-          ...a,
-          status: diff.status || a.status,
-          spent: diff.spent ?? a.spent,
-          clicks: diff.clicks ?? a.clicks,
-          impressions: diff.impressions ?? a.impressions,
-          conversions: diff.conversions ?? a.conversions,
-        };
-      }));
-    }
-    poll();
-    const id = setInterval(poll, 90000);
+    const tick = async () => { if (!cancelled) await runMetaSync(); };
+    tick();
+    const id = setInterval(tick, 90000);
     return () => { cancelled = true; clearInterval(id); };
-  }, []);
+  }, [runMetaSync]);
 
   /* Avisa no sino apenas quando o Rafa precisa reconectar manualmente.
      Dedupa: não repete se já existe uma notificação 'reconnect-required' não lida. */
@@ -751,6 +767,9 @@ export function AppStateProvider({ children }) {
     duplicateAd,
     toggleAdStatus,
     getAdById,
+    runMetaSync,
+    metaSyncedAt,
+    metaSyncing,
 
     audiences,
     addAudience,
