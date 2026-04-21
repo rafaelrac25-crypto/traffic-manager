@@ -161,6 +161,11 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
     if (a.start_time) asParams.start_time = a.start_time;
     if (a.end_time) asParams.end_time = a.end_time;
     if (a.promoted_object) asParams.promoted_object = a.promoted_object;
+    /* CONVERSATIONS (objetivo Mensagens) exige promoted_object.page_id.
+       Fallback: se frontend não mandou, usa page_id das credenciais. */
+    if (asParams.optimization_goal === 'CONVERSATIONS' && !asParams.promoted_object && creds.page_id) {
+      asParams.promoted_object = { page_id: creds.page_id };
+    }
 
     let asResp;
     try {
