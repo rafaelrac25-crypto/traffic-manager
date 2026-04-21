@@ -344,7 +344,7 @@ function AdRow({ ad, isLast, highCpc, onPreview, onToggle, onDuplicate, onEdit, 
 
       {/* Investimento */}
       <td style={{ padding: '8px 10px', fontSize: '12px', color: 'var(--c-text-2)', whiteSpace: 'nowrap' }}>
-        R$ {ad.budget},00 /dia
+        {ad.budget ? `R$ ${Number(ad.budget).toFixed(2).replace('.', ',')} / dia` : '—'}
       </td>
 
       {/* Resultados */}

@@ -1048,11 +1048,31 @@ function saudacaoPorHora() {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { funds, lowBalance, LOW_BALANCE_THRESHOLD, ads } = useAppState();
+  const { ads } = useAppState();
 
   const hoje = new Date();
   const labelHoje = `Hoje, ${hoje.getDate()} de ${MESES_PT[hoje.getMonth()]}`;
   const saudacao = saudacaoPorHora();
+
+  const [metaBilling, setMetaBilling] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const r = await fetch('/api/platforms/meta/billing');
+        if (!r.ok) return;
+        const data = await r.json();
+        if (!cancelled) setMetaBilling(data);
+      } catch {}
+    };
+    load();
+    const id = setInterval(load, 30 * 1000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
+
+  const funds = metaBilling ? Number(metaBilling.balance || 0) : 0;
+  const LOW_BALANCE_THRESHOLD = 20;
+  const lowBalance = metaBilling ? funds < LOW_BALANCE_THRESHOLD : false;
 
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {

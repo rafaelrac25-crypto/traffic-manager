@@ -57,6 +57,37 @@ router.get('/', async (req, res) => {
   }
 });
 
+router.get('/meta/billing', async (req, res) => {
+  try {
+    const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+    const creds = credResult.rows[0];
+    if (!creds) return res.status(400).json({ error: 'Meta não conectado' });
+    const { getToken } = require('../services/metaWrite');
+    const token = getToken(creds);
+    const accountId = creds.account_id;
+    if (!accountId) return res.status(400).json({ error: 'Ad Account ID ausente' });
+
+    const fields = 'balance,amount_spent,spend_cap,currency,account_status,name';
+    const url = `${GRAPH}/${accountId}?fields=${fields}&access_token=${token}`;
+    const json = await httpsGet(url);
+    if (json.error) return res.status(502).json({ error: json.error.message });
+
+    const toReal = (cents) => Number(cents || 0) / 100;
+    res.json({
+      account_id: accountId,
+      account_name: json.name || null,
+      currency: json.currency || 'BRL',
+      balance: toReal(json.balance),
+      amount_spent: toReal(json.amount_spent),
+      spend_cap: json.spend_cap ? toReal(json.spend_cap) : null,
+      account_status: json.account_status,
+    });
+  } catch (err) {
+    console.error('[meta/billing]', err);
+    res.status(500).json({ error: err.message || 'Erro ao buscar saldo Meta' });
+  }
+});
+
 router.get('/meta/oauth/start', (req, res) => {
   const appId = process.env.FB_APP_ID;
   if (!appId) return res.status(500).json({ error: 'FB_APP_ID ausente' });

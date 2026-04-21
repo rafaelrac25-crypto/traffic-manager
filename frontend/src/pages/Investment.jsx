@@ -6,55 +6,29 @@ function formatBRL(v) {
   return `R$\u00A0${Number(v || 0).toFixed(2).replace('.', ',')}`;
 }
 
-function maskCard(v) {
-  return v.replace(/\D/g, '').slice(0, 16).replace(/(\d{4})(?=\d)/g, '$1 ').trim();
-}
-function maskExpiry(v) {
-  return v.replace(/\D/g, '').slice(0, 4).replace(/(\d{2})(\d{1,2})/, '$1/$2');
-}
-
-/* ── Ícones ── */
-const CardIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
-  </svg>
-);
-const PixIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M5 12l7-7 7 7-7 7z"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="12" y1="9" x2="12" y2="15"/>
-  </svg>
-);
-
 export default function Investment() {
-  const {
-    funds, addFunds,
-    paymentMethod, setPaymentMethod,
-    LOW_BALANCE_THRESHOLD,
-    pixel, setPixel,
-  } = useAppState();
+  const { pixel, setPixel } = useAppState();
 
-  const [tab, setTab]           = useState('card');
-  const [cardName, setCardName] = useState('');
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardExp, setCardExp]   = useState('');
-  const [cardCvv, setCardCvv]   = useState('');
-  const [pixKey,  setPixKey]    = useState('');
-  const [topupValue, setTopupValue] = useState(50);
-  const [msg, setMsg] = useState('');
-  const [pixelOpen, setPixelOpen] = useState(false);
   const [metaStatus, setMetaStatus] = useState(null);
+  const [metaBilling, setMetaBilling] = useState(null);
   const [metaLoading, setMetaLoading] = useState(false);
-  const [metaFeedback, setMetaFeedback] = useState(null);
   const [metaSyncing, setMetaSyncing] = useState(false);
+  const [metaFeedback, setMetaFeedback] = useState(null);
+  const [pixelOpen, setPixelOpen] = useState(false);
 
   async function loadMetaStatus() {
     try {
       const { data } = await api.get('/api/platforms');
       const meta = Array.isArray(data) ? data.find(p => p.platform === 'meta') : null;
       setMetaStatus(meta || null);
-    } catch (e) {
-      setMetaStatus(null);
-    }
+    } catch { setMetaStatus(null); }
+  }
+
+  async function loadMetaBilling() {
+    try {
+      const { data } = await api.get('/api/platforms/meta/billing');
+      setMetaBilling(data);
+    } catch { setMetaBilling(null); }
   }
 
   useEffect(() => {
@@ -71,13 +45,12 @@ export default function Investment() {
 
   useEffect(() => {
     if (!metaStatus?.connected) return;
-    const id = setInterval(loadMetaStatus, 30 * 1000);
+    loadMetaBilling();
+    const id = setInterval(() => { loadMetaStatus(); loadMetaBilling(); }, 30 * 1000);
     return () => clearInterval(id);
   }, [metaStatus?.connected]);
 
-  function connectMeta() {
-    window.location.href = '/api/platforms/meta/oauth/start';
-  }
+  function connectMeta() { window.location.href = '/api/platforms/meta/oauth/start'; }
 
   async function syncMeta() {
     setMetaSyncing(true);
@@ -85,12 +58,10 @@ export default function Investment() {
     try {
       const { data } = await api.post('/api/campaigns/sync/meta');
       setMetaFeedback({ type: 'ok', text: `${data.message}. Acesse a página Campanhas para visualizar.` });
+      await loadMetaBilling();
     } catch (e) {
-      const msg = e?.response?.data?.error || 'Erro ao sincronizar';
-      setMetaFeedback({ type: 'err', text: msg });
-    } finally {
-      setMetaSyncing(false);
-    }
+      setMetaFeedback({ type: 'err', text: e?.response?.data?.error || 'Erro ao sincronizar' });
+    } finally { setMetaSyncing(false); }
   }
 
   async function disconnectMeta() {
@@ -100,52 +71,15 @@ export default function Investment() {
       await api.delete('/api/platforms/meta');
       setMetaFeedback({ type: 'ok', text: 'Facebook desconectado.' });
       await loadMetaStatus();
-    } catch (e) {
-      setMetaFeedback({ type: 'err', text: 'Erro ao desconectar.' });
-    } finally {
-      setMetaLoading(false);
-    }
+      setMetaBilling(null);
+    } catch { setMetaFeedback({ type: 'err', text: 'Erro ao desconectar.' }); }
+    finally { setMetaLoading(false); }
   }
 
-  const quickValues = [20, 50, 100, 200, 500];
-
-  function saveCard() {
-    if (cardNumber.replace(/\D/g, '').length < 13 || !cardName) {
-      setMsg('Preencha nome e número do cartão corretamente.');
-      return;
-    }
-    setPaymentMethod({
-      type: 'card',
-      holder: cardName,
-      last4: cardNumber.replace(/\D/g, '').slice(-4),
-      exp: cardExp,
-    });
-    setMsg('Cartão salvo com sucesso.');
-  }
-
-  function savePix() {
-    if (!pixKey) {
-      setMsg('Informe uma chave PIX.');
-      return;
-    }
-    setPaymentMethod({ type: 'pix', key: pixKey });
-    setMsg('Chave PIX salva com sucesso.');
-  }
-
-  function handleTopup() {
-    if (!paymentMethod) {
-      setMsg('Cadastre um método de pagamento primeiro.');
-      return;
-    }
-    if (!topupValue || topupValue <= 0) {
-      setMsg('Informe um valor válido.');
-      return;
-    }
-    addFunds(Number(topupValue));
-    setMsg(`${formatBRL(topupValue)} adicionados ao saldo.`);
-  }
-
-  const lowBalance = funds < LOW_BALANCE_THRESHOLD;
+  const assetId = (metaStatus?.account_id || '').replace(/^act_/, '');
+  const billingUrl = assetId
+    ? `https://business.facebook.com/billing_hub/accounts/details?asset_id=${assetId}`
+    : 'https://business.facebook.com/billing_hub/payment_settings';
 
   return (
     <div className="page-container">
@@ -154,220 +88,50 @@ export default function Investment() {
           Investimento
         </h1>
         <p style={{ fontSize: '13px', color: 'var(--c-text-3)' }}>
-          Cadastre um método de pagamento e adicione fundos para suas campanhas.
+          Saldo, integração Meta e rastreamento de conversões.
         </p>
       </div>
 
-      {/* Saldo */}
-      <div className="ccb-card" style={{
-        background: lowBalance
-          ? 'linear-gradient(135deg, #FEF2F2, #FDEAED)'
-          : 'linear-gradient(135deg, rgba(214,141,143,.08), rgba(125,74,94,.05))',
-        border: `1.5px solid ${lowBalance ? '#FCA5A5' : 'var(--c-border)'}`,
-        borderRadius: '18px', padding: '24px 28px', marginBottom: '20px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px',
-      }}>
-        <div>
-          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-text-3)', marginBottom: '6px', letterSpacing: '.5px', textTransform: 'uppercase' }}>
-            Saldo disponível
-          </div>
-          <div style={{ fontSize: '36px', fontWeight: 700, color: lowBalance ? '#DC2626' : 'var(--c-accent)', lineHeight: 1 }}>
-            {formatBRL(funds)}
-          </div>
-          {lowBalance && (
-            <div style={{ fontSize: '12px', color: '#DC2626', marginTop: '8px', fontWeight: 600 }}>
-              ⚠ Saldo abaixo de {formatBRL(LOW_BALANCE_THRESHOLD)} — adicione fundos para manter suas campanhas ativas.
-            </div>
-          )}
-        </div>
-        {paymentMethod && (
-          <div style={{ padding: '10px 14px', background: 'var(--c-card-bg)', borderRadius: '12px', border: '1px solid var(--c-border)', minWidth: '220px' }}>
-            <div style={{ fontSize: '11px', color: 'var(--c-text-4)', marginBottom: '3px' }}>Método cadastrado</div>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '8px' }}>
-              {paymentMethod.type === 'card'
-                ? `💳 •••• ${paymentMethod.last4}`
-                : `⚡ PIX: ${paymentMethod.key}`}
-            </div>
-            <div style={{ display: 'flex', gap: '6px' }}>
-              <button
-                onClick={() => {
-                  setTab(paymentMethod.type);
-                  if (paymentMethod.type === 'pix') {
-                    setPixKey(paymentMethod.key || '');
-                  } else {
-                    setCardName(paymentMethod.name || '');
-                    setCardNumber('');
-                    setCardExp(paymentMethod.exp || '');
-                    setCardCvv('');
-                  }
-                  setMsg('Edite os campos abaixo e salve novamente.');
-                }}
-                style={{
-                  flex: 1, padding: '6px 10px', borderRadius: '7px',
-                  border: '1.5px solid var(--c-border)', background: 'var(--c-surface)',
-                  color: 'var(--c-text-2)', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
-                }}
-              >
-                ✎ Editar
-              </button>
-              <button
-                onClick={() => {
-                  if (!window.confirm('Excluir método cadastrado? Você vai precisar cadastrar outro antes de adicionar fundos.')) return;
-                  setPaymentMethod(null);
-                  setPixKey('');
-                  setCardName('');
-                  setCardNumber('');
-                  setCardExp('');
-                  setCardCvv('');
-                  setMsg('Método de pagamento excluído.');
-                }}
-                style={{
-                  padding: '6px 10px', borderRadius: '7px',
-                  border: '1.5px solid #FCA5A5', background: '#FEF2F2',
-                  color: '#DC2626', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
-                }}
-              >
-                🗑 Excluir
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="stack-on-mobile" style={{ display: 'grid', gridTemplateColumns: 'minmax(280px,1fr) minmax(280px,1fr)', gap: '18px' }}>
-        {/* Cadastro */}
+      {/* ── Saldo real da conta Meta ── */}
+      {metaStatus?.connected && (
         <div className="ccb-card" style={{
-          background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',
-          borderRadius: '16px', padding: '22px', boxShadow: '0 2px 8px var(--c-shadow)',
+          background: 'linear-gradient(135deg, rgba(214,141,143,.08), rgba(125,74,94,.05))',
+          border: '1.5px solid var(--c-border)',
+          borderRadius: '18px', padding: '24px 28px', marginBottom: '20px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px',
         }}>
-          <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '14px' }}>
-            Método de pagamento
-          </h3>
-
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-            {[
-              { id: 'card', label: 'Cartão', Icon: CardIcon },
-              { id: 'pix',  label: 'PIX',    Icon: PixIcon },
-            ].map(({ id, label, Icon }) => (
-              <button
-                key={id}
-                onClick={() => setTab(id)}
-                style={{
-                  flex: 1, padding: '10px', fontSize: '12px', fontWeight: 600,
-                  border: `1.5px solid ${tab === id ? 'var(--c-accent)' : 'var(--c-border)'}`,
-                  background: tab === id ? 'var(--c-active-bg)' : 'var(--c-surface)',
-                  color: tab === id ? 'var(--c-accent)' : 'var(--c-text-2)',
-                  borderRadius: '10px', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                }}
-              >
-                <Icon /> {label}
-              </button>
-            ))}
-          </div>
-
-          {tab === 'card' ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <input
-                type="text" placeholder="Nome impresso no cartão"
-                value={cardName} onChange={e => setCardName(e.target.value)}
-                style={inputStyle}
-              />
-              <input
-                type="text" placeholder="0000 0000 0000 0000" inputMode="numeric"
-                value={cardNumber} onChange={e => setCardNumber(maskCard(e.target.value))}
-                style={inputStyle}
-              />
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <input
-                  type="text" placeholder="MM/AA"
-                  value={cardExp} onChange={e => setCardExp(maskExpiry(e.target.value))}
-                  style={inputStyle}
-                />
-                <input
-                  type="text" placeholder="CVV" inputMode="numeric"
-                  value={cardCvv} onChange={e => setCardCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                  style={inputStyle}
-                />
-              </div>
-              <button onClick={saveCard} style={btnPrimary}>Salvar cartão</button>
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-text-3)', marginBottom: '6px', letterSpacing: '.5px', textTransform: 'uppercase' }}>
+              Saldo disponível (Meta Ads)
             </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <input
-                type="text" placeholder="Chave PIX (CPF, e-mail, celular ou aleatória)"
-                value={pixKey} onChange={e => setPixKey(e.target.value)}
-                style={inputStyle}
-              />
-              <button onClick={savePix} style={btnPrimary}>Salvar chave PIX</button>
+            <div style={{ fontSize: '36px', fontWeight: 700, color: 'var(--c-accent)', lineHeight: 1 }}>
+              {metaBilling ? formatBRL(metaBilling.balance) : '—'}
             </div>
-          )}
-        </div>
-
-        {/* Recarga */}
-        <div className="ccb-card" style={{
-          background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',
-          borderRadius: '16px', padding: '22px', boxShadow: '0 2px 8px var(--c-shadow)',
-        }}>
-          <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '14px' }}>
-            Adicionar fundos
-          </h3>
-
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '14px' }}>
-            {quickValues.map(v => (
-              <button
-                key={v}
-                onClick={() => setTopupValue(v)}
-                style={{
-                  padding: '8px 14px', fontSize: '12px', fontWeight: 600,
-                  border: `1.5px solid ${topupValue === v ? 'var(--c-accent)' : 'var(--c-border)'}`,
-                  background: topupValue === v ? 'var(--c-active-bg)' : 'var(--c-surface)',
-                  color: topupValue === v ? 'var(--c-accent)' : 'var(--c-text-2)',
-                  borderRadius: '10px', cursor: 'pointer',
-                }}
-              >
-                {formatBRL(v)}
-              </button>
-            ))}
-          </div>
-
-          <div style={{ marginBottom: '14px' }}>
-            <div style={{ fontSize: '11px', color: 'var(--c-text-4)', marginBottom: '6px', fontWeight: 600 }}>
-              Ou digite um valor personalizado
-            </div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--c-surface)', border: '1.5px solid var(--c-border)', borderRadius: '10px', padding: '0 16px', width: '100%' }}>
-              <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--c-accent)' }}>R$</span>
-              <input
-                type="number" min="10" step="10"
-                value={topupValue} onChange={e => setTopupValue(Number(e.target.value))}
-                style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '20px', fontWeight: 700, color: 'var(--c-text-1)', fontFamily: 'inherit', padding: '10px 0', flex: 1 }}
-              />
+            <div style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '8px' }}>
+              {metaBilling ? `Gasto total: ${formatBRL(metaBilling.amount_spent)}${metaBilling.spend_cap ? ` · Limite: ${formatBRL(metaBilling.spend_cap)}` : ''}` : 'Carregando saldo da conta de anúncios…'}
             </div>
           </div>
-
-          <button onClick={handleTopup} style={btnPrimary}>Adicionar {formatBRL(topupValue)}</button>
-
-          <p style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '12px', marginBottom: 0, lineHeight: 1.5 }}>
-            O saldo é consumido automaticamente pelas campanhas ativas. Quando atingir menos de {formatBRL(LOW_BALANCE_THRESHOLD)}, avisaremos no sino de notificações.
-          </p>
-        </div>
-      </div>
-
-      {msg && (
-        <div style={{
-          marginTop: '16px', padding: '12px 16px',
-          background: 'rgba(34,197,94,.08)', border: '1px solid rgba(34,197,94,.3)',
-          borderRadius: '10px', fontSize: '13px', color: '#16A34A', fontWeight: 600,
-        }}>
-          {msg}
+          <a
+            href={billingUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              padding: '12px 20px', borderRadius: '10px',
+              background: 'var(--c-accent)', color: '#fff',
+              fontSize: '13px', fontWeight: 700, textDecoration: 'none',
+              display: 'inline-flex', alignItems: 'center', gap: '8px',
+            }}
+          >
+            💳 Adicionar crédito no Meta
+          </a>
         </div>
       )}
 
       {/* ── Integração Meta (Facebook + Instagram Ads) ── */}
       <div className="ccb-card" style={{
-        marginTop: '24px',
         background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',
         borderRadius: '16px', padding: '22px', boxShadow: '0 2px 8px var(--c-shadow)',
+        marginBottom: '20px',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -426,19 +190,6 @@ export default function Investment() {
               >
                 {metaSyncing ? '⏳ Sincronizando…' : '🔄 Sincronizar agora'}
               </button>
-              <a
-                href={`https://business.facebook.com/billing_hub/accounts/details?asset_id=${(metaStatus.account_id || '').replace(/^act_/, '')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  padding: '10px 16px', borderRadius: '10px',
-                  border: '1.5px solid var(--c-border)', background: 'var(--c-surface)',
-                  color: 'var(--c-text-2)', fontSize: '12px', fontWeight: 700,
-                  textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px',
-                }}
-              >
-                💳 Adicionar crédito no Meta
-              </a>
               <button
                 onClick={disconnectMeta}
                 disabled={metaLoading}
@@ -482,10 +233,8 @@ export default function Investment() {
 
       {/* ── Pixel / Rastreamento de conversão (minimizado por padrão) ── */}
       <div className="ccb-card" style={{
-        marginTop: '24px',
         background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',
-        borderRadius: '16px', boxShadow: '0 2px 8px var(--c-shadow)',
-        overflow: 'hidden',
+        borderRadius: '16px', boxShadow: '0 2px 8px var(--c-shadow)', overflow: 'hidden',
       }}>
         <button
           type="button"
@@ -493,18 +242,14 @@ export default function Investment() {
           style={{
             width: '100%', textAlign: 'left',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            gap: '12px', flexWrap: 'wrap',
-            padding: '14px 18px',
-            background: 'transparent', border: 'none', cursor: 'pointer',
-            fontFamily: 'inherit',
+            gap: '12px', flexWrap: 'wrap', padding: '14px 18px',
+            background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
           }}
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
             <span style={{
-              display: 'inline-block', fontSize: '13px',
-              color: 'var(--c-text-4)',
-              transform: pixelOpen ? 'rotate(90deg)' : 'rotate(0deg)',
-              transition: 'transform .18s',
+              display: 'inline-block', fontSize: '13px', color: 'var(--c-text-4)',
+              transform: pixelOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform .18s',
             }}>›</span>
             <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-1)' }}>
               📊 Pixel de rastreamento
@@ -514,15 +259,10 @@ export default function Investment() {
                 padding: '2px 8px', fontSize: '10px', fontWeight: 700,
                 background: '#DCFCE7', color: '#16A34A',
                 borderRadius: '6px', letterSpacing: '.3px',
-              }}>
-                ATIVO
-              </span>
+              }}>ATIVO</span>
             )}
             {!pixelOpen && !pixel?.enabled && (
-              <span style={{
-                fontSize: '11px', color: 'var(--c-text-4)',
-                fontWeight: 500,
-              }}>
+              <span style={{ fontSize: '11px', color: 'var(--c-text-4)', fontWeight: 500 }}>
                 — opcional, use apenas se tiver site/LP
               </span>
             )}
@@ -556,92 +296,26 @@ export default function Investment() {
               </div>
             </label>
 
-        {pixel?.enabled && (
-          <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div>
-              <label style={{
-                display: 'block', fontSize: '11px', fontWeight: 700,
-                color: 'var(--c-text-3)', marginBottom: '6px',
-                textTransform: 'uppercase', letterSpacing: '.4px',
-              }}>
-                ID do Pixel Meta
-              </label>
-              <input
-                type="text"
-                placeholder="Ex.: 1234567890123456"
-                value={pixel?.pixelId || ''}
-                onChange={e => setPixel({ ...pixel, pixelId: e.target.value.replace(/\D/g, '') })}
-                style={inputStyle}
-              />
-              <p style={{ fontSize: '11px', color: 'var(--c-text-4)', margin: '6px 0 0' }}>
-                Encontre no Gerenciador de Anúncios Meta → Eventos → Pixel.
-              </p>
-            </div>
-
-            <div>
-              <div style={{
-                fontSize: '11px', fontWeight: 700, color: 'var(--c-text-3)',
-                marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '.4px',
-              }}>
-                Eventos rastreados
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px' }}>
-                {[
-                  { id: 'ViewContent', label: 'ViewContent', desc: 'Visualizou página' },
-                  { id: 'Lead',        label: 'Lead',        desc: 'Enviou formulário' },
-                  { id: 'Contact',     label: 'Contact',     desc: 'Clicou WhatsApp' },
-                  { id: 'Purchase',    label: 'Purchase',    desc: 'Concluiu compra' },
-                ].map(({ id, label, desc }) => {
-                  const on = pixel?.events?.[id];
-                  return (
-                    <div
-                      key={id}
-                      onClick={() => setPixel({
-                        ...pixel,
-                        events: { ...pixel.events, [id]: !on },
-                      })}
-                      style={{
-                        padding: '10px 12px', borderRadius: '10px', cursor: 'pointer',
-                        border: `1.5px solid ${on ? 'var(--c-accent)' : 'var(--c-border)'}`,
-                        background: on ? 'var(--c-active-bg)' : 'var(--c-surface)',
-                        transition: 'all .15s',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
-                        <span style={{ fontSize: '12px', fontWeight: 700, color: on ? 'var(--c-accent)' : 'var(--c-text-2)' }}>
-                          {label}
-                        </span>
-                        <span style={{ fontSize: '14px' }}>{on ? '✓' : '○'}</span>
-                      </div>
-                      <div style={{ fontSize: '10px', color: 'var(--c-text-4)' }}>{desc}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {pixel?.pixelId && (
-              <div style={{
-                background: 'var(--c-surface)', border: '1px dashed var(--c-border)',
-                borderRadius: '10px', padding: '12px 14px',
-              }}>
-                <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--c-text-4)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '.4px' }}>
-                  Código para inserir no &lt;head&gt; do seu site
+            {pixel?.enabled && (
+              <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <label style={{
+                    display: 'block', fontSize: '11px', fontWeight: 700,
+                    color: 'var(--c-text-3)', marginBottom: '6px',
+                    textTransform: 'uppercase', letterSpacing: '.4px',
+                  }}>
+                    ID do Pixel Meta
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex.: 1234567890123456"
+                    value={pixel?.pixelId || ''}
+                    onChange={e => setPixel({ ...pixel, pixelId: e.target.value.replace(/\D/g, '') })}
+                    style={inputStyle}
+                  />
                 </div>
-                <pre style={{
-                  fontSize: '10px', color: 'var(--c-text-2)',
-                  fontFamily: 'Menlo, Consolas, monospace',
-                  background: 'var(--c-card-bg)', padding: '10px', borderRadius: '6px',
-                  overflow: 'auto', margin: 0, lineHeight: 1.5,
-                }}>{`<script>
-  !function(f,b,e,v,n,t,s){...}
-  fbq('init', '${pixel.pixelId}');
-  fbq('track', 'PageView');
-</script>`}</pre>
               </div>
             )}
-          </div>
-        )}
           </div>
         )}
       </div>
@@ -670,9 +344,4 @@ const inputStyle = {
   border: '1.5px solid var(--c-border)', borderRadius: '10px',
   background: 'var(--c-surface)', color: 'var(--c-text-1)',
   outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
-};
-const btnPrimary = {
-  width: '100%', padding: '12px', fontSize: '13px', fontWeight: 700,
-  background: 'var(--c-accent)', color: '#fff',
-  border: 'none', borderRadius: '10px', cursor: 'pointer',
 };
