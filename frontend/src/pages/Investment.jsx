@@ -48,7 +48,7 @@ export default function Investment() {
 
   async function loadMetaStatus() {
     try {
-      const { data } = await api.get('/platforms');
+      const { data } = await api.get('/api/platforms');
       const meta = Array.isArray(data) ? data.find(p => p.platform === 'meta') : null;
       setMetaStatus(meta || null);
     } catch (e) {
@@ -76,7 +76,7 @@ export default function Investment() {
     if (!window.confirm('Desconectar o Facebook? As campanhas ficarão offline (não sincronizam) até reconectar.')) return;
     setMetaLoading(true);
     try {
-      await api.delete('/platforms/meta');
+      await api.delete('/api/platforms/meta');
       setMetaFeedback({ type: 'ok', text: 'Facebook desconectado.' });
       await loadMetaStatus();
     } catch (e) {
