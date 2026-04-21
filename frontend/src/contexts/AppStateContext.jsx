@@ -141,10 +141,11 @@ export function AppStateProvider({ children }) {
     return () => { cancelled = true; };
   }, []);
 
-  /* Auto-sync silencioso com Meta a cada 30s (só quando conectado) */
+  /* Auto-sync com Meta a cada 40s (fica em ~90 syncs/h — seguro sob o teto 200 calls/h) */
   useEffect(() => {
     let cancelled = false;
     let inFlight = false;
+    let lastErrorNotifAt = 0;
 
     const runSync = async () => {
       if (cancelled || inFlight) return;
@@ -154,21 +155,33 @@ export function AppStateProvider({ children }) {
         const data = await pr.json();
         const meta = Array.isArray(data) ? data.find(p => p.platform === 'meta') : null;
         if (!meta?.connected) return;
-        await fetch('/api/campaigns/sync/meta', { method: 'POST' });
+        const sr = await fetch('/api/campaigns/sync/meta', { method: 'POST' });
+        if (!sr.ok) {
+          const body = await sr.json().catch(() => ({}));
+          throw new Error(body.error || `HTTP ${sr.status}`);
+        }
         const remote = await adsApi.fetchAds();
         if (cancelled || !remote || remote.length === 0) return;
         setAds(remote.map(r => ({ ...r, serverId: r.id })));
-      } catch {
-        /* silencioso */
+      } catch (err) {
+        if (cancelled) return;
+        if (Date.now() - lastErrorNotifAt < 10 * 60 * 1000) return;
+        lastErrorNotifAt = Date.now();
+        addNotification({
+          kind: 'meta-sync-error',
+          title: 'Falha na sincronização com o Meta',
+          body: err?.message || 'Erro desconhecido ao sincronizar',
+          severity: 'error',
+        });
       } finally {
         inFlight = false;
       }
     };
 
     runSync();
-    const id = setInterval(runSync, 30 * 1000);
+    const id = setInterval(runSync, 40 * 1000);
     return () => { cancelled = true; clearInterval(id); };
-  }, []);
+  }, [addNotification]);
 
   /* ─── Alertas de datas comerciais relevantes em janela de 45 dias (no mount) ─── */
   useEffect(() => {
