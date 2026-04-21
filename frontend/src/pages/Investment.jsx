@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppState } from '../contexts/AppStateContext';
+import api from '../services/api';
 
 function formatBRL(v) {
   return `R$\u00A0${Number(v || 0).toFixed(2).replace('.', ',')}`;
@@ -41,6 +42,49 @@ export default function Investment() {
   const [topupValue, setTopupValue] = useState(50);
   const [msg, setMsg] = useState('');
   const [pixelOpen, setPixelOpen] = useState(false);
+  const [metaStatus, setMetaStatus] = useState(null);
+  const [metaLoading, setMetaLoading] = useState(false);
+  const [metaFeedback, setMetaFeedback] = useState(null);
+
+  async function loadMetaStatus() {
+    try {
+      const { data } = await api.get('/platforms');
+      const meta = Array.isArray(data) ? data.find(p => p.platform === 'meta') : null;
+      setMetaStatus(meta || null);
+    } catch (e) {
+      setMetaStatus(null);
+    }
+  }
+
+  useEffect(() => {
+    loadMetaStatus();
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('connected') === 'meta') {
+      setMetaFeedback({ type: 'ok', text: 'Facebook conectado com sucesso.' });
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (params.get('meta_error')) {
+      setMetaFeedback({ type: 'err', text: `Erro ao conectar Facebook: ${params.get('meta_error')}` });
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
+  function connectMeta() {
+    window.location.href = '/api/platforms/meta/oauth/start';
+  }
+
+  async function disconnectMeta() {
+    if (!window.confirm('Desconectar o Facebook? As campanhas ficarão offline (não sincronizam) até reconectar.')) return;
+    setMetaLoading(true);
+    try {
+      await api.delete('/platforms/meta');
+      setMetaFeedback({ type: 'ok', text: 'Facebook desconectado.' });
+      await loadMetaStatus();
+    } catch (e) {
+      setMetaFeedback({ type: 'err', text: 'Erro ao desconectar.' });
+    } finally {
+      setMetaLoading(false);
+    }
+  }
 
   const quickValues = [20, 50, 100, 200, 500];
 
@@ -298,6 +342,95 @@ export default function Investment() {
         </div>
       )}
 
+      {/* ── Integração Meta (Facebook + Instagram Ads) ── */}
+      <div className="ccb-card" style={{
+        marginTop: '24px',
+        background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',
+        borderRadius: '16px', padding: '22px', boxShadow: '0 2px 8px var(--c-shadow)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '22px' }}>📱</span>
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--c-text-1)' }}>
+                Facebook / Instagram Ads
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '2px' }}>
+                Conecte a conta de anúncios da Meta para publicar direto do painel.
+              </div>
+            </div>
+          </div>
+          {metaStatus?.connected ? (
+            <span style={{
+              padding: '4px 10px', fontSize: '10px', fontWeight: 700,
+              background: '#DCFCE7', color: '#16A34A',
+              borderRadius: '6px', letterSpacing: '.3px',
+            }}>CONECTADO</span>
+          ) : (
+            <span style={{
+              padding: '4px 10px', fontSize: '10px', fontWeight: 700,
+              background: '#FEF3C7', color: '#B45309',
+              borderRadius: '6px', letterSpacing: '.3px',
+            }}>DESCONECTADO</span>
+          )}
+        </div>
+
+        {metaStatus?.connected ? (
+          <div>
+            <div style={{
+              display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+              gap: '10px', marginBottom: '14px',
+            }}>
+              <InfoCell label="Ad Account" value={metaStatus.account_id || '—'} />
+              <InfoCell label="Página Facebook" value={metaStatus.page_id || '—'} />
+              <InfoCell label="Instagram Business" value={metaStatus.ig_business_id || '—'} />
+              <InfoCell
+                label="Token expira em"
+                value={metaStatus.token_expires_at
+                  ? new Date(metaStatus.token_expires_at).toLocaleDateString('pt-BR')
+                  : '—'}
+              />
+            </div>
+            <button
+              onClick={disconnectMeta}
+              disabled={metaLoading}
+              style={{
+                padding: '10px 16px', borderRadius: '10px',
+                border: '1.5px solid #FCA5A5', background: '#FEF2F2',
+                color: '#DC2626', fontSize: '12px', fontWeight: 700,
+                cursor: metaLoading ? 'wait' : 'pointer',
+              }}
+            >
+              {metaLoading ? 'Desconectando…' : 'Desconectar'}
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={connectMeta}
+            style={{
+              padding: '12px 18px', borderRadius: '10px',
+              border: 'none', background: '#1877F2',
+              color: '#fff', fontSize: '13px', fontWeight: 700,
+              cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px',
+            }}
+          >
+            <span style={{ fontSize: '16px' }}>🅕</span> Conectar Facebook
+          </button>
+        )}
+
+        {metaFeedback && (
+          <div style={{
+            marginTop: '14px', padding: '10px 14px',
+            background: metaFeedback.type === 'ok' ? 'rgba(34,197,94,.08)' : 'rgba(220,38,38,.08)',
+            border: `1px solid ${metaFeedback.type === 'ok' ? 'rgba(34,197,94,.3)' : 'rgba(220,38,38,.3)'}`,
+            borderRadius: '10px', fontSize: '12px',
+            color: metaFeedback.type === 'ok' ? '#16A34A' : '#DC2626', fontWeight: 600,
+          }}>
+            {metaFeedback.text}
+          </div>
+        )}
+      </div>
+
       {/* ── Pixel / Rastreamento de conversão (minimizado por padrão) ── */}
       <div className="ccb-card" style={{
         marginTop: '24px',
@@ -462,6 +595,22 @@ export default function Investment() {
         )}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function InfoCell({ label, value }) {
+  return (
+    <div style={{
+      padding: '10px 12px', background: 'var(--c-surface)',
+      border: '1px solid var(--c-border)', borderRadius: '10px',
+    }}>
+      <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--c-text-4)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: '3px' }}>
+        {label}
+      </div>
+      <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-text-1)', wordBreak: 'break-all' }}>
+        {value}
       </div>
     </div>
   );
