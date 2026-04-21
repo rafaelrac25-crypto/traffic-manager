@@ -61,6 +61,15 @@ export async function updateAd(id, patch) {
     const { data } = await api.put(`${BASE}/${id}`, adToPayload(patch));
     return data;
   } catch (err) {
+    /* 502 = Meta recusou → propaga pra quem chamou tratar (rollback).
+       Outros erros (offline, 500) → retorna null pra manter local. */
+    const status = err?.response?.status;
+    const body = err?.response?.data;
+    if (status === 502 || status === 400) {
+      const e = new Error(body?.error || err.message || 'Meta recusou a edição');
+      e.meta = body?.meta || null;
+      throw e;
+    }
     console.warn('[adsApi] updateAd falhou', err?.message);
     return null;
   }
@@ -72,6 +81,13 @@ export async function updateAdStatus(id, status) {
     const { data } = await api.patch(`${BASE}/${id}/status`, { status });
     return data;
   } catch (err) {
+    const s = err?.response?.status;
+    const body = err?.response?.data;
+    if (s === 502 || s === 400) {
+      const e = new Error(body?.error || err.message || 'Meta recusou a mudança de status');
+      e.meta = body?.meta || null;
+      throw e;
+    }
     console.warn('[adsApi] updateAdStatus falhou', err?.message);
     return null;
   }

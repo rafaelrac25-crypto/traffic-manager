@@ -452,20 +452,34 @@ export function AppStateProvider({ children }) {
     return newAd;
   }, [logHistory, addRejectedAd]);
 
-  const updateAd = useCallback((id, patch) => {
-    setAds(prev => prev.map(a => {
-      if (a.id !== id) return a;
-      const fields = Object.keys(patch).filter(k => k !== 'updatedAt').join(', ');
-      logHistory({
-        type: 'ad-updated',
-        title: `Anúncio editado: ${a.name || 'sem nome'}`,
-        description: fields ? `Campos: ${fields}` : null,
+  const updateAd = useCallback(async (id, patch) => {
+    const before = ads.find(a => a.id === id);
+    if (!before) return;
+    const fields = Object.keys(patch).filter(k => k !== 'updatedAt').join(', ');
+    logHistory({
+      type: 'ad-updated',
+      title: `Anúncio editado: ${before.name || 'sem nome'}`,
+      description: fields ? `Campos: ${fields}` : null,
+    });
+    const merged = { ...before, ...patch };
+    /* Otimista — aplica local imediato; reverte se o Meta recusar */
+    setAds(prev => prev.map(a => a.id === id ? merged : a));
+
+    const serverId = before.serverId || before.id;
+    try {
+      const result = await adsApi.updateAd(serverId, merged);
+      if (!result) return; /* offline — permanece local, será reconciliado no sync */
+    } catch (err) {
+      console.warn('[updateAd] Meta rejeitou, revertendo:', err?.message);
+      setAds(prev => prev.map(a => a.id === id ? before : a));
+      addNotification({
+        type: 'error',
+        title: 'Meta recusou a edição',
+        description: err?.message || 'Tente novamente em alguns instantes.',
       });
-      const merged = { ...a, ...patch };
-      adsApi.updateAd(a.serverId || a.id, merged);
-      return merged;
-    }));
-  }, [logHistory]);
+    }
+    return merged;
+  }, [ads, logHistory, addNotification]);
 
   const removeAd = useCallback((id) => {
     setAds(prev => {

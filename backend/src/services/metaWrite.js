@@ -73,6 +73,28 @@ async function updateCampaignStatus(creds, platformCampaignId, status) {
   return request('POST', `/${platformCampaignId}`, { status: metaStatus }, { token });
 }
 
+/* Atualiza campos mutáveis de uma Campaign no Meta (ex: name). */
+async function updateCampaignMeta(creds, platformCampaignId, fields) {
+  const token = getToken(creds);
+  const clean = {};
+  if (fields.name != null) clean.name = fields.name;
+  if (Object.keys(clean).length === 0) return null;
+  return request('POST', `/${platformCampaignId}`, clean, { token });
+}
+
+/* Atualiza campos mutáveis de um AdSet (budget, datas, nome). */
+async function updateAdSetMeta(creds, platformAdSetId, fields) {
+  const token = getToken(creds);
+  const clean = {};
+  if (fields.name != null) clean.name = fields.name;
+  if (fields.daily_budget != null) clean.daily_budget = Math.round(fields.daily_budget);
+  if (fields.lifetime_budget != null) clean.lifetime_budget = Math.round(fields.lifetime_budget);
+  if (fields.start_time != null) clean.start_time = fields.start_time;
+  if (fields.end_time != null) clean.end_time = fields.end_time;
+  if (Object.keys(clean).length === 0) return null;
+  return request('POST', `/${platformAdSetId}`, clean, { token });
+}
+
 async function deleteCampaign(creds, platformCampaignId) {
   const token = getToken(creds);
   return request('DELETE', `/${platformCampaignId}`, {}, { token });
@@ -211,4 +233,4 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
   };
 }
 
-module.exports = { updateCampaignStatus, deleteCampaign, publishCampaign, request, getToken };
+module.exports = { updateCampaignStatus, updateCampaignMeta, updateAdSetMeta, deleteCampaign, publishCampaign, request, getToken };

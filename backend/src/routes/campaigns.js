@@ -114,6 +114,76 @@ router.put('/:id', async (req, res) => {
   const { name, budget, start_date, end_date, spent, clicks, impressions, conversions, status, payload } = req.body;
   const payloadStr = payload !== undefined ? (payload ? JSON.stringify(payload) : null) : undefined;
   try {
+    /* Propaga mudanças pro Meta antes de gravar local (name/budget/datas).
+       Se o Meta recusar, retorna 502 — frontend reverte a edição local. */
+    const before = await db.query('SELECT * FROM campaigns WHERE id = ?', [req.params.id]);
+    const current = before.rows[0];
+    if (!current) return res.status(404).json({ error: 'Campanha não encontrada' });
+
+    const isMeta = (current.platform === 'meta' || current.platform === 'instagram') && current.platform_campaign_id;
+    if (isMeta) {
+      const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+      const creds = credResult.rows[0];
+      if (!creds) return res.status(400).json({ error: 'Meta não está conectado' });
+
+      /* Acha ad_sets reais (criados no publish) pra editar */
+      let prevPayload = {};
+      try { prevPayload = current.payload ? JSON.parse(current.payload) : {}; } catch {}
+      const adSetIds = (prevPayload?.metaPublishResult?.ad_sets || [])
+        .map(x => x.ad_set_id).filter(Boolean);
+      /* Fallback pro legado (1 ad_set só) */
+      if (adSetIds.length === 0 && prevPayload?.metaPublishResult?.ad_set_id) {
+        adSetIds.push(prevPayload.metaPublishResult.ad_set_id);
+      }
+      const ringSplit = (prevPayload?.metaPublishResult?.ad_sets || []).map(x => ({
+        id: x.ad_set_id,
+        pct: x.ring_percent ?? (100 / Math.max(1, (prevPayload?.metaPublishResult?.ad_sets || []).length)),
+      }));
+
+      const { updateCampaignMeta, updateAdSetMeta } = require('../services/metaWrite');
+
+      /* 1) Nome da Campaign */
+      if (name != null && name !== current.name) {
+        try {
+          await updateCampaignMeta(creds, current.platform_campaign_id, { name });
+        } catch (e) {
+          return res.status(502).json({ error: `Meta recusou a mudança de nome: ${e.message}`, meta: e.meta || null });
+        }
+      }
+
+      /* 2) Orçamento — redistribui pelos ad_sets usando ring_percent original */
+      if (budget != null && Number(budget) !== Number(current.budget) && adSetIds.length > 0) {
+        const totalCents = Math.round(Number(budget) * 100);
+        try {
+          for (const as of (ringSplit.length > 0 ? ringSplit : adSetIds.map(id => ({ id, pct: 100 })))) {
+            const ringCents = Math.round(totalCents * (as.pct / 100));
+            await updateAdSetMeta(creds, as.id, { daily_budget: ringCents });
+          }
+        } catch (e) {
+          return res.status(502).json({ error: `Meta recusou a mudança de orçamento: ${e.message}`, meta: e.meta || null });
+        }
+      }
+
+      /* 3) Datas de início/fim — aplica em TODOS os ad_sets */
+      const dateFields = {};
+      if (start_date != null && start_date !== current.start_date) {
+        dateFields.start_time = new Date(start_date + 'T00:00:00').toISOString();
+      }
+      if (end_date != null && end_date !== current.end_date) {
+        dateFields.end_time = new Date(end_date + 'T23:59:59').toISOString();
+      }
+      if (Object.keys(dateFields).length > 0 && adSetIds.length > 0) {
+        try {
+          for (const id of adSetIds) {
+            await updateAdSetMeta(creds, id, dateFields);
+          }
+        } catch (e) {
+          return res.status(502).json({ error: `Meta recusou a mudança de datas: ${e.message}`, meta: e.meta || null });
+        }
+      }
+    }
+
+    /* Tudo OK no Meta → persiste local */
     const result = await db.query(
       `UPDATE campaigns SET
         name = COALESCE(?, name),
