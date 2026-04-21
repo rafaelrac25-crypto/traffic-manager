@@ -762,9 +762,18 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
       setTimeout(() => setLocationError(''), 5000);
       return;
     }
+    /* Prioriza bairro específico (mesma lógica do clique no mapa) */
+    const a = r.address || {};
+    let name = a.neighbourhood || a.suburb || a.quarter || a.city_district || a.residential;
+    if (!name) {
+      const nearest = nearestDistrict(lat, lng);
+      if (nearest) name = nearest.name;
+    }
+    if (!name) name = r.display_name.split(',').slice(0, 2).join(',').trim();
+
     setLocations(prev => [...prev, {
       id: Date.now(),
-      name: r.display_name.split(',').slice(0, 2).join(',').trim(),
+      name,
       lat,
       lng,
       radius: activeRadius,
@@ -1829,8 +1838,7 @@ function Step5Creative({ adFormat, setAdFormat, mediaFiles, setMediaFiles, prima
             {adFormat === 'carousel' ? 'Adicionar cartões (2–10 imagens)' : 'Clique ou arraste o arquivo aqui'}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>
-            Imagem: JPG, PNG — comprimida automaticamente (1080 px, JPEG 85%)<br/>
-            Vídeo: MP4, MOV — comprimido automaticamente se {'>'} 4 MB (720p, H.264)
+            Qualquer imagem ou vídeo — o sistema otimiza automaticamente antes de enviar ao Meta.
           </div>
         </div>
       </div>
@@ -2408,25 +2416,43 @@ export default function CreateAd() {
   }
 
   /* Upload de mídia ANTES do publish — usa endpoint multipart dedicado
-     que bypassa o limite de 4.5MB de body JSON do Vercel. Retorna a lista
-     de mídias com IDs reais do Meta (image_hash ou video_id) já populados. */
+     que bypassa o limite de 4.5MB de body JSON do Vercel.
+     Para vídeos, também extrai frame como thumbnail (Meta video_data exige
+     image_hash além do video_id). */
   async function uploadAllMedia(files) {
     const out = [];
     for (const m of files || []) {
       if (!m?.file) {
-        /* Fallback: se não tem File (ex: carregado de localStorage), skipa */
         if (m?.metaHash || m?.metaVideoId) out.push(m);
         continue;
       }
       const { uploadMedia } = await import('../services/adsApi');
-      const result = await uploadMedia(m.file);
-      out.push({
-        id: m.id,
-        type: result.type,
-        name: m.name,
-        metaHash: result.hash || null,
-        metaVideoId: result.id || null,
-      });
+
+      if (m.type === 'video') {
+        /* Extrai thumbnail do vídeo + upload junto */
+        const { extractVideoThumbnail } = await import('../utils/videoCompressor');
+        const thumbFile = await extractVideoThumbnail(m.file);
+        const [videoResult, thumbResult] = await Promise.all([
+          uploadMedia(m.file),
+          uploadMedia(thumbFile),
+        ]);
+        out.push({
+          id: m.id,
+          type: 'video',
+          name: m.name,
+          metaVideoId: videoResult.id || null,
+          metaHash: thumbResult.hash || null,  /* thumbnail pro video_data.image_hash */
+        });
+      } else {
+        const result = await uploadMedia(m.file);
+        out.push({
+          id: m.id,
+          type: result.type,
+          name: m.name,
+          metaHash: result.hash || null,
+          metaVideoId: null,
+        });
+      }
     }
     return out;
   }

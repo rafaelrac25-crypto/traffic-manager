@@ -36,6 +36,60 @@ async function getFFmpeg(onLoadProgress) {
    overhead de multipart (boundary + headers). */
 const TARGET_MB = 4.0;
 
+/* Extrai 1 frame do vídeo como JPEG pra usar como thumbnail no creative Meta.
+   Meta video_data exige image_url OU image_hash além do video_id. */
+export async function extractVideoThumbnail(videoFile) {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    const url = URL.createObjectURL(videoFile);
+    video.src = url;
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = 'metadata';
+
+    const cleanup = () => { URL.revokeObjectURL(url); };
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error('Timeout ao extrair thumbnail'));
+    }, 15000);
+
+    video.onloadedmetadata = () => {
+      /* Pega frame em 1s ou metade do vídeo — evita primeiro frame preto */
+      video.currentTime = Math.min(1, (video.duration || 2) / 2);
+    };
+    video.onseeked = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        const maxDim = 1080;
+        let w = video.videoWidth, h = video.videoHeight;
+        if (w > maxDim || h > maxDim) {
+          const scale = maxDim / Math.max(w, h);
+          w = Math.round(w * scale);
+          h = Math.round(h * scale);
+        }
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(video, 0, 0, w, h);
+        canvas.toBlob(blob => {
+          clearTimeout(timeout);
+          cleanup();
+          if (!blob) return reject(new Error('Falha ao gerar thumbnail'));
+          resolve(new File([blob], 'thumbnail.jpg', { type: 'image/jpeg' }));
+        }, 'image/jpeg', 0.85);
+      } catch (e) {
+        clearTimeout(timeout);
+        cleanup();
+        reject(e);
+      }
+    };
+    video.onerror = () => {
+      clearTimeout(timeout);
+      cleanup();
+      reject(new Error('Não foi possível ler o vídeo'));
+    };
+  });
+}
+
 /* Comprime vídeo com bitrate adaptativo baseado na duração pra garantir
    tamanho final <= TARGET_MB. Se não conseguir no primeiro pass, reencoda
    com parâmetros mais agressivos automaticamente. */

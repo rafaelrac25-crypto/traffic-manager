@@ -64,9 +64,11 @@ export async function processVideoAuto(file, onProgress) {
     const compressed = await compressVideo(file, onProgress);
     const compressedMB = compressed.size / (1024 * 1024);
     if (compressedMB > MAX_VIDEO_MB_AFTER) {
+      /* Força redução adicional (pass final já roda 360p + 200k) — se ainda
+         passou, vídeo é muito longo. Não exige ação do user, mas avisa. */
       return {
         ok: false,
-        reason: `Vídeo ficou com ${compressedMB.toFixed(1)} MB mesmo após compressão (limite ${MAX_VIDEO_MB_AFTER} MB). Use um vídeo mais curto (<30s) ou em resolução menor.`,
+        reason: `Vídeo muito longo — mesmo otimizado ao máximo ficou em ${compressedMB.toFixed(1)} MB. Tente cortar pra ≤30s.`,
       };
     }
     return { ok: true, file: compressed, wasCompressed: true };
