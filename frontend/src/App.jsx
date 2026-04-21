@@ -99,6 +99,7 @@ const FALLBACK_LINK = {
   'high-cpc': '/anuncios',
   funds: '/investimento',
   'commercial-date': '/criar-anuncio',
+  'reconnect-required': '/investimento',
   info: '/',
 };
 
@@ -130,6 +131,7 @@ function NotificationDropdown({ open, onClose }) {
     'high-cpc':  { bg: '#FFF7ED', border: '#FDBA74', emoji: '📈' },
     funds:       { bg: '#F0FDF4', border: '#86EFAC', emoji: '💵' },
     'commercial-date': { bg: '#FDF2F8', border: '#F9A8D4', emoji: '📅' },
+    'reconnect-required': { bg: '#FEF2F2', border: '#FCA5A5', emoji: '🔌' },
     info:        { bg: 'var(--c-surface)', border: 'var(--c-border)', emoji: '🔔' },
   };
 

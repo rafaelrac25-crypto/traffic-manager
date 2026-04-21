@@ -126,11 +126,35 @@ export function AppStateProvider({ children }) {
     return () => { cancelled = true; };
   }, []);
 
+  /* Avisa no sino apenas quando o Rafa precisa reconectar manualmente.
+     Dedupa: não repete se já existe uma notificação 'reconnect-required' não lida. */
+  const notifyReconnectRequired = useCallback(() => {
+    setNotifications(prev => {
+      if (prev.some(n => n.kind === 'reconnect-required' && !n.read)) return prev;
+      setTimeout(() => playBell(), 0);
+      return [{
+        id: Date.now() + Math.random(),
+        createdAt: new Date().toISOString(),
+        read: false,
+        kind: 'reconnect-required',
+        title: 'Conexão Meta expirada — reconecte',
+        message: 'A renovação automática do token falhou. Clique para reconectar o Facebook sem perder suas configurações.',
+        link: '/investimento',
+      }, ...prev].slice(0, 50);
+    });
+  }, []);
+
   /* Saldo Meta Ads — busca do backend, auto-refresh horário + refresh manual via botão */
   const refreshMetaBilling = useCallback(async () => {
     setMetaBillingLoading(true);
     try {
       const r = await fetch('/api/platforms/meta/billing', { cache: 'no-store' });
+      if (r.status === 401) {
+        const body = await r.json().catch(() => ({}));
+        if (body?.needs_reconnect) notifyReconnectRequired();
+        setMetaBilling(null);
+        return null;
+      }
       if (!r.ok) { setMetaBilling(null); return null; }
       const data = await r.json();
       setMetaBilling(data);
@@ -142,7 +166,7 @@ export function AppStateProvider({ children }) {
     } finally {
       setMetaBillingLoading(false);
     }
-  }, []);
+  }, [notifyReconnectRequired]);
 
   useEffect(() => {
     let cancelled = false;
@@ -170,6 +194,8 @@ export function AppStateProvider({ children }) {
         const data = await pr.json();
         const meta = Array.isArray(data) ? data.find(p => p.platform === 'meta') : null;
         if (!meta?.connected) return;
+        /* Token expirou e renovação automática falhou — avisa no sino (dedupado) */
+        if (meta.needs_reconnect) { notifyReconnectRequired(); return; }
         const sr = await fetch('/api/campaigns/sync/meta', { method: 'POST' });
         if (!sr.ok) {
           const body = await sr.json().catch(() => ({}));
