@@ -1,7 +1,7 @@
 const https = require('https');
-const { URL } = require('url');
 const { decrypt } = require('./crypto');
 const { parseMetaError } = require('./metaErrors');
+const { uploadImage } = require('./metaMedia');
 
 const API_VERSION = 'v20.0';
 const GRAPH_HOST = 'graph.facebook.com';
@@ -16,21 +16,26 @@ function getToken(creds) {
   return creds.access_token;
 }
 
+function toBody(params) {
+  const out = {};
+  Object.entries(params).forEach(([k, v]) => {
+    if (v === undefined || v === null) return;
+    out[k] = typeof v === 'object' ? JSON.stringify(v) : String(v);
+  });
+  return new URLSearchParams(out).toString();
+}
+
 function request(method, path, params = {}, { token } = {}) {
   return new Promise((resolve, reject) => {
-    const search = new URLSearchParams();
-    if (token) search.set('access_token', token);
+    const fullParams = { ...params };
+    if (token) fullParams.access_token = token;
+    let fullPath = `${GRAPH_BASE}${path}`;
+    let body = null;
     if (method === 'GET') {
-      Object.entries(params).forEach(([k, v]) => {
-        if (v !== undefined && v !== null) search.set(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
-      });
+      fullPath += `?${toBody(fullParams)}`;
+    } else {
+      body = toBody(fullParams);
     }
-    const fullPath = `${GRAPH_BASE}${path}?${search.toString()}`;
-    const body = method !== 'GET' ? new URLSearchParams(Object.entries(params).reduce((acc, [k, v]) => {
-      if (v !== undefined && v !== null) acc[k] = typeof v === 'object' ? JSON.stringify(v) : String(v);
-      return acc;
-    }, {})).toString() : null;
-
     const req = https.request({
       host: GRAPH_HOST,
       path: fullPath,
@@ -73,4 +78,100 @@ async function deleteCampaign(creds, platformCampaignId) {
   return request('DELETE', `/${platformCampaignId}`, {}, { token });
 }
 
-module.exports = { updateCampaignStatus, deleteCampaign, request, getToken };
+/**
+ * Publica uma campanha completa no Meta:
+ * 1. Upload de mídia (se houver base64)
+ * 2. Cria Campaign
+ * 3. Cria AdSet
+ * 4. Cria Creative (com image_hash real)
+ * 5. Cria Ad
+ * Retorna IDs reais do Meta.
+ */
+async function publishCampaign(creds, metaPayload, mediaItems = []) {
+  const token = getToken(creds);
+  const accountId = creds.account_id;
+  if (!accountId) throw new Error('account_id ausente');
+  if (!metaPayload?.campaign || !metaPayload?.ad_set || !metaPayload?.creative || !metaPayload?.ad) {
+    throw new Error('Payload Meta incompleto (precisa de campaign, ad_set, creative, ad)');
+  }
+
+  // 1. Upload de mídia
+  const uploadedImages = [];
+  for (const m of mediaItems) {
+    if (m?.base64 && (m.type === 'image' || !m.type)) {
+      try {
+        const img = await uploadImage(creds, m.base64);
+        uploadedImages.push({ ...img, originalId: m.id });
+      } catch (e) {
+        throw new Error(`Falha ao enviar mídia "${m.name || 'imagem'}": ${e.message}`);
+      }
+    }
+  }
+  const mainImageHash = uploadedImages[0]?.hash || metaPayload.creative?.object_story_spec?.link_data?.image_hash;
+
+  // 2. Campaign
+  const c = metaPayload.campaign;
+  const campParams = {
+    name: c.name,
+    objective: c.objective,
+    status: 'PAUSED',
+    buying_type: c.buying_type || 'AUCTION',
+    special_ad_categories: c.special_ad_categories || [],
+  };
+  if (c.daily_budget) campParams.daily_budget = c.daily_budget;
+  if (c.lifetime_budget) campParams.lifetime_budget = c.lifetime_budget;
+  const campResp = await request('POST', `/${accountId}/campaigns`, campParams, { token });
+  const campaignId = campResp.id;
+
+  // 3. AdSet
+  const a = metaPayload.ad_set;
+  const asParams = {
+    campaign_id: campaignId,
+    name: a.name,
+    optimization_goal: a.optimization_goal,
+    billing_event: a.billing_event,
+    bid_strategy: a.bid_strategy || 'LOWEST_COST_WITHOUT_CAP',
+    status: 'PAUSED',
+    targeting: a.targeting,
+  };
+  if (a.daily_budget) asParams.daily_budget = a.daily_budget;
+  if (a.lifetime_budget) asParams.lifetime_budget = a.lifetime_budget;
+  if (a.start_time) asParams.start_time = a.start_time;
+  if (a.end_time) asParams.end_time = a.end_time;
+  if (a.promoted_object) asParams.promoted_object = a.promoted_object;
+  const asResp = await request('POST', `/${accountId}/adsets`, asParams, { token });
+  const adSetId = asResp.id;
+
+  // 4. Creative
+  const cr = { ...metaPayload.creative };
+  const storySpec = JSON.parse(JSON.stringify(cr.object_story_spec || {}));
+  if (storySpec.link_data) {
+    if (mainImageHash) storySpec.link_data.image_hash = mainImageHash;
+    if (!storySpec.page_id && creds.page_id) storySpec.page_id = creds.page_id;
+  }
+  const crResp = await request('POST', `/${accountId}/adcreatives`, {
+    name: cr.name || `${c.name} — Criativo`,
+    object_story_spec: storySpec,
+  }, { token });
+  const creativeId = crResp.id;
+
+  // 5. Ad
+  const ad = metaPayload.ad;
+  const adResp = await request('POST', `/${accountId}/ads`, {
+    name: ad.name,
+    adset_id: adSetId,
+    creative: { creative_id: creativeId },
+    status: 'PAUSED',
+  }, { token });
+  const adId = adResp.id;
+
+  return {
+    platform_campaign_id: campaignId,
+    ad_set_id: adSetId,
+    creative_id: creativeId,
+    ad_id: adId,
+    uploaded_images: uploadedImages,
+  };
+}
+
+module.exports = { updateCampaignStatus, deleteCampaign, publishCampaign, request, getToken };

@@ -46,24 +46,55 @@ router.post('/', async (req, res) => {
 
   const mode = publish_mode || 'immediate';
   const isImmediate = mode === 'immediate';
-  const status = statusIn || (isImmediate ? 'review' : 'scheduled');
+  let status = statusIn || (isImmediate ? 'review' : 'scheduled');
   const submitted_at = isImmediate ? new Date().toISOString() : null;
   const sched = (!isImmediate && scheduled_for) ? scheduled_for : null;
-  const payloadStr = payload ? JSON.stringify(payload) : null;
+
+  let metaResult = null;
+  let platform_campaign_id = null;
+  let metaError = null;
+
+  const shouldPublishMeta = (platform === 'meta' || platform === 'instagram') && isImmediate && payload?.meta?.campaign;
+  if (shouldPublishMeta) {
+    try {
+      const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+      const creds = credResult.rows[0];
+      if (!creds) throw new Error('Conecte o Facebook antes de publicar');
+      const { publishCampaign } = require('../services/metaWrite');
+      const mediaItems = Array.isArray(payload.mediaFilesData) ? payload.mediaFilesData : [];
+      metaResult = await publishCampaign(creds, payload.meta, mediaItems);
+      platform_campaign_id = metaResult.platform_campaign_id;
+      status = 'review';
+    } catch (e) {
+      console.error('[meta.publish]', e);
+      metaError = e.message || 'Erro ao publicar no Meta';
+      return res.status(502).json({ error: metaError, meta: e.meta || null });
+    }
+  }
+
+  const enrichedPayload = metaResult
+    ? { ...payload, mediaFilesData: undefined, metaPublishResult: metaResult }
+    : payload
+      ? { ...payload, mediaFilesData: undefined }
+      : null;
+  const payloadStr = enrichedPayload ? JSON.stringify(enrichedPayload) : null;
 
   try {
+    const savedPlatform = metaResult ? 'meta' : platform;
     const result = await db.query(
       `INSERT INTO campaigns
-        (name, platform, budget, start_date, end_date, publish_mode, status, scheduled_for, submitted_at, payload)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
-      [name, platform, budget || null, start_date || null, end_date || null,
+        (name, platform, platform_campaign_id, budget, start_date, end_date, publish_mode, status, scheduled_for, submitted_at, payload)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
+      [name, savedPlatform, platform_campaign_id, budget || null, start_date || null, end_date || null,
        mode, status, sched, submitted_at, payloadStr]
     );
     const camp = rowToAd(result.rows[0]);
-    const desc = mode === 'scheduled'
+    const desc = metaResult
+      ? `Campanha "${name}" publicada no Meta (ID ${platform_campaign_id})`
+      : mode === 'scheduled'
       ? `Campanha "${name}" agendada para ${sched}`
       : `Campanha "${name}" criada na plataforma ${platform}`;
-    await log('create', 'campaign', camp?.id, desc, { platform, budget, mode });
+    await log('create', 'campaign', camp?.id, desc, { platform, budget, mode, platform_campaign_id });
     res.status(201).json(camp);
   } catch (err) {
     console.error(err);

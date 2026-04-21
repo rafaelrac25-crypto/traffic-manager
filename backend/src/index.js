@@ -8,10 +8,10 @@ const app = express();
 
 app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
 app.use(express.json({
-  limit: '8mb',
+  limit: '30mb',
   verify: (req, _res, buf) => { req.rawBody = buf.toString('utf8'); },
 }));
-app.use(express.urlencoded({ extended: true, limit: '8mb' }));
+app.use(express.urlencoded({ extended: true, limit: '30mb' }));
 
 // Remove prefixo /_/backend das URLs (Vercel proxy)
 app.use((req, res, next) => {

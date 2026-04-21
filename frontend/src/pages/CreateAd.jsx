@@ -1842,7 +1842,33 @@ export default function CreateAd() {
   const todayISO = new Date().toISOString().split('T')[0];
   const isScheduled = !!startDate && startDate > todayISO;
 
-  function handlePublish() {
+  async function blobUrlToBase64(url) {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      return await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve({ dataUrl: reader.result, mime: blob.type });
+        reader.readAsDataURL(blob);
+      });
+    } catch { return null; }
+  }
+
+  async function prepareMediaData(files) {
+    const out = [];
+    for (const m of files || []) {
+      if (!m?.url) continue;
+      if (m.url.startsWith('blob:')) {
+        const r = await blobUrlToBase64(m.url);
+        if (r) out.push({ id: m.id, type: m.type, name: m.name, base64: r.dataUrl, mime: r.mime });
+      } else if (m.url.startsWith('data:')) {
+        out.push({ id: m.id, type: m.type, name: m.name, base64: m.url });
+      }
+    }
+    return out;
+  }
+
+  async function handlePublish() {
     // Revalidação final — evita estado inválido após navegar entre steps.
     const finalErrs = validateAll();
     if (Object.keys(finalErrs).length > 0) {
@@ -1886,6 +1912,9 @@ export default function CreateAd() {
       name: m.name,
     }));
 
+    // Converte mídia em base64 pra backend fazer upload no Meta
+    const mediaFilesData = await prepareMediaData(mediaFiles);
+
     // Referências (em vez de duplicar) quando o user reusa audience/creative
     const audienceId = reuseAudience?.id || null;
     const creativeId = reuseCreative?.id || null;
@@ -1908,6 +1937,7 @@ export default function CreateAd() {
       // Criativo (local)
       adFormat, primaryText, headline, destUrl, ctaButton,
       mediaFiles: serializedMedia,
+      mediaFilesData,
 
       // Referências a outras entidades salvas
       audienceId, creativeId, referenceId,
