@@ -50,8 +50,16 @@ export async function createAd(ad) {
     const { data } = await api.post(BASE, adToPayload(ad));
     return data;
   } catch (err) {
-    console.warn('[adsApi] createAd falhou — mantido só em localStorage', err?.message);
-    return null;
+    const status = err?.response?.status;
+    const body = err?.response?.data;
+    console.warn('[adsApi] createAd falhou', status, body || err?.message);
+    /* Retorna objeto de falha estruturado pro addAd exibir motivo real na UI */
+    return {
+      __failed: true,
+      status,
+      error: body?.error || err?.message || 'Erro desconhecido',
+      meta: body?.meta || null,
+    };
   }
 }
 

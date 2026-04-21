@@ -61,8 +61,31 @@ export function AppStateProvider({ children }) {
   const [rejectedAds,   setRejectedAds]   = useState(() => load(KEY_REJECTED, []));
   const [funds,         setFunds]         = useState(() => load(KEY_FUNDS, 50));
   const [metaAccount,   setMetaAccount]   = useState(() => load(KEY_META, {
-    connected: false, name: 'Cris Costa', avatarUrl: null, pageId: null,
+    connected: false, name: 'Cris Costa', avatarUrl: null, pageId: null, accountId: null,
   }));
+
+  /* Sincroniza metaAccount com a realidade do backend — sem isso o frontend
+     mostrava 'Conta Meta não conectada' mesmo quando platform_credentials
+     tinha linha válida no banco. */
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/platforms', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (cancelled || !Array.isArray(data)) return;
+        const meta = data.find(p => p.platform === 'meta');
+        if (!meta) return;
+        setMetaAccount(prev => ({
+          ...prev,
+          connected: !!meta.connected,
+          pageId: meta.page_id || prev.pageId,
+          accountId: meta.account_id || prev.accountId,
+          igBusinessId: meta.ig_business_id || prev.igBusinessId,
+        }));
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
   const [metaBilling,   setMetaBilling]   = useState(null);
   const [metaBillingLoading, setMetaBillingLoading] = useState(false);
   const [metaBillingLastUpdate, setMetaBillingLastUpdate] = useState(null);
@@ -491,12 +514,17 @@ export function AppStateProvider({ children }) {
        lugar nenhum (banco ou Meta). Trade-off aceito: offline resiliente vira
        offline-com-erro visível. */
     adsApi.createAd(newAd).then((serverAd) => {
-      if (!serverAd) {
+      if (!serverAd || serverAd.__failed) {
         setAds(prev => prev.filter(a => a.id !== newAd.id));
+        const reason = serverAd?.error || 'Sem conexão com o servidor';
+        const friendly =
+          serverAd?.status === 504 || serverAd?.status === 408
+            ? 'O Meta demorou demais para responder (possível timeout na criação da campanha ou upload de mídia). Tente reduzir o tamanho da imagem para <1MB e tente novamente.'
+            : reason;
         addNotification({
           kind: 'publish-failed',
-          title: 'Falha ao publicar no servidor',
-          message: `Não conseguimos salvar "${newAd.name}". Verifique sua conexão e tente novamente.`,
+          title: 'Falha ao publicar',
+          message: `"${newAd.name}" não foi publicado. ${friendly}`,
         });
         return;
       }
