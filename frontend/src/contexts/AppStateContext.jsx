@@ -113,7 +113,12 @@ export function AppStateProvider({ children }) {
     adsApi.fetchAds().then((remote) => {
       if (cancelled || !remote) return;
       if (remote.length === 0) return; /* mantém localStorage se servidor está vazio */
-      setAds(remote.map(r => ({ ...r, serverId: r.id })));
+      /* Merge: preserva ads locais sem serverId (pendentes de publicação). */
+      setAds(prev => {
+        const remoteWithServer = remote.map(r => ({ ...r, serverId: r.id }));
+        const pendingLocal = prev.filter(a => !a.serverId);
+        return [...pendingLocal, ...remoteWithServer];
+      });
     });
     return () => { cancelled = true; };
   }, []);
@@ -139,7 +144,13 @@ export function AppStateProvider({ children }) {
         }
         const remote = await adsApi.fetchAds();
         if (cancelled || !remote || remote.length === 0) return;
-        setAds(remote.map(r => ({ ...r, serverId: r.id })));
+        /* Merge: preserva ads locais ainda não sincronizados com o backend
+           (ex: Meta temporariamente offline). Nunca apaga um ad local pendente. */
+        setAds(prev => {
+          const remoteWithServer = remote.map(r => ({ ...r, serverId: r.id }));
+          const pendingLocal = prev.filter(a => !a.serverId);
+          return [...pendingLocal, ...remoteWithServer];
+        });
       } catch (err) {
         if (cancelled) return;
         if (Date.now() - lastErrorNotifAt < 10 * 60 * 1000) return;
@@ -340,13 +351,29 @@ export function AppStateProvider({ children }) {
     });
     /* Persiste no backend em paralelo — se API estiver offline, segue só localStorage */
     adsApi.createAd(newAd).then((serverAd) => {
-      if (serverAd && serverAd.id && serverAd.id !== newAd.id) {
-        /* Adota o id real do banco, preservando o restante do estado local */
+      if (!serverAd) return; /* rede offline — mantém local (será re-tentado no próximo sync) */
+
+      /* Meta recusou a publicação: remove de /anuncios e move pra /reprovados + toca sino */
+      if (serverAd.rejected) {
+        setAds(prev => prev.filter(a => a.id !== newAd.id));
+        addRejectedAd({
+          name: newAd.name,
+          reason: serverAd.reason || 'Meta recusou a publicação',
+          details: serverAd.details || null,
+          code: serverAd.code || null,
+          platform: newAd.platform,
+          originalPayload: newAd,
+        });
+        return;
+      }
+
+      /* Sucesso — adota o id real do banco, preservando o restante do estado local */
+      if (serverAd.id && serverAd.id !== newAd.id) {
         setAds(prev => prev.map(a => a.id === newAd.id ? { ...a, id: serverAd.id, serverId: serverAd.id } : a));
       }
     });
     return newAd;
-  }, [logHistory]);
+  }, [logHistory, addRejectedAd]);
 
   const updateAd = useCallback((id, patch) => {
     setAds(prev => prev.map(a => {

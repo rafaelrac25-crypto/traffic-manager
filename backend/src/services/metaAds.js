@@ -62,9 +62,16 @@ async function fetchCampaigns(creds) {
     return {
       id: c.id,
       name: c.name,
-      status: (c.effective_status === 'ACTIVE' || c.status === 'ACTIVE') ? 'active'
-        : (c.effective_status === 'PAUSED' || c.status === 'PAUSED') ? 'paused'
-        : (c.status || 'unknown').toLowerCase(),
+      status: (() => {
+        const eff = c.effective_status;
+        const st  = c.status;
+        if (eff === 'ACTIVE' || st === 'ACTIVE') return 'active';
+        if (eff === 'PAUSED' || st === 'PAUSED') return 'paused';
+        /* Estados intermediários de revisão do Meta → frontend mostra "Em revisão" */
+        if (['IN_PROCESS','PENDING_REVIEW','PREAPPROVED','PENDING_BILLING_INFO','WITH_ISSUES','PENDING_PROCESSING'].includes(eff)) return 'review';
+        if (['DISAPPROVED','ADSET_PAUSED','CAMPAIGN_PAUSED','ARCHIVED','DELETED'].includes(eff)) return 'ended';
+        return (st || 'unknown').toLowerCase();
+      })(),
       effective_status: c.effective_status,
       objective: c.objective,
       budget: parseFloat(c.daily_budget || c.lifetime_budget || 0) / 100,

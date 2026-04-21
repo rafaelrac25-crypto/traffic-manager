@@ -68,7 +68,15 @@ router.post('/', async (req, res) => {
     } catch (e) {
       console.error('[meta.publish]', e);
       metaError = e.message || 'Erro ao publicar no Meta';
-      return res.status(502).json({ error: metaError, meta: e.meta || null });
+      /* Meta recusou: não persistimos em campaigns — o frontend vai mover
+         pra rejectedAds (página /reprovados) e disparar alerta no sino. */
+      return res.status(200).json({
+        rejected: true,
+        reason: metaError,
+        details: e.meta?.details || e.meta?.user_msg || null,
+        code: e.meta?.code || null,
+        meta: e.meta || null,
+      });
     }
   }
 

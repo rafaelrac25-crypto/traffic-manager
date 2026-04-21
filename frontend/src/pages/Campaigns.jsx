@@ -267,7 +267,8 @@ function getPerformanceIssues(ad, avgCostPerResult) {
 function AdRow({ ad, isLast, highCpc, onPreview, onToggle, onDuplicate, onEdit, onRemove }) {
   const [hovered, setHovered] = useState(false);
   const plat   = PLAT[ad.platform]   || PLAT.instagram;
-  const status = STATUS[ad.status]   || STATUS.ended;
+  /* Status desconhecido do Meta (ex: sync retornou estado intermediário) → assume "Em revisão" */
+  const status = STATUS[ad.status]   || STATUS.review;
   const isActive = ad.status === 'active';
   const isEnded  = ad.status === 'ended';
 
