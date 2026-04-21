@@ -1,30 +1,41 @@
 /**
  * Normaliza dados do wizard local pro schema oficial da Meta Marketing API v20+.
  *
- * Quando ringsEnabled=true E os bairros selecionados caem em ≥2 anéis por distância,
- * emite `ad_sets: [...]` (array) em vez de `ad_set: {...}` único. O backend
- * publishCampaign detecta e cria N AdSets sob a mesma Campaign, cada um com seu
- * próprio budget e targeting geográfico, compartilhando 1 único Creative.
+ * ringsMode: 'auto' | '1' | '2' | '3' (default 'auto').
+ * Quando o resultado tem ≥2 anéis ativos, emite `ad_sets: [...]` (array) em vez
+ * de `ad_set: {...}` único. O backend publishCampaign detecta e cria N AdSets
+ * sob a mesma Campaign, cada um com seu budget e targeting geográfico,
+ * compartilhando 1 único Creative.
  */
 
 import { HOME_COORDS, distanceKm } from '../data/joinvilleDistricts';
 
-/* Classifica bairros em anéis (primario/medio/externo) usando quantis de distância
-   do Boa Vista. Mesma regra do CreateAd — espelhada aqui pra não criar dep circular. */
-function classifyRings(locations, ringsEnabled = true) {
+/* Classifica bairros em anéis. ringsMode: 'auto' | '1' | '2' | '3'.
+   Mantém compat com a flag booleana legada `ringsEnabled`. */
+function classifyRings(locations, ringsMode = 'auto') {
   const buckets = { primario: [], medio: [], externo: [] };
   const valid = (locations || [])
     .filter(l => l?.lat != null && l?.lng != null)
     .map(l => ({ loc: l, d: distanceKm(HOME_COORDS, { lat: l.lat, lng: l.lng }) }))
     .sort((a, b) => a.d - b.d);
   if (valid.length === 0) return buckets;
-  const spread = valid[valid.length - 1].d - valid[0].d;
-  if (!ringsEnabled || spread <= 2 || valid.length === 1) {
+
+  let numRings;
+  if (ringsMode === '1' || ringsMode === false) numRings = 1;
+  else if (ringsMode === '2') numRings = Math.min(2, valid.length);
+  else if (ringsMode === '3') numRings = Math.min(3, valid.length);
+  else {
+    /* 'auto' / true: decide pelo spread e quantidade */
+    const spread = valid[valid.length - 1].d - valid[0].d;
+    if (spread <= 2 || valid.length === 1) numRings = 1;
+    else if (valid.length >= 6 && spread >= 4) numRings = 3;
+    else numRings = 2;
+  }
+
+  if (numRings === 1) {
     valid.forEach(({ loc }) => buckets.primario.push(loc));
     return buckets;
   }
-  const useThree = valid.length >= 6 && spread >= 4;
-  const numRings = useThree ? 3 : 2;
   const perGroup = Math.ceil(valid.length / numRings);
   const keys = ['primario', 'medio', 'externo'];
   valid.forEach(({ loc }, idx) => {
@@ -180,7 +191,11 @@ export function toMetaPayload(ad) {
     promoted_object:    ad.pixelId ? { pixel_id: ad.pixelId } : undefined,
   };
 
-  const buckets = classifyRings(ad.locations, ad.ringsEnabled !== false);
+  /* Aceita `ringsMode` (novo) ou `ringsEnabled` (legado) */
+  const modeArg = ad.ringsMode !== undefined
+    ? ad.ringsMode
+    : (ad.ringsEnabled === false ? '1' : 'auto');
+  const buckets = classifyRings(ad.locations, modeArg);
   const activeKeys = ['primario', 'medio', 'externo'].filter(k => buckets[k].length > 0);
   const splitInput = ad.budgetRingSplit || {};
   /* Normaliza split pra garantir soma 100% entre ativos; distribui igualmente se ausente */
@@ -199,7 +214,8 @@ export function toMetaPayload(ad) {
   }
 
   const RING_LABEL = { primario: 'Primário', medio: 'Médio', externo: 'Externo' };
-  const useMultiple = activeKeys.length >= 2 && ad.ringsEnabled !== false;
+  /* activeKeys já reflete ringsMode (classifyRings colapsa pra 1 quando mode='1' ou ringsEnabled=false) */
+  const useMultiple = activeKeys.length >= 2;
 
   if (useMultiple) {
     /* Um ad_set por anel, cada um com fatia do budget + geo filtrado */
