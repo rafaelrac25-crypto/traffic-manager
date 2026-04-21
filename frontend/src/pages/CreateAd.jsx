@@ -774,16 +774,35 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
    PASSO 3 — ORÇAMENTO
 ══════════════════════════════════════════ */
 
-/* Classifica cada location pelo anel (primário/médio/externo/fora) */
-function classifyLocationsByRing(locations) {
+/* Classifica bairros em anéis baseado nas distâncias dos selecionados.
+   - Se ringsEnabled=false OU spread total ≤ 2km OU apenas 1 bairro → 1 anel (primario)
+   - Se spread > 2km e N < 6 (ou spread < 4km) → 2 anéis (primario/medio) por mediana
+   - Se N ≥ 6 E spread ≥ 4km → 3 anéis (primario/medio/externo) por tercis
+   Sempre retorna {primario, medio, externo, fora} pra manter compat com UI. */
+function classifyLocationsByRing(locations, ringsEnabled = true) {
   const buckets = { primario: [], medio: [], externo: [], fora: [] };
-  (locations || []).forEach(loc => {
-    if (loc.lat == null || loc.lng == null) return;
-    const d = distanceKm(HOME_COORDS, { lat: loc.lat, lng: loc.lng });
-    if (d <= 5) buckets.primario.push(loc);
-    else if (d <= 7) buckets.medio.push(loc);
-    else if (d <= 8) buckets.externo.push(loc);
-    else buckets.fora.push(loc);
+  const valid = (locations || [])
+    .filter(l => l?.lat != null && l?.lng != null)
+    .map(l => ({ loc: l, d: distanceKm(HOME_COORDS, { lat: l.lat, lng: l.lng }) }))
+    .sort((a, b) => a.d - b.d);
+
+  if (valid.length === 0) return buckets;
+
+  const spread = valid[valid.length - 1].d - valid[0].d;
+  const collapseToSingle = !ringsEnabled || spread <= 2 || valid.length === 1;
+
+  if (collapseToSingle) {
+    valid.forEach(({ loc }) => buckets.primario.push(loc));
+    return buckets;
+  }
+
+  const useThree = valid.length >= 6 && spread >= 4;
+  const numRings = useThree ? 3 : 2;
+  const perGroup = Math.ceil(valid.length / numRings);
+  const ringKeys = ['primario', 'medio', 'externo'];
+  valid.forEach(({ loc }, idx) => {
+    const ringIdx = Math.min(Math.floor(idx / perGroup), numRings - 1);
+    buckets[ringKeys[ringIdx]].push(loc);
   });
   return buckets;
 }
@@ -802,8 +821,8 @@ function normalizeSplit(split, activeKeys) {
   return cleaned;
 }
 
-function RingBudgetSplit({ locations, budgetValue, budgetType, split, setSplit }) {
-  const buckets = classifyLocationsByRing(locations);
+function RingBudgetSplit({ locations, budgetValue, budgetType, split, setSplit, ringsEnabled = true }) {
+  const buckets = classifyLocationsByRing(locations, ringsEnabled);
   const activeKeys = ['primario', 'medio', 'externo'].filter(k => buckets[k].length > 0);
   const validLocations = (locations || []).filter(l => l && l.lat != null && l.lng != null);
 
@@ -955,11 +974,33 @@ function RingBudgetSplit({ locations, budgetValue, budgetType, split, setSplit }
         {balanced ? `✅ Total: 100% · R$\u00A0${value.toFixed(2).replace('.', ',')} distribuídos` : `⚠️ Total: ${total}% — ajuste para fechar 100%`}
       </div>
 
+      {/* Alerta de budget mínimo — Meta exige ~R$ 6/dia por ad set */}
+      {budgetType === 'daily' && balanced && (() => {
+        const lowRings = RINGS.filter(r => activeKeys.includes(r.key))
+          .map(r => ({ key: r.key, label: r.label, share: value * (Number(normalized[r.key]) || 0) / 100 }))
+          .filter(r => r.share < 6);
+        if (lowRings.length === 0) return null;
+        return (
+          <div style={{
+            marginTop: '10px', padding: '10px 12px', borderRadius: '8px',
+            background: 'rgba(239,68,68,.08)',
+            border: '1px solid rgba(239,68,68,.3)',
+            fontSize: '11px', lineHeight: 1.5, color: '#DC2626',
+          }}>
+            <strong>⚠ Meta exige orçamento mínimo de ~R$ 6/dia por ad set.</strong> Seu split
+            atual deixa {lowRings.length === 1 ? 'um anel' : `${lowRings.length} anéis`} abaixo
+            (R$ {lowRings.map(r => r.share.toFixed(2).replace('.', ',')).join(' · R$ ')}).
+            {' '}Meta pode recusar. Aumente o orçamento total para pelo menos
+            R$ {(6 * activeKeys.length).toFixed(2).replace('.', ',')}/dia, ou desative os anéis.
+          </div>
+        );
+      })()}
+
     </div>
   );
 }
 
-function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, startDate, setStartDate, endDate, setEndDate, errors = {}, locations = [], budgetRingSplit, setBudgetRingSplit }) {
+function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, startDate, setStartDate, endDate, setEndDate, errors = {}, locations = [], budgetRingSplit, setBudgetRingSplit, ringsEnabled = true, setRingsEnabled }) {
   const today = new Date().toISOString().split('T')[0];
 
   return (
@@ -1016,13 +1057,51 @@ function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, s
         )}
       </div>
 
-      {/* Split por anel (aparece só quando há localizações em mais de um anel) */}
+      {/* Toggle — ligar/desligar divisão em anéis */}
+      {(locations || []).filter(l => l?.lat != null).length >= 2 && (
+        <div style={{
+          border: '1.5px solid var(--c-border)',
+          borderRadius: '12px', padding: '14px 18px',
+          background: 'var(--c-surface)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+        }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '2px' }}>
+              🎯 Dividir em anéis por distância (recomendado)
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--c-text-4)', lineHeight: 1.5 }}>
+              {ringsEnabled
+                ? 'Ligado — o Meta vai receber 1 campanha com 1–3 ad sets, cada um testando um grupo de bairros por distância. Você vê performance separada por anel.'
+                : 'Desligado — tudo publicado em 1 ad set único cobrindo todos os bairros juntos.'}
+            </div>
+          </div>
+          <div
+            onClick={() => setRingsEnabled && setRingsEnabled(!ringsEnabled)}
+            style={{
+              width: '44px', height: '24px', borderRadius: '24px',
+              background: ringsEnabled ? 'var(--c-accent)' : 'var(--c-border)',
+              position: 'relative', cursor: 'pointer', transition: 'background .2s', flexShrink: 0,
+            }}
+          >
+            <div style={{
+              position: 'absolute',
+              width: '18px', height: '18px', background: '#fff',
+              borderRadius: '50%', top: '3px',
+              left: ringsEnabled ? '23px' : '3px',
+              transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,.3)',
+            }} />
+          </div>
+        </div>
+      )}
+
+      {/* Split por anel (só quando toggle ON e ≥2 anéis ativos) */}
       <RingBudgetSplit
         locations={locations}
         budgetValue={budgetValue}
         budgetType={budgetType}
         split={budgetRingSplit}
         setSplit={setBudgetRingSplit}
+        ringsEnabled={ringsEnabled}
       />
 
       {/* Datas */}
@@ -1475,7 +1554,7 @@ function Step6Review({ data, onGoTo }) {
 
       {/* Conjuntos de anúncios que serão criados (split por anel) */}
       {(() => {
-        const buckets = classifyLocationsByRing(data.locations);
+        const buckets = classifyLocationsByRing(data.locations, data.ringsEnabled);
         const activeKeys = ['primario', 'medio', 'externo'].filter(k => buckets[k].length > 0);
         if (activeKeys.length < 2 || !data.budgetValue) return null;
         const split = normalizeSplit(data.budgetRingSplit || {}, activeKeys);
@@ -1800,6 +1879,7 @@ export default function CreateAd() {
   const [budgetType,         setBudgetType]         = useState(source?.budgetType || 'daily');
   const [budgetValue,        setBudgetValue]        = useState(initialBudget);
   const [budgetRingSplit,    setBudgetRingSplit]    = useState(source?.budgetRingSplit || { primario: 40, medio: 40, externo: 20 });
+  const [ringsEnabled,       setRingsEnabled]       = useState(source?.ringsEnabled !== undefined ? source.ringsEnabled : true);
   const [startDate,          setStartDate]          = useState(initialStart);
   const [endDate,            setEndDate]            = useState(initialEnd);
   const [adFormat,           setAdFormat]           = useState(source?.adFormat || 'image');
@@ -1930,6 +2010,7 @@ export default function CreateAd() {
       budgetValue: Number(budgetValue) || 0,
       budgetType, startDate, endDate,
       budgetRingSplit,
+      ringsEnabled,
 
       // Público (local)
       objective, locations, ageRange, gender, interests,
@@ -1984,12 +2065,12 @@ export default function CreateAd() {
     /* Publicação/correção já aparece no histórico — não vira notificação */
   }
 
-  const reviewData = { objective, locations, ageRange, gender, interests, budgetType, budgetValue, startDate, endDate, adFormat, mediaFiles, primaryText, headline, destUrl, ctaButton, budgetRingSplit };
+  const reviewData = { objective, locations, ageRange, gender, interests, budgetType, budgetValue, startDate, endDate, adFormat, mediaFiles, primaryText, headline, destUrl, ctaButton, budgetRingSplit, ringsEnabled };
 
   const stepComponents = [
     <Step1Objective objective={objective} setObjective={setObjective} errors={errors} />,
     <Step2Audience  locations={locations} setLocations={setLocations} ageRange={ageRange} setAgeRange={setAgeRange} gender={gender} setGender={setGender} interests={interests} setInterests={setInterests} />,
-    <Step4Budget budgetType={budgetType} setBudgetType={setBudgetType} budgetValue={budgetValue} setBudgetValue={setBudgetValue} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} errors={errors} locations={locations} budgetRingSplit={budgetRingSplit} setBudgetRingSplit={setBudgetRingSplit} />,
+    <Step4Budget budgetType={budgetType} setBudgetType={setBudgetType} budgetValue={budgetValue} setBudgetValue={setBudgetValue} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} errors={errors} locations={locations} budgetRingSplit={budgetRingSplit} setBudgetRingSplit={setBudgetRingSplit} ringsEnabled={ringsEnabled} setRingsEnabled={setRingsEnabled} />,
     <Step5Creative adFormat={adFormat} setAdFormat={setAdFormat} mediaFiles={mediaFiles} setMediaFiles={setMediaFiles} primaryText={primaryText} setPrimaryText={setPrimaryText} headline={headline} setHeadline={setHeadline} destUrl={destUrl} setDestUrl={setDestUrl} ctaButton={ctaButton} setCtaButton={setCtaButton} errors={errors} />,
     <Step6Review data={reviewData} onGoTo={(s) => { setErrors({}); setStep(s); }} />,
   ];

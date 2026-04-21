@@ -1,11 +1,38 @@
 /**
  * Normaliza dados do wizard local pro schema oficial da Meta Marketing API v20+.
  *
- * Enquanto o sync real com Meta ainda não está ativo, o painel já guarda
- * o payload formatado corretamente (gender int, budget em centavos, objective
- * enum, CTA enum, geo_locations, interests como {id, name}, IDs fake).
- * Quando a integração for plugada, o `meta` sub-object vai direto pra API.
+ * Quando ringsEnabled=true E os bairros selecionados caem em ≥2 anéis por distância,
+ * emite `ad_sets: [...]` (array) em vez de `ad_set: {...}` único. O backend
+ * publishCampaign detecta e cria N AdSets sob a mesma Campaign, cada um com seu
+ * próprio budget e targeting geográfico, compartilhando 1 único Creative.
  */
+
+import { HOME_COORDS, distanceKm } from '../data/joinvilleDistricts';
+
+/* Classifica bairros em anéis (primario/medio/externo) usando quantis de distância
+   do Boa Vista. Mesma regra do CreateAd — espelhada aqui pra não criar dep circular. */
+function classifyRings(locations, ringsEnabled = true) {
+  const buckets = { primario: [], medio: [], externo: [] };
+  const valid = (locations || [])
+    .filter(l => l?.lat != null && l?.lng != null)
+    .map(l => ({ loc: l, d: distanceKm(HOME_COORDS, { lat: l.lat, lng: l.lng }) }))
+    .sort((a, b) => a.d - b.d);
+  if (valid.length === 0) return buckets;
+  const spread = valid[valid.length - 1].d - valid[0].d;
+  if (!ringsEnabled || spread <= 2 || valid.length === 1) {
+    valid.forEach(({ loc }) => buckets.primario.push(loc));
+    return buckets;
+  }
+  const useThree = valid.length >= 6 && spread >= 4;
+  const numRings = useThree ? 3 : 2;
+  const perGroup = Math.ceil(valid.length / numRings);
+  const keys = ['primario', 'medio', 'externo'];
+  valid.forEach(({ loc }, idx) => {
+    const ringIdx = Math.min(Math.floor(idx / perGroup), numRings - 1);
+    buckets[keys[ringIdx]].push(loc);
+  });
+  return buckets;
+}
 
 // Meta targeting.genders: omitido = todos, [1] = feminino, [2] = masculino
 export const GENDER_TO_META = {
@@ -96,78 +123,129 @@ function toInterestObject(name) {
  * Estrutura final: campaign → ad_set → ad → creative (exatamente como a API espera).
  */
 export function toMetaPayload(ad) {
-  const geoLocations = (ad.locations || []).map(l => ({
-    latitude:      l.lat,
-    longitude:     l.lng,
-    radius:        l.radius,
-    distance_unit: 'kilometer',
-    name:          l.name,
-  }));
+  const toGeo = (l) => ({
+    latitude: l.lat, longitude: l.lng, radius: l.radius,
+    distance_unit: 'kilometer', name: l.name,
+  });
+  const allGeo = (ad.locations || []).map(toGeo);
 
   const genders = GENDER_TO_META[ad.gender] ?? [];
   const budgetCents = toMetaBudgetCents(ad.budgetValue);
 
+  const campaign = {
+    id:                     ad.metaCampaignId,
+    name:                   ad.name,
+    objective:              OBJECTIVE_TO_META[ad.objective] || 'OUTCOME_TRAFFIC',
+    status:                 'PAUSED',
+    buying_type:            'AUCTION',
+    special_ad_categories:  [],
+    /* Budget vai no nível do ad_set quando há anéis (ABO) */
+    daily_budget:           null,
+    lifetime_budget:        null,
+  };
+
+  const creative = {
+    id:   ad.metaCreativeId,
+    name: `${ad.name} — Criativo`,
+    object_story_spec: {
+      page_id: ad.metaAccountId || null,
+      link_data: {
+        message:          ad.primaryText,
+        name:             ad.headline,
+        link:             ad.destUrl,
+        call_to_action:   { type: CTA_TO_META[ad.ctaButton] || 'LEARN_MORE' },
+        image_hash:       ad.imageHash || null,
+        attachment_style: 'link',
+      },
+    },
+  };
+
+  const baseTargeting = {
+    age_min:              ad.ageRange?.[0] || 18,
+    age_max:              ad.ageRange?.[1] || 65,
+    genders,
+    interests:            (ad.interests || []).map(toInterestObject),
+    publisher_platforms:  ['facebook', 'instagram'],
+    facebook_positions:   ['feed'],
+    instagram_positions:  ['stream', 'story', 'reels'],
+  };
+
+  const adSetCommon = {
+    optimization_goal:  OPTIMIZATION_GOAL[ad.objective] || 'LINK_CLICKS',
+    billing_event:      BILLING_EVENT[ad.objective]     || 'IMPRESSIONS',
+    bid_strategy:       'LOWEST_COST_WITHOUT_CAP',
+    status:             'PAUSED',
+    start_time:         ad.startDate ? new Date(ad.startDate + 'T00:00:00').toISOString() : null,
+    end_time:           ad.endDate   ? new Date(ad.endDate   + 'T23:59:59').toISOString() : null,
+    promoted_object:    ad.pixelId ? { pixel_id: ad.pixelId } : undefined,
+  };
+
+  const buckets = classifyRings(ad.locations, ad.ringsEnabled !== false);
+  const activeKeys = ['primario', 'medio', 'externo'].filter(k => buckets[k].length > 0);
+  const splitInput = ad.budgetRingSplit || {};
+  /* Normaliza split pra garantir soma 100% entre ativos; distribui igualmente se ausente */
+  const totalPctRaw = activeKeys.reduce((s, k) => s + (Number(splitInput[k]) || 0), 0);
+  const splitNorm = {};
+  if (totalPctRaw === 0) {
+    activeKeys.forEach((k, i) => {
+      const even = Math.floor(100 / activeKeys.length);
+      splitNorm[k] = i === activeKeys.length - 1 ? 100 - even * (activeKeys.length - 1) : even;
+    });
+  } else {
+    activeKeys.forEach(k => { splitNorm[k] = Math.round((Number(splitInput[k]) || 0) * 100 / totalPctRaw); });
+    /* ajusta pra fechar 100 exato */
+    const diff = 100 - activeKeys.reduce((s, k) => s + splitNorm[k], 0);
+    if (activeKeys.length > 0) splitNorm[activeKeys[activeKeys.length - 1]] += diff;
+  }
+
+  const RING_LABEL = { primario: 'Primário', medio: 'Médio', externo: 'Externo' };
+  const useMultiple = activeKeys.length >= 2 && ad.ringsEnabled !== false;
+
+  if (useMultiple) {
+    /* Um ad_set por anel, cada um com fatia do budget + geo filtrado */
+    const ad_sets = activeKeys.map(key => {
+      const ringBudget = Math.round(budgetCents * (splitNorm[key] / 100));
+      return {
+        id:   null, /* será preenchido pelo Meta no create */
+        name: `${ad.name} — Anel ${RING_LABEL[key]}`,
+        ...adSetCommon,
+        daily_budget:   ad.budgetType === 'daily' ? ringBudget : null,
+        lifetime_budget: ad.budgetType === 'total' ? ringBudget : null,
+        targeting: {
+          ...baseTargeting,
+          geo_locations: {
+            countries:        ['BR'],
+            custom_locations: buckets[key].map(toGeo),
+          },
+        },
+        _ring_key:     key,          /* metadata local pra debug */
+        _ring_percent: splitNorm[key],
+      };
+    });
+    return {
+      campaign,
+      ad_sets, /* array — publishCampaign itera */
+      ad: { id: ad.metaAdId, name: ad.name, status: 'PAUSED', creative: { creative_id: ad.metaCreativeId } },
+      creative,
+      _rings_count: ad_sets.length,
+    };
+  }
+
+  /* Caminho legado: 1 ad_set único com todos os bairros */
   return {
-    campaign: {
-      id:                     ad.metaCampaignId,
-      name:                   ad.name,
-      objective:              OBJECTIVE_TO_META[ad.objective] || 'OUTCOME_TRAFFIC',
-      status:                 'PAUSED',
-      buying_type:            'AUCTION',
-      special_ad_categories:  [],
-      daily_budget:           ad.budgetType === 'daily' ? budgetCents : null,
-      lifetime_budget:        ad.budgetType === 'total' ? budgetCents : null,
-    },
-
+    campaign: { ...campaign, daily_budget: ad.budgetType === 'daily' ? budgetCents : null, lifetime_budget: ad.budgetType === 'total' ? budgetCents : null },
     ad_set: {
-      id:                 ad.metaAdSetId,
-      name:               `${ad.name} — Público`,
-      optimization_goal:  OPTIMIZATION_GOAL[ad.objective] || 'LINK_CLICKS',
-      billing_event:      BILLING_EVENT[ad.objective]     || 'IMPRESSIONS',
-      bid_strategy:       'LOWEST_COST_WITHOUT_CAP',
-      status:             'PAUSED',
-      start_time:         ad.startDate ? new Date(ad.startDate + 'T00:00:00').toISOString() : null,
-      end_time:           ad.endDate   ? new Date(ad.endDate   + 'T23:59:59').toISOString() : null,
+      id:   ad.metaAdSetId,
+      name: `${ad.name} — Público`,
+      ...adSetCommon,
       targeting: {
-        age_min:              ad.ageRange?.[0] || 18,
-        age_max:              ad.ageRange?.[1] || 65,
-        genders,
-        geo_locations: {
-          countries:         ['BR'],
-          custom_locations:  geoLocations,
-        },
-        interests:            (ad.interests || []).map(toInterestObject),
-        publisher_platforms:  ['facebook', 'instagram'],
-        facebook_positions:   ['feed'],
-        instagram_positions:  ['stream', 'story', 'reels'],
-      },
-      promoted_object: ad.pixelId ? {
-        pixel_id: ad.pixelId,
-      } : undefined,
-    },
-
-    ad: {
-      id:        ad.metaAdId,
-      name:      ad.name,
-      status:    'PAUSED',
-      creative:  { creative_id: ad.metaCreativeId },
-    },
-
-    creative: {
-      id:   ad.metaCreativeId,
-      name: `${ad.name} — Criativo`,
-      object_story_spec: {
-        page_id: ad.metaAccountId || null,
-        link_data: {
-          message:          ad.primaryText,
-          name:             ad.headline,
-          link:             ad.destUrl,
-          call_to_action:   { type: CTA_TO_META[ad.ctaButton] || 'LEARN_MORE' },
-          image_hash:       ad.imageHash || null,
-          attachment_style: 'link',
-        },
+        ...baseTargeting,
+        geo_locations: { countries: ['BR'], custom_locations: allGeo },
       },
     },
+    ad: { id: ad.metaAdId, name: ad.name, status: 'PAUSED', creative: { creative_id: ad.metaCreativeId } },
+    creative,
+    _rings_count: 1,
   };
 }
 

@@ -82,17 +82,24 @@ async function deleteCampaign(creds, platformCampaignId) {
  * Publica uma campanha completa no Meta:
  * 1. Upload de mídia (se houver base64)
  * 2. Cria Campaign
- * 3. Cria AdSet
- * 4. Cria Creative (com image_hash real)
- * 5. Cria Ad
- * Retorna IDs reais do Meta.
+ * 3. Cria Creative (ÚNICO, reutilizado entre N ads)
+ * 4. Para cada ad_set do payload: cria AdSet + Ad (referenciando o creative compartilhado)
+ *
+ * Se payload traz `ad_sets` (array) → 1 campaign → N ad sets + N ads (anéis)
+ * Se traz `ad_set` (objeto) → 1 campaign → 1 ad set + 1 ad (legado)
  */
 async function publishCampaign(creds, metaPayload, mediaItems = []) {
   const token = getToken(creds);
   const accountId = creds.account_id;
   if (!accountId) throw new Error('account_id ausente');
-  if (!metaPayload?.campaign || !metaPayload?.ad_set || !metaPayload?.creative || !metaPayload?.ad) {
-    throw new Error('Payload Meta incompleto (precisa de campaign, ad_set, creative, ad)');
+
+  /* Normaliza: aceita ad_sets (array) ou ad_set (objeto único) */
+  const adSetsList = Array.isArray(metaPayload?.ad_sets)
+    ? metaPayload.ad_sets
+    : (metaPayload?.ad_set ? [metaPayload.ad_set] : []);
+
+  if (!metaPayload?.campaign || !metaPayload?.creative || !metaPayload?.ad || adSetsList.length === 0) {
+    throw new Error('Payload Meta incompleto (precisa de campaign, ad_set(s), creative, ad)');
   }
 
   // 1. Upload de mídia
@@ -123,26 +130,7 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
   const campResp = await request('POST', `/${accountId}/campaigns`, campParams, { token });
   const campaignId = campResp.id;
 
-  // 3. AdSet
-  const a = metaPayload.ad_set;
-  const asParams = {
-    campaign_id: campaignId,
-    name: a.name,
-    optimization_goal: a.optimization_goal,
-    billing_event: a.billing_event,
-    bid_strategy: a.bid_strategy || 'LOWEST_COST_WITHOUT_CAP',
-    status: 'PAUSED',
-    targeting: a.targeting,
-  };
-  if (a.daily_budget) asParams.daily_budget = a.daily_budget;
-  if (a.lifetime_budget) asParams.lifetime_budget = a.lifetime_budget;
-  if (a.start_time) asParams.start_time = a.start_time;
-  if (a.end_time) asParams.end_time = a.end_time;
-  if (a.promoted_object) asParams.promoted_object = a.promoted_object;
-  const asResp = await request('POST', `/${accountId}/adsets`, asParams, { token });
-  const adSetId = asResp.id;
-
-  // 4. Creative
+  // 3. Creative ÚNICO — reutilizado entre N ads
   const cr = { ...metaPayload.creative };
   const storySpec = JSON.parse(JSON.stringify(cr.object_story_spec || {}));
   if (storySpec.link_data) {
@@ -155,22 +143,66 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
   }, { token });
   const creativeId = crResp.id;
 
-  // 5. Ad
-  const ad = metaPayload.ad;
-  const adResp = await request('POST', `/${accountId}/ads`, {
-    name: ad.name,
-    adset_id: adSetId,
-    creative: { creative_id: creativeId },
-    status: 'PAUSED',
-  }, { token });
-  const adId = adResp.id;
+  // 4. Para cada ad_set: cria AdSet + Ad. Erro em um dos anéis é fatal pra consistência.
+  const adSetResults = [];
+  for (let i = 0; i < adSetsList.length; i++) {
+    const a = adSetsList[i];
+    const asParams = {
+      campaign_id:       campaignId,
+      name:              a.name,
+      optimization_goal: a.optimization_goal,
+      billing_event:     a.billing_event,
+      bid_strategy:      a.bid_strategy || 'LOWEST_COST_WITHOUT_CAP',
+      status:            'PAUSED',
+      targeting:         a.targeting,
+    };
+    if (a.daily_budget) asParams.daily_budget = a.daily_budget;
+    if (a.lifetime_budget) asParams.lifetime_budget = a.lifetime_budget;
+    if (a.start_time) asParams.start_time = a.start_time;
+    if (a.end_time) asParams.end_time = a.end_time;
+    if (a.promoted_object) asParams.promoted_object = a.promoted_object;
+
+    let asResp;
+    try {
+      asResp = await request('POST', `/${accountId}/adsets`, asParams, { token });
+    } catch (e) {
+      e.message = `Falha ao criar AdSet "${a.name}" (anel ${i + 1}/${adSetsList.length}): ${e.message}`;
+      throw e;
+    }
+    const adSetId = asResp.id;
+
+    const baseAdName = metaPayload.ad.name || a.name;
+    const adName = adSetsList.length > 1 ? `${baseAdName} — Anúncio ${i + 1}` : baseAdName;
+    let adResp;
+    try {
+      adResp = await request('POST', `/${accountId}/ads`, {
+        name: adName,
+        adset_id: adSetId,
+        creative: { creative_id: creativeId },
+        status: 'PAUSED',
+      }, { token });
+    } catch (e) {
+      e.message = `Falha ao criar Ad "${adName}" (anel ${i + 1}/${adSetsList.length}): ${e.message}`;
+      throw e;
+    }
+
+    adSetResults.push({
+      ad_set_id:     adSetId,
+      ad_id:         adResp.id,
+      ring_key:      a._ring_key || null,
+      ring_percent:  a._ring_percent ?? null,
+      daily_budget:  a.daily_budget ?? null,
+    });
+  }
 
   return {
     platform_campaign_id: campaignId,
-    ad_set_id: adSetId,
-    creative_id: creativeId,
-    ad_id: adId,
-    uploaded_images: uploadedImages,
+    creative_id:          creativeId,
+    uploaded_images:      uploadedImages,
+    ad_sets:              adSetResults,
+    /* Campos legados — apontam pro primeiro ad set/ad criado */
+    ad_set_id:            adSetResults[0]?.ad_set_id || null,
+    ad_id:                adSetResults[0]?.ad_id || null,
   };
 }
 
