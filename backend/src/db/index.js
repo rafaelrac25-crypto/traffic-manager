@@ -12,6 +12,7 @@ if (process.env.DATABASE_URL) {
                   text = text.replace(/\?/g, () => `$${++i}`);
           }
           if (typeof text === 'string') {
+                  text = text.replace(/datetime\s*\(\s*'now'\s*\)/gi, 'NOW()');
                   text = text.replace(/INSERT OR IGNORE INTO/gi, 'INSERT INTO');
                   if (text.match(/INSERT INTO/i) && !text.match(/ON CONFLICT/i)) {
                             text = text.replace(/VALUES\s*\([^)]+\)/i, (match) => match + ' ON CONFLICT DO NOTHING');
