@@ -1701,7 +1701,134 @@ function PreviewBlock({ adFormat, mediaFiles, primaryText, headline, destUrl, ct
    PASSO 5 — CRIATIVO
 ══════════════════════════════════════════ */
 
-function Step5Creative({ adFormat, setAdFormat, mediaFiles, setMediaFiles, primaryText, setPrimaryText, headline, setHeadline, destUrl, setDestUrl, ctaButton, setCtaButton, errors = {} }) {
+/* Seletor de capa do vídeo. 2 modos:
+   - Automático: sistema extrai frame aos ~1s do vídeo (default)
+   - Manual: user faz upload de uma imagem (recomendado 1:1 ou 9:16, ~1080px) */
+function VideoCoverPicker({ videoFile, thumbnail, setThumbnail }) {
+  const [mode, setMode] = useState(thumbnail ? 'manual' : 'auto');
+  const [autoPreview, setAutoPreview] = useState(null);
+  const [err, setErr] = useState('');
+  const fileRef = useRef(null);
+
+  /* Regenera preview automático quando vídeo muda */
+  useEffect(() => {
+    if (mode !== 'auto' || !videoFile) { setAutoPreview(null); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const { extractVideoThumbnail } = await import('../utils/videoCompressor');
+        const thumb = await extractVideoThumbnail(videoFile);
+        if (cancelled) return;
+        setAutoPreview({ file: thumb, url: URL.createObjectURL(thumb) });
+      } catch (e) {
+        if (!cancelled) setErr(e.message);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [videoFile, mode]);
+
+  async function handleManualUpload(file) {
+    setErr('');
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setErr('Arquivo precisa ser uma imagem (JPG ou PNG)');
+      return;
+    }
+    try {
+      const { compressImage } = await import('../utils/mediaProcessor');
+      const compressed = await compressImage(file);
+      const compressedFile = new File([compressed], 'capa.jpg', { type: 'image/jpeg' });
+      setThumbnail({ file: compressedFile, url: URL.createObjectURL(compressedFile) });
+    } catch (e) {
+      setErr(`Falha ao processar imagem: ${e.message}`);
+    }
+  }
+
+  return (
+    <div>
+      <SectionLabel sub="A imagem que aparece antes do vídeo começar a tocar — Meta usa como thumbnail no feed.">
+        Capa do vídeo
+      </SectionLabel>
+
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+        {[
+          { v: 'auto', l: '🪄 Automática', d: 'Sistema tira um frame do vídeo' },
+          { v: 'manual', l: '📷 Enviar imagem', d: 'Você sobe uma imagem própria' },
+        ].map(o => (
+          <button
+            key={o.v}
+            type="button"
+            onClick={() => { setMode(o.v); if (o.v === 'auto') setThumbnail(null); }}
+            style={{
+              flex: 1, padding: '10px 14px', borderRadius: '10px',
+              border: `1.5px solid ${mode === o.v ? 'var(--c-accent)' : 'var(--c-border)'}`,
+              background: mode === o.v ? 'rgba(193,53,132,.08)' : 'var(--c-card-bg)',
+              cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
+              transition: 'all .15s',
+            }}
+          >
+            <div style={{ fontSize: '12.5px', fontWeight: 700, color: mode === o.v ? 'var(--c-accent)' : 'var(--c-text-1)', marginBottom: '2px' }}>
+              {o.l}
+            </div>
+            <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)' }}>
+              {o.d}
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {/* Preview */}
+      <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+        {mode === 'auto' && autoPreview && (
+          <div>
+            <img src={autoPreview.url} alt="Capa automática" style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '10px', border: '1px solid var(--c-border)' }} />
+            <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', marginTop: '4px', textAlign: 'center' }}>Frame aos 1s</div>
+          </div>
+        )}
+        {mode === 'manual' && thumbnail && (
+          <div style={{ position: 'relative' }}>
+            <img src={thumbnail.url} alt="Capa manual" style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '10px', border: '1px solid var(--c-border)' }} />
+            <button
+              onClick={() => setThumbnail(null)}
+              style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,.65)', color: '#fff', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', fontSize: '12px' }}
+            >×</button>
+          </div>
+        )}
+        {mode === 'manual' && !thumbnail && (
+          <div>
+            <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handleManualUpload(e.target.files?.[0])} />
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              style={{
+                width: '120px', height: '120px', borderRadius: '10px',
+                border: '2px dashed var(--c-border)', background: 'var(--c-surface)',
+                cursor: 'pointer', fontFamily: 'inherit', fontSize: '11px',
+                color: 'var(--c-text-3)', display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', gap: '6px',
+              }}
+            >
+              <span style={{ fontSize: '22px' }}>📁</span>
+              Clique para enviar
+            </button>
+            <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', marginTop: '4px', textAlign: 'center', width: '120px' }}>
+              1:1 ou 9:16 · 1080 px
+            </div>
+          </div>
+        )}
+        {mode === 'auto' && !autoPreview && !err && (
+          <div style={{ fontSize: '11px', color: 'var(--c-text-4)', padding: '8px 0' }}>Gerando preview do frame…</div>
+        )}
+      </div>
+
+      {err && (
+        <div style={{ marginTop: '8px', fontSize: '11px', color: '#B91C1C', fontWeight: 600 }}>🚫 {err}</div>
+      )}
+    </div>
+  );
+}
+
+function Step5Creative({ adFormat, setAdFormat, mediaFiles, setMediaFiles, videoThumbnail, setVideoThumbnail, primaryText, setPrimaryText, headline, setHeadline, destUrl, setDestUrl, ctaButton, setCtaButton, errors = {} }) {
   const fileRef  = useRef(null);
   const [drag, setDrag] = useState(false);
   const [customCta, setCustomCta] = useState('');
@@ -1842,6 +1969,15 @@ function Step5Creative({ adFormat, setAdFormat, mediaFiles, setMediaFiles, prima
           </div>
         </div>
       </div>
+
+      {/* Capa do vídeo — visível quando houver vídeo no upload */}
+      {mediaFiles.some(m => m.type === 'video') && (
+        <VideoCoverPicker
+          videoFile={mediaFiles.find(m => m.type === 'video')?.file}
+          thumbnail={videoThumbnail}
+          setThumbnail={setVideoThumbnail}
+        />
+      )}
 
       {/* Texto principal */}
       <div>
@@ -2365,6 +2501,7 @@ export default function CreateAd() {
   const [endDate,            setEndDate]            = useState(initialEnd);
   const [adFormat,           setAdFormat]           = useState(source?.adFormat || 'image');
   const [mediaFiles,         setMediaFiles]         = useState(source?.mediaFiles || []);
+  const [videoThumbnail,     setVideoThumbnail]     = useState(source?.videoThumbnail || null); /* { file, url } se manual, null = automático */
   const [primaryText,        setPrimaryText]        = useState(source?.primaryText ?? (quickFillCreative?.primaryText || commercialDate?.preFill?.primaryText || ''));
   const [headline,           setHeadline]           = useState(source?.headline ?? (quickFillCreative?.headline || commercialDate?.preFill?.headline || ''));
   const [destUrl,            setDestUrl]            = useState(source?.destUrl || 'https://wa.me/5547997071161');
@@ -2429,9 +2566,14 @@ export default function CreateAd() {
       const { uploadMedia } = await import('../services/adsApi');
 
       if (m.type === 'video') {
-        /* Extrai thumbnail do vídeo + upload junto */
-        const { extractVideoThumbnail } = await import('../utils/videoCompressor');
-        const thumbFile = await extractVideoThumbnail(m.file);
+        /* Thumb: usa capa manual se user enviou, senão extrai automático do vídeo */
+        let thumbFile;
+        if (videoThumbnail?.file) {
+          thumbFile = videoThumbnail.file;
+        } else {
+          const { extractVideoThumbnail } = await import('../utils/videoCompressor');
+          thumbFile = await extractVideoThumbnail(m.file);
+        }
         const [videoResult, thumbResult] = await Promise.all([
           uploadMedia(m.file),
           uploadMedia(thumbFile),
@@ -2441,7 +2583,7 @@ export default function CreateAd() {
           type: 'video',
           name: m.name,
           metaVideoId: videoResult.id || null,
-          metaHash: thumbResult.hash || null,  /* thumbnail pro video_data.image_hash */
+          metaHash: thumbResult.hash || null,
         });
       } else {
         const result = await uploadMedia(m.file);
@@ -2594,7 +2736,7 @@ export default function CreateAd() {
     <Step1Objective objective={objective} setObjective={setObjective} errors={errors} />,
     <Step2Audience  locations={locations} setLocations={setLocations} ageRange={ageRange} setAgeRange={setAgeRange} gender={gender} setGender={setGender} interests={interests} setInterests={setInterests} ringsMode={ringsMode} setRingsMode={setRingsMode} />,
     <Step4Budget budgetType={budgetType} setBudgetType={setBudgetType} budgetValue={budgetValue} setBudgetValue={setBudgetValue} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} errors={errors} locations={locations} budgetRingSplit={budgetRingSplit} setBudgetRingSplit={setBudgetRingSplit} ringsMode={ringsMode} setRingsMode={setRingsMode} budgetOptimization={budgetOptimization} setBudgetOptimization={setBudgetOptimization} />,
-    <Step5Creative adFormat={adFormat} setAdFormat={setAdFormat} mediaFiles={mediaFiles} setMediaFiles={setMediaFiles} primaryText={primaryText} setPrimaryText={setPrimaryText} headline={headline} setHeadline={setHeadline} destUrl={destUrl} setDestUrl={setDestUrl} ctaButton={ctaButton} setCtaButton={setCtaButton} errors={errors} />,
+    <Step5Creative adFormat={adFormat} setAdFormat={setAdFormat} mediaFiles={mediaFiles} setMediaFiles={setMediaFiles} videoThumbnail={videoThumbnail} setVideoThumbnail={setVideoThumbnail} primaryText={primaryText} setPrimaryText={setPrimaryText} headline={headline} setHeadline={setHeadline} destUrl={destUrl} setDestUrl={setDestUrl} ctaButton={ctaButton} setCtaButton={setCtaButton} errors={errors} />,
     <Step6Review data={reviewData} onGoTo={(s) => { setErrors({}); setStep(s); }} />,
   ];
 
