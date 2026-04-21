@@ -1216,7 +1216,7 @@ function saudacaoPorHora() {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { ads } = useAppState();
+  const { ads, metaBilling } = useAppState();
 
   /* Campanhas no ar, ranqueadas pela melhor performance (menor CPR → mais cliques).
      O top [0] é a "melhor"; o usuário pode trocar via seletor. */
@@ -1233,22 +1233,7 @@ export default function Dashboard() {
   const labelHoje = `Hoje, ${hoje.getDate()} de ${MESES_PT[hoje.getMonth()]}`;
   const saudacao = saudacaoPorHora();
 
-  const [metaBilling, setMetaBilling] = useState(null);
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const r = await fetch('/api/platforms/meta/billing');
-        if (!r.ok) return;
-        const data = await r.json();
-        if (!cancelled) setMetaBilling(data);
-      } catch {}
-    };
-    load();
-    const id = setInterval(load, 30 * 1000);
-    return () => { cancelled = true; clearInterval(id); };
-  }, []);
-
+  /* metaBilling vem do AppStateContext — auto-refresh 1h + botão manual em /investimento */
   const funds = metaBilling ? Number(metaBilling.balance || 0) : 0;
   const LOW_BALANCE_THRESHOLD = 20;
   const lowBalance = metaBilling ? funds < LOW_BALANCE_THRESHOLD : false;

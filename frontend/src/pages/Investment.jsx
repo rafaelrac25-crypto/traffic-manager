@@ -7,10 +7,9 @@ function formatBRL(v) {
 }
 
 export default function Investment() {
-  const { pixel, setPixel } = useAppState();
+  const { pixel, setPixel, metaBilling, metaBillingLoading, metaBillingLastUpdate, refreshMetaBilling } = useAppState();
 
   const [metaStatus, setMetaStatus] = useState(null);
-  const [metaBilling, setMetaBilling] = useState(null);
   const [metaLoading, setMetaLoading] = useState(false);
   const [metaSyncing, setMetaSyncing] = useState(false);
   const [metaFeedback, setMetaFeedback] = useState(null);
@@ -24,13 +23,6 @@ export default function Investment() {
     } catch { setMetaStatus(null); }
   }
 
-  async function loadMetaBilling() {
-    try {
-      const { data } = await api.get('/api/platforms/meta/billing');
-      setMetaBilling(data);
-    } catch { setMetaBilling(null); }
-  }
-
   useEffect(() => {
     loadMetaStatus();
     const params = new URLSearchParams(window.location.search);
@@ -41,14 +33,8 @@ export default function Investment() {
       setMetaFeedback({ type: 'err', text: `Erro ao conectar Facebook: ${params.get('meta_error')}` });
       window.history.replaceState({}, '', window.location.pathname);
     }
+    /* Saldo é gerenciado pelo AppStateContext (auto-refresh 1h + botão manual). */
   }, []);
-
-  useEffect(() => {
-    if (!metaStatus?.connected) return;
-    loadMetaBilling();
-    const id = setInterval(() => { loadMetaStatus(); loadMetaBilling(); }, 30 * 1000);
-    return () => clearInterval(id);
-  }, [metaStatus?.connected]);
 
   function connectMeta() { window.location.href = '/api/platforms/meta/oauth/start'; }
 
@@ -58,7 +44,7 @@ export default function Investment() {
     try {
       const { data } = await api.post('/api/campaigns/sync/meta');
       setMetaFeedback({ type: 'ok', text: `${data.message}. Acesse a página Campanhas para visualizar.` });
-      await loadMetaBilling();
+      await refreshMetaBilling();
     } catch (e) {
       setMetaFeedback({ type: 'err', text: e?.response?.data?.error || 'Erro ao sincronizar' });
     } finally { setMetaSyncing(false); }
@@ -71,9 +57,18 @@ export default function Investment() {
       await api.delete('/api/platforms/meta');
       setMetaFeedback({ type: 'ok', text: 'Facebook desconectado.' });
       await loadMetaStatus();
-      setMetaBilling(null);
+      await refreshMetaBilling();
     } catch { setMetaFeedback({ type: 'err', text: 'Erro ao desconectar.' }); }
     finally { setMetaLoading(false); }
+  }
+
+  function formatRelativeTime(iso) {
+    if (!iso) return 'nunca atualizado';
+    const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+    if (diff < 60) return 'agora mesmo';
+    if (diff < 3600) return `há ${Math.floor(diff / 60)} min`;
+    if (diff < 86400) return `há ${Math.floor(diff / 3600)} h`;
+    return `há ${Math.floor(diff / 86400)} d`;
   }
 
   const assetId = (metaStatus?.account_id || '').replace(/^act_/, '');
@@ -104,11 +99,37 @@ export default function Investment() {
             <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-text-3)', marginBottom: '6px', letterSpacing: '.5px', textTransform: 'uppercase' }}>
               Saldo disponível (Meta Ads)
             </div>
-            <div style={{ fontSize: '36px', fontWeight: 700, color: 'var(--c-accent)', lineHeight: 1 }}>
-              {metaBilling ? formatBRL(metaBilling.balance) : '—'}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ fontSize: '36px', fontWeight: 700, color: 'var(--c-accent)', lineHeight: 1 }}>
+                {metaBilling ? formatBRL(metaBilling.balance) : '—'}
+              </div>
+              <button
+                onClick={refreshMetaBilling}
+                disabled={metaBillingLoading}
+                title="Atualizar saldo agora"
+                aria-label="Atualizar saldo"
+                style={{
+                  width: '34px', height: '34px', borderRadius: '50%',
+                  border: '1.5px solid var(--c-border)',
+                  background: 'var(--c-card-bg)',
+                  color: 'var(--c-accent)', fontSize: '16px', lineHeight: 1,
+                  cursor: metaBillingLoading ? 'wait' : 'pointer',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'transform .18s ease, background .18s ease',
+                }}
+                onMouseEnter={e => { if (!metaBillingLoading) e.currentTarget.style.background = 'var(--c-hover)'; }}
+                onMouseLeave={e => e.currentTarget.style.background = 'var(--c-card-bg)'}
+              >
+                <span style={{
+                  display: 'inline-block',
+                  animation: metaBillingLoading ? 'spin 0.9s linear infinite' : 'none',
+                }}>↻</span>
+              </button>
             </div>
             <div style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '8px' }}>
-              {metaBilling ? `Gasto total: ${formatBRL(metaBilling.amount_spent)}${metaBilling.spend_cap ? ` · Limite: ${formatBRL(metaBilling.spend_cap)}` : ''}` : 'Carregando saldo da conta de anúncios…'}
+              {metaBilling
+                ? <>Gasto total: {formatBRL(metaBilling.amount_spent)}{metaBilling.spend_cap ? ` · Limite: ${formatBRL(metaBilling.spend_cap)}` : ''} · Atualizado {formatRelativeTime(metaBillingLastUpdate)}</>
+                : (metaBillingLoading ? 'Carregando saldo da conta de anúncios…' : 'Clique em ↻ para carregar o saldo')}
             </div>
           </div>
           <a

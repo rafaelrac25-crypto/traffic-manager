@@ -61,6 +61,9 @@ export function AppStateProvider({ children }) {
   const [metaAccount,   setMetaAccount]   = useState(() => load(KEY_META, {
     connected: false, name: 'Cris Costa', avatarUrl: null, pageId: null,
   }));
+  const [metaBilling,   setMetaBilling]   = useState(null);
+  const [metaBillingLoading, setMetaBillingLoading] = useState(false);
+  const [metaBillingLastUpdate, setMetaBillingLastUpdate] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState(() => load(KEY_PAYMENT, null));
   const [ads,           setAds]           = useState(() => load(KEY_ADS, []));
   const [audiences,     setAudiences]     = useState(() => load(KEY_AUDIENCES, DEFAULT_AUDIENCES));
@@ -122,6 +125,36 @@ export function AppStateProvider({ children }) {
     });
     return () => { cancelled = true; };
   }, []);
+
+  /* Saldo Meta Ads — busca do backend, auto-refresh horário + refresh manual via botão */
+  const refreshMetaBilling = useCallback(async () => {
+    setMetaBillingLoading(true);
+    try {
+      const r = await fetch('/api/platforms/meta/billing', { cache: 'no-store' });
+      if (!r.ok) { setMetaBilling(null); return null; }
+      const data = await r.json();
+      setMetaBilling(data);
+      setMetaBillingLastUpdate(new Date().toISOString());
+      return data;
+    } catch {
+      setMetaBilling(null);
+      return null;
+    } finally {
+      setMetaBillingLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const tick = async () => {
+      if (cancelled) return;
+      await refreshMetaBilling();
+    };
+    tick();
+    /* 1 hora = 24 refreshes/dia (user pode forçar manual via botão quando quiser) */
+    const id = setInterval(tick, 60 * 60 * 1000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [refreshMetaBilling]);
 
   /* Auto-sync com Meta a cada 40s (fica em ~90 syncs/h — seguro sob o teto 200 calls/h) */
   useEffect(() => {
@@ -572,6 +605,11 @@ export function AppStateProvider({ children }) {
 
     metaAccount,
     setMetaAccount,
+
+    metaBilling,
+    metaBillingLoading,
+    metaBillingLastUpdate,
+    refreshMetaBilling,
 
     paymentMethod,
     setPaymentMethod,
