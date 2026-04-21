@@ -207,53 +207,43 @@ export function AppStateProvider({ children }) {
     return () => { cancelled = true; clearInterval(id); };
   }, [refreshMetaBilling]);
 
-  /* Auto-sync com Meta a cada 40s (fica em ~90 syncs/h — seguro sob o teto 200 calls/h) */
+  /* Detector de desconexão Meta real — só toca sino se o estado persistir.
+     Substitui o polling agressivo antigo (que disparava falsos positivos a cada
+     hiccup da rede/rate limit). Roda a cada 3min — suficiente pra detectar
+     reconexão necessária sem sobrecarregar. */
   useEffect(() => {
     let cancelled = false;
-    let inFlight = false;
-    let lastErrorNotifAt = 0;
+    let consecutiveFailures = 0;
 
-    const runSync = async () => {
-      if (cancelled || inFlight) return;
-      inFlight = true;
+    const checkConnection = async () => {
+      if (cancelled) return;
       try {
-        const pr = await fetch('/api/platforms');
+        const pr = await fetch('/api/platforms', { cache: 'no-store' });
+        if (!pr.ok) return; /* backend offline — ignora, não toca sino */
         const data = await pr.json();
         const meta = Array.isArray(data) ? data.find(p => p.platform === 'meta') : null;
-        if (!meta?.connected) return;
-        /* Token expirou e renovação automática falhou — avisa no sino (dedupado) */
-        if (meta.needs_reconnect) { notifyReconnectRequired(); return; }
-        const sr = await fetch('/api/campaigns/sync/meta', { method: 'POST' });
-        if (!sr.ok) {
-          const body = await sr.json().catch(() => ({}));
-          throw new Error(body.error || `HTTP ${sr.status}`);
+        /* Só avisa se needs_reconnect foi marcado explicitamente (token expirou).
+           `connected: false` por si só pode ser estado transitório no cold start. */
+        if (meta?.needs_reconnect) {
+          notifyReconnectRequired();
+          consecutiveFailures = 0;
+        } else if (!meta?.connected) {
+          consecutiveFailures++;
+          /* Só notifica se ficar desconectado por 3 checks seguidos (~9min) */
+          if (consecutiveFailures >= 3) {
+            notifyReconnectRequired();
+            consecutiveFailures = 0;
+          }
+        } else {
+          consecutiveFailures = 0;
         }
-        const remote = await adsApi.fetchAds();
-        if (cancelled || !remote || remote.length === 0) return;
-        /* Merge: preserva ads locais ainda não sincronizados com o backend
-           (ex: Meta temporariamente offline). Nunca apaga um ad local pendente. */
-        setAds(prev => {
-          const remoteWithServer = remote.map(r => ({ ...r, serverId: r.id }));
-          const pendingLocal = prev.filter(a => !a.serverId);
-          return [...pendingLocal, ...remoteWithServer];
-        });
-      } catch (err) {
-        if (cancelled) return;
-        if (Date.now() - lastErrorNotifAt < 10 * 60 * 1000) return;
-        lastErrorNotifAt = Date.now();
-        addNotification({
-          kind: 'meta-sync-error',
-          title: 'Falha na sincronização com o Meta',
-          body: err?.message || 'Erro desconhecido ao sincronizar',
-          severity: 'error',
-        });
-      } finally {
-        inFlight = false;
+      } catch {
+        /* Erro de rede — não conta como desconexão, só ignora */
       }
     };
 
-    runSync();
-    const id = setInterval(runSync, 40 * 1000);
+    checkConnection();
+    const id = setInterval(checkConnection, 3 * 60 * 1000);
     return () => { cancelled = true; clearInterval(id); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
