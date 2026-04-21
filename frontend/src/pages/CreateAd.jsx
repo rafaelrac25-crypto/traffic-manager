@@ -397,7 +397,271 @@ function Step1Objective({ objective, setObjective, errors = {} }) {
    PASSO 2 — PÚBLICO
 ══════════════════════════════════════════ */
 
-function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender, setGender, interests, setInterests }) {
+/* Barra compacta de presets de localização. Salva { bairros + modo de anéis }
+   com nome editável, dropdown pra carregar, e modal pra gerenciar. */
+function LocationPresetBar({ locations, setLocations, ringsMode, setRingsMode }) {
+  const { locationPresets, addLocationPreset, updateLocationPreset, removeLocationPreset } = useAppState();
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [presetName, setPresetName] = useState('');
+  const [manageOpen, setManageOpen] = useState(false);
+  const [renamingId, setRenamingId] = useState(null);
+  const [renameValue, setRenameValue] = useState('');
+
+  const hasLocs = Array.isArray(locations) && locations.length > 0;
+
+  function applyPreset(p) {
+    const locs = (p.locations || []).map(l => ({
+      ...l,
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    }));
+    setLocations(locs);
+    if (setRingsMode && p.ringsMode) setRingsMode(p.ringsMode);
+    setOpen(false);
+  }
+
+  function confirmSave() {
+    if (!presetName.trim() || !hasLocs) return;
+    addLocationPreset({
+      name: presetName.trim(),
+      locations: locations.map(({ id, ...rest }) => rest), /* descarta id volátil */
+      ringsMode: ringsMode || 'auto',
+    });
+    setPresetName('');
+    setSaving(false);
+  }
+
+  function confirmRename(id) {
+    if (!renameValue.trim()) { setRenamingId(null); return; }
+    updateLocationPreset(id, { name: renameValue.trim() });
+    setRenamingId(null);
+    setRenameValue('');
+  }
+
+  const ringsLabel = { auto: 'Auto', '1': '1 anel', '2': '2 anéis', '3': '3 anéis' };
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap',
+      marginBottom: '10px', fontSize: '11.5px',
+    }}>
+      {/* Carregar preset */}
+      <div style={{ position: 'relative' }}>
+        <button
+          type="button"
+          onClick={() => setOpen(v => !v)}
+          disabled={locationPresets.length === 0}
+          style={{
+            padding: '6px 10px', fontSize: '11.5px', fontWeight: 600,
+            border: '1px solid var(--c-border)', borderRadius: '8px',
+            background: 'var(--c-surface)', color: 'var(--c-text-2)',
+            cursor: locationPresets.length === 0 ? 'not-allowed' : 'pointer',
+            opacity: locationPresets.length === 0 ? 0.5 : 1,
+            fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '6px',
+          }}
+          title={locationPresets.length === 0 ? 'Nenhum preset salvo ainda' : 'Carregar preset salvo'}
+        >
+          📂 Presets {locationPresets.length > 0 && <span style={{ color: 'var(--c-text-4)' }}>({locationPresets.length})</span>}
+          <span style={{ fontSize: '9px' }}>▾</span>
+        </button>
+        {open && locationPresets.length > 0 && (
+          <div style={{
+            position: 'absolute', top: 'calc(100% + 4px)', left: 0,
+            minWidth: '260px', maxHeight: '280px', overflowY: 'auto',
+            background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',
+            borderRadius: '10px', boxShadow: 'var(--shadow)', zIndex: 1000,
+          }}>
+            {locationPresets.map(p => (
+              <div
+                key={p.id}
+                onClick={() => applyPreset(p)}
+                style={{
+                  padding: '9px 12px', cursor: 'pointer',
+                  borderBottom: '1px solid var(--c-border-lt)',
+                  fontSize: '12px',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--c-surface)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <div style={{ fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '2px' }}>{p.name}</div>
+                <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)' }}>
+                  {(p.locations || []).length} bairro{(p.locations || []).length === 1 ? '' : 's'} · {ringsLabel[p.ringsMode] || 'Auto'}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Salvar atual */}
+      {!saving ? (
+        <button
+          type="button"
+          onClick={() => { setSaving(true); setPresetName(''); }}
+          disabled={!hasLocs}
+          style={{
+            padding: '6px 10px', fontSize: '11.5px', fontWeight: 600,
+            border: '1px solid var(--c-border)', borderRadius: '8px',
+            background: 'var(--c-surface)', color: 'var(--c-text-2)',
+            cursor: hasLocs ? 'pointer' : 'not-allowed',
+            opacity: hasLocs ? 1 : 0.5, fontFamily: 'inherit',
+          }}
+          title={hasLocs ? 'Salvar os bairros e anéis atuais como preset' : 'Adicione ao menos 1 bairro para salvar'}
+        >
+          💾 Salvar atual
+        </button>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <input
+            type="text"
+            autoFocus
+            placeholder="Nome do preset"
+            value={presetName}
+            onChange={e => setPresetName(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') confirmSave();
+              if (e.key === 'Escape') { setSaving(false); setPresetName(''); }
+            }}
+            style={{
+              padding: '6px 10px', border: '1.5px solid var(--c-accent)', borderRadius: '8px',
+              background: 'var(--c-surface)', color: 'var(--c-text-1)',
+              fontSize: '11.5px', fontFamily: 'inherit', outline: 'none', width: '160px',
+            }}
+          />
+          <button
+            type="button"
+            onClick={confirmSave}
+            disabled={!presetName.trim()}
+            style={{
+              padding: '6px 10px', fontSize: '11.5px', fontWeight: 600,
+              background: 'var(--c-accent)', color: '#fff', border: 'none', borderRadius: '8px',
+              cursor: presetName.trim() ? 'pointer' : 'not-allowed',
+              opacity: presetName.trim() ? 1 : 0.5,
+            }}
+          >✓</button>
+          <button
+            type="button"
+            onClick={() => { setSaving(false); setPresetName(''); }}
+            style={{
+              padding: '6px 10px', fontSize: '11.5px',
+              background: 'var(--c-surface)', border: '1px solid var(--c-border)', borderRadius: '8px',
+              color: 'var(--c-text-3)', cursor: 'pointer',
+            }}
+          >✕</button>
+        </div>
+      )}
+
+      {/* Gerenciar */}
+      {locationPresets.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setManageOpen(true)}
+          style={{
+            padding: '6px 8px', fontSize: '11.5px',
+            border: '1px solid var(--c-border)', borderRadius: '8px',
+            background: 'var(--c-surface)', color: 'var(--c-text-3)',
+            cursor: 'pointer', fontFamily: 'inherit',
+          }}
+          title="Renomear ou excluir presets"
+        >⚙️</button>
+      )}
+
+      {/* Modal de gerenciamento */}
+      {manageOpen && (
+        <div
+          onClick={() => setManageOpen(false)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 10000, padding: '20px',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'var(--c-card-bg)', borderRadius: '14px',
+              padding: '18px 20px', width: '100%', maxWidth: '460px',
+              maxHeight: '80vh', overflowY: 'auto',
+              border: '1px solid var(--c-border)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--c-text-1)', margin: 0 }}>Gerenciar presets</h3>
+              <button onClick={() => setManageOpen(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: 'var(--c-text-3)' }}>✕</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {locationPresets.map(p => (
+                <div key={p.id} style={{
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                  padding: '10px 12px', border: '1px solid var(--c-border)', borderRadius: '10px',
+                  background: 'var(--c-surface)',
+                }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    {renamingId === p.id ? (
+                      <input
+                        type="text"
+                        autoFocus
+                        value={renameValue}
+                        onChange={e => setRenameValue(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') confirmRename(p.id);
+                          if (e.key === 'Escape') setRenamingId(null);
+                        }}
+                        onBlur={() => confirmRename(p.id)}
+                        style={{
+                          width: '100%', padding: '4px 8px', border: '1.5px solid var(--c-accent)',
+                          borderRadius: '6px', fontSize: '12.5px', fontWeight: 700,
+                          background: 'var(--c-card-bg)', color: 'var(--c-text-1)',
+                          fontFamily: 'inherit', outline: 'none',
+                        }}
+                      />
+                    ) : (
+                      <div style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--c-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {p.name}
+                      </div>
+                    )}
+                    <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', marginTop: '2px' }}>
+                      {(p.locations || []).length} bairro{(p.locations || []).length === 1 ? '' : 's'} · {ringsLabel[p.ringsMode] || 'Auto'}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setRenamingId(p.id); setRenameValue(p.name); }}
+                    style={{
+                      padding: '5px 9px', fontSize: '11px',
+                      background: 'var(--c-card-bg)', border: '1px solid var(--c-border)', borderRadius: '7px',
+                      color: 'var(--c-text-2)', cursor: 'pointer',
+                    }}
+                    title="Renomear"
+                  >✏️</button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm(`Excluir o preset "${p.name}"?`)) removeLocationPreset(p.id);
+                    }}
+                    style={{
+                      padding: '5px 9px', fontSize: '11px',
+                      background: 'var(--c-card-bg)', border: '1px solid var(--c-border)', borderRadius: '7px',
+                      color: '#EF4444', cursor: 'pointer',
+                    }}
+                    title="Excluir"
+                  >🗑️</button>
+                </div>
+              ))}
+              {locationPresets.length === 0 && (
+                <div style={{ padding: '16px', textAlign: 'center', color: 'var(--c-text-4)', fontSize: '12px' }}>
+                  Nenhum preset salvo.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender, setGender, interests, setInterests, ringsMode, setRingsMode }) {
   const [query, setQuery]           = useState('');
   const [results, setResults]       = useState([]);
   const [searching, setSearching]   = useState(false);
@@ -497,6 +761,13 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
         <SectionLabel sub="Digite o nome do bairro ou cidade — pressione Enter ou ↑↓ para navegar e selecionar. Você também pode clicar diretamente no mapa.">
           Localização
         </SectionLabel>
+
+        <LocationPresetBar
+          locations={locations}
+          setLocations={setLocations}
+          ringsMode={ringsMode}
+          setRingsMode={setRingsMode}
+        />
 
         {locationError && (
           <div role="alert" style={{
@@ -2101,7 +2372,7 @@ export default function CreateAd() {
 
   const stepComponents = [
     <Step1Objective objective={objective} setObjective={setObjective} errors={errors} />,
-    <Step2Audience  locations={locations} setLocations={setLocations} ageRange={ageRange} setAgeRange={setAgeRange} gender={gender} setGender={setGender} interests={interests} setInterests={setInterests} />,
+    <Step2Audience  locations={locations} setLocations={setLocations} ageRange={ageRange} setAgeRange={setAgeRange} gender={gender} setGender={setGender} interests={interests} setInterests={setInterests} ringsMode={ringsMode} setRingsMode={setRingsMode} />,
     <Step4Budget budgetType={budgetType} setBudgetType={setBudgetType} budgetValue={budgetValue} setBudgetValue={setBudgetValue} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} errors={errors} locations={locations} budgetRingSplit={budgetRingSplit} setBudgetRingSplit={setBudgetRingSplit} ringsMode={ringsMode} setRingsMode={setRingsMode} />,
     <Step5Creative adFormat={adFormat} setAdFormat={setAdFormat} mediaFiles={mediaFiles} setMediaFiles={setMediaFiles} primaryText={primaryText} setPrimaryText={setPrimaryText} headline={headline} setHeadline={setHeadline} destUrl={destUrl} setDestUrl={setDestUrl} ctaButton={ctaButton} setCtaButton={setCtaButton} errors={errors} />,
     <Step6Review data={reviewData} onGoTo={(s) => { setErrors({}); setStep(s); }} />,

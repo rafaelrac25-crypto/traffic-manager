@@ -18,6 +18,7 @@ const KEY_PAYMENT   = 'ccb_payment_method';
 const KEY_ADS       = 'ccb_ads';
 const KEY_AUDIENCES = 'ccb_audiences';
 const KEY_CREATIVES = 'ccb_creatives';
+const KEY_LOC_PRESETS = 'ccb_location_presets';
 const KEY_PIXEL     = 'ccb_pixel';
 const KEY_COMMERCIAL_ALERTED = 'ccb_commercial_alerted';
 const KEY_DISMISSED_DATES    = 'ccb_dismissed_dates';
@@ -66,8 +67,9 @@ export function AppStateProvider({ children }) {
   const [metaBillingLastUpdate, setMetaBillingLastUpdate] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState(() => load(KEY_PAYMENT, null));
   const [ads,           setAds]           = useState(() => load(KEY_ADS, []));
-  const [audiences,     setAudiences]     = useState(() => load(KEY_AUDIENCES, DEFAULT_AUDIENCES));
-  const [creatives,     setCreatives]     = useState(() => load(KEY_CREATIVES, []));
+  const [audiences,       setAudiences]       = useState(() => load(KEY_AUDIENCES, DEFAULT_AUDIENCES));
+  const [creatives,       setCreatives]       = useState(() => load(KEY_CREATIVES, []));
+  const [locationPresets, setLocationPresets] = useState(() => load(KEY_LOC_PRESETS, []));
   const [pixel,         setPixel]         = useState(() => load(KEY_PIXEL, {
     enabled: false, pixelId: '', events: { ViewContent: true, Lead: true, Contact: true, Purchase: false },
   }));
@@ -274,6 +276,7 @@ export function AppStateProvider({ children }) {
   useEffect(() => save(KEY_ADS,       ads),           [ads]);
   useEffect(() => save(KEY_AUDIENCES, audiences),     [audiences]);
   useEffect(() => save(KEY_CREATIVES, creatives),     [creatives]);
+  useEffect(() => save(KEY_LOC_PRESETS, locationPresets), [locationPresets]);
   useEffect(() => save(KEY_PIXEL,     pixel),         [pixel]);
   useEffect(() => save(KEY_DISMISSED_DATES, dismissedDates), [dismissedDates]);
   useEffect(() => save(KEY_HISTORY,   history),       [history]);
@@ -583,6 +586,27 @@ export function AppStateProvider({ children }) {
     });
   }, [logHistory]);
 
+  /* ─── Presets de localização (bairros + modo de anéis) ─── */
+  const addLocationPreset = useCallback((preset) => {
+    const newPreset = {
+      id: `lp-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      name: preset.name?.trim() || 'Preset sem nome',
+      locations: preset.locations || [],
+      ringsMode: preset.ringsMode || 'auto',
+    };
+    setLocationPresets(prev => [newPreset, ...prev]);
+    return newPreset;
+  }, []);
+
+  const updateLocationPreset = useCallback((id, patch) => {
+    setLocationPresets(prev => prev.map(p => p.id === id ? { ...p, ...patch, updatedAt: new Date().toISOString() } : p));
+  }, []);
+
+  const removeLocationPreset = useCallback((id) => {
+    setLocationPresets(prev => prev.filter(p => p.id !== id));
+  }, []);
+
   /* ─── Restaurar entradas do histórico ─── */
   const restoreHistoryEntry = useCallback((id) => {
     const entry = history.find(h => h.id === id);
@@ -657,6 +681,11 @@ export function AppStateProvider({ children }) {
     addCreative,
     markCreativeUsed,
     removeCreative,
+
+    locationPresets,
+    addLocationPreset,
+    updateLocationPreset,
+    removeLocationPreset,
 
     pixel,
     setPixel,
