@@ -1141,7 +1141,6 @@ export default function Dashboard() {
           benchmarkLabel={CPC_BENCHMARK_LABEL}
           onOpenAds={() => navigate('/anuncios')}
         />
-        <RingPerformanceTeaser ads={ads} onOpen={() => navigate('/mapa-de-calor')} />
       </div>
 
       {/* ── Gráfico de séries temporais (aguardando histórico de insights) ── */}

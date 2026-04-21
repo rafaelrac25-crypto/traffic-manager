@@ -50,30 +50,7 @@ function defaultLoc(name, i) {
   return { id: `loc-default-${i}`, name, lat: c?.lat ?? null, lng: c?.lng ?? null, radius: 5 };
 }
 
-const DEFAULT_AUDIENCES = [
-  {
-    id: 'aud-demo-1',
-    name: 'Mulheres 25-45 — estética · Joinville',
-    description: 'Clientes-alvo principais. Moram em Joinville, bairros de renda média-alta.',
-    gender: 'F',
-    ageMin: 25,
-    ageMax: 45,
-    locations: ['Joinville', 'Centro', 'América', 'Glória', 'Saguaçu'].map(defaultLoc),
-    interests: ['Estética', 'Skincare', 'Autocuidado', 'Beleza', 'Bem-estar'],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'aud-demo-2',
-    name: 'Noivas & madrinhas · Joinville',
-    description: 'Segmentação para datas como Dia das Mães e pré-festas, público de Joinville.',
-    gender: 'F',
-    ageMin: 22,
-    ageMax: 40,
-    locations: ['Joinville', 'Centro', 'América'].map(defaultLoc),
-    interests: ['Casamento', 'Estética', 'Beleza', 'Eventos'],
-    createdAt: new Date().toISOString(),
-  },
-];
+const DEFAULT_AUDIENCES = [];
 
 const AppStateContext = createContext(null);
 
