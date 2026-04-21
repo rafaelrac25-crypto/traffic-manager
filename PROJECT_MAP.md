@@ -203,7 +203,7 @@ Campos locais + referências + subtree `meta` pronta pra sync real.
 
 ## Deploy
 
-- **Produção:** https://traffic-manager-five.vercel.app
+- **Produção:** https://criscosta.vercel.app
 - **GitHub:** https://github.com/rafaelrac25-crypto/traffic-manager (branch `main`)
 - **Regra crítica:** `frontend/dist/` fica commitado. Sempre `cd frontend && npm run build` antes de commitar
 - **Vercel config:** `vercel.json` — `@vercel/node` + `includeFiles: ["frontend/dist/**"]`
@@ -217,7 +217,7 @@ Campos locais + referências + subtree `meta` pronta pra sync real.
 | `JWT_SECRET`     | ✅                                                |
 | `GEMINI_API_KEY` | ⏳ Pendente configurar                            |
 | `NODE_ENV`       | ✅ production                                     |
-| `FRONTEND_URL`   | ✅ https://traffic-manager-five.vercel.app        |
+| `FRONTEND_URL`   | ✅ https://criscosta.vercel.app                   |
 
 ### Quando for integrar Meta real (ainda não feito)
 

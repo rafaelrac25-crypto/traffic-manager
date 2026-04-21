@@ -2,7 +2,7 @@
 
 **Última atualização:** 2026-04-20 fim do dia
 **Commit HEAD:** ver `git log --oneline -1`
-**Produção:** https://traffic-manager-five.vercel.app
+**Produção:** https://criscosta.vercel.app
 
 ---
 

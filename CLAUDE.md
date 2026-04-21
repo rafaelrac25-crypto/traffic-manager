@@ -114,7 +114,7 @@ traffic-manager/
 
 ## Deploy — Produção
 
-- **URL:** https://traffic-manager-five.vercel.app
+- **URL:** https://criscosta.vercel.app
 - **GitHub:** https://github.com/rafaelrac25-crypto/traffic-manager (branch `main`)
 - **Banco:** PostgreSQL Neon (AWS sa-east-1)
 - **Regra crítica:** `frontend/dist/` fica commitado. Sempre rodar `cd frontend && npm run build` antes de commitar mudanças no frontend
@@ -128,7 +128,7 @@ traffic-manager/
 |---|---|
 | `DATABASE_URL` | Neon PostgreSQL (`sslmode=require`) |
 | `NODE_ENV` | `production` |
-| `FRONTEND_URL` | https://traffic-manager-five.vercel.app |
+| `FRONTEND_URL` | https://criscosta.vercel.app |
 | `GROQ_API_KEY` | Chat IA (llama-3.3 + llama-4-scout com vision) |
 | `FB_APP_ID` | ⏳ obter em developers.facebook.com |
 | `FB_APP_SECRET` | ⏳ obter em developers.facebook.com |
