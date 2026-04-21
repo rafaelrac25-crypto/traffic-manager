@@ -140,7 +140,18 @@ router.delete('/:id', async (req, res) => {
 });
 
 router.post('/sync/:platform', async (req, res) => {
-  res.json({ message: `Sincronização de ${req.params.platform} disponível após conectar a plataforma`, count: 0 });
+  const { platform } = req.params;
+  try {
+    const { syncPlatform } = require('../services/sync');
+    const result = await syncPlatform(platform);
+    await log('sync', 'platform', null,
+      `Sincronização ${platform}: ${result.upserted} campanha(s) atualizada(s)`,
+      { platform, ...result });
+    res.json({ message: `${result.upserted} campanha(s) sincronizada(s)`, ...result });
+  } catch (err) {
+    console.error('[sync]', err);
+    res.status(500).json({ error: err.message || 'Erro na sincronização', meta: err.meta || null });
+  }
 });
 
 module.exports = router;

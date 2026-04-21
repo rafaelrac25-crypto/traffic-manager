@@ -141,6 +141,35 @@ export function AppStateProvider({ children }) {
     return () => { cancelled = true; };
   }, []);
 
+  /* Auto-sync silencioso com Meta a cada 30s (só quando conectado) */
+  useEffect(() => {
+    let cancelled = false;
+    let inFlight = false;
+
+    const runSync = async () => {
+      if (cancelled || inFlight) return;
+      inFlight = true;
+      try {
+        const pr = await fetch('/api/platforms');
+        const data = await pr.json();
+        const meta = Array.isArray(data) ? data.find(p => p.platform === 'meta') : null;
+        if (!meta?.connected) return;
+        await fetch('/api/campaigns/sync/meta', { method: 'POST' });
+        const remote = await adsApi.fetchAds();
+        if (cancelled || !remote || remote.length === 0) return;
+        setAds(remote.map(r => ({ ...r, serverId: r.id })));
+      } catch {
+        /* silencioso */
+      } finally {
+        inFlight = false;
+      }
+    };
+
+    runSync();
+    const id = setInterval(runSync, 30 * 1000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
+
   /* ─── Alertas de datas comerciais relevantes em janela de 45 dias (no mount) ─── */
   useEffect(() => {
     const upcoming = getRelevantCommercialDatesInWindow(new Date(), 45);

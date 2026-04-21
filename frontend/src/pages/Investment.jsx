@@ -45,6 +45,7 @@ export default function Investment() {
   const [metaStatus, setMetaStatus] = useState(null);
   const [metaLoading, setMetaLoading] = useState(false);
   const [metaFeedback, setMetaFeedback] = useState(null);
+  const [metaSyncing, setMetaSyncing] = useState(false);
 
   async function loadMetaStatus() {
     try {
@@ -68,8 +69,28 @@ export default function Investment() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!metaStatus?.connected) return;
+    const id = setInterval(loadMetaStatus, 30 * 1000);
+    return () => clearInterval(id);
+  }, [metaStatus?.connected]);
+
   function connectMeta() {
     window.location.href = '/api/platforms/meta/oauth/start';
+  }
+
+  async function syncMeta() {
+    setMetaSyncing(true);
+    setMetaFeedback(null);
+    try {
+      const { data } = await api.post('/api/campaigns/sync/meta');
+      setMetaFeedback({ type: 'ok', text: `${data.message}. Acesse a página Campanhas para visualizar.` });
+    } catch (e) {
+      const msg = e?.response?.data?.error || 'Erro ao sincronizar';
+      setMetaFeedback({ type: 'err', text: msg });
+    } finally {
+      setMetaSyncing(false);
+    }
   }
 
   async function disconnectMeta() {
@@ -391,18 +412,33 @@ export default function Investment() {
                   : '—'}
               />
             </div>
-            <button
-              onClick={disconnectMeta}
-              disabled={metaLoading}
-              style={{
-                padding: '10px 16px', borderRadius: '10px',
-                border: '1.5px solid #FCA5A5', background: '#FEF2F2',
-                color: '#DC2626', fontSize: '12px', fontWeight: 700,
-                cursor: metaLoading ? 'wait' : 'pointer',
-              }}
-            >
-              {metaLoading ? 'Desconectando…' : 'Desconectar'}
-            </button>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                onClick={syncMeta}
+                disabled={metaSyncing}
+                style={{
+                  padding: '10px 16px', borderRadius: '10px',
+                  border: 'none', background: 'var(--c-accent)',
+                  color: '#fff', fontSize: '12px', fontWeight: 700,
+                  cursor: metaSyncing ? 'wait' : 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: '6px',
+                }}
+              >
+                {metaSyncing ? '⏳ Sincronizando…' : '🔄 Sincronizar agora'}
+              </button>
+              <button
+                onClick={disconnectMeta}
+                disabled={metaLoading}
+                style={{
+                  padding: '10px 16px', borderRadius: '10px',
+                  border: '1.5px solid #FCA5A5', background: '#FEF2F2',
+                  color: '#DC2626', fontSize: '12px', fontWeight: 700,
+                  cursor: metaLoading ? 'wait' : 'pointer',
+                }}
+              >
+                {metaLoading ? 'Desconectando…' : 'Desconectar'}
+              </button>
+            </div>
           </div>
         ) : (
           <button
