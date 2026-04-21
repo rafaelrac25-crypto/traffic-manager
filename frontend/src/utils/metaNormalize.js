@@ -157,20 +157,40 @@ export function toMetaPayload(ad) {
     lifetime_budget:        useCBO && ad.budgetType === 'total' ? budgetCents : null,
   };
 
+  /* Extrai IDs reais do Meta já uploaded (via /api/upload/media).
+     Se há vídeo, cria object_story_spec.video_data; caso contrário, link_data. */
+  const uploadedMedia = ad.mediaFilesData || [];
+  const firstVideo = uploadedMedia.find(m => m.type === 'video' && m.metaVideoId);
+  const firstImage = uploadedMedia.find(m => m.type === 'image' && m.metaHash);
+  const imageHashFromUpload = firstImage?.metaHash || ad.imageHash || null;
+  const videoIdFromUpload = firstVideo?.metaVideoId || null;
+
+  const storySpec = videoIdFromUpload
+    ? {
+        page_id: ad.metaAccountId || null,
+        video_data: {
+          video_id:       videoIdFromUpload,
+          message:        ad.primaryText || '',
+          title:          ad.headline || '',
+          call_to_action: { type: CTA_TO_META[ad.ctaButton] || 'LEARN_MORE' },
+        },
+      }
+    : {
+        page_id: ad.metaAccountId || null,
+        link_data: {
+          message:          ad.primaryText,
+          name:             ad.headline,
+          link:             ad.destUrl,
+          call_to_action:   { type: CTA_TO_META[ad.ctaButton] || 'LEARN_MORE' },
+          image_hash:       imageHashFromUpload,
+          attachment_style: 'link',
+        },
+      };
+
   const creative = {
     id:   ad.metaCreativeId,
     name: `${ad.name} — Criativo`,
-    object_story_spec: {
-      page_id: ad.metaAccountId || null,
-      link_data: {
-        message:          ad.primaryText,
-        name:             ad.headline,
-        link:             ad.destUrl,
-        call_to_action:   { type: CTA_TO_META[ad.ctaButton] || 'LEARN_MORE' },
-        image_hash:       ad.imageHash || null,
-        attachment_style: 'link',
-      },
-    },
+    object_story_spec: storySpec,
   };
 
   const baseTargeting = {

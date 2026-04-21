@@ -2388,16 +2388,26 @@ export default function CreateAd() {
     } catch { return null; }
   }
 
-  async function prepareMediaData(files) {
+  /* Upload de mídia ANTES do publish — usa endpoint multipart dedicado
+     que bypassa o limite de 4.5MB de body JSON do Vercel. Retorna a lista
+     de mídias com IDs reais do Meta (image_hash ou video_id) já populados. */
+  async function uploadAllMedia(files) {
     const out = [];
     for (const m of files || []) {
-      if (!m?.url) continue;
-      if (m.url.startsWith('blob:')) {
-        const r = await blobUrlToBase64(m.url);
-        if (r) out.push({ id: m.id, type: m.type, name: m.name, base64: r.dataUrl, mime: r.mime });
-      } else if (m.url.startsWith('data:')) {
-        out.push({ id: m.id, type: m.type, name: m.name, base64: m.url });
+      if (!m?.file) {
+        /* Fallback: se não tem File (ex: carregado de localStorage), skipa */
+        if (m?.metaHash || m?.metaVideoId) out.push(m);
+        continue;
       }
+      const { uploadMedia } = await import('../services/adsApi');
+      const result = await uploadMedia(m.file);
+      out.push({
+        id: m.id,
+        type: result.type,
+        name: m.name,
+        metaHash: result.hash || null,
+        metaVideoId: result.id || null,
+      });
     }
     return out;
   }
@@ -2446,8 +2456,21 @@ export default function CreateAd() {
       name: m.name,
     }));
 
-    // Converte mídia em base64 pra backend fazer upload no Meta
-    const mediaFilesData = await prepareMediaData(mediaFiles);
+    /* Upload de mídia em etapa separada — via multipart dedicado pra evitar
+       o limite de 4.5MB do body JSON do Vercel. Cada arquivo vai individual,
+       independente do tamanho total (até 15MB por vídeo, imagens comprimidas). */
+    let mediaFilesData;
+    try {
+      mediaFilesData = await uploadAllMedia(mediaFiles);
+    } catch (uploadErr) {
+      setPublishing(false);
+      addNotification({
+        kind: 'publish-failed',
+        title: 'Falha no upload da mídia',
+        message: `"${adName}" não foi publicado. ${uploadErr?.message || 'Erro no upload'}. Tente uma imagem/vídeo menor.`,
+      });
+      return;
+    }
 
     // Referências (em vez de duplicar) quando o user reusa audience/creative
     const audienceId = reuseAudience?.id || null;

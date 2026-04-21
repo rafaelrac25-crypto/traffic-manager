@@ -89,4 +89,29 @@ async function uploadVideo(creds, base64OrDataUrl) {
   return { id: json.id };
 }
 
-module.exports = { uploadImage, uploadVideo };
+/* Variante que aceita Buffer diretamente (evita round-trip base64 quando
+   vem via multipart upload). Mais eficiente pra arquivos grandes. */
+async function uploadVideoBuffer(creds, buffer, filename = 'video.mp4') {
+  const token = getToken(creds);
+  const accountId = creds.account_id;
+  if (!accountId) throw new Error('account_id ausente');
+
+  const form = new FormData();
+  const blob = new Blob([buffer], { type: 'video/mp4' });
+  form.append('source', blob, filename);
+  form.append('access_token', token);
+
+  const url = `https://${GRAPH_HOST}/${API_VERSION}/${accountId}/advideos`;
+  const res = await fetch(url, { method: 'POST', body: form });
+  const json = await res.json();
+  if (json.error) {
+    const parsed = parseMetaError(json.error);
+    const e = new Error(parsed.pt);
+    e.meta = parsed;
+    throw e;
+  }
+  if (!json.id) throw new Error('Meta não retornou video_id');
+  return { id: json.id };
+}
+
+module.exports = { uploadImage, uploadVideo, uploadVideoBuffer };

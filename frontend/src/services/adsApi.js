@@ -101,6 +101,28 @@ export async function updateAdStatus(id, status) {
   }
 }
 
+/* Upload de mídia via multipart — evita limite de body JSON do Vercel (~4.5MB).
+   Retorna { type: 'image'|'video', id?, hash?, url? } pro publish usar direto. */
+export async function uploadMedia(file) {
+  const form = new FormData();
+  form.append('file', file);
+  try {
+    const { data } = await api.post('/api/upload/media', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120000, /* upload pode demorar em conexão lenta */
+    });
+    return data;
+  } catch (err) {
+    const status = err?.response?.status;
+    const body = err?.response?.data;
+    const msg = body?.error?.pt || body?.error?.message || body?.error || err?.message || 'Falha no upload';
+    const e = new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
+    e.status = status;
+    e.meta = body?.meta || null;
+    throw e;
+  }
+}
+
 /* Faz sync cirúrgico de status + métricas dos ads Meta já publicados.
    Retorna { updated: [{ id, platform_campaign_id, status, spent, clicks, ... }] }. */
 export async function syncMetaStatus() {

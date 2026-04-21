@@ -27,6 +27,7 @@ app.use('/api/campaigns', require('./routes/campaigns'));
 app.use('/api/platforms', require('./routes/platforms'));
 app.use('/api/history', require('./routes/history'));
 app.use('/api/ai', require('./routes/ai'));
+app.use('/api/upload', require('./routes/upload'));
 app.use('/webhooks', require('./routes/webhooks'));
 
 app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
