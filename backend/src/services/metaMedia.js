@@ -61,8 +61,32 @@ function uploadImage(creds, base64OrDataUrl) {
   });
 }
 
-function uploadVideo(creds, base64OrDataUrl) {
-  return Promise.reject(new Error('Upload de vídeo ainda não suportado — use imagem ou reels estático'));
+/* Upload de vídeo pro Meta via POST /act_XXX/advideos com multipart/form-data.
+   Meta retorna {id} do vídeo que vira video_id no creative. Para vídeos grandes
+   (>1GB) Meta exige chunked upload, mas nosso limite cliente é 8MB — simples. */
+async function uploadVideo(creds, base64OrDataUrl) {
+  const token = getToken(creds);
+  const accountId = creds.account_id;
+  if (!accountId) throw new Error('account_id ausente');
+  const clean = stripDataPrefix(base64OrDataUrl);
+  const buffer = Buffer.from(clean, 'base64');
+
+  const form = new FormData();
+  const blob = new Blob([buffer], { type: 'video/mp4' });
+  form.append('source', blob, 'video.mp4');
+  form.append('access_token', token);
+
+  const url = `https://${GRAPH_HOST}/${API_VERSION}/${accountId}/advideos`;
+  const res = await fetch(url, { method: 'POST', body: form });
+  const json = await res.json();
+  if (json.error) {
+    const parsed = parseMetaError(json.error);
+    const e = new Error(parsed.pt);
+    e.meta = parsed;
+    throw e;
+  }
+  if (!json.id) throw new Error('Meta não retornou video_id');
+  return { id: json.id };
 }
 
 module.exports = { uploadImage, uploadVideo };

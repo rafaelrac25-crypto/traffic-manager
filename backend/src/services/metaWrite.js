@@ -124,19 +124,27 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
     throw new Error('Payload Meta incompleto (precisa de campaign, ad_set(s), creative, ad)');
   }
 
-  // 1. Upload de mídia
+  // 1. Upload de mídia — detecta image vs video
+  const { uploadVideo } = require('./metaMedia');
   const uploadedImages = [];
+  const uploadedVideos = [];
   for (const m of mediaItems) {
-    if (m?.base64 && (m.type === 'image' || !m.type)) {
-      try {
+    if (!m?.base64) continue;
+    try {
+      if (m.type === 'video' || (m.mime || '').startsWith('video/')) {
+        const vid = await uploadVideo(creds, m.base64);
+        uploadedVideos.push({ ...vid, originalId: m.id });
+      } else {
         const img = await uploadImage(creds, m.base64);
         uploadedImages.push({ ...img, originalId: m.id });
-      } catch (e) {
-        throw new Error(`Falha ao enviar mídia "${m.name || 'imagem'}": ${e.message}`);
       }
+    } catch (e) {
+      throw new Error(`Falha ao enviar "${m.name || 'mídia'}": ${e.message}`);
     }
   }
   const mainImageHash = uploadedImages[0]?.hash || metaPayload.creative?.object_story_spec?.link_data?.image_hash;
+  const mainVideoId   = uploadedVideos[0]?.id || metaPayload.creative?.object_story_spec?.video_data?.video_id;
+  const isVideo = !!mainVideoId && !mainImageHash;
 
   // 2. Campaign
   const c = metaPayload.campaign;
@@ -155,10 +163,25 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
   // 3. Creative ÚNICO — reutilizado entre N ads
   const cr = { ...metaPayload.creative };
   const storySpec = JSON.parse(JSON.stringify(cr.object_story_spec || {}));
-  if (storySpec.link_data) {
+  if (!storySpec.page_id && creds.page_id) storySpec.page_id = creds.page_id;
+
+  if (isVideo) {
+    /* Creative de VÍDEO: precisa de video_data (não link_data). Meta exige
+       image_url (thumbnail) — usa o próprio vídeo com param picture ausente
+       deixa Meta gerar thumb automático. */
+    const linkData = storySpec.link_data || {};
+    storySpec.video_data = {
+      video_id:       mainVideoId,
+      message:        linkData.message || cr.primary_text || '',
+      title:          linkData.name || linkData.title || '',
+      call_to_action: linkData.call_to_action || { type: 'LEARN_MORE' },
+      ...(linkData.link ? { link_description: linkData.link } : {}),
+    };
+    delete storySpec.link_data;
+  } else if (storySpec.link_data) {
     if (mainImageHash) storySpec.link_data.image_hash = mainImageHash;
-    if (!storySpec.page_id && creds.page_id) storySpec.page_id = creds.page_id;
   }
+
   const crResp = await request('POST', `/${accountId}/adcreatives`, {
     name: cr.name || `${c.name} — Criativo`,
     object_story_spec: storySpec,

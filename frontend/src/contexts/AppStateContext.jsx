@@ -516,11 +516,27 @@ export function AppStateProvider({ children }) {
     adsApi.createAd(newAd).then((serverAd) => {
       if (!serverAd || serverAd.__failed) {
         setAds(prev => prev.filter(a => a.id !== newAd.id));
-        const reason = serverAd?.error || 'Sem conexão com o servidor';
+        /* Extrai motivo real garantindo string (nunca [object Object]).
+           body.error pode ser string OU objeto {code, message, pt, ...} */
+        function extractReason(payload) {
+          if (!payload) return 'Sem resposta do servidor';
+          const err = payload.error;
+          if (typeof err === 'string') return err;
+          if (err && typeof err === 'object') {
+            return err.pt || err.message || err.error_user_msg || JSON.stringify(err);
+          }
+          if (payload.meta && typeof payload.meta === 'object') {
+            return payload.meta.pt || payload.meta.message || JSON.stringify(payload.meta);
+          }
+          return 'Erro desconhecido';
+        }
+        const reason = extractReason(serverAd);
         const friendly =
           serverAd?.status === 504 || serverAd?.status === 408
-            ? 'O Meta demorou demais para responder (possível timeout na criação da campanha ou upload de mídia). Tente reduzir o tamanho da imagem para <1MB e tente novamente.'
+            ? 'O servidor demorou demais. Reduza imagem/vídeo pra <2MB e tente novamente.'
             : reason;
+        /* Log no console pro dev ver o payload completo (facilita debug) */
+        if (serverAd) console.error('[publish-failed] resposta completa:', serverAd);
         addNotification({
           kind: 'publish-failed',
           title: 'Falha ao publicar',
