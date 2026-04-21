@@ -10,8 +10,8 @@
 /* Limites adequados pro pipeline Vercel + Meta (ad account criscosta.beauty) */
 export const MAX_IMAGE_PX = 1080;
 export const IMAGE_JPEG_QUALITY = 0.85;
-export const MAX_VIDEO_MB_AFTER = 14; /* limite máximo APÓS compressão automática (multer 15MB) */
-export const VIDEO_COMPRESS_THRESHOLD_MB = 4; /* acima disso, comprime antes do upload */
+export const MAX_VIDEO_MB_AFTER = 4.0; /* Vercel limita body em 4.5MB — 500KB de margem pro overhead multipart */
+export const VIDEO_COMPRESS_THRESHOLD_MB = 3.5; /* acima disso, comprime sempre */
 export const MAX_IMAGE_MB_AFTER = 2;
 
 /* Converte File de imagem em Blob comprimido via canvas. */

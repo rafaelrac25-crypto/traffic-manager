@@ -32,10 +32,36 @@ async function getFFmpeg(onLoadProgress) {
   return loading;
 }
 
-/* Comprime vídeo. onProgress recebe número 0..100 ou string de status. */
+/* Target final: 4MB. Vercel limita body em 4.5MB — 500KB de margem cobre
+   overhead de multipart (boundary + headers). */
+const TARGET_MB = 4.0;
+
+/* Comprime vídeo com bitrate adaptativo baseado na duração pra garantir
+   tamanho final <= TARGET_MB. Se não conseguir no primeiro pass, reencoda
+   com parâmetros mais agressivos automaticamente. */
 export async function compressVideo(file, onProgress) {
   onProgress?.('Preparando…');
   const ffm = await getFFmpeg(onProgress);
+
+  /* Tenta descobrir duração do vídeo lendo os metadados */
+  let durationSec = 30; /* fallback */
+  try {
+    const v = document.createElement('video');
+    v.src = URL.createObjectURL(file);
+    await new Promise((res, rej) => {
+      v.onloadedmetadata = res;
+      v.onerror = () => rej(new Error('metadata'));
+      setTimeout(() => rej(new Error('timeout')), 5000);
+    });
+    durationSec = v.duration || 30;
+    URL.revokeObjectURL(v.src);
+  } catch { /* usa fallback */ }
+
+  /* Calcula bitrate alvo: (target_mb × 8192 kbps por MB/s) / duração, reservando
+     96k pro áudio e 10% de overhead. */
+  const totalKbps = Math.floor((TARGET_MB * 8192) / Math.max(durationSec, 5));
+  const audioKbps = 96;
+  const videoKbps = Math.max(250, Math.floor((totalKbps - audioKbps) * 0.90));
 
   const handler = ({ progress }) => {
     const pct = Math.min(99, Math.max(0, Math.round(progress * 100)));
@@ -43,40 +69,56 @@ export async function compressVideo(file, onProgress) {
   };
   ffm.on('progress', handler);
 
-  try {
+  async function encode(params) {
     const inputName = 'input' + (file.name.match(/\.[^.]+$/)?.[0] || '.mp4');
     const outputName = 'output.mp4';
-
     const buffer = new Uint8Array(await file.arrayBuffer());
     await ffm.writeFile(inputName, buffer);
-
-    /* CRF 28 é bom balanço qualidade/tamanho. scale 720p (altura -2 mantém aspect).
-       preset fast é razoável pra browser. AAC 128k áudio. +faststart coloca moov
-       atom no início pro Meta processar rápido. */
     await ffm.exec([
       '-i', inputName,
       '-c:v', 'libx264',
-      '-preset', 'fast',
-      '-crf', '28',
+      '-preset', 'veryfast',
+      '-b:v', `${params.vKbps}k`,
+      '-maxrate', `${params.vKbps}k`,
+      '-bufsize', `${params.vKbps * 2}k`,
+      '-vf', `scale='min(${params.width},iw)':'-2'`,
       '-c:a', 'aac',
-      '-b:a', '128k',
-      '-vf', "scale='min(1280,iw)':'-2'",
+      '-b:a', `${params.aKbps}k`,
       '-movflags', '+faststart',
       '-y',
       outputName,
     ]);
-
     const data = await ffm.readFile(outputName);
     await ffm.deleteFile(inputName).catch(() => {});
     await ffm.deleteFile(outputName).catch(() => {});
+    return data;
+  }
+
+  try {
+    /* Pass 1: bitrate calculado, largura 720p */
+    onProgress?.(0);
+    let data = await encode({ vKbps: videoKbps, aKbps: audioKbps, width: 720 });
+    let outMB = data.byteLength / (1024 * 1024);
+
+    /* Pass 2: se ainda estourou, reencoda MUITO agressivo — 480p + bitrate baixo */
+    if (outMB > TARGET_MB) {
+      onProgress?.('Comprimindo mais…');
+      data = await encode({ vKbps: Math.max(200, Math.floor(videoKbps * 0.55)), aKbps: 64, width: 480 });
+      outMB = data.byteLength / (1024 * 1024);
+    }
+
+    /* Pass 3 (último recurso): 360p + bitrate mínimo */
+    if (outMB > TARGET_MB) {
+      onProgress?.('Reduzindo ainda mais…');
+      data = await encode({ vKbps: 200, aKbps: 48, width: 360 });
+    }
 
     onProgress?.(100);
-    const compressed = new File(
+    return new File(
       [data.buffer],
       file.name.replace(/\.[^.]+$/, '.mp4'),
       { type: 'video/mp4' }
     );
-    return compressed;
   } finally {
     ffm.off('progress', handler);
   }
