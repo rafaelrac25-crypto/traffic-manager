@@ -1234,7 +1234,7 @@ export default function Dashboard() {
   const saudacao = saudacaoPorHora();
 
   /* metaBilling vem do AppStateContext — auto-refresh 1h + botão manual em /investimento */
-  const funds = metaBilling ? Number(metaBilling.balance || 0) : 0;
+  const funds = metaBilling ? Number(metaBilling.available ?? metaBilling.balance ?? 0) : 0;
   const LOW_BALANCE_THRESHOLD = 20;
   const lowBalance = metaBilling ? funds < LOW_BALANCE_THRESHOLD : false;
 

@@ -101,7 +101,7 @@ export default function Investment() {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{ fontSize: '36px', fontWeight: 700, color: 'var(--c-accent)', lineHeight: 1 }}>
-                {metaBilling ? formatBRL(metaBilling.balance) : '—'}
+                {metaBilling ? formatBRL(metaBilling.available ?? metaBilling.balance) : '—'}
               </div>
               <button
                 onClick={refreshMetaBilling}
@@ -128,7 +128,7 @@ export default function Investment() {
             </div>
             <div style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '8px' }}>
               {metaBilling
-                ? <>Gasto total: {formatBRL(metaBilling.amount_spent)}{metaBilling.spend_cap ? ` · Limite: ${formatBRL(metaBilling.spend_cap)}` : ''} · Atualizado {formatRelativeTime(metaBillingLastUpdate)}</>
+                ? <>Gasto total: {formatBRL(metaBilling.amount_spent)}{metaBilling.spend_cap ? ` · Limite: ${formatBRL(metaBilling.spend_cap)}` : ''} · Atualizado {formatRelativeTime(metaBillingLastUpdate)}<br/><span style={{ fontSize: '10px', color: 'var(--c-text-4)', opacity: 0.8 }}>Pode variar alguns centavos do Meta por créditos promocionais</span></>
                 : (metaBillingLoading ? 'Carregando saldo da conta de anúncios…' : 'Clique em ↻ para carregar o saldo')}
             </div>
           </div>

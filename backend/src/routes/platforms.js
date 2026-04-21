@@ -84,13 +84,24 @@ router.get('/meta/billing', async (req, res) => {
     }
 
     const toReal = (cents) => Number(cents || 0) / 100;
+    const balance = toReal(json.balance);
+    const amount_spent = toReal(json.amount_spent);
+    const spend_cap = json.spend_cap ? toReal(json.spend_cap) : null;
+    /* "Disponível": quanto ainda pode gastar antes de bater no limite da conta.
+       Pra contas pós-pago (balance sempre ~0), usa spend_cap - amount_spent.
+       Pra contas pré-pago ou sem cap, cai no balance. Pode divergir em centavos
+       do Meta Ads Manager por créditos promocionais/reembolsos não expostos aqui. */
+    const available = spend_cap != null
+      ? Math.max(0, spend_cap - amount_spent)
+      : balance;
     res.json({
       account_id: accountId,
       account_name: json.name || null,
       currency: json.currency || 'BRL',
-      balance: toReal(json.balance),
-      amount_spent: toReal(json.amount_spent),
-      spend_cap: json.spend_cap ? toReal(json.spend_cap) : null,
+      balance,
+      amount_spent,
+      spend_cap,
+      available,
       account_status: json.account_status,
     });
   } catch (err) {
