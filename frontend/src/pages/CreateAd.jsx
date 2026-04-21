@@ -1689,14 +1689,23 @@ function Step5Creative({ adFormat, setAdFormat, mediaFiles, setMediaFiles, prima
   const [customCta, setCustomCta] = useState('');
   const [uploadError, setUploadError] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [progress, setProgress] = useState('');
 
   async function handleFiles(files) {
     setUploadError('');
     setProcessing(true);
+    setProgress('');
     const processed = [];
     const errors = [];
     for (const f of Array.from(files)) {
-      const result = await processMediaFile(f);
+      const isVideo = f.type.startsWith('video/');
+      const sizeMB = f.size / (1024 * 1024);
+      const onProg = (p) => {
+        if (typeof p === 'number') setProgress(`Comprimindo "${f.name}"… ${p}%`);
+        else setProgress(`${p}`);
+      };
+      if (isVideo && sizeMB >= 4) setProgress(`Comprimindo "${f.name}"… preparando`);
+      const result = await processMediaFile(f, onProg);
       if (result.error) {
         errors.push(`${f.name}: ${result.error}`);
         continue;
@@ -1715,6 +1724,7 @@ function Step5Creative({ adFormat, setAdFormat, mediaFiles, setMediaFiles, prima
     if (errors.length > 0) setUploadError(errors.join(' · '));
     if (processed.length > 0) setMediaFiles(prev => [...prev, ...processed]);
     setProcessing(false);
+    setProgress('');
   }
 
   return (
@@ -1775,14 +1785,14 @@ function Step5Creative({ adFormat, setAdFormat, mediaFiles, setMediaFiles, prima
           </div>
         )}
 
-        {/* Loading durante processamento */}
+        {/* Loading com progresso real */}
         {processing && (
           <div style={{
             padding: '10px 14px', marginBottom: '8px',
             background: 'rgba(193, 53, 132, 0.08)', border: '1px solid rgba(193, 53, 132, 0.25)',
             borderRadius: '10px', fontSize: '12px', color: 'var(--c-text-2)',
           }}>
-            ⚙️ Otimizando mídia…
+            ⚙️ {progress || 'Otimizando mídia…'}
           </div>
         )}
 
@@ -1810,8 +1820,8 @@ function Step5Creative({ adFormat, setAdFormat, mediaFiles, setMediaFiles, prima
             {adFormat === 'carousel' ? 'Adicionar cartões (2–10 imagens)' : 'Clique ou arraste o arquivo aqui'}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>
-            Imagem: JPG, PNG — otimizada automaticamente pra até 1080 px<br/>
-            Vídeo: MP4, MOV — máx 8 MB (comprima se maior em freeconvert.com/video-compressor)
+            Imagem: JPG, PNG — comprimida automaticamente (1080 px, JPEG 85%)<br/>
+            Vídeo: MP4, MOV — comprimido automaticamente se {'>'} 4 MB (720p, H.264)
           </div>
         </div>
       </div>

@@ -10,8 +10,9 @@
 /* Limites adequados pro pipeline Vercel + Meta (ad account criscosta.beauty) */
 export const MAX_IMAGE_PX = 1080;
 export const IMAGE_JPEG_QUALITY = 0.85;
-export const MAX_VIDEO_MB = 8;
-export const MAX_IMAGE_MB_AFTER = 2; /* se comprimir e ainda ficar > 2MB, avisa */
+export const MAX_VIDEO_MB_AFTER = 14; /* limite máximo APÓS compressão automática (multer 15MB) */
+export const VIDEO_COMPRESS_THRESHOLD_MB = 4; /* acima disso, comprime antes do upload */
+export const MAX_IMAGE_MB_AFTER = 2;
 
 /* Converte File de imagem em Blob comprimido via canvas. */
 export async function compressImage(file) {
@@ -50,21 +51,40 @@ export async function compressImage(file) {
   });
 }
 
-/* Valida vídeo — retorna { ok: true, file } ou { ok: false, reason, suggestion } */
-export function validateVideo(file) {
-  const mb = file.size / (1024 * 1024);
-  if (mb > MAX_VIDEO_MB) {
+/* Comprime vídeo automaticamente via FFmpeg.wasm se acima do threshold.
+   Retorna { ok: true, file, wasCompressed } ou { ok: false, reason }. */
+export async function processVideoAuto(file, onProgress) {
+  const originalMB = file.size / (1024 * 1024);
+  /* Abaixo do threshold → passa direto (não vale a pena comprimir) */
+  if (originalMB < VIDEO_COMPRESS_THRESHOLD_MB) {
+    return { ok: true, file, wasCompressed: false };
+  }
+  try {
+    const { compressVideo } = await import('./videoCompressor');
+    const compressed = await compressVideo(file, onProgress);
+    const compressedMB = compressed.size / (1024 * 1024);
+    if (compressedMB > MAX_VIDEO_MB_AFTER) {
+      return {
+        ok: false,
+        reason: `Vídeo ficou com ${compressedMB.toFixed(1)} MB mesmo após compressão (limite ${MAX_VIDEO_MB_AFTER} MB). Use um vídeo mais curto (<30s) ou em resolução menor.`,
+      };
+    }
+    return { ok: true, file: compressed, wasCompressed: true };
+  } catch (e) {
+    /* Se FFmpeg falhar (navegador antigo, memória), aceita vídeo original
+       SE ainda couber no limite do multer (15MB). */
+    if (originalMB <= MAX_VIDEO_MB_AFTER) {
+      return { ok: true, file, wasCompressed: false };
+    }
     return {
       ok: false,
-      reason: `O vídeo tem ${mb.toFixed(1)} MB — limite para publicação direta é ${MAX_VIDEO_MB} MB.`,
-      suggestion: 'Comprima gratuitamente em freeconvert.com/video-compressor (ajuste qualidade pra 70% e resolução 720p).',
+      reason: `Compressão automática falhou (${e.message}). Vídeo tem ${originalMB.toFixed(1)} MB — precisa ser ≤${MAX_VIDEO_MB_AFTER} MB.`,
     };
   }
-  return { ok: true, file };
 }
 
 /* Processa 1 arquivo. Retorna { file, name, type, wasCompressed } ou { error } */
-export async function processMediaFile(file) {
+export async function processMediaFile(file, onProgress) {
   if (file.type.startsWith('image/')) {
     try {
       const originalMB = file.size / (1024 * 1024);
@@ -90,17 +110,17 @@ export async function processMediaFile(file) {
   }
 
   if (file.type.startsWith('video/')) {
-    const check = validateVideo(file);
-    if (!check.ok) {
-      return { error: `${check.reason} ${check.suggestion}` };
-    }
+    const originalMB = Number((file.size / (1024 * 1024)).toFixed(2));
+    const result = await processVideoAuto(file, onProgress);
+    if (!result.ok) return { error: result.reason };
+    const finalMB = Number((result.file.size / (1024 * 1024)).toFixed(2));
     return {
-      file,
-      name: file.name,
+      file: result.file,
+      name: result.file.name,
       type: 'video',
-      wasCompressed: false,
-      originalSize: Number((file.size / (1024 * 1024)).toFixed(2)),
-      finalSize: Number((file.size / (1024 * 1024)).toFixed(2)),
+      wasCompressed: result.wasCompressed,
+      originalSize: originalMB,
+      finalSize: finalMB,
     };
   }
 
