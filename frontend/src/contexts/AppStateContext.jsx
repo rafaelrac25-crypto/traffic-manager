@@ -391,6 +391,20 @@ export function AppStateProvider({ children }) {
     if (!notif.silent && Date.now() - mountedAtRef.current > 1500) {
       playBell();
     }
+    /* Replica no histórico erros/warnings relevantes pro log de auditoria.
+       Exclui kinds ruidosos como commercial-date ou low-balance (vão no sino mas
+       não inflam histórico). */
+    const loggableKinds = ['publish-failed', 'rejected', 'meta-sync-error', 'reconnect-required', 'warning', 'insight-high-performer', 'insight-low-performer'];
+    if (loggableKinds.includes(notif.kind)) {
+      setHistory(prev => [{
+        id: `hist-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        createdAt: new Date().toISOString(),
+        type: `notif-${notif.kind}`,
+        title: notif.title || 'Notificação',
+        description: notif.message || notif.body || null,
+        restorable: false,
+      }, ...prev].slice(0, 500));
+    }
   }, []);
 
   /* ─── Histórico (log de ações principais + undo) ─── */

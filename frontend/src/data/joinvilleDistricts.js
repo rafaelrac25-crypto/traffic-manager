@@ -155,3 +155,21 @@ export const DISTRICT_NAMES_FOR_SUGGESTION = [
     .sort((a, b) => distanceKm(HOME_COORDS, a.coords) - distanceKm(HOME_COORDS, b.coords))
     .map((d) => d.name),
 ];
+
+/**
+ * Retorna o bairro mais próximo de uma coordenada (exclui "Joinville" cidade inteira).
+ * Usado como fallback quando Nominatim não retorna nome de bairro no reverse geocode.
+ */
+export function nearestDistrict(lat, lng) {
+  let best = null;
+  let bestDist = Infinity;
+  for (const d of DISTRICTS) {
+    if (d.name === 'Joinville') continue; /* cidade inteira, não conta */
+    const dist = distanceKm({ lat, lng }, d.coords);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = d;
+    }
+  }
+  return best ? { ...best, distKm: bestDist } : null;
+}

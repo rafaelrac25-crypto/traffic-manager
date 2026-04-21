@@ -21,6 +21,14 @@ const TYPE_META = {
   'platform-connected':   { icon: '🔗', label: 'Plataforma conectada', color: '#16A34A' },
   'platform-disconnected':{ icon: '⛓',  label: 'Plataforma desconectada', color: '#EA580C' },
   'payment-updated':      { icon: '💳', label: 'Pagamento atualizado', color: '#3B82F6' },
+  /* Erros e avisos do sino espelhados no histórico pra log de auditoria */
+  'notif-publish-failed':      { icon: '⚠', label: 'Erro ao publicar',       color: '#EF4444' },
+  'notif-rejected':            { icon: '❌', label: 'Anúncio reprovado',     color: '#EF4444' },
+  'notif-meta-sync-error':     { icon: '⚠', label: 'Erro de sincronização', color: '#EA580C' },
+  'notif-reconnect-required':  { icon: '🔐', label: 'Reconexão necessária',  color: '#EA580C' },
+  'notif-warning':             { icon: '⚠', label: 'Aviso',                 color: '#EAB308' },
+  'notif-insight-high-performer': { icon: '🔥', label: 'Oportunidade detectada', color: '#22C55E' },
+  'notif-insight-low-performer':  { icon: '📉', label: 'Baixa performance',  color: '#EA580C' },
 };
 
 function groupKey(iso) {
@@ -36,6 +44,50 @@ function groupKey(iso) {
 
 function formatTime(iso) {
   return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+/* Grupo de um dia com "ver mais" quando tem muitas entradas.
+   Padrão: mostra as 8 primeiras; botão expande o resto. */
+function DayGroup({ label, entries, onRestore, onRemove }) {
+  const [expanded, setExpanded] = useState(false);
+  const LIMIT = 8;
+  const overflow = entries.length > LIMIT;
+  const visible = expanded || !overflow ? entries : entries.slice(0, LIMIT);
+  const hidden = overflow && !expanded ? entries.length - LIMIT : 0;
+
+  return (
+    <div>
+      <div style={{
+        fontSize: '10.5px', fontWeight: 700, color: 'var(--c-text-4)',
+        textTransform: 'uppercase', letterSpacing: '.7px',
+        padding: '0 12px', marginBottom: '4px',
+        display: 'flex', alignItems: 'center', gap: '8px',
+      }}>
+        <span>{label}</span>
+        <span style={{ flex: 1, height: '1px', background: 'var(--c-border-lt)' }} />
+        <span style={{ color: 'var(--c-text-4)', fontWeight: 500 }}>{entries.length}</span>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        {visible.map(h => (
+          <LogRow key={h.id} entry={h} onRestore={onRestore} onRemove={onRemove} />
+        ))}
+        {overflow && (
+          <button
+            type="button"
+            onClick={() => setExpanded(v => !v)}
+            style={{
+              background: 'transparent', border: 'none', cursor: 'pointer',
+              padding: '6px 12px', fontSize: '11px', fontWeight: 600,
+              color: 'var(--c-accent)', textAlign: 'left',
+              alignSelf: 'flex-start',
+            }}
+          >
+            {expanded ? '↑ Mostrar menos' : `↓ Ver mais ${hidden}`}
+          </button>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function LogRow({ entry, onRestore, onRemove }) {
@@ -227,32 +279,13 @@ export default function History() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {Object.entries(grouped).map(([groupLabel, entries]) => (
-            <div key={groupLabel}>
-              <div style={{
-                fontSize: '10.5px', fontWeight: 700, color: 'var(--c-text-4)',
-                textTransform: 'uppercase', letterSpacing: '.7px',
-                padding: '0 12px', marginBottom: '4px',
-                display: 'flex', alignItems: 'center', gap: '8px',
-              }}>
-                <span>{groupLabel}</span>
-                <span style={{
-                  flex: 1, height: '1px', background: 'var(--c-border-lt)',
-                }} />
-                <span style={{ color: 'var(--c-text-4)', fontWeight: 500 }}>
-                  {entries.length}
-                </span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                {entries.map(h => (
-                  <LogRow
-                    key={h.id}
-                    entry={h}
-                    onRestore={handleRestore}
-                    onRemove={removeHistoryEntry}
-                  />
-                ))}
-              </div>
-            </div>
+            <DayGroup
+              key={groupLabel}
+              label={groupLabel}
+              entries={entries}
+              onRestore={handleRestore}
+              onRemove={removeHistoryEntry}
+            />
           ))}
         </div>
       )}

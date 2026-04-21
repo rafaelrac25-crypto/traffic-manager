@@ -22,6 +22,7 @@ import {
   HOME_DISTRICT,
   distanceKm,
   ringByDistance,
+  nearestDistrict,
 } from '../data/joinvilleDistricts';
 import { toMetaPayload, newMetaIds } from '../utils/metaNormalize';
 
@@ -253,18 +254,26 @@ function MapClickHandler({ onAdd, radius, onReject }) {
         onReject?.(geo.distance);
         return;
       }
+      /* Prioriza nome de BAIRRO (suburb/neighbourhood) em vez de 'Joinville' cidade.
+         Fallback: calcula o bairro mais próximo da nossa lista local. */
+      let name;
       try {
         const r = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+          `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&zoom=18`,
           { headers: { 'Accept-Language': 'pt-BR', 'User-Agent': 'TrafficManager/1.0' } }
         );
         const d = await r.json();
-        const name = d.address?.city || d.address?.town || d.address?.village || d.address?.county
-          || `${lat.toFixed(3)}, ${lng.toFixed(3)}`;
-        onAdd({ id: Date.now(), name, lat, lng, radius });
-      } catch {
-        onAdd({ id: Date.now(), name: `${lat.toFixed(3)}, ${lng.toFixed(3)}`, lat, lng, radius });
+        const a = d.address || {};
+        name = a.neighbourhood || a.suburb || a.quarter || a.city_district || a.residential;
+      } catch { /* ignora — cai no fallback */ }
+
+      if (!name) {
+        const nearest = nearestDistrict(lat, lng);
+        if (nearest) name = nearest.name;
       }
+      if (!name) name = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+
+      onAdd({ id: Date.now(), name, lat, lng, radius });
     },
   });
   return null;
