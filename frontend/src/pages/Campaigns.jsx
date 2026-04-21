@@ -554,8 +554,28 @@ function AdRow({ ad, isLast, highCpc, onPreview, onToggle, onDuplicate, onEdit, 
       <td style={{ padding: '8px 14px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <button title="Ver criativo" onClick={stop(() => onPreview && onPreview(ad))} style={btn}><EyeIcon /></button>
-          {(isActive || ad.status === 'paused') && onToggle && (
-            <button title={isActive ? 'Pausar' : 'Reativar'} onClick={stop(() => onToggle(ad))} style={btn}>
+          {(isActive || ad.status === 'paused' || ad.status === 'review') && onToggle && (
+            <button
+              title={
+                isActive
+                  ? 'Pausar no Meta'
+                  : ad.status === 'review'
+                    ? 'Pré-ativar — começa a entregar assim que o Meta aprovar'
+                    : 'Reativar no Meta'
+              }
+              onClick={stop(() => {
+                /* Confirm ao ativar — evita gasto acidental */
+                if (!isActive) {
+                  const budget = ad.budgetValue || ad.budget;
+                  const msg = ad.status === 'review'
+                    ? `Pré-ativar "${ad.name || 'esse anúncio'}"? Assim que o Meta aprovar, ele começa a gastar R$ ${budget || '?'}${ad.budgetType === 'daily' ? '/dia' : ''}.`
+                    : `Ativar "${ad.name || 'esse anúncio'}"? Ele começa a gastar R$ ${budget || '?'}${ad.budgetType === 'daily' ? '/dia' : ''} imediatamente.`;
+                  if (!confirm(msg)) return;
+                }
+                onToggle(ad);
+              })}
+              style={btn}
+            >
               {isActive ? <PauseIcon /> : <PlayIcon />}
             </button>
           )}

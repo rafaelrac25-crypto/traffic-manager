@@ -209,6 +209,65 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+/* Sync cirúrgico: só atualiza status/métricas das ads que JÁ existem no nosso DB
+   e têm platform_campaign_id. Preserva o `payload` (wizard completo). Seguro pra
+   rodar em polling curto (60s) sem perder dados.
+   Retorna apenas os diffs — frontend aplica sem precisar refetch completo. */
+router.post('/sync-meta-status', async (req, res) => {
+  try {
+    const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+    const creds = credResult.rows[0];
+    if (!creds) return res.json({ updated: [], skipped: 'meta-not-connected' });
+
+    const localAds = await db.query(
+      `SELECT id, platform_campaign_id, status FROM campaigns
+       WHERE platform = 'meta' AND platform_campaign_id IS NOT NULL`,
+      []
+    );
+    if (!localAds.rows.length) return res.json({ updated: [] });
+
+    const metaAds = require('../services/metaAds');
+    let remote;
+    try {
+      remote = await metaAds.fetchCampaigns(creds);
+    } catch (e) {
+      console.warn('[sync-meta-status] fetchCampaigns falhou:', e.message);
+      return res.json({ updated: [], error: e.message });
+    }
+    const byMetaId = new Map(remote.map(r => [r.id, r]));
+
+    const updated = [];
+    for (const local of localAds.rows) {
+      const r = byMetaId.get(local.platform_campaign_id);
+      if (!r) continue;
+      /* Só grava se mudou algo relevante — reduz churn de updated_at */
+      const statusChanged = r.status && r.status !== local.status;
+      const metricsChanged = (r.spent ?? 0) > 0 || (r.clicks ?? 0) > 0 || (r.impressions ?? 0) > 0;
+      if (!statusChanged && !metricsChanged) continue;
+
+      await db.query(
+        `UPDATE campaigns SET
+           status = COALESCE(?, status),
+           spent = ?, clicks = ?, impressions = ?, conversions = ?,
+           updated_at = datetime('now')
+         WHERE id = ?`,
+        [r.status || null, r.spent || 0, r.clicks || 0, r.impressions || 0, r.conversions || 0, local.id]
+      );
+      updated.push({
+        id: local.id,
+        platform_campaign_id: local.platform_campaign_id,
+        status: r.status,
+        effective_status: r.effective_status,
+        spent: r.spent, clicks: r.clicks, impressions: r.impressions, conversions: r.conversions,
+      });
+    }
+    res.json({ updated });
+  } catch (err) {
+    console.error('[sync-meta-status]', err);
+    res.status(500).json({ error: err.message || 'Erro no sync' });
+  }
+});
+
 router.post('/sync/:platform', async (req, res) => {
   const { platform } = req.params;
   try {

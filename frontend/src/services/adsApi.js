@@ -77,6 +77,18 @@ export async function updateAdStatus(id, status) {
   }
 }
 
+/* Faz sync cirúrgico de status + métricas dos ads Meta já publicados.
+   Retorna { updated: [{ id, platform_campaign_id, status, spent, clicks, ... }] }. */
+export async function syncMetaStatus() {
+  try {
+    const { data } = await api.post(`${BASE}/sync-meta-status`);
+    return data?.updated || [];
+  } catch (err) {
+    console.warn('[adsApi] syncMetaStatus falhou', err?.message);
+    return [];
+  }
+}
+
 export async function deleteAd(id) {
   if (id == null) return false;
   try {

@@ -128,6 +128,31 @@ export function AppStateProvider({ children }) {
     return () => { cancelled = true; };
   }, []);
 
+  /* Polling de status Meta: pega aprovação/rejeição/métricas dos ads publicados.
+     Roda no mount + a cada 90s. Aplica diffs in-place, preservando payload local. */
+  useEffect(() => {
+    let cancelled = false;
+    async function poll() {
+      const updates = await adsApi.syncMetaStatus();
+      if (cancelled || !Array.isArray(updates) || updates.length === 0) return;
+      setAds(prev => prev.map(a => {
+        const diff = updates.find(u => u.id === a.id || u.id === a.serverId || u.platform_campaign_id === a.metaCampaignId);
+        if (!diff) return a;
+        return {
+          ...a,
+          status: diff.status || a.status,
+          spent: diff.spent ?? a.spent,
+          clicks: diff.clicks ?? a.clicks,
+          impressions: diff.impressions ?? a.impressions,
+          conversions: diff.conversions ?? a.conversions,
+        };
+      }));
+    }
+    poll();
+    const id = setInterval(poll, 90000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
+
   /* Avisa no sino apenas quando o Rafa precisa reconectar manualmente.
      Dedupa: não repete se já existe uma notificação 'reconnect-required' não lida. */
   const notifyReconnectRequired = useCallback(() => {
@@ -492,19 +517,43 @@ export function AppStateProvider({ children }) {
     return dup;
   }, [ads, addNotification, logHistory]);
 
-  const toggleAdStatus = useCallback((id) => {
-    setAds(prev => prev.map(a => {
-      if (a.id !== id) return a;
-      const next = a.status === 'active' ? 'paused' : a.status === 'paused' ? 'active' : a.status;
-      if (next !== a.status) {
-        logHistory({
-          type: next === 'active' ? 'ad-activated' : 'ad-paused',
-          title: `${next === 'active' ? 'Ativado' : 'Pausado'}: ${a.name || 'anúncio'}`,
-        });
+  /* Alterna status local + sincroniza com backend/Meta.
+     - review/paused → active: confirma, dispara update, reverte se Meta recusar
+     - active → paused: idem
+     - outros: no-op */
+  const toggleAdStatus = useCallback(async (id) => {
+    const current = ads.find(a => a.id === id);
+    if (!current) return;
+    let next;
+    if (current.status === 'active') next = 'paused';
+    else if (current.status === 'paused' || current.status === 'review') next = 'active';
+    else return;
+
+    /* Aplica otimisticamente — UI responde na hora */
+    setAds(prev => prev.map(a => a.id === id ? { ...a, status: next } : a));
+    logHistory({
+      type: next === 'active' ? 'ad-activated' : 'ad-paused',
+      title: `${next === 'active' ? 'Ativado' : 'Pausado'}: ${current.name || 'anúncio'}`,
+    });
+
+    /* Persiste no backend. Se backend rejeitar (ex: Meta recusa), reverte o estado local. */
+    const serverId = current.serverId || current.id;
+    try {
+      const result = await adsApi.updateAdStatus(serverId, next);
+      if (!result) {
+        /* Rede offline — mantém local, será reconciliado no próximo sync */
+        return;
       }
-      return { ...a, status: next };
-    }));
-  }, [logHistory]);
+    } catch (err) {
+      console.warn('[toggleAdStatus] backend rejeitou, revertendo:', err?.message);
+      setAds(prev => prev.map(a => a.id === id ? { ...a, status: current.status } : a));
+      addNotification({
+        type: 'error',
+        title: `Não foi possível ${next === 'active' ? 'ativar' : 'pausar'} no Meta`,
+        description: err?.message || 'Tente novamente em alguns instantes.',
+      });
+    }
+  }, [ads, logHistory, addNotification]);
 
   const getAdById = useCallback((id) => ads.find(a => a.id === id) || null, [ads]);
 
