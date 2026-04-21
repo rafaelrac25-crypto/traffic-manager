@@ -426,6 +426,19 @@ export default function Investment() {
               >
                 {metaSyncing ? '⏳ Sincronizando…' : '🔄 Sincronizar agora'}
               </button>
+              <a
+                href={`https://business.facebook.com/billing_hub/accounts/details?asset_id=${(metaStatus.account_id || '').replace(/^act_/, '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  padding: '10px 16px', borderRadius: '10px',
+                  border: '1.5px solid var(--c-border)', background: 'var(--c-surface)',
+                  color: 'var(--c-text-2)', fontSize: '12px', fontWeight: 700,
+                  textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px',
+                }}
+              >
+                💳 Adicionar crédito no Meta
+              </a>
               <button
                 onClick={disconnectMeta}
                 disabled={metaLoading}

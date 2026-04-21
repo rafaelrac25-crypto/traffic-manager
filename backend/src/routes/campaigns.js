@@ -104,19 +104,35 @@ router.patch('/:id/status', async (req, res) => {
   const validStatuses = ['active', 'paused', 'ended', 'review', 'scheduled'];
   if (!validStatuses.includes(status)) return res.status(400).json({ error: 'Status inválido' });
 
-  // Quando marcar como 'active' (live), registra live_at se ainda não tiver
-  const extraFields = status === 'active'
-    ? `, live_at = COALESCE(live_at, datetime('now'))`
-    : status === 'review'
-    ? `, submitted_at = COALESCE(submitted_at, datetime('now')), review_started_at = datetime('now')`
-    : '';
-
   try {
+    const pre = await db.query('SELECT id, name, platform, platform_campaign_id FROM campaigns WHERE id = ?', [req.params.id]);
+    const row = pre.rows[0];
+    if (!row) return res.status(404).json({ error: 'Campanha não encontrada' });
+
+    if (row.platform === 'meta' && row.platform_campaign_id && (status === 'active' || status === 'paused' || status === 'ended')) {
+      const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+      const creds = credResult.rows[0];
+      if (!creds) return res.status(400).json({ error: 'Meta não está conectado' });
+      try {
+        const { updateCampaignStatus } = require('../services/metaWrite');
+        const metaStatus = status === 'ended' ? 'paused' : status;
+        await updateCampaignStatus(creds, row.platform_campaign_id, metaStatus);
+      } catch (mErr) {
+        console.error('[meta.updateStatus]', mErr);
+        return res.status(502).json({ error: `Meta recusou: ${mErr.message}`, meta: mErr.meta || null });
+      }
+    }
+
+    const extraFields = status === 'active'
+      ? `, live_at = COALESCE(live_at, datetime('now'))`
+      : status === 'review'
+      ? `, submitted_at = COALESCE(submitted_at, datetime('now')), review_started_at = datetime('now')`
+      : '';
+
     const result = await db.query(
       `UPDATE campaigns SET status = ?, updated_at = datetime('now')${extraFields} WHERE id = ? RETURNING *`,
       [status, req.params.id]
     );
-    if (!result.rows[0]) return res.status(404).json({ error: 'Campanha não encontrada' });
     const camp = result.rows[0];
     const statusLabels = { active: 'Ativada', paused: 'Pausada', ended: 'Encerrada', review: 'Enviada para revisão', scheduled: 'Agendada' };
     await log('status_change', 'campaign', camp.id, `Campanha "${camp.name}" — ${statusLabels[status] || status}`, { status });
@@ -129,8 +145,23 @@ router.patch('/:id/status', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    const before = await db.query('SELECT name, platform FROM campaigns WHERE id = ?', [req.params.id]);
+    const before = await db.query('SELECT name, platform, platform_campaign_id FROM campaigns WHERE id = ?', [req.params.id]);
     const camp = before.rows[0];
+
+    if (camp && camp.platform === 'meta' && camp.platform_campaign_id) {
+      const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+      const creds = credResult.rows[0];
+      if (creds) {
+        try {
+          const { deleteCampaign } = require('../services/metaWrite');
+          await deleteCampaign(creds, camp.platform_campaign_id);
+        } catch (mErr) {
+          console.error('[meta.delete]', mErr);
+          return res.status(502).json({ error: `Meta recusou remoção: ${mErr.message}`, meta: mErr.meta || null });
+        }
+      }
+    }
+
     await db.query('DELETE FROM campaigns WHERE id = ?', [req.params.id]);
     if (camp) await log('delete', 'campaign', parseInt(req.params.id), `Campanha "${camp.name}" removida`, { platform: camp.platform });
     res.json({ message: 'Campanha removida' });
