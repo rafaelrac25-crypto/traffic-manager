@@ -106,10 +106,45 @@ function AdThumb({ ad }) {
   );
 }
 
-/* ── Modal de preview do criativo ── */
-function AdPreviewModal({ ad, onClose }) {
+/* ── Helpers de formatação e tradução pro modal de detalhes ── */
+const OBJECTIVE_PT = {
+  OUTCOME_ENGAGEMENT: 'Engajamento',
+  OUTCOME_AWARENESS: 'Reconhecimento de Marca',
+  OUTCOME_TRAFFIC: 'Tráfego',
+  OUTCOME_LEADS: 'Leads / Cadastros',
+  OUTCOME_SALES: 'Vendas',
+  OUTCOME_APP_PROMOTION: 'Promoção de App',
+  MESSAGES: 'Mensagens (Direct/WhatsApp)',
+  LINK_CLICKS: 'Cliques em Link',
+  CONVERSIONS: 'Conversões',
+  POST_ENGAGEMENT: 'Engajamento de Publicação',
+  REACH: 'Alcance',
+  BRAND_AWARENESS: 'Reconhecimento da Marca',
+  PAGE_LIKES: 'Curtidas de Página',
+  VIDEO_VIEWS: 'Visualizações de Vídeo',
+};
+function objectivePt(obj) { return obj ? (OBJECTIVE_PT[obj] || obj) : null; }
+function fmtInt(v)    { return v != null ? Number(v).toLocaleString('pt-BR') : '—'; }
+function fmtBRL(v)    { return v != null ? `R$ ${Number(v).toFixed(2).replace('.', ',')}` : '—'; }
+function fmtPct(v)    { return v != null ? `${Number(v).toFixed(2).replace('.', ',')}%` : '—'; }
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d)) return '—';
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+function genderPt(g) {
+  if (g == null || g === 'all' || g === 0) return 'Todos';
+  if (g === 1 || g === '1' || g === 'men'   || g === 'male')   return 'Homens';
+  if (g === 2 || g === '2' || g === 'women' || g === 'female') return 'Mulheres';
+  return String(g);
+}
+
+/* ── Modal de detalhes completos do anúncio ── */
+function AdPreviewModal({ ad, onClose, onDuplicate, onEdit }) {
   if (!ad) return null;
   const platLabel = PLAT[ad.platform]?.label || 'Meta';
+  const statusInfo = STATUS[ad.status] || STATUS.review;
   const format = ad.adFormat || ad.format || 'image';
   const media = ad.mediaFiles || [];
   const grad = ad.thumbGrad || 'linear-gradient(135deg,#FECDD3,#FDA4AF,#FB7185)';
@@ -118,6 +153,29 @@ function AdPreviewModal({ ad, onClose }) {
     reels: '🎬 Reels', stories: '📱 Stories', carousel: '🔄 Carrossel',
     video: '▶ Vídeo', image: '🖼️ Imagem',
   }[format] || format;
+
+  const hasTargeting = ad.locations?.length > 0 || ad.interests?.length > 0 || ad.ageRange || ad.gender;
+  const ageLabel = ad.ageRange ? `${ad.ageRange[0] || ad.ageRange.min || '?'}–${ad.ageRange[1] || ad.ageRange.max || '?'} anos` : null;
+
+  const row   = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', fontSize: '12px' };
+  const label = { color: 'var(--c-text-4)', fontWeight: 500 };
+  const val   = { color: 'var(--c-text-1)', fontWeight: 600, textAlign: 'right', maxWidth: '60%', wordBreak: 'break-word' };
+  const sectionH = {
+    fontSize: '10.5px', fontWeight: 700, color: 'var(--c-text-3)',
+    letterSpacing: '.5px', textTransform: 'uppercase',
+    margin: '16px 0 8px',
+  };
+
+  const metrics = [
+    { k: 'Impressões',      v: fmtInt(ad.impressions) },
+    { k: 'Alcance',         v: fmtInt(ad.reach) },
+    { k: 'Cliques',         v: fmtInt(ad.clicks) },
+    { k: 'CTR',             v: fmtPct(ad.ctr) },
+    { k: 'Conversões',      v: fmtInt(ad.conversions ?? ad.results) },
+    { k: 'CPC',             v: fmtBRL(ad.cpc) },
+    { k: 'CPM',             v: fmtBRL(ad.cpm) },
+    { k: 'Custo/Resultado', v: fmtBRL(ad.costPerResult) },
+  ];
 
   return (
     <div
@@ -132,41 +190,61 @@ function AdPreviewModal({ ad, onClose }) {
         onClick={(e) => e.stopPropagation()}
         style={{
           background: 'var(--c-card-bg)', borderRadius: '16px',
-          border: '1px solid var(--c-border)', width: '100%', maxWidth: '420px',
+          border: '1px solid var(--c-border)', width: '100%', maxWidth: '520px',
           maxHeight: '90vh', overflow: 'auto',
           boxShadow: '0 20px 60px rgba(0,0,0,.4)',
         }}
       >
-        {/* Header estilo Instagram/Meta */}
+        {/* Header com nome, plataforma, status */}
         <div style={{
-          padding: '12px 16px', borderBottom: '1px solid var(--c-border-lt)',
-          display: 'flex', alignItems: 'center', gap: '10px',
+          padding: '14px 18px', borderBottom: '1px solid var(--c-border-lt)',
+          display: 'flex', alignItems: 'flex-start', gap: '12px', position: 'sticky', top: 0,
+          background: 'var(--c-card-bg)', zIndex: 2,
         }}>
-          <div style={{
-            width: '32px', height: '32px', borderRadius: '50%',
-            background: 'linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#fff', fontWeight: 700, fontSize: '14px',
-          }}>C</div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--c-text-1)' }}>cris.costabeauty</div>
-            <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)' }}>Patrocinado · {platLabel} · {formatLabel}</div>
+            <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--c-text-1)', lineHeight: 1.25, wordBreak: 'break-word' }}>
+              {ad.name || 'Anúncio sem nome'}
+            </div>
+            <div style={{ display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
+              <span style={{
+                fontSize: '10px', fontWeight: 700,
+                background: PLAT[ad.platform]?.bg || '#EFF6FF',
+                color: PLAT[ad.platform]?.color || '#1877F2',
+                padding: '2px 8px', borderRadius: '10px',
+              }}>{platLabel}</span>
+              <span style={{
+                fontSize: '10px', fontWeight: 700,
+                background: statusInfo.bg, color: statusInfo.color,
+                padding: '2px 8px', borderRadius: '10px',
+                display: 'inline-flex', alignItems: 'center', gap: '4px',
+              }}>
+                <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: statusInfo.dot }} />
+                {statusInfo.label}
+              </span>
+              <span style={{
+                fontSize: '10px', fontWeight: 600, color: 'var(--c-text-4)',
+                padding: '2px 8px',
+              }}>{formatLabel}</span>
+            </div>
+            <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', marginTop: '4px' }}>
+              ID: {ad.adId || ad.id} {ad.createdAt && `· Criado em ${fmtDate(ad.createdAt)}`}
+            </div>
           </div>
           <button
             onClick={onClose}
             style={{
               background: 'transparent', border: 'none',
               fontSize: '22px', lineHeight: 1, color: 'var(--c-text-3)',
-              cursor: 'pointer', padding: '4px 8px',
+              cursor: 'pointer', padding: '0 4px', flexShrink: 0,
             }}
           >×</button>
         </div>
 
-        {/* Mídia — se tiver mediaFiles renderiza; se não, placeholder colorido */}
+        {/* Preview estilo Instagram */}
         <div style={{
           width: '100%',
           aspectRatio: format === 'stories' || format === 'reels' ? '9/16' : '1',
-          maxHeight: '540px',
+          maxHeight: '480px',
           background: media.length > 0 ? '#000' : grad,
           position: 'relative',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -174,11 +252,9 @@ function AdPreviewModal({ ad, onClose }) {
         }}>
           {media.length === 0 && (
             <div style={{ textAlign: 'center', color: 'rgba(255,255,255,.85)' }}>
-              <div style={{ fontSize: '56px', marginBottom: '8px' }}>
-                {formatLabel.split(' ')[0]}
-              </div>
+              <div style={{ fontSize: '56px', marginBottom: '8px' }}>{formatLabel.split(' ')[0]}</div>
               <div style={{ fontSize: '11.5px', fontWeight: 600, textShadow: '0 1px 3px rgba(0,0,0,.4)' }}>
-                Sem mídia salva — pré-visualização
+                Criativo não disponível — importado do Meta
               </div>
             </div>
           )}
@@ -192,44 +268,152 @@ function AdPreviewModal({ ad, onClose }) {
               position: 'absolute', top: '10px', right: '10px',
               background: 'rgba(0,0,0,.6)', color: '#fff',
               padding: '3px 8px', borderRadius: '10px', fontSize: '10.5px', fontWeight: 600,
-            }}>
-              1 / {media.length}
-            </div>
+            }}>1 / {media.length}</div>
           )}
         </div>
 
-        {/* Corpo: texto do anúncio */}
-        <div style={{ padding: '12px 16px' }}>
-          <div style={{ fontSize: '12.5px', color: 'var(--c-text-1)', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
-            {ad.primaryText || ad.description || <span style={{ color: 'var(--c-text-4)', fontStyle: 'italic' }}>Sem texto principal.</span>}
+        {/* Conteúdo detalhado */}
+        <div style={{ padding: '4px 18px 18px' }}>
+
+          {/* Copy do anúncio */}
+          {(ad.primaryText || ad.headline || ad.ctaButton) && (
+            <>
+              <div style={sectionH}>✍️ Texto do anúncio</div>
+              {ad.primaryText && (
+                <div style={{ fontSize: '12.5px', color: 'var(--c-text-1)', lineHeight: 1.55, whiteSpace: 'pre-wrap', marginBottom: '8px' }}>
+                  {ad.primaryText}
+                </div>
+              )}
+              {ad.headline && (
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)' }}>
+                  {ad.headline}
+                </div>
+              )}
+              {ad.ctaButton && (
+                <div style={{
+                  marginTop: '10px', padding: '8px 14px', borderRadius: '8px',
+                  background: 'var(--c-accent)', color: '#fff',
+                  fontSize: '12px', fontWeight: 700, textAlign: 'center', display: 'inline-block',
+                }}>{ad.ctaButton}</div>
+              )}
+              {ad.destUrl && (
+                <div style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '8px', wordBreak: 'break-all' }}>
+                  Link: {ad.destUrl}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Desempenho */}
+          <div style={sectionH}>📊 Desempenho</div>
+          <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px',
+            background: 'var(--c-surface)', borderRadius: '10px', padding: '10px',
+          }}>
+            {metrics.map(m => (
+              <div key={m.k} style={{ padding: '4px 8px' }}>
+                <div style={{ fontSize: '10px', color: 'var(--c-text-4)', textTransform: 'uppercase', letterSpacing: '.3px' }}>{m.k}</div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', marginTop: '2px' }}>{m.v}</div>
+              </div>
+            ))}
           </div>
-          {ad.headline && (
-            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', marginTop: '10px' }}>
-              {ad.headline}
-            </div>
-          )}
-          {ad.ctaButton && (
-            <button style={{
-              marginTop: '12px', width: '100%',
-              padding: '10px', borderRadius: '8px',
-              background: 'var(--c-accent)', color: '#fff',
-              border: 'none', fontSize: '12.5px', fontWeight: 700,
-              cursor: 'pointer',
-            }}>
-              {ad.ctaButton}
-            </button>
-          )}
-        </div>
 
-        {/* Footer de métricas */}
-        <div style={{
-          padding: '10px 16px', borderTop: '1px solid var(--c-border-lt)',
-          display: 'flex', gap: '14px', fontSize: '11px', color: 'var(--c-text-3)',
-          background: 'var(--c-surface)',
-        }}>
-          <span><strong style={{ color: 'var(--c-text-1)' }}>{ad.results ?? 0}</strong> resultados</span>
-          <span><strong style={{ color: 'var(--c-text-1)' }}>{ad.clicks ?? 0}</strong> cliques</span>
-          {ad.costPerResult != null && <span>CPR <strong style={{ color: 'var(--c-text-1)' }}>R$&nbsp;{ad.costPerResult.toFixed(2)}</strong></span>}
+          {/* Investimento */}
+          <div style={sectionH}>💰 Investimento</div>
+          <div>
+            <div style={row}><span style={label}>Orçamento diário</span><span style={val}>{fmtBRL(ad.budget ?? ad.budgetValue)}</span></div>
+            <div style={row}><span style={label}>Total gasto</span><span style={val}>{fmtBRL(ad.spent)}</span></div>
+            <div style={row}><span style={label}>Início</span><span style={val}>{fmtDate(ad.startDate ?? ad.start_date ?? ad.created_at)}</span></div>
+            <div style={row}><span style={label}>Término</span><span style={val}>{fmtDate(ad.endDate ?? ad.end_date) !== '—' ? fmtDate(ad.endDate ?? ad.end_date) : 'Sem data fim'}</span></div>
+          </div>
+
+          {/* Objetivo */}
+          {(ad.objective || ad.effective_status) && (
+            <>
+              <div style={sectionH}>🎯 Objetivo</div>
+              <div>
+                {ad.objective && <div style={row}><span style={label}>Objetivo Meta</span><span style={val}>{objectivePt(ad.objective)}</span></div>}
+                {ad.effective_status && <div style={row}><span style={label}>Estado Meta</span><span style={val}>{ad.effective_status}</span></div>}
+                {ad.synced_at && <div style={row}><span style={label}>Sincronizado</span><span style={val}>{fmtDate(ad.synced_at)}</span></div>}
+              </div>
+            </>
+          )}
+
+          {/* Público */}
+          {hasTargeting && (
+            <>
+              <div style={sectionH}>🎯 Público</div>
+              <div>
+                {ageLabel && <div style={row}><span style={label}>Idade</span><span style={val}>{ageLabel}</span></div>}
+                {ad.gender != null && <div style={row}><span style={label}>Gênero</span><span style={val}>{genderPt(ad.gender)}</span></div>}
+                {ad.locations?.length > 0 && (
+                  <div style={row}>
+                    <span style={label}>Bairros ({ad.locations.length})</span>
+                    <span style={val}>{ad.locations.map(l => l.name || l.district || l).join(', ')}</span>
+                  </div>
+                )}
+                {ad.interests?.length > 0 && (
+                  <div style={row}>
+                    <span style={label}>Interesses ({ad.interests.length})</span>
+                    <span style={val}>{ad.interests.map(i => i.name || i).join(', ')}</span>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* IDs Meta */}
+          {(ad.platform_campaign_id || ad.metaCampaignId || ad.metaAdSetId || ad.metaAdId || ad.metaCreativeId) && (
+            <>
+              <div style={sectionH}>🔗 IDs Meta</div>
+              <div>
+                {(ad.platform_campaign_id || ad.metaCampaignId) && (
+                  <div style={row}><span style={label}>Campaign ID</span><span style={{ ...val, fontFamily: 'ui-monospace, monospace', fontSize: '11px' }}>{ad.platform_campaign_id || ad.metaCampaignId}</span></div>
+                )}
+                {ad.metaAdSetId && <div style={row}><span style={label}>Ad Set ID</span><span style={{ ...val, fontFamily: 'ui-monospace, monospace', fontSize: '11px' }}>{ad.metaAdSetId}</span></div>}
+                {ad.metaCreativeId && <div style={row}><span style={label}>Creative ID</span><span style={{ ...val, fontFamily: 'ui-monospace, monospace', fontSize: '11px' }}>{ad.metaCreativeId}</span></div>}
+                {ad.metaAdId && <div style={row}><span style={label}>Ad ID</span><span style={{ ...val, fontFamily: 'ui-monospace, monospace', fontSize: '11px' }}>{ad.metaAdId}</span></div>}
+                {(ad.platform_campaign_id || ad.metaCampaignId) && (
+                  <a
+                    href={`https://business.facebook.com/adsmanager/manage/campaigns?selected_campaign_ids=${ad.platform_campaign_id || ad.metaCampaignId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-block', marginTop: '8px',
+                      fontSize: '11px', color: 'var(--c-accent)', fontWeight: 600,
+                      textDecoration: 'none',
+                    }}
+                  >Abrir no Meta Ads Manager ↗</a>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* Ações */}
+          <div style={{ display: 'flex', gap: '8px', marginTop: '18px', borderTop: '1px solid var(--c-border-lt)', paddingTop: '14px' }}>
+            {onDuplicate && (
+              <button
+                onClick={() => { onDuplicate(ad); onClose(); }}
+                style={{
+                  flex: 1, padding: '10px', borderRadius: '10px',
+                  background: 'var(--c-accent)', color: '#fff',
+                  border: 'none', fontSize: '12px', fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >📋 Duplicar como novo</button>
+            )}
+            {onEdit && (
+              <button
+                onClick={() => { onEdit(ad); onClose(); }}
+                style={{
+                  flex: 1, padding: '10px', borderRadius: '10px',
+                  background: 'var(--c-card-bg)', color: 'var(--c-text-2)',
+                  border: '1.5px solid var(--c-border)', fontSize: '12px', fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >✏️ Editar</button>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -764,7 +948,12 @@ export default function Campaigns() {
         </div>
       </div>
 
-      <AdPreviewModal ad={previewAd} onClose={() => setPreviewAd(null)} />
+      <AdPreviewModal
+        ad={previewAd}
+        onClose={() => setPreviewAd(null)}
+        onDuplicate={previewAd && userAds.some(u => u.id === previewAd.id) ? (a) => duplicateAd(a.id) : null}
+        onEdit={previewAd && userAds.some(u => u.id === previewAd.id) ? handleEdit : null}
+      />
     </div>
   );
 }
