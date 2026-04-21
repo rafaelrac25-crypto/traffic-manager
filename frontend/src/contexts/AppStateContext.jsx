@@ -113,16 +113,24 @@ export function AppStateProvider({ children }) {
     return () => { cancelled = true; clearInterval(id); };
   }, []);
 
-  /* Hidrata ads do backend no mount. Se API falhar, segue com localStorage. */
+  /* Hidrata ads do backend — backend é a fonte da verdade.
+     Também limpa ads "zumbi": sem serverId e criados há mais de 10 min
+     (publish falhou silenciosamente). */
   useEffect(() => {
     let cancelled = false;
     adsApi.fetchAds().then((remote) => {
-      if (cancelled || !remote) return;
-      if (remote.length === 0) return; /* mantém localStorage se servidor está vazio */
-      /* Merge: preserva ads locais sem serverId (pendentes de publicação). */
+      if (cancelled) return;
+      if (!remote) {
+        /* backend offline — só limpa zumbis antigos, mantém ads com serverId */
+        setAds(prev => prev.filter(a => a.serverId || (Date.now() - new Date(a.createdAt).getTime() < 10 * 60 * 1000)));
+        return;
+      }
+      /* Merge: remoto é autoritativo + preserva ads pending de publicação recente (<10min) */
       setAds(prev => {
         const remoteWithServer = remote.map(r => ({ ...r, serverId: r.id }));
-        const pendingLocal = prev.filter(a => !a.serverId);
+        const pendingLocal = prev.filter(a =>
+          !a.serverId && (Date.now() - new Date(a.createdAt).getTime() < 10 * 60 * 1000)
+        );
         return [...pendingLocal, ...remoteWithServer];
       });
     });
@@ -244,6 +252,15 @@ export function AppStateProvider({ children }) {
         if (meta?.needs_reconnect) {
           notifyReconnectRequired();
           consecutiveFailures = 0;
+        } else if (meta?.connected) {
+          /* Conectado: auto-limpa notificações obsoletas de desconexão/erro
+             que ficaram presas do fluxo antigo. Executa UMA vez ao detectar
+             conexão saudável. */
+          consecutiveFailures = 0;
+          setNotifications(prev => prev.filter(n =>
+            n.kind !== 'reconnect-required' &&
+            n.kind !== 'meta-sync-error'
+          ));
         } else if (!meta?.connected) {
           consecutiveFailures++;
           /* Só notifica se ficar desconectado por 3 checks seguidos (~9min) */
@@ -469,9 +486,20 @@ export function AppStateProvider({ children }) {
       title: `Anúncio criado: ${newAd.name || 'sem nome'}`,
       description: newAd.platform ? `Plataforma: ${newAd.platform}` : null,
     });
-    /* Persiste no backend em paralelo — se API estiver offline, segue só localStorage */
+    /* Persiste no backend. Se o backend falhar (null) ou rejeitar, REMOVE o ad
+       local — eliminamos ads "zumbi" que aparecem no painel mas não existem em
+       lugar nenhum (banco ou Meta). Trade-off aceito: offline resiliente vira
+       offline-com-erro visível. */
     adsApi.createAd(newAd).then((serverAd) => {
-      if (!serverAd) return; /* rede offline — mantém local (será re-tentado no próximo sync) */
+      if (!serverAd) {
+        setAds(prev => prev.filter(a => a.id !== newAd.id));
+        addNotification({
+          kind: 'publish-failed',
+          title: 'Falha ao publicar no servidor',
+          message: `Não conseguimos salvar "${newAd.name}". Verifique sua conexão e tente novamente.`,
+        });
+        return;
+      }
 
       /* Meta recusou a publicação: remove de /anuncios e move pra /reprovados + toca sino */
       if (serverAd.rejected) {
