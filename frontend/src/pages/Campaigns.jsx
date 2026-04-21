@@ -9,14 +9,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../contexts/AppStateContext';
 
-/* ── Dados mock ── */
-const MOCK_ADS = [
-  { id: 1, name: 'Promoção Verão',       adId: '2388471', platform: 'instagram', status: 'active',   budget: 50,  results: 43,   clicks: 3456, costPerResult: 18.64, thumbGrad: 'linear-gradient(135deg,#FECDD3,#FDA4AF,#FB7185)' },
-  { id: 2, name: 'Esmaltes Tendência',   adId: '2388472', platform: 'meta',      status: 'paused',   budget: 70,  results: 28,   clicks: 2187, costPerResult: 25.00, thumbGrad: 'linear-gradient(135deg,#D1D5DB,#9CA3AF,#6B7280)' },
-  { id: 3, name: 'Skincare Rotina Diária', adId: '2388473', platform: 'instagram', status: 'active', budget: 30,  results: 15,   clicks: 743,  costPerResult: 20.00, thumbGrad: 'linear-gradient(135deg,#FDE68A,#FCA5A5,#F9A8D4)' },
-  { id: 4, name: 'Lançamento Nova Linha', adId: '2388474', platform: 'meta',      status: 'review',  budget: 100, results: null, clicks: null, costPerResult: null,  thumbGrad: 'linear-gradient(135deg,#C4B5FD,#A78BFA,#8B5CF6)' },
-  { id: 5, name: 'Remarketing Site',     adId: '2388475', platform: 'instagram', status: 'ended',    budget: 40,  results: 12,   clicks: 1102, costPerResult: 23.10, thumbGrad: 'linear-gradient(135deg,#BAE6FD,#7DD3FC,#38BDF8)' },
-];
 
 /* ── Configurações visuais ── */
 const PLAT = {
@@ -508,7 +500,7 @@ export default function Campaigns() {
   const [sortDir, setSortDir] = useState('desc');
   const [previewAd, setPreviewAd] = useState(null);
 
-  const allAds = [...userAds, ...MOCK_ADS];
+  const allAds = userAds;
   const TOTAL = allAds.length;
 
   function handleEdit(ad) {

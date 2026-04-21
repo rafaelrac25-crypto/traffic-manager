@@ -1,102 +1,26 @@
-/**
- * IMPORTANT:
- * All displayed data is fictional placeholder data.
- * Real data will be loaded later from Meta Ads API.
- * Do not persist mock values.
- */
-
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../contexts/AppStateContext';
 import { getUpcomingCommercialDates } from '../data/commercialDates';
 import { globalRingPerformance } from '../data/performanceMock';
 
-/* ── Constantes de mock ── */
 const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const WEEK_DAYS_SHORT = ['DOM','SEG','TER','QUA','QUI','SEX','SÁB'];
 
-const MOCK_METRICS = [
-  {
-    label: 'Investimento',
-    value: 'R$ 3.700,00',
-    trend: '+12,5%',
-    trendUp: true,
-    sub: 'vs. ontem',
-    icon: <WalletIcon />,
-    iconBg: '#FDF0F8',
-    iconColor: '#d68d8f',
-  },
-  {
-    label: 'Cliques',
-    value: '13.663',
-    trend: '+8,3%',
-    trendUp: true,
-    sub: 'vs. ontem',
-    icon: <CursorIcon />,
-    iconBg: '#EFF6FF',
-    iconColor: '#3B82F6',
-  },
-  {
-    label: 'Resultados',
-    value: '166',
-    trend: '+6,1%',
-    trendUp: true,
-    sub: 'vs. ontem',
-    icon: <ResultIcon />,
-    iconBg: '#F0FDF4',
-    iconColor: '#22C55E',
-  },
-  {
-    label: 'Custo por resultado',
-    value: 'R$ 22,29',
-    trend: '-4,7%',
-    trendUp: false,
-    sub: 'vs. ontem',
-    icon: <DollarIcon />,
-    iconBg: '#FFF7ED',
-    iconColor: '#F97316',
-  },
-];
-
-/* Dados do gráfico — 7 dias, um dataset por métrica */
-const CHART_DATASETS = {
-  Resultados: {
-    unit: 'resultados',
-    data: [
-      { label: '08 Abr', value: 82 },
-      { label: '09 Abr', value: 95 },
-      { label: '10 Abr', value: 72 },
-      { label: '11 Abr', value: 118 },
-      { label: '12 Abr', value: 166 },
-      { label: '13 Abr', value: 148 },
-      { label: '14 Abr', value: 158 },
-    ],
-  },
-  Cliques: {
-    unit: 'cliques',
-    data: [
-      { label: '08 Abr', value: 612 },
-      { label: '09 Abr', value: 748 },
-      { label: '10 Abr', value: 530 },
-      { label: '11 Abr', value: 891 },
-      { label: '12 Abr', value: 1204 },
-      { label: '13 Abr', value: 1087 },
-      { label: '14 Abr', value: 1156 },
-    ],
-  },
-  Investimento: {
-    unit: 'reais',
-    data: [
-      { label: '08 Abr', value: 40 },
-      { label: '09 Abr', value: 45 },
-      { label: '10 Abr', value: 35 },
-      { label: '11 Abr', value: 60 },
-      { label: '12 Abr', value: 85 },
-      { label: '13 Abr', value: 75 },
-      { label: '14 Abr', value: 80 },
-    ],
-  },
-};
+function computeRealMetrics(ads) {
+  const active = ads.filter(a => a.status === 'active' || a.status === 'paused' || a.status === 'review');
+  const spent = active.reduce((s, a) => s + Number(a.spent || 0), 0);
+  const clicks = active.reduce((s, a) => s + Number(a.clicks || 0), 0);
+  const conversions = active.reduce((s, a) => s + Number(a.conversions || 0), 0);
+  const cpr = conversions > 0 ? spent / conversions : 0;
+  const fmt = (v) => `R$\u00A0${Number(v).toFixed(2).replace('.', ',')}`;
+  return [
+    { label: 'Investimento',        value: fmt(spent),   icon: <WalletIcon />, iconBg: '#FDF0F8', iconColor: '#d68d8f' },
+    { label: 'Cliques',             value: clicks.toLocaleString('pt-BR'), icon: <CursorIcon />, iconBg: '#EFF6FF', iconColor: '#3B82F6' },
+    { label: 'Resultados',          value: conversions.toLocaleString('pt-BR'), icon: <ResultIcon />, iconBg: '#F0FDF4', iconColor: '#22C55E' },
+    { label: 'Custo por resultado', value: fmt(cpr),     icon: <DollarIcon />, iconBg: '#FFF7ED', iconColor: '#F97316' },
+  ];
+}
 
 /* ── Ícones SVG ── */
 function WalletIcon() {
@@ -764,26 +688,16 @@ function MetricCard({ label, value, trend, trendUp, sub, icon, iconBg, iconColor
   );
 }
 
-/* ── Mock de CPC por anúncio ativo (até integração Meta Ads) ── */
-const MOCK_CPC = [
-  { id: 1, name: 'Limpeza de Pele Profunda', cpc: 0.92 },
-  { id: 2, name: 'Micropigmentação Labial',  cpc: 1.86 },
-  { id: 3, name: 'Lash Lifting + Brow',      cpc: 1.08 },
-  { id: 5, name: 'Remarketing Glow Lips',    cpc: 0.78 },
-];
-
-/**
- * Benchmark de CPC do ramo de ESTÉTICA FACIAL AVANÇADA.
- * Referência: micropigmentação (labial, sobrancelhas), extensão de cílios,
- * lash lifting, brow lamination, glow lips, limpeza de pele, microagulhamento.
- * NÃO representa salão de beleza generalista — procedimentos com ticket médio
- * mais alto e público qualificado tendem a ter CPC nesta faixa.
- * Mercado BR, Meta Ads, 2026. Atualizar quando integrar API real.
- */
 const CPC_BENCHMARK_ESTETICA_FACIAL = 1.20;
 const CPC_BENCHMARK_LABEL = 'Estética facial avançada';
 const HIGH_CPC_THRESHOLD = CPC_BENCHMARK_ESTETICA_FACIAL * 1.3;
-const HIGH_CPC_ADS = MOCK_CPC.filter(a => a.cpc > HIGH_CPC_THRESHOLD);
+
+function computeHighCpcAds(ads) {
+  return ads
+    .filter(a => a.clicks > 0 && a.spent > 0)
+    .map(a => ({ id: a.id, name: a.name, cpc: Number(a.spent) / Number(a.clicks) }))
+    .filter(a => a.cpc > HIGH_CPC_THRESHOLD);
+}
 
 /* ── Card de saldo ── */
 function BalanceCard({ funds, lowBalance, threshold, onAdd }) {
@@ -1181,14 +1095,14 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── Cards de métricas ── */}
+      {/* ── Cards de métricas (agregados dos anúncios reais) ── */}
       <div className="metric-grid" style={{ marginBottom: '20px' }}>
-        {MOCK_METRICS.map(m => (
+        {computeRealMetrics(ads).map(m => (
           <MetricCard key={m.label} {...m} />
         ))}
       </div>
 
-      {/* ── Linha: saldo + alerta CPC + histórico comparativo ── */}
+      {/* ── Linha: saldo + alerta CPC + desempenho por anel ── */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
@@ -1202,16 +1116,15 @@ export default function Dashboard() {
           onAdd={() => navigate('/investimento')}
         />
         <CpcAlertCard
-          ads={HIGH_CPC_ADS}
+          ads={computeHighCpcAds(ads)}
           benchmark={CPC_BENCHMARK_ESTETICA_FACIAL}
           benchmarkLabel={CPC_BENCHMARK_LABEL}
           onOpenAds={() => navigate('/anuncios')}
         />
         <RingPerformanceTeaser ads={ads} onOpen={() => navigate('/mapa-de-calor')} />
-        <HistoricalComparisonCard onViewCalendar={() => navigate('/calendario')} />
       </div>
 
-      {/* ── Gráfico (largura total) ── */}
+      {/* ── Gráfico de séries temporais (aguardando histórico de insights) ── */}
       <div style={{ marginBottom: '20px' }}>
         <div className="ccb-card" style={{
           background: 'var(--c-card-bg)',
@@ -1228,12 +1141,14 @@ export default function Dashboard() {
               Investimento × Cliques — últimos 7 dias
             </div>
           </div>
-          <DualLineChart
-            series={[
-              { name: 'Investimento', color: '#d68d8f', unit: 'reais', data: CHART_DATASETS.Investimento.data },
-              { name: 'Cliques',      color: '#3B82F6', unit: 'cliques', data: CHART_DATASETS.Cliques.data },
-            ]}
-          />
+          <div style={{
+            padding: '40px 16px', textAlign: 'center',
+            background: 'var(--c-surface)', borderRadius: '10px',
+            border: '1px dashed var(--c-border)',
+            color: 'var(--c-text-4)', fontSize: '13px',
+          }}>
+            📊 Sem dados históricos ainda — o gráfico vai aparecer automaticamente após alguns dias de veiculação de anúncios reais.
+          </div>
         </div>
       </div>
 
