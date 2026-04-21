@@ -586,8 +586,25 @@ export default function HeatMap() {
         </div>
       )}
 
-      {/* Mapa + resumo */}
+      {/* Aguardando insights reais por bairro do Meta */}
       {activeAds.length > 0 && (
+        <div style={{
+          padding: '32px 24px', textAlign: 'center',
+          background: 'var(--c-card-bg)', border: '1px dashed var(--c-border)',
+          borderRadius: '14px', marginBottom: '14px',
+        }}>
+          <div style={{ fontSize: '32px', marginBottom: '8px' }}>🌡️</div>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '6px' }}>
+            Aguardando insights por bairro
+          </div>
+          <div style={{ fontSize: '12px', color: 'var(--c-text-3)', maxWidth: '480px', margin: '0 auto', lineHeight: 1.5 }}>
+            O mapa de calor vai aparecer automaticamente quando o Meta começar a enviar o desempenho por região das suas campanhas ativas. Isso geralmente leva alguns dias após a primeira veiculação.
+          </div>
+        </div>
+      )}
+
+      {/* Mapa + resumo — desativado até termos insights reais por bairro */}
+      {false && activeAds.length > 0 && (
         <>
           {selectedAd && (
             <CampaignDetailPanel
