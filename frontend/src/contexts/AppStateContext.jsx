@@ -181,7 +181,8 @@ export function AppStateProvider({ children }) {
     runSync();
     const id = setInterval(runSync, 40 * 1000);
     return () => { cancelled = true; clearInterval(id); };
-  }, [addNotification]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ─── Alertas de datas comerciais relevantes em janela de 45 dias (no mount) ─── */
   useEffect(() => {
