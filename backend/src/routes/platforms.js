@@ -36,7 +36,7 @@ function httpsGet(url) {
 router.get('/', async (req, res) => {
   try {
     const result = await db.query(
-      'SELECT platform, account_id, page_id, ig_business_id, token_expires_at, scopes, updated_at FROM platform_credentials'
+      'SELECT platform, account_id, page_id, ig_business_id, token_expires_at, scopes, needs_reconnect, updated_at FROM platform_credentials'
     );
     const connected = {};
     result.rows.forEach(r => { connected[r.platform] = r; });
@@ -49,6 +49,7 @@ router.get('/', async (req, res) => {
       ig_business_id: connected[p]?.ig_business_id || null,
       token_expires_at: connected[p]?.token_expires_at || null,
       scopes: connected[p]?.scopes || null,
+      needs_reconnect: connected[p] ? !!connected[p].needs_reconnect : false,
       updated_at: connected[p]?.updated_at || null,
     })));
   } catch (err) {
@@ -62,15 +63,25 @@ router.get('/meta/billing', async (req, res) => {
     const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
     const creds = credResult.rows[0];
     if (!creds) return res.status(400).json({ error: 'Meta não conectado' });
-    const { getToken } = require('../services/metaWrite');
-    const token = getToken(creds);
     const accountId = creds.account_id;
     if (!accountId) return res.status(400).json({ error: 'Ad Account ID ausente' });
+
+    /* Renova proativamente se faltar <15 dias — mantém a conexão permanente */
+    const { refreshIfNeeded, markNeedsReconnect } = require('../services/metaToken');
+    const token = await refreshIfNeeded(creds);
+    if (!token) return res.status(400).json({ error: 'Token Meta ausente' });
 
     const fields = 'balance,amount_spent,spend_cap,currency,account_status,name';
     const url = `${GRAPH}/${accountId}?fields=${fields}&access_token=${token}`;
     const json = await httpsGet(url);
-    if (json.error) return res.status(502).json({ error: json.error.message });
+    if (json.error) {
+      /* Erros 190/102 = token inválido/expirado → marca needs_reconnect sem apagar credential */
+      if (json.error.code === 190 || json.error.code === 102) {
+        await markNeedsReconnect('meta');
+        return res.status(401).json({ error: json.error.message, needs_reconnect: true });
+      }
+      return res.status(502).json({ error: json.error.message });
+    }
 
     const toReal = (cents) => Number(cents || 0) / 100;
     res.json({

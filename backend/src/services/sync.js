@@ -12,6 +12,17 @@ async function syncPlatform(platform) {
   const creds = credResult.rows[0];
   if (!creds) throw new Error(`Plataforma '${platform}' não está conectada`);
 
+  /* Renova proativamente o token long-lived do Meta se faltar <15 dias.
+     Mantém a conexão permanente — só desconecta no /disconnect explícito. */
+  if (platform === 'meta') {
+    try {
+      const { refreshIfNeeded, markNeedsReconnect } = require('./metaToken');
+      const fresh = await refreshIfNeeded(creds);
+      if (fresh) creds.access_token = fresh; /* usa o token fresco sem re-query */
+      void markNeedsReconnect; /* usado adiante se detecção de 190 for adicionada */
+    } catch (e) { console.warn('[sync] refreshIfNeeded:', e.message); }
+  }
+
   const campaigns = await handler.fetchCampaigns(creds);
   let upserted = 0;
 

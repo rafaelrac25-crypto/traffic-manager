@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS platform_credentials (
   scopes TEXT,
   page_id VARCHAR(255),
   ig_business_id VARCHAR(255),
+  needs_reconnect INTEGER DEFAULT 0,
   updated_at TIMESTAMP DEFAULT NOW()
 );
 

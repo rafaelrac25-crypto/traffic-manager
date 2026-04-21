@@ -15,6 +15,7 @@ const ADD_COLUMNS = [
   'ALTER TABLE platform_credentials ADD COLUMN IF NOT EXISTS scopes TEXT',
   'ALTER TABLE platform_credentials ADD COLUMN IF NOT EXISTS page_id VARCHAR(255)',
   'ALTER TABLE platform_credentials ADD COLUMN IF NOT EXISTS ig_business_id VARCHAR(255)',
+  'ALTER TABLE platform_credentials ADD COLUMN IF NOT EXISTS needs_reconnect INTEGER DEFAULT 0',
 ];
 
 async function runMigrations(pool) {
