@@ -7,20 +7,43 @@ import { globalRingPerformance } from '../data/performanceMock';
 const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const WEEK_DAYS_SHORT = ['DOM','SEG','TER','QUA','QUI','SEX','SÁB'];
 
-function computeRealMetrics(ads) {
-  const active = ads.filter(a => a.status === 'active' || a.status === 'paused' || a.status === 'review');
-  const spent = active.reduce((s, a) => s + Number(a.spent || 0), 0);
-  const clicks = active.reduce((s, a) => s + Number(a.clicks || 0), 0);
-  const conversions = active.reduce((s, a) => s + Number(a.conversions || 0), 0);
+const fmtBRL = (v) => `R$\u00A0${Number(v || 0).toFixed(2).replace('.', ',')}`;
+
+/* Campanhas "no ar" = status que ainda consome ou está pronta pra consumir
+   verba (active, paused, review). Ordenadas da melhor pra pior. */
+function rankLiveCampaigns(ads) {
+  const live = ads.filter(a => a.status === 'active' || a.status === 'paused' || a.status === 'review');
+  return [...live].sort((a, b) => {
+    const aActive = a.status === 'active' ? 0 : 1;
+    const bActive = b.status === 'active' ? 0 : 1;
+    if (aActive !== bActive) return aActive - bActive;
+    const aConv = Number(a.conversions || a.results || 0);
+    const bConv = Number(b.conversions || b.results || 0);
+    const aCpr = aConv > 0 ? Number(a.spent || 0) / aConv : Infinity;
+    const bCpr = bConv > 0 ? Number(b.spent || 0) / bConv : Infinity;
+    if (aCpr !== bCpr) return aCpr - bCpr;
+    return Number(b.clicks || 0) - Number(a.clicks || 0);
+  });
+}
+
+function computeCampaignMetrics(ad) {
+  const spent = Number(ad?.spent || 0);
+  const clicks = Number(ad?.clicks || 0);
+  const conversions = Number(ad?.conversions || ad?.results || 0);
   const cpr = conversions > 0 ? spent / conversions : 0;
-  const fmt = (v) => `R$\u00A0${Number(v).toFixed(2).replace('.', ',')}`;
   return [
-    { label: 'Investimento',        value: fmt(spent),   icon: <WalletIcon />, iconBg: '#FDF0F8', iconColor: '#d68d8f' },
-    { label: 'Cliques',             value: clicks.toLocaleString('pt-BR'), icon: <CursorIcon />, iconBg: '#EFF6FF', iconColor: '#3B82F6' },
+    { label: 'Investimento',        value: fmtBRL(spent),                       icon: <WalletIcon />, iconBg: '#FDF0F8', iconColor: '#d68d8f' },
+    { label: 'Cliques',             value: clicks.toLocaleString('pt-BR'),      icon: <CursorIcon />, iconBg: '#EFF6FF', iconColor: '#3B82F6' },
     { label: 'Resultados',          value: conversions.toLocaleString('pt-BR'), icon: <ResultIcon />, iconBg: '#F0FDF4', iconColor: '#22C55E' },
-    { label: 'Custo por resultado', value: fmt(cpr),     icon: <DollarIcon />, iconBg: '#FFF7ED', iconColor: '#F97316' },
+    { label: 'Custo por resultado', value: conversions > 0 ? fmtBRL(cpr) : '—', icon: <DollarIcon />, iconBg: '#FFF7ED', iconColor: '#F97316' },
   ];
 }
+
+const CAMPAIGN_STATUS_LABEL = {
+  active: { label: 'No ar', color: '#16A34A', bg: '#DCFCE7' },
+  paused: { label: 'Pausada', color: '#B45309', bg: '#FEF3C7' },
+  review: { label: 'Em revisão', color: '#2563EB', bg: '#DBEAFE' },
+};
 
 /* ── Ícones SVG ── */
 function WalletIcon() {
@@ -1037,6 +1060,151 @@ function CpcAlertCard({ ads, benchmark, benchmarkLabel, onOpenAds }) {
   );
 }
 
+/* ── Bloco de métricas focado em UMA campanha ── */
+function CampaignMetricsBlock({ campaigns, selectedId, onSelect, onCreate, onOpenCampaigns }) {
+  /* Campanha efetivamente exibida: a escolhida manualmente (se ainda no ar),
+     ou a #1 do ranking (melhor performance / única no ar). */
+  const selected =
+    (selectedId && campaigns.find(c => c.id === selectedId)) ||
+    campaigns[0] ||
+    null;
+
+  if (!selected) {
+    return (
+      <div className="ccb-card" style={{
+        background: 'var(--c-card-bg)',
+        borderRadius: '16px',
+        border: '1px dashed var(--c-border)',
+        padding: '32px 24px',
+        boxShadow: '0 2px 8px var(--c-shadow)',
+        textAlign: 'center',
+        marginBottom: '20px',
+      }}>
+        <div style={{ fontSize: '28px', marginBottom: '8px' }}>📭</div>
+        <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
+          Nenhuma campanha no ar
+        </div>
+        <div style={{ fontSize: '12px', color: 'var(--c-text-3)', marginBottom: '14px' }}>
+          Publique um anúncio para ver as métricas dele aqui.
+        </div>
+        <button
+          onClick={onCreate}
+          style={{
+            background: 'var(--c-accent)', color: '#fff',
+            border: 'none', borderRadius: '10px',
+            padding: '8px 18px', fontSize: '12px', fontWeight: 700,
+            cursor: 'pointer',
+          }}
+        >
+          Criar anúncio
+        </button>
+      </div>
+    );
+  }
+
+  const isTop = campaigns[0] && selected.id === campaigns[0].id;
+  const hasMultiple = campaigns.length > 1;
+  const statusStyle = CAMPAIGN_STATUS_LABEL[selected.status] || CAMPAIGN_STATUS_LABEL.active;
+  const metrics = computeCampaignMetrics(selected);
+
+  return (
+    <div style={{ marginBottom: '20px' }}>
+      {/* Cabeçalho: nome da campanha + badge + seletor */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '12px',
+        marginBottom: '10px',
+        flexWrap: 'wrap',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--c-text-4)', letterSpacing: '.4px', textTransform: 'uppercase' }}>
+            {hasMultiple && isTop ? 'Melhor campanha' : 'Campanha'}
+          </span>
+          <span style={{
+            fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            maxWidth: '100%',
+          }}>
+            {selected.name}
+          </span>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: '4px',
+            background: statusStyle.bg, color: statusStyle.color,
+            padding: '2px 8px', borderRadius: '10px',
+            fontSize: '10px', fontWeight: 700, flexShrink: 0,
+          }}>
+            <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: statusStyle.color }} />
+            {statusStyle.label}
+          </span>
+          {hasMultiple && isTop && (
+            <span title="Melhor CPR entre as campanhas no ar" style={{
+              fontSize: '12px', flexShrink: 0,
+            }}>🏆</span>
+          )}
+        </div>
+
+        {hasMultiple && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+            <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--c-text-3)' }}>
+              Ver:
+            </label>
+            <select
+              value={selected.id}
+              onChange={(e) => onSelect(e.target.value)}
+              style={{
+                appearance: 'none',
+                background: 'var(--c-card-bg)',
+                border: '1.5px solid var(--c-border)',
+                borderRadius: '8px',
+                padding: '6px 26px 6px 10px',
+                fontSize: '12px',
+                fontWeight: 600,
+                color: 'var(--c-text-1)',
+                cursor: 'pointer',
+                maxWidth: '220px',
+                backgroundImage: 'url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'10\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23999\' stroke-width=\'3\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><polyline points=\'6 9 12 15 18 9\'/></svg>")',
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 8px center',
+              }}
+            >
+              {campaigns.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.name}{c.status !== 'active' ? ` · ${CAMPAIGN_STATUS_LABEL[c.status]?.label || c.status}` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+
+      {/* Cards de métricas da campanha selecionada */}
+      <div className="metric-grid">
+        {metrics.map(m => (
+          <MetricCard key={m.label} {...m} />
+        ))}
+      </div>
+
+      {/* Rodapé: atalho pra lista completa */}
+      {hasMultiple && (
+        <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'flex-end' }}>
+          <button
+            onClick={onOpenCampaigns}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: '11px', fontWeight: 600, color: 'var(--c-accent)',
+              padding: '4px 2px',
+            }}
+          >
+            Ver todas as campanhas ({campaigns.length}) →
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Dashboard ── */
 const MESES_PT = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 function saudacaoPorHora() {
@@ -1049,6 +1217,17 @@ function saudacaoPorHora() {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { ads } = useAppState();
+
+  /* Campanhas no ar, ranqueadas pela melhor performance (menor CPR → mais cliques).
+     O top [0] é a "melhor"; o usuário pode trocar via seletor. */
+  const liveCampaigns = useMemo(() => rankLiveCampaigns(ads), [ads]);
+  const [selectedCampaignId, setSelectedCampaignId] = useState(null);
+  /* Se a campanha escolhida sair do ar, volta pra melhor atual */
+  useEffect(() => {
+    if (selectedCampaignId && !liveCampaigns.find(c => c.id === selectedCampaignId)) {
+      setSelectedCampaignId(null);
+    }
+  }, [liveCampaigns, selectedCampaignId]);
 
   const hoje = new Date();
   const labelHoje = `Hoje, ${hoje.getDate()} de ${MESES_PT[hoje.getMonth()]}`;
@@ -1115,12 +1294,14 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── Cards de métricas (agregados dos anúncios reais) ── */}
-      <div className="metric-grid" style={{ marginBottom: '20px' }}>
-        {computeRealMetrics(ads).map(m => (
-          <MetricCard key={m.label} {...m} />
-        ))}
-      </div>
+      {/* ── Bloco: métricas da campanha selecionada (ou melhor/única no ar) ── */}
+      <CampaignMetricsBlock
+        campaigns={liveCampaigns}
+        selectedId={selectedCampaignId}
+        onSelect={setSelectedCampaignId}
+        onCreate={() => navigate('/criar-anuncio')}
+        onOpenCampaigns={() => navigate('/anuncios')}
+      />
 
       {/* ── Linha: saldo + alerta CPC + desempenho por anel ── */}
       <div style={{
