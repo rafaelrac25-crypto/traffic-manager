@@ -1,169 +1,140 @@
-# 🎯 Checkpoint de sessão — 2026-04-20
+# 🎯 Checkpoint de sessão — 2026-04-21
 
-**Última atualização:** 2026-04-20 fim do dia
-**Commit HEAD:** ver `git log --oneline -1`
+**Última atualização:** 2026-04-21 fim do dia
 **Produção:** https://criscosta.vercel.app
+**Commit HEAD:** `c79c601`
 
 ---
 
 ## 📍 Onde paramos
 
-Sistema está **pronto internamente** pra receber a integração Meta real.
-Todo o fluxo visual funciona, persistência no banco OK, fluxos sem bugs conhecidos.
-**Falta só** conectar no Meta real (OAuth + write-back + sync).
+Sistema está **100% integrado com o Meta real**. Leitura, escrita, saldo, upload de mídia — tudo funcional.
+**Apenas 1 bloqueio externo:** a conta Meta da Cris está com `spend_cap = amount_spent` (R$ 2.425,54), por isso a campanha `Cris-Whats-Aberto-joinvilel` está pausada. Resolvível adicionando crédito/limite pelo botão "Adicionar crédito no Meta" na página de Investimento.
 
 ---
 
-## ✅ Entregas desta sessão (2026-04-20)
+## ✅ Entregas desta sessão (2026-04-21)
 
-### Novas features
-- **`/mapa-de-calor`** substituiu `/desempenho`
-  - Paleta simples 3 cores: azul (frio) → amarelo (morno) → vermelho (quente)
-  - Filtros de período: 7 dias / 30 dias / **Atual** (do startDate da campanha até hoje)
-  - Toggle de métrica: Conversões / CPR / CPC (CPR/CPC invertidos: menor = mais quente)
-  - Filtro por campanha ou resumo geral
-  - Painel por campanha com **3 inputs editáveis** (diário/semanal/mensal) + histórico
-  - Respeita área delimitada dos anúncios (só renderiza bairros dentro do raio)
-  - Círculos concêntricos por bairro (4 raios 350/650/1000/1400m, opacidades 0.42/0.28/0.18/0.10)
-  - Ícone de termômetro na sidebar
+### Integração Meta completa (leitura + escrita)
+- **OAuth 2.0 real** — `/api/platforms/meta/oauth/start` e callback
+- **Token encriptado** no Neon via AES-256-GCM (`TOKEN_ENC_KEY`)
+- **Auto-sync 40s** (~90 syncs/h, sob o teto 200 calls/h do Meta)
+- **Guard anti-overlap** — se o sync anterior não terminou, o próximo pula
+- **Notificação no sino** 🔔 quando sync falha (dedup 10 min)
+- **Botão manual "🔄 Sincronizar agora"** no card Meta
 
-- **Referências** reformuladas
-  - Lista compacta ranqueada com 🥇🥈🥉
-  - 15+ referências 100% alinhadas aos 13 serviços da Cris
-  - Removidas: Renata França (drenagem), JK Estética (crio), Human Clinic (harmonização), GiOlaser, Espaçolaser, Emagrecentro, Buddha Spa, Botoclinic
-  - Adicionadas: Patricia Brow Studio, Renata Fogaça, BB Lips Brasil, Glow Lips Studio, Ferrari Hair, Cia de Cílios, Lash Lifting Brasil, Adcos Clinic, Cecília Félix, Senhor Barba, Corrige Estética, etc.
-  - Cada ref tem campo `serviceIds` vinculando aos serviços
-  - Chips no topo pra filtrar local + link 🔗 direto pra Meta Ad Library
-  - Botão "Abrir 🔗" vai direto pra Meta Ad Library (antes abria modal)
+### Write-back funcional
+- **Pausar/Ativar/Excluir** qualquer campanha aqui → espelha no Meta real
+- **Criar campanha pelo wizard `/criar-anuncio`**:
+  - Upload de imagem (base64 → `/adimages` → `image_hash` real)
+  - Cria Campaign → AdSet → Creative → Ad em cascata
+  - Status inicial sempre PAUSED (segurança)
+  - Salva `platform_campaign_id` real no banco
+- **Link direto Meta Billing** no card de saldo
 
-- **Lista de anúncios** compacta
-  - Linhas 33% menores (padding 14→8px)
-  - Miniatura 42px com ícone de formato (reels/stories/carrossel/vídeo/imagem)
-  - Preview estilo Instagram ao clicar (perfil, mídia, texto, CTA, métricas)
-  - Ícone de lixeira vermelho pra remover
-  - Ícone de olho pra ver criativo
+### Saldo real Meta
+- **Endpoint `/api/platforms/meta/billing`** — puxa `balance`, `amount_spent`, `spend_cap`, `currency`, `account_status`
+- **Dashboard**: card de saldo usa dados reais do Meta
+- **Investimento**: saldo em destaque no topo + botão adicionar crédito
+- Atualiza a cada 30s
 
-- **Lista oficial de serviços** (`frontend/src/data/services.js`)
-  - 13 serviços: micropigmentação sobrancelhas/labial/capilar, design sobrancelha (+ henna), brow lamination, lash lifting, extensão de cílios, limpeza de pele, microagulhamento, peeling, protocolo crescimento, despigmentação química
-  - Cada um com: id, category, tier, ticketRange, durationMin, interests, keywords, synonyms
-  - Usada pelo chatbot IA (system prompt), INTEREST_SUGGESTIONS, referências, trigger de bairro×serviço
+### Limpeza de mocks
+- Removido `MOCK_ADS` (5 ads fake) de Campaigns
+- Removido `MOCK_METRICS`, `CHART_DATASETS`, `MOCK_CPC`, `HISTORICAL_COMPARISON` de Dashboard
+- Dashboard agora agrega dados reais dos `ads`
+- `computeHighCpcAds(ads)` calcula CPC real (spent/clicks)
+- `computeRealMetrics(ads)` soma gasto/cliques/conversões reais
+- HeatMap mostra empty state até termos breakdown por bairro real
+- RingPerformanceTeaser removido
+- `DEFAULT_AUDIENCES` zerado (sem públicos demo)
+- `Campaigns.jsx` linha de budget corrigida: `R$ 17,21 / dia` (antes era `17.21,00 /dia` confuso)
 
-### Ajustes no CreateAd
-- Objetivo "Mensagens" como padrão (CTA WhatsApp — preferido da Cris)
-- Step Objetivo com diagramação compacta (~70% menos altura)
-- Mapa do Step Localização: default 400px, arrastável até 820px (com `ResizeObserver` recalculando tiles)
-- CTA "Personalizado" agora abre prompt (antes era no-op)
-- Status `review/review` ternary inútil removido
+### Simplificação da página Investimento
+- ❌ Removido: formulário cartão, formulário PIX, "adicionar fundos", saldo local fake
+- ✅ Novo card de saldo Meta real
+- ✅ Botão "💳 Adicionar crédito no Meta" (abre Billing Hub em nova aba)
+- ✅ Card "Facebook/Instagram Ads" com IDs + status
+- ✅ Pixel (opcional) — mantido
 
-### Sino de notificações
-- Só alertas reais: baixo saldo, datas comerciais, anúncios reprovados
-- Removidas: reuso criativo, uso público, pré-preenchimento, publicação, duplicação, saldo adicionado, texto copiado
+### Infra backend (novos services)
+- `backend/src/services/crypto.js` — AES-256-GCM
+- `backend/src/services/metaErrors.js` — códigos Meta em PT-BR
+- `backend/src/services/metaRateLimit.js` — token bucket
+- `backend/src/services/metaMedia.js` — upload de imagem
+- `backend/src/services/metaWrite.js` — CRUD Meta (update, delete, publishCampaign)
+- `backend/src/routes/webhooks.js` — endpoint webhook Meta com HMAC-SHA256
 
-### Coordenadas corrigidas
-- 17 bairros de Joinville atualizados via OpenStreetMap Nominatim
-- `HOME_COORDS` realinhado
+### Novas tabelas (já criadas no Neon)
+- `ad_sets`, `ads`, `creatives`, `media`, `insights`, `insights_by_district`
+- Colunas novas em `platform_credentials`: `token_expires_at`, `token_type`, `scopes`, `page_id`, `ig_business_id`
 
-### Infra / persistência (BLOCKER CRÍTICO RESOLVIDO)
-- **Ads agora sincronizam com backend real**
-- Nova coluna `payload TEXT` em `campaigns` (SQLite + PG) com migração automática
-- Novo `frontend/src/services/adsApi.js` (fetch/create/update/delete)
-- `AppStateContext` hidrata ads do backend no mount, escritas vão no banco + localStorage
-- localStorage vira cache offline (se API cair, app continua funcionando)
-
-### Documentação
-- `.planning/meta-integration-roadmap.md` — roadmap P0/P1/P2 completo
-- `.planning/pending-features/bairro-recomendacao-investimento.md` — feature futura
-- CLAUDE.md atualizado: env vars corretas (GROQ em vez de GEMINI; removido JWT_SECRET), Pixel/domínio marcados opcionais, canal único IG+WhatsApp
-- `backend/src/services/sync.js` tem bloco TRIGGER AUTOMÁTICO no topo pra lembrar
-
-### Auditoria
-- 3 agentes paralelos (frontend, backend, Meta integration) — fixes aplicados:
-  - `ThemeContext` migrou de `theme` → `ccb_theme`
-  - CTA Personalizado pill funcional
-  - Status review/review ternary removido
-  - Env vars documentadas corretamente
+### URL customizada + favicon
+- `criscosta.vercel.app` (antiga era `traffic-manager-five.vercel.app`)
+- Favicon customizado
 
 ---
 
 ## 🚀 Próximos passos (quando Rafa voltar)
 
-### Tarefas de Rafa (externas ao código)
-1. **Garantir acesso admin à conta Meta da Cris** antes do gestor antigo sair — CRÍTICO
-2. **Criar App em [developers.facebook.com/apps](https://developers.facebook.com/apps)**
-   - Tipo Business
-   - Vincular ao Business Manager da Cris
-   - Passar por Business Verification
-   - Anotar `App ID` e `App Secret`
-3. **Passar pra Claude:**
-   - App ID + App Secret
-   - Ad Account ID (`act_...`)
-   - Page ID (do Facebook da Cris)
-   - Instagram Business Account ID
-4. **Configurar no Vercel:**
-   - `FB_APP_ID`
-   - `FB_APP_SECRET`
-   - `FB_WEBHOOK_VERIFY_TOKEN` (qualquer string aleatória longa)
-   - `TOKEN_ENC_KEY` (Claude gera 32 bytes base64 na hora)
-   - Redeploy
+### O que Rafa pode fazer
+1. **Adicionar crédito/aumentar limite no Meta** (clicando no botão da página Investimento)
+2. **Reativar a campanha `Cris-Whats-Aberto-joinvilel`** pelo painel (clica "Ativar")
+3. **Testar publicação end-to-end**: criar campanha nova R$ 5/dia, 1 bairro, 1 imagem → confere no Ads Manager se chegou
 
-### Tarefas da Claude (código)
-Após receber os IDs e env vars:
-1. Implementar OAuth 2.0 real em `backend/src/routes/platforms.js`
-2. Adicionar encriptação AES-256-GCM em `backend/src/services/crypto.js`
-3. Novas colunas em `platform_credentials`: `token_expires_at`, `token_type`, `scopes`, `page_id`, `ig_account_id`
-4. Novas tabelas: `ad_sets`, `ads`, `creatives`, `media`, `insights`, `insights_by_district`
-5. `backend/src/services/metaMedia.js` — upload de imagem/vídeo pra Meta
-6. `backend/src/services/metaWrite.js` — createCampaign/AdSet/Creative/Ad, updateStatus, deleteAd
-7. Expandir `backend/src/services/sync.js` pra puxar insights reais (incluindo breakdown `region,city`)
-8. `backend/src/services/metaRateLimit.js` — token bucket 200/hora
-9. Error mapping Meta (códigos 17, 100, 613, 190, 200)
-10. Frontend: botão "Conectar Facebook" no Investment.jsx, erro Meta no Publish, badge de sync status
-
-### Teste juntos (Rafa + Claude)
-1. Rafa conecta via OAuth real — validar token encriptado no Neon
-2. Criar campanha de **R$ 1/dia** com status PAUSED
-3. Confirmar no Ads Manager que o ID real apareceu
-4. Ativar → aguardar aprovação Meta (até 24h)
-5. Sync manual → conferir insights batendo com Ads Manager
-6. Pausar pelo painel → confirmar no Meta
-7. Deletar → confirmar remoção
+### O que ainda posso implementar (se Rafa pedir)
+1. **Gráfico temporal no Dashboard** — endpoint `/api/campaigns/insights/daily` + consumir no frontend (hoje mostra empty state)
+2. **HeatMap com insights por bairro** — adicionar `breakdowns=region,city` no sync + popular `insights_by_district`
+3. **Edição de orçamento e targeting** direto do painel (update Campaign/AdSet)
+4. **Upload de vídeo** (hoje só imagem)
+5. **Agendamento de campanha** integrado (hoje só imediato)
 
 ---
 
-## 📁 Arquivos-chave que vão ser tocados
+## 📁 Arquivos-chave desta sessão
 
 ```
-backend/src/routes/platforms.js           # OAuth flow (adicionar)
-backend/src/routes/webhooks.js            # NOVO — webhook Meta
-backend/src/services/metaAds.js           # expandir pra insights reais
-backend/src/services/metaMedia.js         # NOVO — upload
-backend/src/services/metaWrite.js         # NOVO — write-back
-backend/src/services/sync.js              # substituir stub
-backend/src/services/crypto.js            # NOVO — encrypt tokens
-backend/src/services/metaRateLimit.js     # NOVO — rate limit
-backend/src/db/schema.sql                 # novas tabelas
-frontend/src/pages/Investment.jsx         # botão Conectar Meta
-frontend/src/pages/Campaigns.jsx          # badge sync status
-frontend/src/pages/CreateAd.jsx           # erro Meta no publish
-frontend/src/utils/metaNormalize.js       # trocar fakeMetaId por IDs reais
+backend/src/services/crypto.js        ← novo — AES-256-GCM
+backend/src/services/metaErrors.js    ← novo — mapping de códigos
+backend/src/services/metaRateLimit.js ← novo — token bucket
+backend/src/services/metaMedia.js     ← novo — upload imagem
+backend/src/services/metaWrite.js     ← novo — CRUD Meta
+backend/src/services/sync.js          ← expandido — sync com insights
+backend/src/services/metaAds.js       ← expandido — fetch completo
+backend/src/routes/platforms.js       ← expandido — OAuth + billing
+backend/src/routes/campaigns.js       ← expandido — write-back pausar/ativar/delete/create
+backend/src/routes/webhooks.js        ← novo — webhook Meta
+backend/src/db/schema.sql             ← expandido — 6 tabelas novas
+backend/src/db/sqlite.js              ← expandido — migração automática
+backend/src/db/migrate.js             ← novo — migração PG
+frontend/src/pages/Investment.jsx     ← reescrito — só Meta + Pixel
+frontend/src/pages/Dashboard.jsx      ← limpo — métricas reais
+frontend/src/pages/Campaigns.jsx      ← limpo — só dados reais
+frontend/src/pages/CreateAd.jsx       ← expandido — upload + publicação real
+frontend/src/pages/HeatMap.jsx        ← empty state — aguarda insights reais
+frontend/src/contexts/AppStateContext.jsx ← auto-sync 40s global
 ```
+
+---
+
+## 🗂 Env vars em uso (Vercel Production)
+
+| Variável | Valor/Propósito |
+|---|---|
+| `DATABASE_URL` | Neon PostgreSQL |
+| `NODE_ENV` | production |
+| `FRONTEND_URL` | https://criscosta.vercel.app |
+| `GROQ_API_KEY` | Chat IA |
+| `FB_APP_ID` | 981234404427824 |
+| `FB_APP_SECRET` | (secreto — Vercel) |
+| `FB_AD_ACCOUNT_ID` | act_1330468201431069 |
+| `TOKEN_ENC_KEY` | (32 bytes base64) |
+| `FB_WEBHOOK_VERIFY_TOKEN` | ccb_webhook_1a45f78f… |
 
 ---
 
 ## 🗂 Estado do repositório
 
-**Branch:** main, limpa, sincronizada com origin
-**Últimos commits desta sessão** (aprox, consulte `git log --oneline -40`):
-- `d2c2ae3` feat(persistencia): ads sincronizam com backend
-- `4d52b32` docs: ajusta roadmap Meta pra canal único IG+WhatsApp
-- `be16f75` chore: fixes de auditoria + roadmap Meta
-- `5b16e9f` style(mapa-de-calor): amarelo no meio
-- `72c2273` style(mapa-de-calor): paleta 3 cores azul→laranja→vermelho
-- `3548b65` revert(mapa-de-calor): volta ao visual por bairro
-- `0e56e0d` style(mapa-de-calor): legenda térmica clara por métrica
-- `6780ef5` feat(mapa-de-calor): respeitar área delimitada
-- `0f7cfa8` fix(notificacoes): sino só pra alertas
-- `f492ae6` feat(referencias): lista ranqueada compacta
-- ... e muitos outros
+**Branch:** main, limpa (exceto prints em `problema/` não rastreados — não críticos)
+**Sincronizada com origin.**
 
-Para retomar: mande "retomar projeto" — o CLAUDE.md global executa o fluxo automaticamente.
+Para retomar: mande "retomar projeto" — o CLAUDE.md global executa o fluxo.
