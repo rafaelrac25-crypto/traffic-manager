@@ -2561,7 +2561,18 @@ export default function CreateAd() {
     if (s === 1 && (!locations || locations.length === 0)) {
       errs.locations = 'Adicione ao menos uma localização (Joinville ou região).';
     }
-    if (s === 2 && (!budgetValue || Number(budgetValue) <= 0)) errs.budgetValue = 'Defina um valor de orçamento maior que zero.';
+    if (s === 2) {
+      const v = Number(budgetValue);
+      if (!budgetValue || v <= 0) {
+        errs.budgetValue = 'Defina um valor de orçamento maior que zero.';
+      } else if (budgetType === 'daily' && v < 6) {
+        /* Meta BR: mínimo ~R$6/dia/adset pra rodar. Se user escolher 2-3 anéis,
+           cada anel fica abaixo do mínimo e Meta recusa. */
+        errs.budgetValue = 'Orçamento diário mínimo do Meta é R$ 6,00.';
+      } else if (budgetType === 'total' && v < 30) {
+        errs.budgetValue = 'Orçamento total mínimo é R$ 30,00 (5 dias × R$ 6).';
+      }
+    }
     if (s === 3) {
       if (!adFormat) errs.adFormat = 'Escolha o formato do anúncio.';
       if (!primaryText.trim()) errs.primaryText = 'O texto principal é obrigatório.';

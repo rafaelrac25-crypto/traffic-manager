@@ -300,8 +300,9 @@ router.post('/sync-meta-status', async (req, res) => {
     if (!creds) return res.json({ updated: [], skipped: 'meta-not-connected' });
 
     const localAds = await db.query(
-      `SELECT id, platform_campaign_id, status FROM campaigns
-       WHERE platform = 'meta' AND platform_campaign_id IS NOT NULL`,
+      `SELECT id, platform_campaign_id, status, spent, clicks, impressions, conversions
+         FROM campaigns
+        WHERE platform = 'meta' AND platform_campaign_id IS NOT NULL`,
       []
     );
     if (!localAds.rows.length) return res.json({ updated: [] });
@@ -325,13 +326,24 @@ router.post('/sync-meta-status', async (req, res) => {
       const metricsChanged = (r.spent ?? 0) > 0 || (r.clicks ?? 0) > 0 || (r.impressions ?? 0) > 0;
       if (!statusChanged && !metricsChanged) continue;
 
+      /* Nunca regride métricas — se Meta retorna 0 por delay/erro temporário,
+         preservamos o valor anterior bom (compat SQLite+Postgres via JS max). */
+      const keepMax = (metaVal, localVal) => {
+        const a = Number(metaVal) || 0;
+        const b = Number(localVal) || 0;
+        return a >= b ? a : b;
+      };
+      const nextSpent       = keepMax(r.spent,       local.spent);
+      const nextClicks      = keepMax(r.clicks,      local.clicks);
+      const nextImpressions = keepMax(r.impressions, local.impressions);
+      const nextConversions = keepMax(r.conversions, local.conversions);
       await db.query(
         `UPDATE campaigns SET
            status = COALESCE(?, status),
            spent = ?, clicks = ?, impressions = ?, conversions = ?,
            updated_at = datetime('now')
          WHERE id = ?`,
-        [r.status || null, r.spent || 0, r.clicks || 0, r.impressions || 0, r.conversions || 0, local.id]
+        [r.status || null, nextSpent, nextClicks, nextImpressions, nextConversions, local.id]
       );
       updated.push({
         id: local.id,

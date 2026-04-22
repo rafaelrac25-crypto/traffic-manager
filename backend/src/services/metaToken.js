@@ -19,16 +19,23 @@ const db = require('../db');
 const API_VERSION = 'v20.0';
 const GRAPH = `https://graph.facebook.com/${API_VERSION}`;
 const REFRESH_THRESHOLD_DAYS = 15;
+const REQUEST_TIMEOUT_MS = 15000;
 
+/* GET com timeout — sem ele, Vercel pode pendurar function até 300s
+   quando Meta fica lento, e o refresh silenciosamente bloqueia o sync. */
 function httpsGet(url) {
   return new Promise((resolve, reject) => {
-    https.get(url, (res) => {
+    const req = https.get(url, { timeout: REQUEST_TIMEOUT_MS }, (res) => {
       let data = '';
       res.on('data', c => data += c);
       res.on('end', () => {
         try { resolve(JSON.parse(data)); } catch (e) { reject(e); }
       });
-    }).on('error', reject);
+    });
+    req.on('timeout', () => {
+      req.destroy(new Error(`Meta timeout (${REQUEST_TIMEOUT_MS}ms) em token refresh`));
+    });
+    req.on('error', reject);
   });
 }
 

@@ -44,6 +44,17 @@ CREATE TABLE IF NOT EXISTS platform_credentials (
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
+/* OAuth state persistido em DB — em serverless multi-instância, Map() em
+   memória não sobrevive ao callback. Esta tabela garante que o state
+   criado em qualquer function seja validado pela que recebe o callback. */
+CREATE TABLE IF NOT EXISTS oauth_states (
+  state VARCHAR(64) PRIMARY KEY,
+  platform VARCHAR(50) NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  expires_at TIMESTAMP NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_oauth_states_expires ON oauth_states(expires_at);
+
 CREATE TABLE IF NOT EXISTS activity_log (
   id SERIAL PRIMARY KEY,
   action VARCHAR(100) NOT NULL,

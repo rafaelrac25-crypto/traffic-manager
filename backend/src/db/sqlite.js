@@ -163,6 +163,14 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_insights_campaign_date ON insights(campaign_id, date_start);
   CREATE INDEX IF NOT EXISTS idx_insights_district ON insights_by_district(district, date_start);
   CREATE INDEX IF NOT EXISTS idx_insights_district_service ON insights_by_district(district, service);
+
+  CREATE TABLE IF NOT EXISTS oauth_states (
+    state TEXT PRIMARY KEY,
+    platform TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+    expires_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_oauth_states_expires ON oauth_states(expires_at);
 `);
 
 const migrations = [

@@ -3,34 +3,68 @@ const crypto = require('crypto');
 const https = require('https');
 const db = require('../db');
 const { encrypt } = require('../services/crypto');
+const { metaGet } = require('../services/metaHttp');
 
 const GRAPH = 'https://graph.facebook.com/v20.0';
+const OAUTH_STATE_TTL_MS = 10 * 60 * 1000; /* 10 minutos */
+const HTTPS_TIMEOUT_MS = 15000;
+
+/* Scopes necessários pra publicar/ler anúncios e mensagens em IG.
+   instagram_manage_insights opcional mas necessário pra reach/impressões
+   a nível de conta IG — inclui por segurança. */
 const SCOPES = [
   'ads_management',
   'ads_read',
   'business_management',
   'pages_show_list',
   'pages_read_engagement',
+  'pages_manage_metadata',
   'instagram_basic',
+  'instagram_manage_insights',
 ];
-
-const OAUTH_STATE = new Map();
 
 function redirectUri(req) {
   const base = process.env.FRONTEND_URL || `${req.protocol}://${req.get('host')}`;
   return `${base.replace(/\/$/, '')}/api/platforms/meta/oauth/callback`;
 }
 
+/* GET com timeout — evita pendurar a function se Meta ficar lento */
 function httpsGet(url) {
   return new Promise((resolve, reject) => {
-    https.get(url, (res) => {
+    const req = https.get(url, { timeout: HTTPS_TIMEOUT_MS }, (res) => {
       let data = '';
       res.on('data', c => data += c);
       res.on('end', () => {
         try { resolve(JSON.parse(data)); } catch (e) { reject(e); }
       });
-    }).on('error', reject);
+    });
+    req.on('timeout', () => req.destroy(new Error(`Meta timeout (${HTTPS_TIMEOUT_MS}ms)`)));
+    req.on('error', reject);
   });
+}
+
+/* OAuth state persistido em DB — sobrevive a multi-instância de serverless */
+async function saveOAuthState(state, platform) {
+  const expiresAt = new Date(Date.now() + OAUTH_STATE_TTL_MS).toISOString();
+  /* Expira estados antigos antes de inserir — mantém a tabela enxuta */
+  try { await db.query(`DELETE FROM oauth_states WHERE expires_at < datetime('now')`); } catch {}
+  await db.query(
+    `INSERT INTO oauth_states (state, platform, expires_at) VALUES (?, ?, ?)`,
+    [state, platform, expiresAt]
+  );
+}
+
+async function consumeOAuthState(state) {
+  const sel = await db.query(
+    `SELECT state, platform, expires_at FROM oauth_states WHERE state = ?`,
+    [state]
+  );
+  const row = sel.rows[0];
+  if (!row) return null;
+  /* One-shot: apaga imediatamente pra bloquear replay */
+  await db.query(`DELETE FROM oauth_states WHERE state = ?`, [state]);
+  if (new Date(row.expires_at).getTime() < Date.now()) return null;
+  return row;
 }
 
 router.get('/', async (req, res) => {
@@ -67,26 +101,30 @@ router.get('/meta/billing', async (req, res) => {
     if (!accountId) return res.status(400).json({ error: 'Ad Account ID ausente' });
 
     /* Renova proativamente se faltar <15 dias — mantém a conexão permanente */
-    const { refreshIfNeeded, markNeedsReconnect } = require('../services/metaToken');
+    const { refreshIfNeeded } = require('../services/metaToken');
     const token = await refreshIfNeeded(creds);
     if (!token) return res.status(400).json({ error: 'Token Meta ausente' });
 
-    const fields = 'balance,amount_spent,spend_cap,currency,account_status,name';
-    const url = `${GRAPH}/${accountId}?fields=${fields}&access_token=${token}`;
-    const json = await httpsGet(url);
-    if (json.error) {
-      /* Erros 190/102 = token inválido/expirado → marca needs_reconnect sem apagar credential */
-      if (json.error.code === 190 || json.error.code === 102) {
-        await markNeedsReconnect('meta');
-        return res.status(401).json({ error: json.error.message, needs_reconnect: true });
+    /* metaGet aplica timeout + rate limit + auto needs_reconnect em 190/102 */
+    let json;
+    try {
+      json = await metaGet(`/${accountId}`, {
+        fields: 'balance,amount_spent,spend_cap,currency,account_status,name',
+      }, { token });
+    } catch (e) {
+      if (e.meta?.reconnect) {
+        return res.status(401).json({ error: e.message, needs_reconnect: true });
       }
-      return res.status(502).json({ error: json.error.message });
+      return res.status(502).json({ error: e.message, meta: e.meta || null });
     }
 
-    const toReal = (cents) => Number(cents || 0) / 100;
+    const toReal = (cents) => {
+      const n = Number(cents);
+      return Number.isFinite(n) ? n / 100 : 0;
+    };
     const balance = toReal(json.balance);
     const amount_spent = toReal(json.amount_spent);
-    const spend_cap = json.spend_cap ? toReal(json.spend_cap) : null;
+    const spend_cap = json.spend_cap != null ? toReal(json.spend_cap) : null;
     /* "Disponível": quanto ainda pode gastar antes de bater no limite da conta.
        Pra contas pós-pago (balance sempre ~0), usa spend_cap - amount_spent.
        Pra contas pré-pago ou sem cap, cai no balance. Pode divergir em centavos
@@ -110,12 +148,15 @@ router.get('/meta/billing', async (req, res) => {
   }
 });
 
-router.get('/meta/oauth/start', (req, res) => {
+router.get('/meta/oauth/start', async (req, res) => {
   const appId = process.env.FB_APP_ID;
   if (!appId) return res.status(500).json({ error: 'FB_APP_ID ausente' });
   const state = crypto.randomBytes(16).toString('hex');
-  OAUTH_STATE.set(state, Date.now());
-  setTimeout(() => OAUTH_STATE.delete(state), 10 * 60 * 1000);
+  try { await saveOAuthState(state, 'meta'); }
+  catch (e) {
+    console.error('[oauth/start] saveOAuthState:', e.message);
+    return res.status(500).json({ error: 'Erro ao iniciar OAuth' });
+  }
   const url = new URL(`${GRAPH}/dialog/oauth`.replace('graph.facebook.com', 'www.facebook.com'));
   url.searchParams.set('client_id', appId);
   url.searchParams.set('redirect_uri', redirectUri(req));
@@ -125,16 +166,30 @@ router.get('/meta/oauth/start', (req, res) => {
   res.redirect(url.toString());
 });
 
+/* Escolhe a página mais provável de ser a "correta" — a que tem Instagram
+   Business conectado. Se nenhuma tem, cai pra primeira da lista. */
+function pickBestPage(pages) {
+  if (!Array.isArray(pages) || pages.length === 0) return null;
+  const withIG = pages.find(p => p?.instagram_business_account?.id);
+  return withIG || pages[0];
+}
+
 router.get('/meta/oauth/callback', async (req, res) => {
   const { code, state, error, error_description } = req.query;
   const frontBase = (process.env.FRONTEND_URL || '/').replace(/\/$/, '');
   if (error) {
     return res.redirect(`${frontBase}/investment?meta_error=${encodeURIComponent(error_description || error)}`);
   }
-  if (!code || !state || !OAUTH_STATE.has(state)) {
+  if (!code || !state) {
+    return res.redirect(`${frontBase}/investment?meta_error=${encodeURIComponent('código ou state ausente')}`);
+  }
+
+  let stateRow = null;
+  try { stateRow = await consumeOAuthState(state); }
+  catch (e) { console.error('[oauth/callback] consumeOAuthState:', e.message); }
+  if (!stateRow) {
     return res.redirect(`${frontBase}/investment?meta_error=${encodeURIComponent('state inválido ou expirado')}`);
   }
-  OAUTH_STATE.delete(state);
 
   try {
     const appId = process.env.FB_APP_ID;
@@ -153,13 +208,26 @@ router.get('/meta/oauth/callback', async (req, res) => {
     const expiresIn = longResp.expires_in || 60 * 24 * 3600;
     const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
 
-    const pagesUrl = `${GRAPH}/me/accounts?fields=id,name,instagram_business_account&access_token=${longToken}`;
-    const pagesResp = await httpsGet(pagesUrl);
-    const firstPage = pagesResp?.data?.[0] || {};
-    const pageId = firstPage.id || null;
-    const igBusinessId = firstPage.instagram_business_account?.id || null;
+    /* Lista páginas com instagram_business_account e escolhe a melhor */
+    const pagesResp = await httpsGet(`${GRAPH}/me/accounts?fields=id,name,instagram_business_account&access_token=${longToken}`);
+    const bestPage = pickBestPage(pagesResp?.data);
+    const pageId = bestPage?.id || null;
+    const igBusinessId = bestPage?.instagram_business_account?.id || null;
 
-    const accountId = process.env.FB_AD_ACCOUNT_ID || null;
+    /* Descobre ad account automaticamente quando env var não foi setada.
+       Evita cair no caso "account_id=null silencioso" que quebra publicação. */
+    let accountId = process.env.FB_AD_ACCOUNT_ID || null;
+    if (!accountId) {
+      try {
+        const adsResp = await httpsGet(`${GRAPH}/me/adaccounts?fields=id,account_id,account_status,currency,name&access_token=${longToken}`);
+        /* Prefere conta ACTIVE (status=1) pra evitar contas desabilitadas */
+        const active = (adsResp?.data || []).find(a => a.account_status === 1);
+        const chosen = active || adsResp?.data?.[0];
+        if (chosen?.id) accountId = chosen.id; /* formato 'act_123...' que Meta exige em endpoints */
+      } catch (e) {
+        console.warn('[oauth/callback] auto-descoberta de ad account falhou:', e.message);
+      }
+    }
 
     const encToken = encrypt(longToken);
     await db.query(
@@ -173,6 +241,7 @@ router.get('/meta/oauth/callback', async (req, res) => {
            scopes = excluded.scopes,
            page_id = excluded.page_id,
            ig_business_id = excluded.ig_business_id,
+           needs_reconnect = 0,
            updated_at = datetime('now')`,
       ['meta', encToken, accountId, expiresAt, 'long_lived_user', SCOPES.join(','), pageId, igBusinessId]
     );

@@ -1,11 +1,7 @@
 const https = require('https');
 const { decrypt } = require('./crypto');
-const { parseMetaError } = require('./metaErrors');
 const { uploadImage } = require('./metaMedia');
-
-const API_VERSION = 'v20.0';
-const GRAPH_HOST = 'graph.facebook.com';
-const GRAPH_BASE = `/${API_VERSION}`;
+const { metaRequest } = require('./metaHttp');
 
 function getToken(creds) {
   if (!creds?.access_token) throw new Error('Plataforma não conectada');
@@ -16,55 +12,10 @@ function getToken(creds) {
   return creds.access_token;
 }
 
-function toBody(params) {
-  const out = {};
-  Object.entries(params).forEach(([k, v]) => {
-    if (v === undefined || v === null) return;
-    out[k] = typeof v === 'object' ? JSON.stringify(v) : String(v);
-  });
-  return new URLSearchParams(out).toString();
-}
-
+/* Thin wrapper: preserva a assinatura antiga `request(method, path, params, {token})`
+   mas delega pro helper central (timeout, rate limit, auto needs_reconnect em 190/102). */
 function request(method, path, params = {}, { token } = {}) {
-  return new Promise((resolve, reject) => {
-    const fullParams = { ...params };
-    if (token) fullParams.access_token = token;
-    let fullPath = `${GRAPH_BASE}${path}`;
-    let body = null;
-    if (method === 'GET') {
-      fullPath += `?${toBody(fullParams)}`;
-    } else {
-      body = toBody(fullParams);
-    }
-    const req = https.request({
-      host: GRAPH_HOST,
-      path: fullPath,
-      method,
-      headers: body ? {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Content-Length': Buffer.byteLength(body),
-      } : {},
-    }, (res) => {
-      let data = '';
-      res.on('data', c => data += c);
-      res.on('end', () => {
-        try {
-          const json = JSON.parse(data || '{}');
-          if (json.error) {
-            const parsed = parseMetaError(json.error);
-            const e = new Error(parsed.pt);
-            e.meta = parsed;
-            e.status = res.statusCode;
-            return reject(e);
-          }
-          resolve(json);
-        } catch (e) { reject(e); }
-      });
-    });
-    req.on('error', reject);
-    if (body) req.write(body);
-    req.end();
-  });
+  return metaRequest(method, path, params, { token });
 }
 
 async function updateCampaignStatus(creds, platformCampaignId, status) {
@@ -177,7 +128,7 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
   }
 
   // 1. Upload de mídia — detecta image vs video
-  const { uploadVideo } = require('./metaMedia');
+  const { uploadVideo, waitForVideoReady } = require('./metaMedia');
   const uploadedImages = [];
   const uploadedVideos = [];
   for (const m of mediaItems) {
@@ -197,6 +148,13 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
   const mainImageHash = uploadedImages[0]?.hash || metaPayload.creative?.object_story_spec?.link_data?.image_hash;
   const mainVideoId   = uploadedVideos[0]?.id || metaPayload.creative?.object_story_spec?.video_data?.video_id;
   const isVideo = !!mainVideoId && !mainImageHash;
+
+  /* Meta processa vídeo de forma assíncrona — se criarmos o creative antes
+     do processamento terminar, dá erro 1492013. Aguarda até 60s. */
+  if (isVideo && mainVideoId && uploadedVideos.length > 0) {
+    try { await waitForVideoReady(creds, mainVideoId); }
+    catch (e) { throw new Error(`Vídeo não ficou pronto no Meta: ${e.message}`); }
+  }
 
   // 2. Campaign
   const c = metaPayload.campaign;
