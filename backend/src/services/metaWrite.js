@@ -1,4 +1,3 @@
-const https = require('https');
 const { decrypt } = require('./crypto');
 const { uploadImage } = require('./metaMedia');
 const { metaRequest } = require('./metaHttp');
@@ -92,7 +91,9 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
   /* Busca ID real de um interesse no Meta Ad Library via /search.
      Frontend envia IDs fake ('interest_beleza') que o Meta rejeita — aqui
      trocamos pelo ID oficial ({id: '6003107', name: 'Beauty'}). Se não
-     achar, remove o interesse (melhor broader do que rejeitar). */
+     achar, remove o interesse (melhor broader do que rejeitar).
+     Usa metaGet pra herdar timeout + rate limit + auto-reconnect em 190/102. */
+  const { metaGet } = require('./metaHttp');
   async function resolveInterestIds(interests) {
     if (!Array.isArray(interests) || interests.length === 0) return [];
     const resolved = [];
@@ -102,23 +103,11 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
       if (hasValidId) { resolved.push({ id: it.id, name: it.name || name }); continue; }
       if (!name) continue;
       try {
-        const q = encodeURIComponent(name);
-        const path = `/search?type=adinterest&q=${q}&limit=1&access_token=${token}`;
-        const result = await new Promise((resolve, reject) => {
-          const req = https.request({
-            host: GRAPH_HOST,
-            path: `${GRAPH_BASE}${path}`,
-            method: 'GET',
-          }, (res) => {
-            let data = '';
-            res.on('data', c => data += c);
-            res.on('end', () => {
-              try { resolve(JSON.parse(data || '{}')); } catch (e) { reject(e); }
-            });
-          });
-          req.on('error', reject);
-          req.end();
-        });
+        const result = await metaGet('/search', {
+          type: 'adinterest',
+          q: name,
+          limit: 1,
+        }, { token });
         const first = result?.data?.[0];
         if (first?.id) resolved.push({ id: first.id, name: first.name || name });
         /* Sem match → simplesmente não inclui esse interesse */
@@ -190,13 +179,16 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
 
   if (isVideo) {
     /* Creative de VÍDEO: video_data precisa de video_id + image_hash (capa).
-       Preserva campos que o frontend já populou em video_data — só rebaixa
-       pro link_data se video_data não veio montado. */
+       Meta v20 REJEITA video_data sem image_hash com erro 1815575. */
     const existingVideo = storySpec.video_data || {};
     const linkData = storySpec.link_data || {};
+    const videoImageHash = existingVideo.image_hash || mainImageHash;
+    if (!videoImageHash) {
+      throw new Error('Capa do vídeo (image_hash) ausente — Meta exige uma imagem de capa pra publicar vídeo');
+    }
     storySpec.video_data = {
       video_id:       mainVideoId,
-      image_hash:     existingVideo.image_hash || mainImageHash || undefined,
+      image_hash:     videoImageHash,
       message:        existingVideo.message || linkData.message || cr.primary_text || '',
       title:          existingVideo.title || linkData.name || linkData.title || '',
       call_to_action: existingVideo.call_to_action || linkData.call_to_action || { type: 'LEARN_MORE' },

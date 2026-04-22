@@ -2,6 +2,7 @@ const db = require('../db');
 const googleAds = require('./googleAds');
 const metaAds = require('./metaAds');
 
+const { CONVERSION_ACTION_TYPES } = metaAds;
 const handlers = { google: googleAds, meta: metaAds };
 
 async function syncPlatform(platform) {
@@ -68,11 +69,11 @@ async function syncPlatform(platform) {
         );
         const campId = campResult.rows[0]?.id;
         if (!campId) continue;
+        /* Mesma lista que fetchCampaigns usa — evita divergência entre
+           número de conversões mostrado na campanha vs. nos insights. */
         const conversions =
           (Array.isArray(row.actions) ? row.actions : [])
-            .filter(a => ['lead', 'purchase', 'complete_registration',
-              'onsite_conversion.messaging_conversation_started_7d']
-              .includes(a.action_type))
+            .filter(a => CONVERSION_ACTION_TYPES.includes(a.action_type))
             .reduce((s, a) => s + parseInt(a.value || 0, 10), 0);
         await db.query(
           `INSERT INTO insights
