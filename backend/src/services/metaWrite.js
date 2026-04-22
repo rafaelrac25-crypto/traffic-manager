@@ -138,6 +138,44 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
     }
   }
 
+  /* Busca ID real de um interesse no Meta Ad Library via /search.
+     Frontend envia IDs fake ('interest_beleza') que o Meta rejeita — aqui
+     trocamos pelo ID oficial ({id: '6003107', name: 'Beauty'}). Se não
+     achar, remove o interesse (melhor broader do que rejeitar). */
+  async function resolveInterestIds(interests) {
+    if (!Array.isArray(interests) || interests.length === 0) return [];
+    const resolved = [];
+    for (const it of interests) {
+      const name = it?.name || (typeof it === 'string' ? it : null);
+      const hasValidId = it?.id && !String(it.id).startsWith('interest_');
+      if (hasValidId) { resolved.push({ id: it.id, name: it.name || name }); continue; }
+      if (!name) continue;
+      try {
+        const q = encodeURIComponent(name);
+        const path = `/search?type=adinterest&q=${q}&limit=1&access_token=${token}`;
+        const result = await new Promise((resolve, reject) => {
+          const req = https.request({
+            host: GRAPH_HOST,
+            path: `${GRAPH_BASE}${path}`,
+            method: 'GET',
+          }, (res) => {
+            let data = '';
+            res.on('data', c => data += c);
+            res.on('end', () => {
+              try { resolve(JSON.parse(data || '{}')); } catch (e) { reject(e); }
+            });
+          });
+          req.on('error', reject);
+          req.end();
+        });
+        const first = result?.data?.[0];
+        if (first?.id) resolved.push({ id: first.id, name: first.name || name });
+        /* Sem match → simplesmente não inclui esse interesse */
+      } catch { /* ignora erro de search — só não inclui */ }
+    }
+    return resolved;
+  }
+
   // 1. Upload de mídia — detecta image vs video
   const { uploadVideo } = require('./metaMedia');
   const uploadedImages = [];
@@ -214,6 +252,14 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
   const adSetResults = [];
   for (let i = 0; i < adSetsList.length; i++) {
     const a = adSetsList[i];
+    /* Resolve IDs de interesses pelos IDs reais do Meta antes de enviar
+       (frontend envia IDs fake tipo 'interest_beleza' que Meta rejeita). */
+    const targeting = { ...(a.targeting || {}) };
+    if (Array.isArray(targeting.interests) && targeting.interests.length > 0) {
+      targeting.interests = await resolveInterestIds(targeting.interests);
+      /* Se todos interesses falharam, remove o campo — broader é melhor que inválido */
+      if (targeting.interests.length === 0) delete targeting.interests;
+    }
     const asParams = {
       campaign_id:       campaignId,
       name:              a.name,
@@ -221,7 +267,7 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
       billing_event:     a.billing_event,
       bid_strategy:      a.bid_strategy || 'LOWEST_COST_WITHOUT_CAP',
       status:            'PAUSED',
-      targeting:         a.targeting,
+      targeting,
     };
     if (a.daily_budget) asParams.daily_budget = a.daily_budget;
     if (a.lifetime_budget) asParams.lifetime_budget = a.lifetime_budget;
@@ -236,7 +282,7 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
 
     let asResp;
     try {
-      asResp = await request('POST', `/${accountId}/adsets`, asParams, { token });
+      asResp = await metaCall('adset', asParams, `/${accountId}/adsets`);
     } catch (e) {
       e.message = `Falha ao criar AdSet "${a.name}" (anel ${i + 1}/${adSetsList.length}): ${e.message}`;
       throw e;

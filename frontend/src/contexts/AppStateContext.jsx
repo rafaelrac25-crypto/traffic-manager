@@ -503,6 +503,42 @@ export function AppStateProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [funds]);
 
+  /* ─── Rascunhos (drafts) ───
+     Auto-save do wizard: se user sair a meio caminho, persiste como
+     status='draft' e aparece em /anuncios com visual diferente pra ser
+     retomado depois. Draft é só localStorage — não vai pro backend. */
+  const saveDraft = useCallback((draftData) => {
+    const KEY_CURRENT_DRAFT = 'ccb_current_draft_id';
+    const existingDraftId = localStorage.getItem(KEY_CURRENT_DRAFT);
+
+    setAds(prev => {
+      const id = existingDraftId ? Number(existingDraftId) : Date.now();
+      if (!existingDraftId) localStorage.setItem(KEY_CURRENT_DRAFT, String(id));
+      const draftAd = {
+        id,
+        adId: `DRAFT-${String(id).slice(-6)}`,
+        createdAt: new Date().toISOString(),
+        status: 'draft',
+        platform: 'instagram',
+        thumbGrad: 'linear-gradient(135deg,#E5E7EB,#D1D5DB,#9CA3AF)',
+        ...draftData,
+      };
+      const exists = prev.some(a => a.id === id);
+      return exists
+        ? prev.map(a => a.id === id ? { ...a, ...draftAd, updatedAt: new Date().toISOString() } : a)
+        : [draftAd, ...prev];
+    });
+  }, []);
+
+  const clearCurrentDraft = useCallback(() => {
+    const KEY_CURRENT_DRAFT = 'ccb_current_draft_id';
+    const id = localStorage.getItem(KEY_CURRENT_DRAFT);
+    if (id) {
+      setAds(prev => prev.filter(a => String(a.id) !== id));
+      localStorage.removeItem(KEY_CURRENT_DRAFT);
+    }
+  }, []);
+
   /* ─── Ads ─── */
   const addAd = useCallback((ad) => {
     const newAd = {
@@ -559,7 +595,8 @@ export function AppStateProvider({ children }) {
         return;
       }
 
-      /* Meta recusou a publicação: remove de /anuncios e move pra /reprovados + toca sino */
+      /* Meta recusou a publicação: remove de /anuncios e move pra /reprovados + toca sino.
+         Guarda payload completo pra 'Corrigir e reenviar' preservar tudo que user fez. */
       if (serverAd.rejected) {
         setAds(prev => prev.filter(a => a.id !== newAd.id));
         addRejectedAd({
@@ -573,7 +610,7 @@ export function AppStateProvider({ children }) {
           sentParams: serverAd.sentParams || null,
           endpoint: serverAd.endpoint || null,
           platform: newAd.platform,
-          originalPayload: newAd,
+          payload: newAd, /* usado pelo fixMode do CreateAd — restaura tudo que user preencheu */
         });
         return;
       }
@@ -858,6 +895,8 @@ export function AppStateProvider({ children }) {
     duplicateAd,
     toggleAdStatus,
     getAdById,
+    saveDraft,
+    clearCurrentDraft,
     runMetaSync,
     metaSyncedAt,
     metaSyncing,

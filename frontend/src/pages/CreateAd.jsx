@@ -2419,7 +2419,7 @@ export default function CreateAd() {
     cta: referenceRef.cta === 'Enviar mensagem' ? 'WhatsApp' : referenceRef.cta,
   } : null);
   const reviewMode = !!location.state?.reviewMode || !!referenceRef;
-  const { addNotification, addAd, updateAd, getAdById, audiences, creatives, addCreative, markCreativeUsed, removeRejectedAd, logHistory, pixel, metaAccount } = useAppState();
+  const { addNotification, addAd, updateAd, getAdById, audiences, creatives, addCreative, markCreativeUsed, removeRejectedAd, logHistory, pixel, metaAccount, saveDraft, clearCurrentDraft } = useAppState();
   const editId = location.state?.editId || null;
   const editingAd = editId ? getAdById(editId) : null;
 
