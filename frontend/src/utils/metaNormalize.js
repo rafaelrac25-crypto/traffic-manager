@@ -288,7 +288,15 @@ export function toMetaPayload(ad) {
     ? ad.ringsMode
     : (ad.ringsEnabled === false ? '1' : 'auto');
   const buckets = classifyRings(ad.locations, modeArg);
-  const activeKeys = ['primario', 'medio', 'externo'].filter(k => buckets[k].length > 0);
+  /* Aplica dedupe ANTES de decidir quais anéis criar — se um anel ficou sem
+     localizações após o dedupe (raios conflitando), ele não deve virar adset.
+     Meta rejeita targeting.geo_locations.custom_locations=[] com erro 100. */
+  const dedupedBuckets = {
+    primario: dedupeOverlappingGeos(buckets.primario),
+    medio:    dedupeOverlappingGeos(buckets.medio),
+    externo:  dedupeOverlappingGeos(buckets.externo),
+  };
+  const activeKeys = ['primario', 'medio', 'externo'].filter(k => dedupedBuckets[k].length > 0);
   const splitInput = ad.budgetRingSplit || {};
   /* Normaliza split pra garantir soma 100% entre ativos; distribui igualmente se ausente */
   const totalPctRaw = activeKeys.reduce((s, k) => s + (Number(splitInput[k]) || 0), 0);
@@ -310,7 +318,9 @@ export function toMetaPayload(ad) {
   const useMultiple = activeKeys.length >= 2;
 
   if (useMultiple) {
-    /* Um ad_set por anel, cada um com fatia do budget + geo filtrado */
+    /* Um ad_set por anel, cada um com fatia do budget + geo filtrado.
+       Usa dedupedBuckets pra garantir que custom_locations nunca vai vazio
+       (activeKeys já filtrou anéis zerados pelo dedupe). */
     const ad_sets = activeKeys.map(key => {
       const ringBudget = Math.round(budgetCents * (splitNorm[key] / 100));
       return {
@@ -325,7 +335,7 @@ export function toMetaPayload(ad) {
           /* Meta v20 conflita quando countries + custom_locations no mesmo
              geo_locations. Quando tem custom_locations, envia só elas. */
           geo_locations: {
-            custom_locations: dedupeOverlappingGeos(buckets[key]).map(toGeo),
+            custom_locations: dedupedBuckets[key].map(toGeo),
           },
         },
         _ring_key:     key,          /* metadata local pra debug */
@@ -341,7 +351,17 @@ export function toMetaPayload(ad) {
     };
   }
 
-  /* Caminho legado: 1 ad_set único com todos os bairros */
+  /* Caminho legado: 1 ad_set único com todos os bairros.
+     Se allGeo ficou vazio (nenhum bairro passou no dedupe), usa HOME_COORDS
+     de Joinville com raio 15km como fallback — respeita a regra de negócio
+     "só Joinville" sem violar cobrindo BR inteiro. */
+  const fallbackJoinville = [{
+    latitude:      HOME_COORDS.lat,
+    longitude:     HOME_COORDS.lng,
+    radius:        15,
+    distance_unit: 'kilometer',
+    name:          'Joinville (fallback)',
+  }];
   return {
     campaign: { ...campaign, daily_budget: ad.budgetType === 'daily' ? budgetCents : null, lifetime_budget: ad.budgetType === 'total' ? budgetCents : null },
     ad_set: {
@@ -350,9 +370,9 @@ export function toMetaPayload(ad) {
       ...adSetCommon,
       targeting: {
         ...baseTargeting,
-        geo_locations: allGeo.length > 0
-          ? { custom_locations: allGeo }
-          : { countries: ['BR'] },
+        geo_locations: {
+          custom_locations: allGeo.length > 0 ? allGeo : fallbackJoinville,
+        },
       },
     },
     ad: { id: ad.metaAdId, name: ad.name, status: 'PAUSED', creative: { creative_id: ad.metaCreativeId } },
