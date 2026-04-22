@@ -153,11 +153,17 @@ cd frontend
 npm run dev       # Vite na porta 5173
 ```
 
-**backend/.env:**
+**backend/.env** (ver `backend/.env.example` pro modelo completo). Mínimo pra subir o backend:
 ```
 PORT=3001
 JWT_SECRET=qualquer_string_para_dev_local
 FRONTEND_URL=http://localhost:5173
+TOKEN_ENC_KEY=<32 bytes base64 — gerar com: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))">
+```
+Pra integração Meta funcionar também:
+```
+FB_APP_ID=<do developers.facebook.com>
+FB_APP_SECRET=<do developers.facebook.com>
 ```
 
 ---
@@ -166,20 +172,31 @@ FRONTEND_URL=http://localhost:5173
 
 ### ✅ Frontend pronto
 - `frontend/src/utils/metaNormalize.js` converte payload local pro schema Meta Marketing API v20
-- `adPayload.meta` tem estrutura **campaign → ad_set → ad → creative** aninhada
+- `adPayload.meta` tem estrutura **campaign → ad_set → ad → creative** aninhada (N ad_sets por anel de raio)
 - Gender em int, budget em centavos, objective em `OUTCOME_*`, CTA em enum Meta, interests `{id, name}`
-- IDs Meta fake (`metaCampaignId`, `metaAdSetId`, `metaAdId`, `metaCreativeId`, `imageHash`) gerados no publish — serão substituídos pelos reais no primeiro sync
+- Preflight check em tempo real no Step 4 (token, saldo, Page, IG Business, account_status)
+- Validação de dimensões mínimas Meta (500×500) + auto-resize no upload
 
-### ❌ Backend NÃO pronto
-- OAuth 2.0 não existe (`/connect` aceita token cru — inviável pra produção)
-- Sem coluna `token_expires_at` → sync quebra após 60 dias
-- `sync.js` é stub (endpoint retorna `count: 0`)
-- Sem write-back (painel não cria/pausa campanha no Meta real)
-- Sem upload de mídia → sem `image_hash` → Meta rejeita criação de anúncio
-- Sem rate limit, sem error codes Meta (17, 100, 613)
-- Falta tabelas `ad_sets`, `ads`, `creatives`, `media`, `insights`
+### ✅ Backend pronto
+- **OAuth 2.0 completo** (`routes/platforms.js`): state em DB, code→token exchange, auto-descoberta de ad account, Page e IG Business
+- **Token criptografado** no DB via AES-256-GCM (`services/crypto.js`, key via `TOKEN_ENC_KEY`)
+- **Refresh automático** de long-lived token quando <15 dias pra expirar (`services/metaToken.js`)
+- **`sync.js` funcional**: puxa campanhas + insights agregadas + insights por bairro
+- **`publishCampaign` (`services/metaWrite.js`)**: cria campaign → N ad_sets → creatives → ads, com upload de mídia (imagem+vídeo com polling), CBO/ABO, cleanup de órfãos em caso de falha
+- **Rate limit** por token (`services/metaRateLimit.js`, token bucket 180req/h)
+- **Parse de erro Meta** com mensagens traduzidas PT-BR (`services/metaErrors.js`)
+- **Diagnose** (`GET /:id/diagnose`, `GET /last/diagnose`) — status ao vivo + feedback de review
+- **Schema completo**: `campaigns`, `ad_sets`, `ads`, `creatives`, `media`, `insights`, `insights_by_district`, `platform_credentials`, `oauth_states`
 
-**Estimativa pra produção-ready:** 2-3 semanas dev backend full-time.
+### ⏳ Falta apenas configuração pra testar E2E
+- Criar App em developers.facebook.com → obter `FB_APP_ID` + `FB_APP_SECRET`
+- Setar as variáveis no `.env` local e no painel Vercel
+- Primeiro clique em "Conectar Meta" na Investment page
+
+### 🔧 Melhorias futuras (não bloqueantes)
+- Cron automático de sync (hoje é manual via botão em Investment)
+- Feedback visual de progresso em upload de vídeo grande
+- Histórico de mudanças de status (atualmente diagnose mostra só estado atual)
 
 ---
 
@@ -196,17 +213,17 @@ FRONTEND_URL=http://localhost:5173
 ## O que falta implementar
 
 ### Alto
-- [ ] Integração real Meta Marketing API (OAuth + sync + write-back + upload mídia)
-- [ ] Integração real Google Ads
-- [ ] Tabelas `ad_sets`, `ads`, `creatives`, `media`, `insights`
+- [ ] **Setar `FB_APP_ID` / `FB_APP_SECRET` na Vercel** (criar App em developers.facebook.com)
+- [ ] **Setar `TOKEN_ENC_KEY` na Vercel** (valor de 32 bytes base64 já existe no `.env` local)
+- [ ] Integração real Google Ads (ainda é stub)
 
 ### Médio
-- [ ] Gráficos de evolução temporal com dados reais
-- [ ] Histórico de métricas persistido
-- [ ] Rate limiting e retry nos services de plataforma
-- [ ] Encriptar tokens no DB
+- [ ] Cron automático de sync do Meta (hoje só via botão em Investment)
+- [ ] Gráficos de evolução temporal com dados reais (depende do 1º sync)
+- [ ] Feedback visual de progresso no upload de vídeos grandes
 - [ ] **Relatório de recomendação de investimento por bairro** (ver `.planning/pending-features/bairro-recomendacao-investimento.md`) — após sync real, analisar performance histórica por bairro × serviço, recomendar onde investir mais. Sugestão resumida no Step 2 do CreateAd + seção no Mapa de Calor + alerta via sino quando houver insight forte.
 
 ### Baixo
 - [ ] Code-splitting do bundle (hoje ~670kB)
 - [ ] Testes automatizados
+- [ ] Histórico de mudanças de status de campanha (diagnose mostra só estado atual)
