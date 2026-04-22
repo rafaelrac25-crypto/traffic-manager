@@ -167,6 +167,27 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
     catch (e) { throw new Error(`Vídeo não ficou pronto no Meta: ${e.message}`); }
   }
 
+  /* Cleanup transacional: se qualquer etapa depois da criação da campaign
+     falhar, deleta os recursos já criados no Meta antes de propagar o erro.
+     Evita acumular campanhas/creatives órfãos no Ads Manager quando
+     publicação falha no meio. Best-effort — se o delete também falhar,
+     loga e continua (não ofusca o erro original). */
+  let createdCampaignId = null;
+  let createdCreativeId = null;
+  async function cleanupOrphans() {
+    if (createdCreativeId) {
+      try { await request('DELETE', `/${createdCreativeId}`, {}, { token }); }
+      catch (e) { console.warn('[cleanup] creative falhou:', createdCreativeId, e.message); }
+    }
+    if (createdCampaignId) {
+      /* Deletar a Campaign cascateia pra AdSets e Ads filhos no Meta */
+      try { await request('DELETE', `/${createdCampaignId}`, {}, { token }); }
+      catch (e) { console.warn('[cleanup] campaign falhou:', createdCampaignId, e.message); }
+    }
+  }
+
+  try {
+
   // 2. Campaign
   const c = metaPayload.campaign;
   const hasCampaignBudget = !!(c.daily_budget || c.lifetime_budget);
@@ -187,6 +208,7 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
   }
   const campResp = await metaCall('campaign', campParams, `/${accountId}/campaigns`);
   const campaignId = campResp.id;
+  createdCampaignId = campaignId;
 
   // 3. Creative ÚNICO — reutilizado entre N ads
   const cr = { ...metaPayload.creative };
@@ -229,6 +251,7 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
     object_story_spec: storySpec,
   }, `/${accountId}/adcreatives`);
   const creativeId = crResp.id;
+  createdCreativeId = creativeId;
 
   // 4. Para cada ad_set: cria AdSet + Ad. Erro em um dos anéis é fatal pra consistência.
   const adSetResults = [];
@@ -318,6 +341,15 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
     ad_set_id:            adSetResults[0]?.ad_set_id || null,
     ad_id:                adSetResults[0]?.ad_id || null,
   };
+
+  } catch (err) {
+    /* Qualquer falha após criar campaign/creative → cleanup automático.
+       Preserva o erro original (stage/params/meta) pro frontend exibir
+       em Reprovados com diagnóstico completo. */
+    await cleanupOrphans();
+    err.cleanedUp = true;
+    throw err;
+  }
 }
 
 module.exports = { updateCampaignStatus, updateCampaignMeta, updateAdSetMeta, deleteCampaign, publishCampaign, request, getToken };
