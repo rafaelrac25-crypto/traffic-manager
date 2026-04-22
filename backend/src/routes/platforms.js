@@ -253,6 +253,44 @@ router.get('/meta/oauth/callback', async (req, res) => {
   }
 });
 
+/* Check rápido do status de uma campanha direto no Meta (usando o
+   platform_campaign_id, não o ID local). Útil pra verificar se um
+   DELETE propagou ou pra diagnosticar fora do fluxo normal. Read-only. */
+router.get('/meta/campaign-status', async (req, res) => {
+  const targetId = String(req.query.id || '').trim();
+  if (!targetId || !/^\d{6,}$/.test(targetId)) {
+    return res.status(400).json({ error: 'Parâmetro id obrigatório (ID da Campaign no Meta, só dígitos)' });
+  }
+  try {
+    const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+    const creds = credResult.rows[0];
+    if (!creds) return res.status(400).json({ error: 'Meta não conectado' });
+    const { decrypt } = require('../services/crypto');
+    const token = String(creds.access_token).includes(':')
+      ? (() => { try { return decrypt(creds.access_token); } catch { return creds.access_token; } })()
+      : creds.access_token;
+    try {
+      const info = await metaGet(`/${targetId}`, {
+        fields: 'id,name,status,effective_status,configured_status,created_time,updated_time',
+      }, { token });
+      return res.json({ exists: true, ...info });
+    } catch (e) {
+      /* Meta retorna erro 803 quando o objeto não existe (foi deletado). */
+      const code = e.meta?.code;
+      const isNotFound = code === 803 || String(e.message).toLowerCase().includes('does not exist');
+      return res.json({
+        exists: !isNotFound,
+        deleted_confirmed: isNotFound,
+        error_code: code || null,
+        message: e.message,
+      });
+    }
+  } catch (err) {
+    console.error('[campaign-status]', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/:platform/connect', async (req, res) => {
   const { platform } = req.params;
   if (platform === 'meta') {
