@@ -465,6 +465,132 @@ router.get('/analytics/districts', async (req, res) => {
   }
 });
 
+/* PRE-FLIGHT CHECK: verifica se tudo está pronto antes de publicar uma
+   campanha. Não cria nada — só consulta o Meta pra confirmar token, saldo,
+   page, ad account. Retorna checklist com status de cada item.
+   Body: { budget_daily, days } — opcional pra validar saldo vs. gasto estimado. */
+router.post('/preflight', async (req, res) => {
+  const { budget_daily, days } = req.body || {};
+  const checks = [];
+  try {
+    /* 1. Meta conectado? */
+    const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+    const creds = credResult.rows[0];
+    if (!creds) {
+      checks.push({ key: 'connected', label: 'Meta conectado', ok: false, severity: 'error', details: 'Conecte o Meta em Investimento → Conectar Meta.' });
+      return res.json({ ok_overall: false, checks });
+    }
+    checks.push({ key: 'connected', label: 'Meta conectado', ok: true });
+
+    /* 2. needs_reconnect? */
+    if (creds.needs_reconnect) {
+      checks.push({ key: 'reconnect', label: 'Token válido', ok: false, severity: 'error', details: 'Token expirou — reconecte o Meta.' });
+    } else {
+      checks.push({ key: 'reconnect', label: 'Token válido', ok: true });
+    }
+
+    /* 3. account_id presente? */
+    if (!creds.account_id) {
+      checks.push({ key: 'account_id', label: 'Ad Account configurada', ok: false, severity: 'error', details: 'FB_AD_ACCOUNT_ID não foi preenchido no OAuth. Desconecte e reconecte.' });
+    } else {
+      checks.push({ key: 'account_id', label: 'Ad Account configurada', ok: true, details: creds.account_id });
+    }
+
+    /* 4. Page + IG Business? */
+    if (!creds.page_id) {
+      checks.push({ key: 'page', label: 'Página do Facebook', ok: false, severity: 'error', details: 'Nenhuma página vinculada.' });
+    } else {
+      checks.push({ key: 'page', label: 'Página do Facebook', ok: true, details: creds.page_id });
+    }
+    if (!creds.ig_business_id) {
+      checks.push({ key: 'ig', label: 'Instagram Business', ok: false, severity: 'warn', details: 'IG Business não vinculado à página — anúncios de Mensagens IG Direct não vão rodar.' });
+    } else {
+      checks.push({ key: 'ig', label: 'Instagram Business', ok: true, details: creds.ig_business_id });
+    }
+
+    /* 5. Só segue se token+account estiverem OK (senão billing falha) */
+    const canQueryMeta = !creds.needs_reconnect && creds.account_id;
+    if (canQueryMeta) {
+      try {
+        const { decrypt } = require('../services/crypto');
+        const token = String(creds.access_token).includes(':')
+          ? (() => { try { return decrypt(creds.access_token); } catch { return creds.access_token; } })()
+          : creds.access_token;
+        const { metaGet } = require('../services/metaHttp');
+
+        /* 5a. Ad account status + saldo */
+        const acctInfo = await metaGet(`/${creds.account_id}`, {
+          fields: 'balance,amount_spent,spend_cap,currency,account_status,name',
+        }, { token });
+
+        /* Meta account_status: 1=ACTIVE, 2=DISABLED, 3=UNSETTLED, 7=PENDING_RISK_REVIEW, 9=IN_GRACE_PERIOD, 101=CLOSED */
+        if (acctInfo.account_status !== 1) {
+          const statusNames = { 2: 'Desativada', 3: 'Pendência de pagamento', 7: 'Em análise de risco', 9: 'Em período de graça', 101: 'Encerrada' };
+          checks.push({
+            key: 'account_status',
+            label: 'Conta Meta ativa',
+            ok: false,
+            severity: 'error',
+            details: `Conta está em estado: ${statusNames[acctInfo.account_status] || acctInfo.account_status}. Verifique no Ads Manager.`,
+          });
+        } else {
+          checks.push({ key: 'account_status', label: 'Conta Meta ativa', ok: true, details: acctInfo.name || creds.account_id });
+        }
+
+        /* 5b. Saldo suficiente pra duração desejada (cobre gasto estimado + folga 20%) */
+        const toReal = (cents) => { const n = Number(cents); return Number.isFinite(n) ? n / 100 : 0; };
+        const balance = toReal(acctInfo.balance);
+        const amount_spent = toReal(acctInfo.amount_spent);
+        const spend_cap = acctInfo.spend_cap != null ? toReal(acctInfo.spend_cap) : null;
+        const available = spend_cap != null ? Math.max(0, spend_cap - amount_spent) : balance;
+
+        if (budget_daily && days) {
+          const estimatedSpend = Number(budget_daily) * Number(days);
+          const needed = estimatedSpend * 1.2; /* 20% de folga */
+          if (available < needed) {
+            checks.push({
+              key: 'balance',
+              label: 'Saldo suficiente',
+              ok: false,
+              severity: 'error',
+              details: `Disponível R$ ${available.toFixed(2)} — necessário ~R$ ${needed.toFixed(2)} (${days} dias × R$ ${budget_daily} + 20% folga).`,
+            });
+          } else {
+            checks.push({
+              key: 'balance',
+              label: 'Saldo suficiente',
+              ok: true,
+              details: `Disponível R$ ${available.toFixed(2)} cobre os ${days} dias estimados.`,
+            });
+          }
+        } else {
+          checks.push({
+            key: 'balance',
+            label: 'Saldo disponível',
+            ok: available > 0,
+            severity: available > 0 ? 'info' : 'warn',
+            details: `R$ ${available.toFixed(2)} disponível na conta.`,
+          });
+        }
+      } catch (e) {
+        checks.push({
+          key: 'meta_query',
+          label: 'Consulta ao Meta',
+          ok: false,
+          severity: 'error',
+          details: `Erro: ${e.message}${e.meta?.code ? ` (code ${e.meta.code})` : ''}`,
+        });
+      }
+    }
+
+    const ok_overall = checks.every(c => c.ok || c.severity === 'warn' || c.severity === 'info');
+    return res.json({ ok_overall, checks });
+  } catch (err) {
+    console.error('[preflight]', err);
+    return res.status(500).json({ error: err.message, checks });
+  }
+});
+
 /* Atalho: diagnostica a ÚLTIMA campanha Meta criada (ordem de created_at).
    Útil pra conferir rapidamente se a publicação recente deu certo. */
 router.get('/last/diagnose', async (req, res) => {

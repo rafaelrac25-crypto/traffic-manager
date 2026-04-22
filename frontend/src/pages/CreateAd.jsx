@@ -2343,6 +2343,92 @@ function Step6Review({ data, onGoTo }) {
       <div style={{ padding: '14px 16px', background: 'rgba(245,158,11,.07)', border: '1px solid rgba(245,158,11,.25)', borderRadius: '12px', fontSize: '12px', color: 'var(--c-text-2)', lineHeight: 1.6 }}>
         <span style={{ fontWeight: 700, color: '#B45309' }}>⚠️ Revisão do Meta:</span> Após a publicação, o anúncio passa por análise automática. O processo geralmente ocorre em menos de 24 horas. Certifique-se de que o criativo segue as <a href="https://www.facebook.com/policies/ads/" target="_blank" rel="noreferrer" style={{ color: 'var(--c-accent)' }}>Políticas de Publicidade do Meta</a>.
       </div>
+
+      {/* Preflight check — consulta Meta em tempo real */}
+      <PreflightCheckPanel data={data} />
+    </div>
+  );
+}
+
+/* Consulta /api/campaigns/preflight automaticamente ao entrar na revisão.
+   Mostra checklist ✅/⚠️/❌ pra que a Cris veja ANTES de publicar se saldo,
+   token, page e IG estão OK. Se algo falhar, ela corrige antes de gastar. */
+function PreflightCheckPanel({ data }) {
+  const [state, setState] = useState({ loading: true, ok_overall: null, checks: [], error: null });
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        /* Calcula duração estimada pra validação de saldo */
+        const daily = Number(data.budgetValue) || 0;
+        let days = 5;
+        if (data.startDate && data.endDate) {
+          const ms = new Date(data.endDate) - new Date(data.startDate);
+          days = Math.max(1, Math.round(ms / (1000 * 60 * 60 * 24)));
+        }
+        const res = await fetch('/api/campaigns/preflight', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ budget_daily: daily, days }),
+        });
+        const json = await res.json();
+        if (!cancelled) setState({ loading: false, ...json });
+      } catch (e) {
+        if (!cancelled) setState({ loading: false, ok_overall: false, checks: [], error: e.message });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [data.budgetValue, data.startDate, data.endDate]);
+
+  const box = {
+    padding: '14px 16px',
+    border: '1px solid var(--c-border)',
+    borderRadius: '12px',
+    background: 'var(--c-card-bg)',
+  };
+
+  if (state.loading) {
+    return (
+      <div style={box}>
+        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-2)', marginBottom: '4px' }}>🔎 Verificando compatibilidade com Meta Ads…</div>
+        <div style={{ fontSize: '12px', color: 'var(--c-text-4)' }}>Checando token, saldo, Page e Instagram.</div>
+      </div>
+    );
+  }
+
+  if (state.error) {
+    return (
+      <div style={{ ...box, borderColor: 'rgba(239,68,68,.35)', background: 'rgba(239,68,68,.05)' }}>
+        <div style={{ fontSize: '13px', fontWeight: 700, color: '#DC2626' }}>Não consegui verificar: {state.error}</div>
+      </div>
+    );
+  }
+
+  const borderColor = state.ok_overall ? 'rgba(22,163,74,.35)' : 'rgba(239,68,68,.35)';
+  const bgColor = state.ok_overall ? 'rgba(22,163,74,.05)' : 'rgba(239,68,68,.05)';
+  const headerColor = state.ok_overall ? '#15803D' : '#DC2626';
+  const headerIcon = state.ok_overall ? '✅' : '❌';
+  const headerText = state.ok_overall ? 'Tudo certo pra publicar' : 'Corrija antes de publicar';
+
+  return (
+    <div style={{ ...box, borderColor, background: bgColor }}>
+      <div style={{ fontSize: '13px', fontWeight: 700, color: headerColor, marginBottom: '10px' }}>
+        {headerIcon} {headerText}
+      </div>
+      <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        {state.checks.map(c => {
+          const icon = c.ok ? '✅' : (c.severity === 'warn' ? '⚠️' : '❌');
+          const color = c.ok ? 'var(--c-text-2)' : (c.severity === 'warn' ? '#B45309' : '#DC2626');
+          return (
+            <li key={c.key} style={{ fontSize: '12px', color, lineHeight: 1.5 }}>
+              <span style={{ marginRight: '6px' }}>{icon}</span>
+              <strong>{c.label}</strong>
+              {c.details && <span style={{ color: 'var(--c-text-4)', fontWeight: 400 }}> — {c.details}</span>}
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
