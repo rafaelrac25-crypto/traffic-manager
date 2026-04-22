@@ -465,11 +465,30 @@ router.get('/analytics/districts', async (req, res) => {
   }
 });
 
+/* Atalho: diagnostica a ÚLTIMA campanha Meta criada (ordem de created_at).
+   Útil pra conferir rapidamente se a publicação recente deu certo. */
+router.get('/last/diagnose', async (req, res) => {
+  try {
+    const last = await db.query(
+      `SELECT id FROM campaigns WHERE platform = 'meta' AND platform_campaign_id IS NOT NULL
+       ORDER BY created_at DESC LIMIT 1`, []
+    );
+    const lastId = last.rows[0]?.id;
+    if (!lastId) return res.status(404).json({ error: 'Nenhuma campanha Meta publicada encontrada' });
+    req.params.id = lastId;
+    /* Delega pro handler de diagnose existente */
+    return diagnoseCampaign(req, res);
+  } catch (err) {
+    console.error('[last/diagnose]', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 /* Diagnóstico end-to-end de uma campanha: bate no Meta em tempo real e
    compara com o estado local. Retorna tudo num JSON único pra facilitar
    debug quando user vê algo estranho (campanha sumindo, status divergente,
    orçamento errado, etc). Read-only. */
-router.get('/:id/diagnose', async (req, res) => {
+async function diagnoseCampaign(req, res) {
   try {
     const local = await db.query('SELECT * FROM campaigns WHERE id = ?', [req.params.id]);
     const camp = local.rows[0];
@@ -560,7 +579,8 @@ router.get('/:id/diagnose', async (req, res) => {
     console.error('[diagnose]', err);
     return res.status(500).json({ error: err.message });
   }
-});
+}
+router.get('/:id/diagnose', diagnoseCampaign);
 
 router.post('/sync/:platform', async (req, res) => {
   const { platform } = req.params;
