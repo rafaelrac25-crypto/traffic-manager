@@ -110,10 +110,32 @@ const META_OBJECTIVES = [
 
 
 
-const CTA_OPTIONS = [
-  'Saiba mais', 'Entrar em contato', 'Reservar agora', 'Enviar mensagem',
-  'Inscrever-se', 'Chamar agora', 'Mande uma mensagem', 'WhatsApp',
-];
+/* CTAs permitidos pelo Meta v20 por objetivo. Cada label PT-BR mapeia
+   pra um enum oficial no Meta (ver frontend/src/utils/metaNormalize.js:
+   CTA_TO_META). O wizard só mostra os que são compatíveis com o
+   objective escolhido no passo 1 — evita erro 1487891 do Meta. */
+const CTA_BY_OBJECTIVE = {
+  messages:     ['WhatsApp', 'Enviar mensagem', 'Mande uma mensagem', 'Chamar agora', 'Entrar em contato'],
+  traffic:      ['Saiba mais', 'Comprar agora', 'Inscrever-se', 'Entrar em contato', 'Ver mais'],
+  engagement:   ['Saiba mais', 'Enviar mensagem', 'Entrar em contato'],
+  leads:        ['Saiba mais', 'Inscrever-se', 'Entrar em contato'],
+  sales:        ['Comprar agora', 'Saiba mais', 'Ver mais'],
+  brand_awareness: ['Saiba mais', 'Ver mais'],
+  reach:        ['Saiba mais', 'Ver mais'],
+  app_installs: ['Saiba mais'],
+  store_traffic:['Saiba mais', 'Chamar agora', 'Entrar em contato'],
+};
+const CTA_DEFAULT_BY_OBJECTIVE = {
+  messages:     'WhatsApp',
+  traffic:      'Saiba mais',
+  engagement:   'Saiba mais',
+  leads:        'Inscrever-se',
+  sales:        'Comprar agora',
+  brand_awareness: 'Saiba mais',
+  reach:        'Saiba mais',
+  app_installs: 'Saiba mais',
+  store_traffic:'Chamar agora',
+};
 
 const INTEREST_SUGGESTIONS = [
   /* Genéricos de beleza */
@@ -1873,13 +1895,24 @@ function VideoCoverPicker({ videoFile, thumbnail, setThumbnail }) {
   );
 }
 
-function Step5Creative({ adFormat, setAdFormat, mediaFiles, setMediaFiles, videoThumbnail, setVideoThumbnail, primaryText, setPrimaryText, headline, setHeadline, destUrl, setDestUrl, ctaButton, setCtaButton, errors = {} }) {
+function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaFiles, videoThumbnail, setVideoThumbnail, primaryText, setPrimaryText, headline, setHeadline, destUrl, setDestUrl, ctaButton, setCtaButton, errors = {} }) {
   const fileRef  = useRef(null);
   const [drag, setDrag] = useState(false);
-  const [customCta, setCustomCta] = useState('');
   const [uploadError, setUploadError] = useState('');
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState('');
+
+  /* CTAs filtrados pelo objetivo — só mostra os que Meta aceita pra aquele
+     objective, evita erro 1487891 ("Criativo inválido para o objetivo"). */
+  const allowedCTAs = CTA_BY_OBJECTIVE[objective] || CTA_BY_OBJECTIVE.traffic;
+
+  /* Auto-corrige ctaButton se o user voltou pro passo 1 e trocou de objetivo
+     (deixando um CTA incompatível). Roda só quando objective muda. */
+  useEffect(() => {
+    if (!allowedCTAs.includes(ctaButton)) {
+      setCtaButton(CTA_DEFAULT_BY_OBJECTIVE[objective] || allowedCTAs[0]);
+    }
+  }, [objective]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleFiles(files) {
     setUploadError('');
@@ -2093,38 +2126,19 @@ function Step5Creative({ adFormat, setAdFormat, mediaFiles, setMediaFiles, video
         )}
       </div>
 
-      {/* CTA */}
+      {/* CTA — apenas os aceitos pelo Meta pra este objetivo */}
       <div>
-        <SectionLabel sub="Texto do botão que aparece no anúncio.">Botão de chamada para ação (CTA)</SectionLabel>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
-          {CTA_OPTIONS.map(cta => (
-            <Pill key={cta} selected={ctaButton === cta} onClick={() => { setCtaButton(cta); setCustomCta(''); }}>{cta}</Pill>
+        <SectionLabel sub="Meta aceita apenas estas opções para o objetivo escolhido — texto livre é rejeitado.">
+          Botão de chamada para ação (CTA)
+        </SectionLabel>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '6px' }}>
+          {allowedCTAs.map(cta => (
+            <Pill key={cta} selected={ctaButton === cta} onClick={() => setCtaButton(cta)}>{cta}</Pill>
           ))}
-          <Pill
-            selected={!CTA_OPTIONS.includes(ctaButton) && ctaButton !== ''}
-            onClick={() => {
-              const current = CTA_OPTIONS.includes(ctaButton) ? '' : ctaButton;
-              const custom = window.prompt('Qual CTA personalizado você quer usar?', current || '');
-              if (custom != null) {
-                const trimmed = custom.trim();
-                if (trimmed) { setCtaButton(trimmed); setCustomCta(trimmed); }
-              }
-            }}
-          >
-            <span style={{ color: 'var(--c-text-4)', fontSize: '11px' }}>
-              {!CTA_OPTIONS.includes(ctaButton) && ctaButton ? `✏️ ${ctaButton}` : 'Personalizado'}
-            </span>
-          </Pill>
         </div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <input
-            type="text"
-            placeholder="Digite um texto personalizado..."
-            value={customCta}
-            onChange={e => { setCustomCta(e.target.value); if (e.target.value) setCtaButton(e.target.value); }}
-            style={{ flex: 1, padding: '9px 12px', border: '1.5px solid var(--c-border)', borderRadius: '10px', background: 'var(--c-surface)', color: 'var(--c-text-1)', fontSize: '13px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
-          />
-        </div>
+        <p style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '4px' }}>
+          Quer outra opção? Troque o objetivo no passo 1.
+        </p>
       </div>
 
       {/* Preview */}
@@ -2835,7 +2849,7 @@ export default function CreateAd() {
     <Step1Objective objective={objective} setObjective={setObjective} errors={errors} />,
     <Step2Audience  locations={locations} setLocations={setLocations} ageRange={ageRange} setAgeRange={setAgeRange} gender={gender} setGender={setGender} interests={interests} setInterests={setInterests} ringsMode={ringsMode} setRingsMode={setRingsMode} />,
     <Step4Budget budgetType={budgetType} setBudgetType={setBudgetType} budgetValue={budgetValue} setBudgetValue={setBudgetValue} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} errors={errors} locations={locations} budgetRingSplit={budgetRingSplit} setBudgetRingSplit={setBudgetRingSplit} ringsMode={ringsMode} setRingsMode={setRingsMode} budgetOptimization={budgetOptimization} setBudgetOptimization={setBudgetOptimization} />,
-    <Step5Creative adFormat={adFormat} setAdFormat={setAdFormat} mediaFiles={mediaFiles} setMediaFiles={setMediaFiles} videoThumbnail={videoThumbnail} setVideoThumbnail={setVideoThumbnail} primaryText={primaryText} setPrimaryText={setPrimaryText} headline={headline} setHeadline={setHeadline} destUrl={destUrl} setDestUrl={setDestUrl} ctaButton={ctaButton} setCtaButton={setCtaButton} errors={errors} />,
+    <Step5Creative objective={objective} adFormat={adFormat} setAdFormat={setAdFormat} mediaFiles={mediaFiles} setMediaFiles={setMediaFiles} videoThumbnail={videoThumbnail} setVideoThumbnail={setVideoThumbnail} primaryText={primaryText} setPrimaryText={setPrimaryText} headline={headline} setHeadline={setHeadline} destUrl={destUrl} setDestUrl={setDestUrl} ctaButton={ctaButton} setCtaButton={setCtaButton} errors={errors} />,
     <Step6Review data={reviewData} onGoTo={(s) => { setErrors({}); setStep(s); }} />,
   ];
 
