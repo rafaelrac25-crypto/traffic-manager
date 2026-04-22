@@ -166,16 +166,17 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
   if (!storySpec.page_id && creds.page_id) storySpec.page_id = creds.page_id;
 
   if (isVideo) {
-    /* Creative de VÍDEO: precisa de video_data (não link_data). Meta exige
-       image_url (thumbnail) — usa o próprio vídeo com param picture ausente
-       deixa Meta gerar thumb automático. */
+    /* Creative de VÍDEO: video_data precisa de video_id + image_hash (capa).
+       Preserva campos que o frontend já populou em video_data — só rebaixa
+       pro link_data se video_data não veio montado. */
+    const existingVideo = storySpec.video_data || {};
     const linkData = storySpec.link_data || {};
     storySpec.video_data = {
       video_id:       mainVideoId,
-      message:        linkData.message || cr.primary_text || '',
-      title:          linkData.name || linkData.title || '',
-      call_to_action: linkData.call_to_action || { type: 'LEARN_MORE' },
-      ...(linkData.link ? { link_description: linkData.link } : {}),
+      image_hash:     existingVideo.image_hash || mainImageHash || undefined,
+      message:        existingVideo.message || linkData.message || cr.primary_text || '',
+      title:          existingVideo.title || linkData.name || linkData.title || '',
+      call_to_action: existingVideo.call_to_action || linkData.call_to_action || { type: 'LEARN_MORE' },
     };
     delete storySpec.link_data;
   } else if (storySpec.link_data) {

@@ -59,30 +59,105 @@ export async function processVideoAuto(file, onProgress) {
   if (originalMB < VIDEO_COMPRESS_THRESHOLD_MB) {
     return { ok: true, file, wasCompressed: false };
   }
+
+  /* Tentativa 1: FFmpeg.wasm (melhor qualidade, suporta H.264 direto) */
   try {
     const { compressVideo } = await import('./videoCompressor');
     const compressed = await compressVideo(file, onProgress);
     const compressedMB = compressed.size / (1024 * 1024);
-    if (compressedMB > MAX_VIDEO_MB_AFTER) {
-      /* Força redução adicional (pass final já roda 360p + 200k) — se ainda
-         passou, vídeo é muito longo. Não exige ação do user, mas avisa. */
-      return {
-        ok: false,
-        reason: `Vídeo muito longo — mesmo otimizado ao máximo ficou em ${compressedMB.toFixed(1)} MB. Tente cortar pra ≤30s.`,
-      };
+    if (compressedMB <= MAX_VIDEO_MB_AFTER) {
+      return { ok: true, file: compressed, wasCompressed: true };
     }
-    return { ok: true, file: compressed, wasCompressed: true };
+    /* Se ainda estourou depois dos 3 passes, tenta fallback MediaRecorder */
+    console.warn('[compress] FFmpeg produziu', compressedMB.toFixed(1), 'MB — tentando MediaRecorder');
   } catch (e) {
-    /* Se FFmpeg falhar (navegador antigo, memória), aceita vídeo original
-       SE ainda couber no limite do multer (15MB). */
-    if (originalMB <= MAX_VIDEO_MB_AFTER) {
-      return { ok: true, file, wasCompressed: false };
-    }
-    return {
-      ok: false,
-      reason: `Compressão automática falhou (${e.message}). Vídeo tem ${originalMB.toFixed(1)} MB — precisa ser ≤${MAX_VIDEO_MB_AFTER} MB.`,
-    };
+    console.warn('[compress] FFmpeg falhou:', e.message, '— tentando MediaRecorder');
   }
+
+  /* Tentativa 2: MediaRecorder nativo (fallback — funciona se browser suporta) */
+  try {
+    onProgress?.('Comprimindo (modo alternativo)…');
+    const compressed = await compressWithMediaRecorder(file, onProgress);
+    const compressedMB = compressed.size / (1024 * 1024);
+    if (compressedMB <= MAX_VIDEO_MB_AFTER) {
+      return { ok: true, file: compressed, wasCompressed: true };
+    }
+  } catch (e) {
+    console.warn('[compress] MediaRecorder falhou:', e.message);
+  }
+
+  /* Tentativa 3: se original já cabe, manda sem comprimir */
+  if (originalMB <= MAX_VIDEO_MB_AFTER) {
+    return { ok: true, file, wasCompressed: false };
+  }
+
+  /* Derrota total — vídeo muito grande e compressão não funcionou */
+  return {
+    ok: false,
+    reason: `Não conseguimos comprimir o vídeo (${originalMB.toFixed(1)} MB). Tente um vídeo mais curto (≤30s).`,
+  };
+}
+
+/* Fallback: comprime vídeo via MediaRecorder nativo do browser.
+   Usa captureStream + bitrate controlado pra atingir ≤4MB. */
+async function compressWithMediaRecorder(file, onProgress) {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    video.src = URL.createObjectURL(file);
+    video.muted = true;
+    video.playsInline = true;
+
+    video.onloadedmetadata = () => {
+      const duration = video.duration || 30;
+      /* Bitrate pra atingir ~3.5MB total: (3.5MB * 8192) / duração */
+      const totalKbps = Math.floor((3.5 * 8192) / duration);
+      const videoBits = Math.max(200, totalKbps - 96) * 1000; /* reserva 96k pro áudio */
+
+      const stream = video.captureStream ? video.captureStream() : video.mozCaptureStream?.();
+      if (!stream) return reject(new Error('Browser não suporta captureStream'));
+
+      /* Prioridade: MP4 H.264 → WebM VP9 → WebM VP8 */
+      const mimeOptions = [
+        'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+        'video/mp4',
+        'video/webm;codecs=vp9',
+        'video/webm',
+      ];
+      const mimeType = mimeOptions.find(m => MediaRecorder.isTypeSupported(m));
+      if (!mimeType) return reject(new Error('Browser sem codec compatível'));
+
+      const recorder = new MediaRecorder(stream, {
+        mimeType,
+        videoBitsPerSecond: videoBits,
+        audioBitsPerSecond: 96000,
+      });
+
+      const chunks = [];
+      recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+      recorder.onstop = () => {
+        URL.revokeObjectURL(video.src);
+        const blob = new Blob(chunks, { type: mimeType.split(';')[0] });
+        const ext = mimeType.startsWith('video/mp4') ? '.mp4' : '.webm';
+        resolve(new File([blob], file.name.replace(/\.[^.]+$/, ext), { type: blob.type }));
+      };
+      recorder.onerror = (e) => reject(new Error(`MediaRecorder erro: ${e.error?.message || 'unknown'}`));
+
+      /* Progresso aproximado baseado no tempo de vídeo */
+      let lastPct = 0;
+      const progressInt = setInterval(() => {
+        const pct = Math.min(99, Math.round((video.currentTime / duration) * 100));
+        if (pct !== lastPct) { lastPct = pct; onProgress?.(pct); }
+      }, 300);
+
+      recorder.start();
+      video.play();
+      video.onended = () => {
+        clearInterval(progressInt);
+        recorder.stop();
+      };
+    };
+    video.onerror = () => reject(new Error('Não consegui carregar o vídeo'));
+  });
 }
 
 /* Processa 1 arquivo. Retorna { file, name, type, wasCompressed } ou { error } */

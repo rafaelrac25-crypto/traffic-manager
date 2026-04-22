@@ -66,15 +66,18 @@ router.post('/', async (req, res) => {
       platform_campaign_id = metaResult.platform_campaign_id;
       status = 'review';
     } catch (e) {
-      console.error('[meta.publish]', e);
-      metaError = e.message || 'Erro ao publicar no Meta';
-      /* Meta recusou: não persistimos em campaigns — o frontend vai mover
-         pra rejectedAds (página /reprovados) e disparar alerta no sino. */
+      /* Log detalhado pros logs do Vercel — payload completo + erro Meta */
+      console.error('[meta.publish] FALHA — payload:', JSON.stringify(payload.meta, null, 2));
+      console.error('[meta.publish] FALHA — erro:', e.message, 'meta:', JSON.stringify(e.meta, null, 2));
+      metaError = e.meta?.pt || e.message || 'Erro ao publicar no Meta';
+      /* Retorna TODOS os detalhes do erro pro frontend mostrar motivo específico */
       return res.status(200).json({
         rejected: true,
         reason: metaError,
-        details: e.meta?.details || e.meta?.user_msg || null,
+        details: e.meta?.user_msg || e.meta?.raw || null,
+        user_title: e.meta?.user_title || null,
         code: e.meta?.code || null,
+        subcode: e.meta?.subcode || null,
         meta: e.meta || null,
       });
     }

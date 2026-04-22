@@ -21,13 +21,29 @@ const META_ERROR_MAP = {
 };
 
 function parseMetaError(err) {
-  const code = err?.code ?? err?.error?.code;
-  const message = err?.message ?? err?.error?.message ?? String(err);
+  const inner = err?.error || err;
+  const code = inner?.code;
+  const subcode = inner?.error_subcode;
+  const message = inner?.message ?? String(err);
+  /* error_user_msg / error_user_title são muito mais específicos que
+     "Invalid parameter" e dizem EXATAMENTE qual campo está errado. */
+  const userTitle = inner?.error_user_title;
+  const userMsg = inner?.error_user_msg;
   const known = code != null ? META_ERROR_MAP[code] : null;
+
+  /* Mensagem final: priorize o detalhe específico do Meta quando existir. */
+  let pt = known?.pt ?? message;
+  if (userMsg) {
+    pt = userTitle ? `${userTitle}: ${userMsg}` : userMsg;
+  }
+
   return {
     code: code ?? null,
+    subcode: subcode ?? null,
     raw: message,
-    pt: known?.pt ?? message,
+    pt,
+    user_title: userTitle || null,
+    user_msg: userMsg || null,
     retry: known?.retry ?? false,
     backoffMs: known?.backoffMs ?? 0,
     reconnect: known?.reconnect ?? false,

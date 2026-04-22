@@ -158,18 +158,22 @@ export function toMetaPayload(ad) {
   };
 
   /* Extrai IDs reais do Meta já uploaded (via /api/upload/media).
-     Se há vídeo, cria object_story_spec.video_data; caso contrário, link_data. */
+     Se há vídeo, cria object_story_spec.video_data; caso contrário, link_data.
+     IMPORTANTE: video_data.image_hash é o hash da CAPA (vem do mesmo item
+     que tem metaVideoId — atribuído por uploadAllMedia). */
   const uploadedMedia = ad.mediaFilesData || [];
   const firstVideo = uploadedMedia.find(m => m.type === 'video' && m.metaVideoId);
   const firstImage = uploadedMedia.find(m => m.type === 'image' && m.metaHash);
   const imageHashFromUpload = firstImage?.metaHash || ad.imageHash || null;
   const videoIdFromUpload = firstVideo?.metaVideoId || null;
+  const videoCoverHash = firstVideo?.metaHash || null; /* hash da capa do vídeo */
 
   const storySpec = videoIdFromUpload
     ? {
         page_id: ad.metaAccountId || null,
         video_data: {
           video_id:       videoIdFromUpload,
+          image_hash:     videoCoverHash,  /* CAPA obrigatória pro Meta aceitar */
           message:        ad.primaryText || '',
           title:          ad.headline || '',
           call_to_action: { type: CTA_TO_META[ad.ctaButton] || 'LEARN_MORE' },
