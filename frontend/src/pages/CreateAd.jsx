@@ -1184,7 +1184,9 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
    Quando N de bairros < numRings solicitado, reduz automaticamente. */
 function classifyLocationsByRing(locations, ringsMode = 'auto') {
   const buckets = { primario: [], medio: [], externo: [], fora: [] };
-  const valid = (locations || [])
+  /* Dedupe por nome ANTES de sortear — garante que o mesmo bairro nunca
+     apareça em 2 anéis se Rafa marcou 2 pontos no mesmo bairro. */
+  const valid = dedupeLocationsByName(locations || [])
     .filter(l => l?.lat != null && l?.lng != null)
     .map(l => ({ loc: l, d: distanceKm(HOME_COORDS, { lat: l.lat, lng: l.lng }) }))
     .sort((a, b) => a.d - b.d);
@@ -1277,9 +1279,9 @@ function RingBudgetSplit({ locations, budgetValue, budgetType, split, setSplit, 
   const value = Number(budgetValue) || 0;
 
   const RINGS = [
-    { key: 'primario', label: 'Anel interno (0–5 km)', color: '#16A34A', desc: 'Ticket alto · micropigmentação, glow lips' },
-    { key: 'medio',    label: 'Anel médio (5–7 km)',   color: '#F59E0B', desc: 'Ticket médio · pacotes, combos' },
-    { key: 'externo',  label: 'Anel externo (7–8 km)', color: '#D97706', desc: 'Ticket de entrada · lash, brow, limpeza' },
+    { key: 'primario', label: 'Anel interno (0–5 km)', color: '#16A34A' },
+    { key: 'medio',    label: 'Anel médio (5–7 km)',   color: '#F59E0B' },
+    { key: 'externo',  label: 'Anel externo (7–8 km)', color: '#D97706' },
   ];
 
   function onChange(key, v) {
@@ -1365,7 +1367,9 @@ function RingBudgetSplit({ locations, budgetValue, budgetType, split, setSplit, 
                 style={{ width: '100%', accentColor: r.color }}
               />
               <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', marginTop: '3px', lineHeight: 1.4 }}>
-                {r.desc}{hoods ? ` · ${hoods}` : ''}
+                {hoods
+                  ? <>📍 <strong>{buckets[r.key].length} {buckets[r.key].length === 1 ? 'bairro' : 'bairros'}:</strong> {hoods}</>
+                  : 'Nenhum bairro neste anel.'}
               </div>
             </div>
           );
@@ -1428,10 +1432,38 @@ function computeDailyBudget(budgetValue, budgetType, days) {
 
 function computeDays(startDate, endDate) {
   if (!startDate || !endDate) return null;
-  const s = new Date(startDate);
-  const e = new Date(endDate);
-  if (isNaN(s) || isNaN(e) || e <= s) return null;
-  return Math.max(1, Math.round((e - s) / (1000 * 60 * 60 * 24)));
+  /* Fuso local fixo pra evitar deslocamento UTC do parser (YYYY-MM-DD vira UTC
+     meia-noite e pode cair num dia diferente no Brasil — usa T00:00:00 local). */
+  const s = new Date(`${startDate}T00:00:00`);
+  const e = new Date(`${endDate}T00:00:00`);
+  if (isNaN(s) || isNaN(e) || e < s) return null;
+  /* Meta conta período inclusivo: 01/05 a 05/05 = 5 dias (não 4).
+     Mesmo dia = 1 dia. */
+  const diff = Math.round((e - s) / (1000 * 60 * 60 * 24));
+  return Math.max(1, diff + 1);
+}
+
+/* Normaliza nome de bairro pra comparar (case/acento insensível).
+   Ex: "Boa Vista" e "boa vista" viram a mesma chave. */
+function normalizeLocationName(name) {
+  return String(name || '').trim().toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+/* Remove bairros duplicados mantendo apenas o mais próximo do centro
+   quando Rafa marca dois pontos no mesmo bairro. Garante que o mesmo
+   bairro nunca apareça em 2 anéis diferentes. */
+function dedupeLocationsByName(locations) {
+  const seen = new Set();
+  const out = [];
+  for (const loc of locations || []) {
+    const key = normalizeLocationName(loc?.name);
+    if (!key) { out.push(loc); continue; } /* sem nome, não tem como comparar */
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(loc);
+  }
+  return out;
 }
 
 function BudgetSummaryPanel({ budgetValue, budgetType, startDate, endDate, locations, budgetRingSplit, ringsMode }) {
@@ -1562,19 +1594,27 @@ function BudgetSummaryPanel({ budgetValue, budgetType, startDate, endDate, locat
           <div style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--c-text-2)', marginBottom: '8px' }}>
             💰 Divisão diária por anel ({perRing.length === 1 ? '1 anel' : `${perRing.length} anéis`})
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {perRing.map(r => {
               const ok = r.daily >= MIN_DAILY_PER_RING;
+              const hoods = (buckets[r.key] || []).map(l => l.name);
               return (
-                <div key={r.key} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
-                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: r.color, flexShrink: 0 }} />
-                  <span style={{ color: 'var(--c-text-1)', fontWeight: 600, minWidth: '70px' }}>{r.label}</span>
-                  <span style={{ color: 'var(--c-text-4)' }}>({r.pct}%)</span>
-                  <span style={{ flex: 1 }} />
-                  <span style={{ fontWeight: 700, color: ok ? '#16A34A' : '#DC2626' }}>
-                    {fmtBRL(r.daily)}/dia
-                  </span>
-                  <span style={{ fontSize: '14px' }}>{ok ? '✅' : '❌'}</span>
+                <div key={r.key}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: r.color, flexShrink: 0 }} />
+                    <span style={{ color: 'var(--c-text-1)', fontWeight: 600, minWidth: '70px' }}>{r.label}</span>
+                    <span style={{ color: 'var(--c-text-4)' }}>({r.pct}%)</span>
+                    <span style={{ flex: 1 }} />
+                    <span style={{ fontWeight: 700, color: ok ? '#16A34A' : '#DC2626' }}>
+                      {fmtBRL(r.daily)}/dia
+                    </span>
+                    <span style={{ fontSize: '14px' }}>{ok ? '✅' : '❌'}</span>
+                  </div>
+                  {hoods.length > 0 && (
+                    <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', marginLeft: '16px', marginTop: '3px', lineHeight: 1.45 }}>
+                      📍 <strong>{hoods.length} {hoods.length === 1 ? 'bairro' : 'bairros'}:</strong> {hoods.join(', ')}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -2615,17 +2655,14 @@ function PreflightCheckPanel({ data }) {
     let cancelled = false;
     (async () => {
       try {
-        /* Calcula duração estimada pra validação de saldo */
-        const daily = Number(data.budgetValue) || 0;
-        let days = 5;
-        if (data.startDate && data.endDate) {
-          const ms = new Date(data.endDate) - new Date(data.startDate);
-          days = Math.max(1, Math.round(ms / (1000 * 60 * 60 * 24)));
-        }
+        /* Calcula duração estimada pra validação de saldo (usa o mesmo
+           helper que o painel de resumo pra não divergir). */
+        const daily = computeDailyBudget(data.budgetValue, data.budgetType || 'daily', computeDays(data.startDate, data.endDate));
+        const days = computeDays(data.startDate, data.endDate) || 5;
         const res = await fetch('/api/campaigns/preflight', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ budget_daily: daily, days }),
+          body: JSON.stringify({ budget_daily: Number(daily.toFixed(2)), days }),
         });
         const json = await res.json();
         if (!cancelled) setState({ loading: false, ...json });
@@ -2957,11 +2994,11 @@ export default function CreateAd() {
         errs.budgetValue = 'Orçamento diário mínimo R$ 7,00 (exigência Meta + folga).';
       } else if (budgetType === 'total') {
         /* Lifetime mínimo dinâmico: 5 dias × R$7 = R$35 absoluto.
-           Se o user já escolheu datas, calcula 5× a duração em dias × R$7. */
+           Se o user já escolheu datas, calcula (dias inclusivos) × R$7. */
         let minTotal = 35;
-        if (startDate && endDate) {
-          const diffDays = Math.max(1, Math.round((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)));
-          minTotal = Math.max(35, diffDays * 7);
+        const days = computeDays(startDate, endDate);
+        if (days) {
+          minTotal = Math.max(35, days * 7);
         }
         if (v < minTotal) {
           errs.budgetValue = `Orçamento total mínimo R$ ${minTotal},00 (${Math.max(5, Math.round(minTotal/7))} dias × R$ 7).`;

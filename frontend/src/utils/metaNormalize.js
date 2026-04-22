@@ -10,11 +10,30 @@
 
 import { HOME_COORDS, distanceKm } from '../data/joinvilleDistricts';
 
+/* Remove bairros duplicados por nome (mantém a 1ª ocorrência após sort por
+   distância → mantém o mais próximo do centro). Evita que o mesmo bairro
+   apareça em 2 anéis diferentes quando Rafa marca múltiplos pontos nele. */
+function dedupeLocationsByName(locations) {
+  const seen = new Set();
+  const out = [];
+  for (const loc of locations || []) {
+    const key = String(loc?.name || '').trim().toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '');
+    if (!key) { out.push(loc); continue; }
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(loc);
+  }
+  return out;
+}
+
 /* Classifica bairros em anéis. ringsMode: 'auto' | '1' | '2' | '3'.
-   Mantém compat com a flag booleana legada `ringsEnabled`. */
+   Mantém compat com a flag booleana legada `ringsEnabled`.
+   Dedupe por nome antes de distribuir — regra: bairro único por anel. */
 function classifyRings(locations, ringsMode = 'auto') {
   const buckets = { primario: [], medio: [], externo: [] };
-  const valid = (locations || [])
+  const deduped = dedupeLocationsByName(locations || []);
+  const valid = deduped
     .filter(l => l?.lat != null && l?.lng != null)
     .map(l => ({ loc: l, d: distanceKm(HOME_COORDS, { lat: l.lat, lng: l.lng }) }))
     .sort((a, b) => a.d - b.d);
