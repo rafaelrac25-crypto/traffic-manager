@@ -13,6 +13,7 @@ import 'leaflet/dist/leaflet.css';
 import { useAppState } from '../contexts/AppStateContext';
 import { fetchDistrictInsights, recommendationLine } from '../data/districtInsights';
 import { processMediaFile } from '../utils/mediaProcessor';
+import { INTEREST_PRESETS } from '../data/interestPresets';
 import { getRejectionInfo } from '../data/rejectionRules';
 import {
   DISTRICT_COORDS,
@@ -1056,6 +1057,50 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
         <SectionLabel sub="Segmente por interesses, comportamentos e dados demográficos.">
           Interesses e comportamentos
         </SectionLabel>
+
+        {/* Presets por serviço — carregam 3 interesses curados de uma vez */}
+        <div style={{ marginBottom: '12px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--c-text-3)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '.5px' }}>
+            🎯 Conjuntos prontos por serviço
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {INTEREST_PRESETS.map(p => {
+              const allPresent = p.interests.every(i => interests.includes(i));
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  title={`${p.description}\n\nAdiciona: ${p.interests.join(', ')}`}
+                  onClick={() => {
+                    if (allPresent) {
+                      /* Todos já estão: remove esses 3 */
+                      setInterests(prev => prev.filter(i => !p.interests.includes(i)));
+                    } else {
+                      /* Adiciona os que faltam */
+                      setInterests(prev => [...prev, ...p.interests.filter(i => !prev.includes(i))]);
+                    }
+                  }}
+                  style={{
+                    padding: '7px 12px', borderRadius: '8px', fontSize: '11.5px', fontWeight: 600,
+                    border: `1px solid ${allPresent ? 'var(--c-accent)' : 'var(--c-border)'}`,
+                    background: allPresent ? 'rgba(193,53,132,.10)' : 'var(--c-surface)',
+                    color: allPresent ? 'var(--c-accent)' : 'var(--c-text-2)',
+                    cursor: 'pointer', fontFamily: 'inherit',
+                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                  }}
+                >
+                  <span>{p.emoji}</span>
+                  <span>{p.service}</span>
+                  {allPresent && <span style={{ fontSize: '13px' }}>✓</span>}
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', marginTop: '5px', lineHeight: 1.5 }}>
+            Cada botão adiciona 3 interesses curados pro Meta reconhecer e otimizar. Clique de novo pra remover.
+          </div>
+        </div>
+
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
           {INTEREST_SUGGESTIONS.filter(s => !interests.includes(s)).map(s => (
             <div
