@@ -246,15 +246,29 @@ export function toMetaPayload(ad) {
     object_story_spec: storySpec,
   };
 
-  const baseTargeting = {
-    age_min:              ad.ageRange?.[0] || 18,
-    age_max:              ad.ageRange?.[1] || 65,
-    genders,
-    interests:            (ad.interests || []).map(toInterestObject),
-    publisher_platforms:  ['facebook', 'instagram'],
-    facebook_positions:   ['feed'],
-    instagram_positions:  ['stream', 'story', 'reels'],
-  };
+  /* Mensagens: Cris atende só Instagram Direct — Meta v20 exige destination_type
+     quando optimization_goal=CONVERSATIONS. INSTAGRAM_DIRECT não aceita
+     facebook_positions, então restringimos pra publisher_platforms=[instagram]. */
+  const isMessages = ad.objective === 'messages';
+
+  const baseTargeting = isMessages
+    ? {
+        age_min:              ad.ageRange?.[0] || 18,
+        age_max:              ad.ageRange?.[1] || 65,
+        genders,
+        interests:            (ad.interests || []).map(toInterestObject),
+        publisher_platforms:  ['instagram'],
+        instagram_positions:  ['stream', 'story', 'reels'],
+      }
+    : {
+        age_min:              ad.ageRange?.[0] || 18,
+        age_max:              ad.ageRange?.[1] || 65,
+        genders,
+        interests:            (ad.interests || []).map(toInterestObject),
+        publisher_platforms:  ['facebook', 'instagram'],
+        facebook_positions:   ['feed'],
+        instagram_positions:  ['stream', 'story', 'reels'],
+      };
 
   const adSetCommon = {
     optimization_goal:  OPTIMIZATION_GOAL[ad.objective] || 'LINK_CLICKS',
@@ -264,6 +278,9 @@ export function toMetaPayload(ad) {
     start_time:         ad.startDate ? new Date(ad.startDate + 'T00:00:00').toISOString() : null,
     end_time:           ad.endDate   ? new Date(ad.endDate   + 'T23:59:59').toISOString() : null,
     promoted_object:    ad.pixelId ? { pixel_id: ad.pixelId } : undefined,
+    /* Meta v20: obrigatório p/ optimization_goal=CONVERSATIONS.
+       Sem ele, Graph API retorna erro 100 / sub 2490408. */
+    destination_type:   isMessages ? 'INSTAGRAM_DIRECT' : undefined,
   };
 
   /* Aceita `ringsMode` (novo) ou `ringsEnabled` (legado) */

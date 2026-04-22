@@ -279,6 +279,14 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
     if (asParams.optimization_goal === 'CONVERSATIONS' && !asParams.promoted_object && creds.page_id) {
       asParams.promoted_object = { page_id: creds.page_id };
     }
+    /* Meta v20: optimization_goal=CONVERSATIONS exige destination_type
+       (MESSENGER / INSTAGRAM_DIRECT / WHATSAPP). Default INSTAGRAM_DIRECT
+       porque canal único da Cris é IG Direct. */
+    if (a.destination_type) {
+      asParams.destination_type = a.destination_type;
+    } else if (asParams.optimization_goal === 'CONVERSATIONS') {
+      asParams.destination_type = 'INSTAGRAM_DIRECT';
+    }
 
     let asResp;
     try {
