@@ -523,7 +523,7 @@ router.get('/:id/diagnose', async (req, res) => {
       }, { token });
 
       const adsInfo = await metaGet(`/${camp.platform_campaign_id}/ads`, {
-        fields: 'id,name,status,effective_status,configured_status,creative,recommendations',
+        fields: 'id,name,status,effective_status,configured_status,issues_info,ad_review_feedback,recommendations,creative{id,status,effective_object_story_id,object_story_spec}',
         limit: 10,
       }, { token });
 
