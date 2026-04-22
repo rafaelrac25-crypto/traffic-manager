@@ -133,12 +133,55 @@ function toInterestObject(name) {
  * Converte o estado local do wizard no payload Meta completo (4 níveis).
  * Estrutura final: campaign → ad_set → ad → creative (exatamente como a API espera).
  */
+/* Remove sobreposição de localizações (Meta v20 rejeita com erro 1487756).
+   Algoritmo: ordena do mais próximo do HOME pro mais distante; pra cada
+   ponto, se ele já está DENTRO da área de outro anterior, descarta.
+   Senão, reduz o raio pra não encostar no anterior (buffer 0.3km).
+   Se raio ficar < 1km, descarta (área muito pequena pro Meta rodar). */
+function dedupeOverlappingGeos(locations) {
+  const valid = (locations || []).filter(l => l?.lat != null && l?.lng != null && l?.radius > 0);
+  if (valid.length <= 1) return valid;
+  /* Haversine inline */
+  const distKm = (a, b) => {
+    const R = 6371, toRad = x => (x * Math.PI) / 180;
+    const dLat = toRad(b.lat - a.lat), dLng = toRad(b.lng - a.lng);
+    const la1 = toRad(a.lat), la2 = toRad(b.lat);
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  };
+
+  /* Ordena do mais denso pro menos (menor raio primeiro, depois mais próximo do 1º) */
+  const sorted = [...valid].sort((a, b) => a.radius - b.radius);
+  const kept = [];
+  for (const loc of sorted) {
+    let skip = false;
+    let newRadius = loc.radius;
+    for (const other of kept) {
+      const d = distKm(loc, other);
+      /* Se center do loc está dentro do círculo de other → redundante */
+      if (d <= other.radius) { skip = true; break; }
+      /* Se círculos se sobrepõem → reduz raio pra ficar tangente (buffer 0.3km) */
+      const maxAllowed = d - other.radius - 0.3;
+      if (maxAllowed < newRadius) {
+        newRadius = maxAllowed;
+      }
+    }
+    if (skip) continue;
+    /* Raio ficou muito pequeno: descarta */
+    if (newRadius < 1) continue;
+    kept.push({ ...loc, radius: Number(newRadius.toFixed(2)) });
+  }
+  return kept;
+}
+
 export function toMetaPayload(ad) {
   const toGeo = (l) => ({
     latitude: l.lat, longitude: l.lng, radius: l.radius,
     distance_unit: 'kilometer', name: l.name,
   });
-  const allGeo = (ad.locations || []).map(toGeo);
+  /* Deduplica sobreposição ANTES de mapear pro schema Meta */
+  const cleanLocations = dedupeOverlappingGeos(ad.locations || []);
+  const allGeo = cleanLocations.map(toGeo);
 
   const genders = GENDER_TO_META[ad.gender] ?? [];
   const budgetCents = toMetaBudgetCents(ad.budgetValue);
@@ -258,7 +301,7 @@ export function toMetaPayload(ad) {
           ...baseTargeting,
           geo_locations: {
             countries:        ['BR'],
-            custom_locations: buckets[key].map(toGeo),
+            custom_locations: dedupeOverlappingGeos(buckets[key]).map(toGeo),
           },
         },
         _ring_key:     key,          /* metadata local pra debug */
