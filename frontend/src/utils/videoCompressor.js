@@ -37,7 +37,9 @@ async function getFFmpeg(onLoadProgress) {
 const TARGET_MB = 4.0;
 
 /* Extrai 1 frame do vídeo como JPEG pra usar como thumbnail no creative Meta.
-   Meta video_data exige image_url OU image_hash além do video_id. */
+   Meta video_data exige image_url OU image_hash além do video_id.
+   GARANTE saída ≥ 600px em ambas dimensões: se vídeo source for menor, faz
+   upscale pra 1080. Meta v20 rejeita thumbnail < 500px (erro 2875006). */
 export async function extractVideoThumbnail(videoFile) {
   return new Promise((resolve, reject) => {
     const video = document.createElement('video');
@@ -60,16 +62,27 @@ export async function extractVideoThumbnail(videoFile) {
     video.onseeked = () => {
       try {
         const canvas = document.createElement('canvas');
-        const maxDim = 1080;
+        const MAX_DIM = 1080;
+        const MIN_DIM = 600;  /* folga sobre o mínimo Meta de 500 */
         let w = video.videoWidth, h = video.videoHeight;
-        if (w > maxDim || h > maxDim) {
-          const scale = maxDim / Math.max(w, h);
+        /* 1) Reduz se grande demais */
+        if (w > MAX_DIM || h > MAX_DIM) {
+          const scale = MAX_DIM / Math.max(w, h);
           w = Math.round(w * scale);
           h = Math.round(h * scale);
         }
+        /* 2) Upscale se pequeno demais (rede de segurança vs erro 2875006) */
+        if (w < MIN_DIM || h < MIN_DIM) {
+          const upscale = MAX_DIM / Math.min(w, h);
+          w = Math.round(w * upscale);
+          h = Math.round(h * upscale);
+        }
         canvas.width = w;
         canvas.height = h;
-        canvas.getContext('2d').drawImage(video, 0, 0, w, h);
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(video, 0, 0, w, h);
         canvas.toBlob(blob => {
           clearTimeout(timeout);
           cleanup();

@@ -9,31 +9,51 @@
 
 /* Limites adequados pro pipeline Vercel + Meta (ad account criscosta.beauty) */
 export const MAX_IMAGE_PX = 1080;
+/* Meta v20 rejeita mídia < 500px (erro 2875006) — usamos 600 com folga. */
+export const MIN_IMAGE_PX = 600;
+/* Alvo pro upscale quando mídia chega abaixo do mínimo. 1080 é o recomendado
+   oficial do Meta pro Instagram (Feed 1080×1080, Stories/Reels 1080×1920). */
+export const TARGET_UPSCALE_PX = 1080;
 export const IMAGE_JPEG_QUALITY = 0.85;
 export const MAX_VIDEO_MB_AFTER = 4.0; /* Vercel limita body em 4.5MB — 500KB de margem pro overhead multipart */
 export const VIDEO_COMPRESS_THRESHOLD_MB = 3.5; /* acima disso, comprime sempre */
 export const MAX_IMAGE_MB_AFTER = 2;
 
-/* Converte File de imagem em Blob comprimido via canvas. */
+/* Converte File de imagem em Blob comprimido + sempre ≥ MIN_IMAGE_PX em ambas
+   dimensões. Se chegar menor, faz upscale via canvas (bilinear) pra TARGET.
+   Resultado: Meta sempre recebe mídia dentro dos limites mínimos. */
 export async function compressImage(file) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
       URL.revokeObjectURL(url);
-      /* Calcula novo tamanho respeitando aspect ratio */
       let { width, height } = img;
+
+      /* 1) Se muito grande, reduz mantendo aspect ratio */
       if (width > MAX_IMAGE_PX || height > MAX_IMAGE_PX) {
         const scale = MAX_IMAGE_PX / Math.max(width, height);
-        width = Math.round(width * scale);
+        width  = Math.round(width  * scale);
         height = Math.round(height * scale);
       }
+
+      /* 2) Se abaixo do mínimo Meta, upscale pra TARGET na menor dimensão.
+         Qualidade sofre, mas é melhor que Meta rejeitar. Usuário ideal sobe
+         em alta resolução — isto é a rede de segurança final. */
+      if (width < MIN_IMAGE_PX || height < MIN_IMAGE_PX) {
+        const upscale = TARGET_UPSCALE_PX / Math.min(width, height);
+        width  = Math.round(width  * upscale);
+        height = Math.round(height * upscale);
+      }
+
       const canvas = document.createElement('canvas');
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext('2d');
+      /* imageSmoothingQuality=high → melhora levemente o upscale */
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img, 0, 0, width, height);
-      /* JPEG com qualidade 0.85 — bom equilíbrio tamanho/qualidade */
       canvas.toBlob(
         blob => {
           if (!blob) return reject(new Error('Falha na compressão'));
