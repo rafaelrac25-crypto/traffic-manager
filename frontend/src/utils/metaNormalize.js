@@ -204,13 +204,18 @@ export function toMetaPayload(ad) {
   /* Extrai IDs reais do Meta já uploaded (via /api/upload/media).
      Se há vídeo, cria object_story_spec.video_data; caso contrário, link_data.
      IMPORTANTE: video_data.image_hash é o hash da CAPA (vem do mesmo item
-     que tem metaVideoId — atribuído por uploadAllMedia). */
+     que tem metaVideoId — atribuído por uploadAllMedia).
+     Detector de fake IDs: hash real do Meta tem 32+ chars hex; IDs gerados
+     por newMetaIds() têm formato timestamp+random. */
+  const isRealMetaHash = (h) => typeof h === 'string' && /^[a-f0-9]{20,}$/i.test(h) && !h.startsWith('17');
+  const isRealMetaVideoId = (id) => typeof id === 'string' && /^\d{10,20}$/.test(id);
+
   const uploadedMedia = ad.mediaFilesData || [];
-  const firstVideo = uploadedMedia.find(m => m.type === 'video' && m.metaVideoId);
-  const firstImage = uploadedMedia.find(m => m.type === 'image' && m.metaHash);
-  const imageHashFromUpload = firstImage?.metaHash || ad.imageHash || null;
+  const firstVideo = uploadedMedia.find(m => m.type === 'video' && isRealMetaVideoId(m.metaVideoId));
+  const firstImage = uploadedMedia.find(m => m.type === 'image' && isRealMetaHash(m.metaHash));
+  const imageHashFromUpload = firstImage?.metaHash || (isRealMetaHash(ad.imageHash) ? ad.imageHash : null);
   const videoIdFromUpload = firstVideo?.metaVideoId || null;
-  const videoCoverHash = firstVideo?.metaHash || null; /* hash da capa do vídeo */
+  const videoCoverHash = isRealMetaHash(firstVideo?.metaHash) ? firstVideo.metaHash : null;
 
   const storySpec = videoIdFromUpload
     ? {

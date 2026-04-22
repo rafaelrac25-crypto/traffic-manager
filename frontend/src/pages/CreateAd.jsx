@@ -2704,6 +2704,26 @@ export default function CreateAd() {
       return;
     }
 
+    /* Validação: precisa ter AO MENOS 1 hash real do Meta (imagem ou vídeo).
+       Sem isso, Meta rejeita creative. Cenário comum: reaproveitou ad reprovado
+       sem re-subir a mídia (File não persiste em localStorage). */
+    const hasRealMedia = mediaFilesData.some(m => {
+      const h = m.metaHash;
+      const v = m.metaVideoId;
+      const realHash = typeof h === 'string' && /^[a-f0-9]{20,}$/i.test(h) && !h.startsWith('17');
+      const realVideoId = typeof v === 'string' && /^\d{10,20}$/.test(v);
+      return realHash || realVideoId;
+    });
+    if (!hasRealMedia) {
+      setPublishing(false);
+      addNotification({
+        kind: 'publish-failed',
+        title: 'Mídia precisa ser enviada novamente',
+        message: `Detectei que você está reaproveitando um anúncio. Por segurança, volte ao Passo 5 (Criativo), remova a imagem/vídeo atual e adicione de novo antes de publicar.`,
+      });
+      return;
+    }
+
     // Referências (em vez de duplicar) quando o user reusa audience/creative
     const audienceId = reuseAudience?.id || null;
     const creativeId = reuseCreative?.id || null;
