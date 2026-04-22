@@ -2565,22 +2565,27 @@ export default function CreateAd() {
       const v = Number(budgetValue);
       if (!budgetValue || v <= 0) {
         errs.budgetValue = 'Defina um valor de orçamento maior que zero.';
-      } else if (budgetType === 'daily' && v < 6) {
-        /* Meta BR: mínimo ~R$6/dia/adset pra rodar. Se user escolher 2-3 anéis,
-           cada anel fica abaixo do mínimo e Meta recusa. */
-        errs.budgetValue = 'Orçamento diário mínimo do Meta é R$ 6,00.';
-      } else if (budgetType === 'total' && v < 30) {
-        errs.budgetValue = 'Orçamento total mínimo é R$ 30,00 (5 dias × R$ 6).';
+      } else if (budgetType === 'daily' && v < 7) {
+        /* Meta BR exige ~R$6/dia/adset. Pedimos R$7 com folga de 15% pra não
+           bater no limite quando dividimos entre 2-3 anéis (ex: R$7/3 = R$2,33
+           já ficaria abaixo — por isso soma dos anéis precisa ser ≥ R$7). */
+        errs.budgetValue = 'Orçamento diário mínimo R$ 7,00 (exigência Meta + folga).';
+      } else if (budgetType === 'total' && v < 35) {
+        errs.budgetValue = 'Orçamento total mínimo R$ 35,00 (5 dias × R$ 7).';
       }
     }
     if (s === 3) {
       if (!adFormat) errs.adFormat = 'Escolha o formato do anúncio.';
       if (!primaryText.trim()) errs.primaryText = 'O texto principal é obrigatório.';
+      /* Meta recomenda ≤125 chars pra não truncar em mobile; limite rígido ~500 */
+      else if (primaryText.length > 500) errs.primaryText = 'Texto principal acima do limite Meta (500 caracteres).';
       if (!headline.trim()) errs.headline = 'O título é obrigatório.';
+      /* Meta recomenda ≤40 chars; hard ~255 */
+      else if (headline.length > 255) errs.headline = 'Título acima do limite Meta (255 caracteres).';
       const messageCTAs = ['WhatsApp', 'Enviar mensagem', 'Mande uma mensagem', 'Chamar agora'];
       const needsUrl = !messageCTAs.includes(ctaButton);
       if (needsUrl && !destUrl.trim()) errs.destUrl = 'Com este CTA é preciso informar um destino.';
-      else if (destUrl.trim() && !destUrl.startsWith('http')) errs.destUrl = 'A URL deve começar com https://';
+      else if (destUrl.trim() && !destUrl.startsWith('https://')) errs.destUrl = 'A URL deve começar com https:// (Meta exige HTTPS).';
     }
     return errs;
   }

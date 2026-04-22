@@ -161,26 +161,46 @@ router.put('/:id', async (req, res) => {
         }
       }
 
-      /* 2) Orçamento — redistribui pelos ad_sets usando ring_percent original */
-      if (budget != null && Number(budget) !== Number(current.budget) && adSetIds.length > 0) {
+      /* Detecta se a campanha usa CBO (budget na Campaign) ou ABO (budget
+         nos ad_sets) a partir do payload original — edição muda de endpoint
+         conforme a estrutura. Tentar editar ad_set.daily_budget quando é
+         CBO causa erro "cannot set adset budget" no Meta. */
+      const isCBO = prevPayload?.budgetOptimization === 'campaign'
+        || !!prevPayload?.meta?.campaign?.daily_budget
+        || !!prevPayload?.meta?.campaign?.lifetime_budget;
+
+      /* 2) Orçamento */
+      if (budget != null && Number(budget) !== Number(current.budget)) {
         const totalCents = Math.round(Number(budget) * 100);
         try {
-          for (const as of (ringSplit.length > 0 ? ringSplit : adSetIds.map(id => ({ id, pct: 100 })))) {
-            const ringCents = Math.round(totalCents * (as.pct / 100));
-            await updateAdSetMeta(creds, as.id, { daily_budget: ringCents });
+          if (isCBO) {
+            /* CBO: edita direto no nível da Campaign */
+            const budgetField = prevPayload?.budgetType === 'total'
+              ? { lifetime_budget: totalCents }
+              : { daily_budget: totalCents };
+            await updateCampaignMeta(creds, current.platform_campaign_id, budgetField);
+          } else if (adSetIds.length > 0) {
+            /* ABO: redistribui pelos ad_sets usando ring_percent original */
+            const budgetType = prevPayload?.budgetType === 'total' ? 'lifetime_budget' : 'daily_budget';
+            for (const as of (ringSplit.length > 0 ? ringSplit : adSetIds.map(id => ({ id, pct: 100 })))) {
+              const ringCents = Math.round(totalCents * (as.pct / 100));
+              await updateAdSetMeta(creds, as.id, { [budgetType]: ringCents });
+            }
           }
         } catch (e) {
           return res.status(502).json({ error: `Meta recusou a mudança de orçamento: ${e.message}`, meta: e.meta || null });
         }
       }
 
-      /* 3) Datas de início/fim — aplica em TODOS os ad_sets */
+      /* 3) Datas de início/fim — fuso BR fixo (-03:00) pra não virar o dia
+         quando interpretado no fuso UTC do servidor Vercel. */
+      const BR_OFFSET = '-03:00';
       const dateFields = {};
       if (start_date != null && start_date !== current.start_date) {
-        dateFields.start_time = new Date(start_date + 'T00:00:00').toISOString();
+        dateFields.start_time = new Date(`${start_date}T00:00:00${BR_OFFSET}`).toISOString();
       }
       if (end_date != null && end_date !== current.end_date) {
-        dateFields.end_time = new Date(end_date + 'T23:59:59').toISOString();
+        dateFields.end_time = new Date(`${end_date}T23:59:59${BR_OFFSET}`).toISOString();
       }
       if (Object.keys(dateFields).length > 0 && adSetIds.length > 0) {
         try {

@@ -20,7 +20,29 @@ function request(method, path, params = {}, { token } = {}) {
 async function updateCampaignStatus(creds, platformCampaignId, status) {
   const token = getToken(creds);
   const metaStatus = status === 'active' ? 'ACTIVE' : status === 'paused' ? 'PAUSED' : String(status).toUpperCase();
-  return request('POST', `/${platformCampaignId}`, { status: metaStatus }, { token });
+  const result = await request('POST', `/${platformCampaignId}`, { status: metaStatus }, { token });
+
+  /* Defensivo: ao PAUSAR, também pausa todos os ad_sets descendentes.
+     Meta já pausa cascata via effective_status quando campaign pausa, mas
+     alguns cenários (CBO em reativação parcial) deixam ad_sets em ACTIVE.
+     Pausar explícito garante que a Cris pare de gastar imediatamente. */
+  if (metaStatus === 'PAUSED') {
+    try {
+      const { metaGet } = require('./metaHttp');
+      const adsetsResp = await metaGet(`/${platformCampaignId}/adsets`, { fields: 'id,status', limit: 100 }, { token });
+      for (const as of (adsetsResp?.data || [])) {
+        if (as?.id && as?.status !== 'PAUSED') {
+          try { await request('POST', `/${as.id}`, { status: 'PAUSED' }, { token }); }
+          catch (e) { console.warn('[metaWrite] pause adset falhou:', as.id, e.message); }
+        }
+      }
+    } catch (e) {
+      /* Não bloqueia: a campaign JÁ está pausada, ad_sets em cascata é defensivo */
+      console.warn('[metaWrite] pause cascade falhou:', e.message);
+    }
+  }
+
+  return result;
 }
 
 /* Atualiza campos mutáveis de uma Campaign no Meta (ex: name). */
