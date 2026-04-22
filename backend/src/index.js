@@ -28,9 +28,8 @@ app.use('/api/platforms', require('./routes/platforms'));
 app.use('/api/history', require('./routes/history'));
 app.use('/api/ai', require('./routes/ai'));
 app.use('/api/upload', require('./routes/upload'));
+app.use('/api/health', require('./routes/health'));
 app.use('/webhooks', require('./routes/webhooks'));
-
-app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
 
 // Servir frontend estático (produção)
 const frontendDist = path.join(__dirname, '../../frontend/dist');

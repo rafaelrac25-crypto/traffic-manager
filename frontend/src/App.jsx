@@ -13,6 +13,7 @@ import References from './pages/References';
 import History from './pages/History';
 import HeatMap from './pages/HeatMap';
 import AIAssistant from './components/AIAssistant';
+import SystemStatus from './components/SystemStatus';
 import SplashScreen from './components/SplashScreen';
 import { useTheme } from './contexts/ThemeContext';
 import { AppStateProvider, useAppState } from './contexts/AppStateContext';
@@ -498,6 +499,7 @@ function Layout() {
       </div>
 
       <AIAssistant />
+      <SystemStatus />
     </div>
   );
 }
