@@ -167,8 +167,9 @@ function dedupeOverlappingGeos(locations) {
       }
     }
     if (skip) continue;
-    /* Raio ficou muito pequeno: descarta */
-    if (newRadius < 1) continue;
+    /* Meta rejeita raios muito pequenos (audiência insuficiente pra rodar).
+       Piso: 3km garante público mínimo viável mesmo em bairro pequeno. */
+    if (newRadius < 3) newRadius = 3;
     kept.push({ ...loc, radius: Number(newRadius.toFixed(2)) });
   }
   return kept;
@@ -299,8 +300,9 @@ export function toMetaPayload(ad) {
         lifetime_budget: useCBO ? null : (ad.budgetType === 'total' ? ringBudget : null),
         targeting: {
           ...baseTargeting,
+          /* Meta v20 conflita quando countries + custom_locations no mesmo
+             geo_locations. Quando tem custom_locations, envia só elas. */
           geo_locations: {
-            countries:        ['BR'],
             custom_locations: dedupeOverlappingGeos(buckets[key]).map(toGeo),
           },
         },
@@ -326,7 +328,9 @@ export function toMetaPayload(ad) {
       ...adSetCommon,
       targeting: {
         ...baseTargeting,
-        geo_locations: { countries: ['BR'], custom_locations: allGeo },
+        geo_locations: allGeo.length > 0
+          ? { custom_locations: allGeo }
+          : { countries: ['BR'] },
       },
     },
     ad: { id: ad.metaAdId, name: ad.name, status: 'PAUSED', creative: { creative_id: ad.metaCreativeId } },
