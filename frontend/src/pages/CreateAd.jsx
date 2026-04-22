@@ -1383,11 +1383,11 @@ function RingBudgetSplit({ locations, budgetValue, budgetType, split, setSplit, 
         {balanced ? `✅ Total: 100% · R$\u00A0${value.toFixed(2).replace('.', ',')} distribuídos` : `⚠️ Total: ${total}% — ajuste para fechar 100%`}
       </div>
 
-      {/* Alerta de budget mínimo — Meta exige ~R$ 6/dia por ad set */}
+      {/* Alerta de budget mínimo — Meta exige R$ 7/dia por ad set (R$ 6 bruto + folga) */}
       {budgetType === 'daily' && balanced && (() => {
         const lowRings = RINGS.filter(r => activeKeys.includes(r.key))
           .map(r => ({ key: r.key, label: r.label, share: value * (Number(normalized[r.key]) || 0) / 100 }))
-          .filter(r => r.share < 6);
+          .filter(r => r.share < 7);
         if (lowRings.length === 0) return null;
         return (
           <div style={{
@@ -1396,15 +1396,259 @@ function RingBudgetSplit({ locations, budgetValue, budgetType, split, setSplit, 
             border: '1px solid rgba(239,68,68,.3)',
             fontSize: '11px', lineHeight: 1.5, color: '#DC2626',
           }}>
-            <strong>⚠ Meta exige orçamento mínimo de ~R$ 6/dia por ad set.</strong> Seu split
+            <strong>⚠ Cada anel precisa de R$ 7/dia no mínimo.</strong> Seu split
             atual deixa {lowRings.length === 1 ? 'um anel' : `${lowRings.length} anéis`} abaixo
             (R$ {lowRings.map(r => r.share.toFixed(2).replace('.', ',')).join(' · R$ ')}).
             {' '}Meta pode recusar. Aumente o orçamento total para pelo menos
-            R$ {(6 * activeKeys.length).toFixed(2).replace('.', ',')}/dia, ou desative os anéis.
+            R$ {(7 * activeKeys.length).toFixed(2).replace('.', ',')}/dia, ou reduza os anéis.
           </div>
         );
       })()}
 
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════
+   PAINEL DE RESUMO DE ORÇAMENTO
+   Mostra dias de campanha, divisão por anel com mínimo R$ 7/dia,
+   total previsto e comparação com saldo disponível no Meta.
+   Saldo vem do /api/campaigns/preflight (debounced).
+══════════════════════════════════════════ */
+const MIN_DAILY_PER_RING = 7;
+
+function computeDailyBudget(budgetValue, budgetType, days) {
+  const v = Number(budgetValue) || 0;
+  if (v <= 0) return 0;
+  if (budgetType === 'daily')  return v;
+  if (budgetType === 'weekly') return v / 7;
+  if (budgetType === 'total')  return days && days > 0 ? v / days : 0;
+  return v;
+}
+
+function computeDays(startDate, endDate) {
+  if (!startDate || !endDate) return null;
+  const s = new Date(startDate);
+  const e = new Date(endDate);
+  if (isNaN(s) || isNaN(e) || e <= s) return null;
+  return Math.max(1, Math.round((e - s) / (1000 * 60 * 60 * 24)));
+}
+
+function BudgetSummaryPanel({ budgetValue, budgetType, startDate, endDate, locations, budgetRingSplit, ringsMode }) {
+  const days = computeDays(startDate, endDate);
+  const dailyBudget = computeDailyBudget(budgetValue, budgetType, days);
+
+  const buckets = classifyLocationsByRing(locations, ringsMode);
+  const activeKeys = ['primario', 'medio', 'externo'].filter(k => buckets[k].length > 0);
+  const normalized = normalizeSplit(budgetRingSplit, activeKeys);
+
+  const RING_LABELS = {
+    primario: { label: 'Interno', color: '#16A34A' },
+    medio:    { label: 'Médio',   color: '#F59E0B' },
+    externo:  { label: 'Externo', color: '#D97706' },
+  };
+
+  const perRing = activeKeys.map(k => ({
+    key: k,
+    label: RING_LABELS[k].label,
+    color: RING_LABELS[k].color,
+    pct: Number(normalized[k]) || 0,
+    daily: dailyBudget * (Number(normalized[k]) || 0) / 100,
+  }));
+  const underMin = perRing.filter(r => r.daily < MIN_DAILY_PER_RING);
+
+  /* Total previsto: se tem dias, daily × dias. Se não, mostra só "por dia". */
+  const totalEstimated = days ? dailyBudget * days : null;
+
+  /* Chama /preflight com debounce pra ver saldo real na conta Meta */
+  const [balanceState, setBalanceState] = useState({ loading: false, data: null, error: null });
+
+  useEffect(() => {
+    /* Só chama se tiver valor e duração definidos */
+    if (!(dailyBudget > 0) || !days) {
+      setBalanceState({ loading: false, data: null, error: null });
+      return;
+    }
+    const t = setTimeout(async () => {
+      setBalanceState(prev => ({ ...prev, loading: true, error: null }));
+      try {
+        const res = await fetch('/api/campaigns/preflight', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ budget_daily: Number(dailyBudget.toFixed(2)), days }),
+        });
+        const json = await res.json();
+        const bal = (json.checks || []).find(c => c.key === 'balance');
+        const conn = (json.checks || []).find(c => c.key === 'connected');
+        if (conn && conn.ok === false) {
+          setBalanceState({ loading: false, data: null, error: 'Meta não conectado' });
+          return;
+        }
+        if (!bal) {
+          setBalanceState({ loading: false, data: null, error: 'Saldo não retornado pelo Meta' });
+          return;
+        }
+        setBalanceState({
+          loading: false,
+          data: {
+            ok: bal.ok,
+            available: bal.data?.available ?? null,
+            needed: bal.data?.needed ?? null,
+            estimated: bal.data?.estimated ?? null,
+            currency: bal.data?.currency || 'BRL',
+            details: bal.details,
+          },
+          error: null,
+        });
+      } catch (e) {
+        setBalanceState({ loading: false, data: null, error: e.message || 'Erro ao consultar saldo' });
+      }
+    }, 600); /* debounce — evita chamar a cada tecla */
+    return () => clearTimeout(t);
+  }, [dailyBudget, days]);
+
+  const fmtBRL = (n) => `R$ ${(Number(n) || 0).toFixed(2).replace('.', ',')}`;
+  const fmtDate = (d) => {
+    try { return new Date(`${d}T12:00:00`).toLocaleDateString('pt-BR'); } catch { return d; }
+  };
+
+  /* Estado vazio — precisa de valor + datas pra fazer sentido */
+  if (!(dailyBudget > 0)) return null;
+
+  return (
+    <div style={{
+      border: '1.5px solid var(--c-border)',
+      borderRadius: '12px',
+      padding: '14px 18px',
+      background: 'var(--c-surface)',
+      display: 'flex', flexDirection: 'column', gap: '12px',
+    }}>
+      <div>
+        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '2px' }}>
+          📋 Resumo do investimento
+        </div>
+        <div style={{ fontSize: '11px', color: 'var(--c-text-4)', lineHeight: 1.5 }}>
+          Confira duração, divisão por anel e se seu saldo no Meta cobre a campanha.
+        </div>
+      </div>
+
+      {/* 1. Duração */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', background: 'var(--c-card-bg)' }}>
+        <span style={{ fontSize: '16px' }}>📅</span>
+        <div style={{ flex: 1 }}>
+          {days ? (
+            <>
+              <div style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--c-text-1)' }}>
+                {days} {days === 1 ? 'dia' : 'dias'} de campanha
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>
+                {fmtDate(startDate)} → {fmtDate(endDate)}
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--c-text-1)' }}>Sem data de término</div>
+              <div style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>
+                Anúncio roda até pausa manual. Defina uma data de término pra ver total e saldo.
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* 2. Divisão por anel */}
+      {perRing.length > 0 && (
+        <div style={{ padding: '10px 12px', borderRadius: '8px', background: 'var(--c-card-bg)' }}>
+          <div style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--c-text-2)', marginBottom: '8px' }}>
+            💰 Divisão diária por anel ({perRing.length === 1 ? '1 anel' : `${perRing.length} anéis`})
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {perRing.map(r => {
+              const ok = r.daily >= MIN_DAILY_PER_RING;
+              return (
+                <div key={r.key} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: r.color, flexShrink: 0 }} />
+                  <span style={{ color: 'var(--c-text-1)', fontWeight: 600, minWidth: '70px' }}>{r.label}</span>
+                  <span style={{ color: 'var(--c-text-4)' }}>({r.pct}%)</span>
+                  <span style={{ flex: 1 }} />
+                  <span style={{ fontWeight: 700, color: ok ? '#16A34A' : '#DC2626' }}>
+                    {fmtBRL(r.daily)}/dia
+                  </span>
+                  <span style={{ fontSize: '14px' }}>{ok ? '✅' : '❌'}</span>
+                </div>
+              );
+            })}
+          </div>
+          {underMin.length > 0 && (
+            <div style={{ marginTop: '8px', padding: '8px 10px', borderRadius: '6px', background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.3)', fontSize: '11px', color: '#DC2626', lineHeight: 1.5 }}>
+              <strong>Abaixo do mínimo.</strong> Cada anel precisa de pelo menos {fmtBRL(MIN_DAILY_PER_RING)}/dia.
+              {' '}Aumente o orçamento para {fmtBRL(MIN_DAILY_PER_RING * activeKeys.length)}/dia ou reduza os anéis.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 3. Total previsto */}
+      {totalEstimated != null && (
+        <div style={{ padding: '10px 12px', borderRadius: '8px', background: 'var(--c-card-bg)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '16px' }}>📊</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '11.5px', color: 'var(--c-text-4)' }}>Total previsto da campanha</div>
+            <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--c-accent)' }}>
+              {fmtBRL(totalEstimated)}
+            </div>
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--c-text-4)', textAlign: 'right' }}>
+            {fmtBRL(dailyBudget)}/dia<br />× {days} dias
+          </div>
+        </div>
+      )}
+
+      {/* 4. Check de saldo (assíncrono) */}
+      {days ? (
+        balanceState.loading ? (
+          <div style={{ padding: '10px 12px', borderRadius: '8px', background: 'var(--c-card-bg)', fontSize: '12px', color: 'var(--c-text-4)' }}>
+            🔎 Consultando saldo no Meta…
+          </div>
+        ) : balanceState.error ? (
+          <div style={{ padding: '10px 12px', borderRadius: '8px', background: 'rgba(245,158,11,.08)', border: '1px solid rgba(245,158,11,.3)', fontSize: '11.5px', color: '#B45309', lineHeight: 1.5 }}>
+            ⚠ Não consegui checar o saldo: {balanceState.error}. Verifique na etapa de revisão.
+          </div>
+        ) : balanceState.data ? (
+          (() => {
+            const { ok, available, needed, estimated } = balanceState.data;
+            const avail = Number(available) || 0;
+            const est = Number(estimated) || totalEstimated || 0;
+            const margin = avail - est;
+            /* 3 estados: verde (sobra > 20%), amarelo (passa mas apertado), vermelho (não cobre) */
+            let status = 'green', title = 'Dá pra rodar', icon = '✅';
+            if (!ok) { status = 'red'; title = 'Não cabe no saldo'; icon = '❌'; }
+            else if (margin < est * 0.2) { status = 'yellow'; title = 'Apertado — sem folga'; icon = '⚠'; }
+            const palette = {
+              green:  { bg: 'rgba(22,163,74,.08)',  bd: 'rgba(22,163,74,.3)',  fg: '#16A34A' },
+              yellow: { bg: 'rgba(245,158,11,.08)', bd: 'rgba(245,158,11,.3)', fg: '#B45309' },
+              red:    { bg: 'rgba(239,68,68,.08)',  bd: 'rgba(239,68,68,.3)',  fg: '#DC2626' },
+            }[status];
+            return (
+              <div style={{ padding: '10px 12px', borderRadius: '8px', background: palette.bg, border: `1px solid ${palette.bd}` }}>
+                <div style={{ fontSize: '12.5px', fontWeight: 700, color: palette.fg, marginBottom: '4px' }}>
+                  {icon} {title}
+                </div>
+                <div style={{ fontSize: '11.5px', color: 'var(--c-text-2)', lineHeight: 1.55 }}>
+                  Saldo disponível na conta Meta: <strong>{fmtBRL(avail)}</strong>
+                  {' · '}previsto gastar: <strong>{fmtBRL(est)}</strong>
+                  {ok ? (margin >= 0 ? ` · sobra ${fmtBRL(margin)}` : '') : ` · faltam ${fmtBRL(est - avail)}`}
+                </div>
+                {!ok && (
+                  <div style={{ fontSize: '11px', color: palette.fg, marginTop: '6px' }}>
+                    Reduza dias ou valor diário, ou coloque saldo no Meta antes de publicar.
+                  </div>
+                )}
+              </div>
+            );
+          })()
+        ) : null
+      ) : null}
     </div>
   );
 }
@@ -1538,7 +1782,7 @@ function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, s
                 🎯 Quantos anéis (ad sets) criar?
               </div>
               <div style={{ fontSize: '11px', color: 'var(--c-text-4)', lineHeight: 1.5 }}>
-                Cada anel vira 1 ad set no Meta com seus bairros agrupados por distância. Lembrete: cada ad set precisa de pelo menos R$ 6/dia.
+                Cada anel vira 1 ad set no Meta com seus bairros agrupados por distância. Lembrete: cada ad set precisa de pelo menos R$ 7/dia.
               </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
@@ -1612,6 +1856,17 @@ function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, s
         </div>
         {!endDate && <p style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '6px' }}>Sem data de término: o anúncio ficará ativo até ser pausado manualmente.</p>}
       </div>
+
+      {/* Resumo final: duração + divisão por anel + total previsto + saldo Meta */}
+      <BudgetSummaryPanel
+        budgetValue={budgetValue}
+        budgetType={budgetType}
+        startDate={startDate}
+        endDate={endDate}
+        locations={locations}
+        budgetRingSplit={budgetRingSplit}
+        ringsMode={ringsMode}
+      />
 
     </div>
   );
@@ -2716,6 +2971,24 @@ export default function CreateAd() {
       if (startDate && endDate && new Date(endDate) <= new Date(startDate)) {
         errs.endDate = 'Data de fim deve ser posterior à data de início.';
       }
+      /* Divisão por anel: cada anel precisa de R$ 7/dia mínimo.
+         Bloqueia antes de chegar no Meta, evita "ad set under minimum" (code 1815113). */
+      try {
+        const days = computeDays(startDate, endDate);
+        const dailyBudget = computeDailyBudget(budgetValue, budgetType, days);
+        if (dailyBudget > 0) {
+          const buckets = classifyLocationsByRing(locations, ringsMode);
+          const activeKeys = ['primario', 'medio', 'externo'].filter(k => buckets[k].length > 0);
+          if (activeKeys.length > 0) {
+            const normalized = normalizeSplit(budgetRingSplit, activeKeys);
+            const under = activeKeys.filter(k => (dailyBudget * (Number(normalized[k]) || 0) / 100) < MIN_DAILY_PER_RING);
+            if (under.length > 0) {
+              const minTotal = MIN_DAILY_PER_RING * activeKeys.length;
+              errs.budgetValue = `Cada anel precisa de R$ ${MIN_DAILY_PER_RING}/dia. Aumente pra R$ ${minTotal}/dia ou reduza os anéis (${under.length} abaixo do mínimo).`;
+            }
+          }
+        }
+      } catch { /* se falhar o classify, não bloqueia — o preflight do Step 5 pega */ }
       /* Idade: Meta aceita 13-65. Default 18-65 está ok, mas validar user override. */
       if (Array.isArray(ageRange)) {
         if (ageRange[0] < 13) errs.ageRange = 'Idade mínima é 13 (regra Meta).';

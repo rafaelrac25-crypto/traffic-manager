@@ -554,6 +554,7 @@ router.post('/preflight', async (req, res) => {
               ok: false,
               severity: 'error',
               details: `Disponível R$ ${available.toFixed(2)} — necessário ~R$ ${needed.toFixed(2)} (${days} dias × R$ ${budget_daily} + 20% folga).`,
+              data: { available, needed, estimated: estimatedSpend, balance, spend_cap, amount_spent, currency: acctInfo.currency || 'BRL' },
             });
           } else {
             checks.push({
@@ -561,6 +562,7 @@ router.post('/preflight', async (req, res) => {
               label: 'Saldo suficiente',
               ok: true,
               details: `Disponível R$ ${available.toFixed(2)} cobre os ${days} dias estimados.`,
+              data: { available, needed, estimated: estimatedSpend, balance, spend_cap, amount_spent, currency: acctInfo.currency || 'BRL' },
             });
           }
         } else {
@@ -570,6 +572,7 @@ router.post('/preflight', async (req, res) => {
             ok: available > 0,
             severity: available > 0 ? 'info' : 'warn',
             details: `R$ ${available.toFixed(2)} disponível na conta.`,
+            data: { available, balance, spend_cap, amount_spent, currency: acctInfo.currency || 'BRL' },
           });
         }
       } catch (e) {
