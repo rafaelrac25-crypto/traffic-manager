@@ -465,6 +465,103 @@ router.get('/analytics/districts', async (req, res) => {
   }
 });
 
+/* Diagnóstico end-to-end de uma campanha: bate no Meta em tempo real e
+   compara com o estado local. Retorna tudo num JSON único pra facilitar
+   debug quando user vê algo estranho (campanha sumindo, status divergente,
+   orçamento errado, etc). Read-only. */
+router.get('/:id/diagnose', async (req, res) => {
+  try {
+    const local = await db.query('SELECT * FROM campaigns WHERE id = ?', [req.params.id]);
+    const camp = local.rows[0];
+    if (!camp) return res.status(404).json({ error: 'Campanha não encontrada localmente' });
+
+    const diag = {
+      local: {
+        id: camp.id,
+        name: camp.name,
+        platform_campaign_id: camp.platform_campaign_id,
+        status: camp.status,
+        budget: camp.budget,
+        start_date: camp.start_date,
+        end_date: camp.end_date,
+        created_at: camp.created_at,
+      },
+      meta: null,
+      meta_error: null,
+      ads_manager_url: null,
+      verdict: null,
+    };
+
+    if (!camp.platform_campaign_id) {
+      diag.verdict = 'LOCAL_ONLY — campanha nunca chegou ao Meta (publicação falhou ou foi agendada).';
+      return res.json(diag);
+    }
+
+    const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+    const creds = credResult.rows[0];
+    if (!creds) {
+      diag.verdict = 'Meta não está conectado — impossível verificar estado remoto';
+      return res.json(diag);
+    }
+
+    diag.ads_manager_url = `https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=${(creds.account_id || '').replace(/^act_/, '')}&selected_campaign_ids=${camp.platform_campaign_id}`;
+
+    try {
+      const { decrypt } = require('../services/crypto');
+      const token = String(creds.access_token).includes(':')
+        ? (() => { try { return decrypt(creds.access_token); } catch { return creds.access_token; } })()
+        : creds.access_token;
+      const { metaGet } = require('../services/metaHttp');
+
+      const campaignInfo = await metaGet(`/${camp.platform_campaign_id}`, {
+        fields: 'id,name,status,effective_status,objective,daily_budget,lifetime_budget,start_time,stop_time,created_time',
+      }, { token });
+
+      const adsetsInfo = await metaGet(`/${camp.platform_campaign_id}/adsets`, {
+        fields: 'id,name,status,effective_status,optimization_goal,destination_type,daily_budget,targeting',
+        limit: 10,
+      }, { token });
+
+      const adsInfo = await metaGet(`/${camp.platform_campaign_id}/ads`, {
+        fields: 'id,name,status,effective_status,configured_status,creative,recommendations',
+        limit: 10,
+      }, { token });
+
+      diag.meta = {
+        campaign: campaignInfo,
+        adsets: adsetsInfo?.data || [],
+        ads: adsInfo?.data || [],
+      };
+
+      /* Veredicto legível */
+      const campStatus = campaignInfo?.status;
+      const campEff = campaignInfo?.effective_status;
+      const adEffs = (adsInfo?.data || []).map(a => a.effective_status);
+      if (campStatus === 'PAUSED' && adEffs.every(s => s === 'PAUSED' || s === 'ADSET_PAUSED' || s === 'CAMPAIGN_PAUSED')) {
+        diag.verdict = '✅ PRONTO pra dar play — Meta aprovou, campanha e ads em PAUSED aguardando ativação.';
+      } else if (adEffs.some(s => String(s).includes('REVIEW'))) {
+        diag.verdict = '⏳ EM REVISÃO no Meta — pode dar play, mas só começa a rodar quando Meta aprovar (≤24h).';
+      } else if (adEffs.some(s => String(s).includes('DISAPPROVED'))) {
+        diag.verdict = '❌ REPROVADO pelo Meta — ver recommendations de cada ad pra motivo.';
+      } else {
+        diag.verdict = `Status Meta: campaign=${campStatus}/${campEff}, ads=[${adEffs.join(', ')}]`;
+      }
+    } catch (metaErr) {
+      diag.meta_error = {
+        message: metaErr.message,
+        code: metaErr.meta?.code || null,
+        subcode: metaErr.meta?.subcode || null,
+      };
+      diag.verdict = 'Erro ao consultar Meta — ver meta_error pra detalhe';
+    }
+
+    return res.json(diag);
+  } catch (err) {
+    console.error('[diagnose]', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/sync/:platform', async (req, res) => {
   const { platform } = req.params;
   try {
