@@ -253,6 +253,28 @@ router.get('/meta/oauth/callback', async (req, res) => {
   }
 });
 
+/* Endpoint admin temporário pra deletar órfãos no Meta (campanhas criadas
+   parcialmente antes do cleanup automático existir). Cola a URL no
+   navegador: /api/platforms/meta/delete-orphan?id=120245280065460627
+   Será removido após uso. */
+router.get('/meta/delete-orphan', async (req, res) => {
+  const targetId = String(req.query.id || '').trim();
+  if (!targetId || !/^\d{6,}$/.test(targetId)) {
+    return res.status(400).json({ error: 'Parâmetro id obrigatório (apenas dígitos do ID da Campaign no Meta)' });
+  }
+  try {
+    const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+    const creds = credResult.rows[0];
+    if (!creds) return res.status(400).json({ error: 'Meta não conectado' });
+    const { deleteCampaign } = require('../services/metaWrite');
+    await deleteCampaign(creds, targetId);
+    return res.json({ deleted: targetId, ok: true });
+  } catch (e) {
+    console.error('[delete-orphan]', e);
+    return res.status(502).json({ error: e.message, meta: e.meta || null });
+  }
+});
+
 router.post('/:platform/connect', async (req, res) => {
   const { platform } = req.params;
   if (platform === 'meta') {
