@@ -1628,23 +1628,50 @@ function BudgetSummaryPanel({ budgetValue, budgetType, startDate, endDate, locat
         </div>
       )}
 
-      {/* 3. Total previsto */}
-      {totalEstimated != null && (
-        <div style={{ padding: '10px 12px', borderRadius: '8px', background: 'var(--c-card-bg)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '16px' }}>📊</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '11.5px', color: 'var(--c-text-4)' }}>Total previsto da campanha</div>
-            <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--c-accent)' }}>
-              {fmtBRL(totalEstimated)}
+      {/* 3. Total previsto — valor bruto + folga 20% Meta */}
+      {totalEstimated != null && (() => {
+        /* Meta pode gastar até ~25% a mais num dia quente (daily budget
+           variance). Padrão da plataforma: reservar 20% de folga no saldo
+           pra não pausar anúncio no meio da campanha por falta de fundos. */
+        const BALANCE_FOLGA_PCT = 0.20;
+        const neededWithFolga = totalEstimated * (1 + BALANCE_FOLGA_PCT);
+        return (
+          <div style={{ padding: '12px 14px', borderRadius: '8px', background: 'var(--c-card-bg)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '16px' }}>📊</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '11.5px', color: 'var(--c-text-4)' }}>Gasto previsto da campanha</div>
+                <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--c-text-1)' }}>
+                  {fmtBRL(totalEstimated)}
+                </div>
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--c-text-4)', textAlign: 'right', lineHeight: 1.4 }}>
+                {fmtBRL(dailyBudget)}/dia<br />× {days} {days === 1 ? 'dia' : 'dias'}
+              </div>
+            </div>
+            <div style={{ height: '1px', background: 'var(--c-border-lt)' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '16px' }}>💳</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '11.5px', color: 'var(--c-text-4)' }}>
+                  Saldo que você precisa ter no Meta
+                </div>
+                <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--c-accent)' }}>
+                  {fmtBRL(neededWithFolga)}
+                </div>
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--c-text-4)', textAlign: 'right', lineHeight: 1.4 }}>
+                {fmtBRL(totalEstimated)}<br />+ 20% folga
+              </div>
+            </div>
+            <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', lineHeight: 1.5, paddingTop: '2px' }}>
+              ℹ A folga de 20% é recomendação do Meta — alguns dias gastam um pouco mais que o diário. Sem ela, o anúncio pode pausar no meio por falta de saldo.
             </div>
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--c-text-4)', textAlign: 'right' }}>
-            {fmtBRL(dailyBudget)}/dia<br />× {days} dias
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
-      {/* 4. Check de saldo (assíncrono) */}
+      {/* 4. Check de saldo (assíncrono) — compara available com needed+20% */}
       {days ? (
         balanceState.loading ? (
           <div style={{ padding: '10px 12px', borderRadius: '8px', background: 'var(--c-card-bg)', fontSize: '12px', color: 'var(--c-text-4)' }}>
@@ -1659,11 +1686,15 @@ function BudgetSummaryPanel({ budgetValue, budgetType, startDate, endDate, locat
             const { ok, available, needed, estimated } = balanceState.data;
             const avail = Number(available) || 0;
             const est = Number(estimated) || totalEstimated || 0;
-            const margin = avail - est;
-            /* 3 estados: verde (sobra > 20%), amarelo (passa mas apertado), vermelho (não cobre) */
-            let status = 'green', title = 'Dá pra rodar', icon = '✅';
-            if (!ok) { status = 'red'; title = 'Não cabe no saldo'; icon = '❌'; }
-            else if (margin < est * 0.2) { status = 'yellow'; title = 'Apertado — sem folga'; icon = '⚠'; }
+            const need = Number(needed) || est * 1.2;
+            const marginVsNeed = avail - need;
+            /* 3 estados:
+               - verde: saldo cobre needed (estimado + 20% folga) com sobra
+               - amarelo: cobre apenas o estimado bruto, mas não a folga de 20%
+               - vermelho: não cobre nem o estimado */
+            let status = 'green', title = 'Dá pra rodar com folga', icon = '✅';
+            if (avail < est) { status = 'red'; title = 'Não cabe no saldo'; icon = '❌'; }
+            else if (avail < need) { status = 'yellow'; title = 'Cabe, mas sem folga de 20%'; icon = '⚠'; }
             const palette = {
               green:  { bg: 'rgba(22,163,74,.08)',  bd: 'rgba(22,163,74,.3)',  fg: '#16A34A' },
               yellow: { bg: 'rgba(245,158,11,.08)', bd: 'rgba(245,158,11,.3)', fg: '#B45309' },
@@ -1674,14 +1705,18 @@ function BudgetSummaryPanel({ budgetValue, budgetType, startDate, endDate, locat
                 <div style={{ fontSize: '12.5px', fontWeight: 700, color: palette.fg, marginBottom: '4px' }}>
                   {icon} {title}
                 </div>
-                <div style={{ fontSize: '11.5px', color: 'var(--c-text-2)', lineHeight: 1.55 }}>
-                  Saldo disponível na conta Meta: <strong>{fmtBRL(avail)}</strong>
-                  {' · '}previsto gastar: <strong>{fmtBRL(est)}</strong>
-                  {ok ? (margin >= 0 ? ` · sobra ${fmtBRL(margin)}` : '') : ` · faltam ${fmtBRL(est - avail)}`}
+                <div style={{ fontSize: '11.5px', color: 'var(--c-text-2)', lineHeight: 1.6 }}>
+                  Saldo disponível no Meta: <strong>{fmtBRL(avail)}</strong><br />
+                  Gasto previsto: <strong>{fmtBRL(est)}</strong> · Com folga 20%: <strong>{fmtBRL(need)}</strong><br />
+                  {status === 'green' && <span style={{ color: '#16A34A' }}>Sobra {fmtBRL(marginVsNeed)} de segurança.</span>}
+                  {status === 'yellow' && <span style={{ color: '#B45309' }}>Faltam {fmtBRL(need - avail)} pra ter a folga recomendada.</span>}
+                  {status === 'red' && <span style={{ color: '#DC2626' }}>Faltam {fmtBRL(est - avail)} só pra cobrir o gasto bruto.</span>}
                 </div>
-                {!ok && (
+                {status !== 'green' && (
                   <div style={{ fontSize: '11px', color: palette.fg, marginTop: '6px' }}>
-                    Reduza dias ou valor diário, ou coloque saldo no Meta antes de publicar.
+                    {status === 'yellow'
+                      ? 'Sugestão: adicione saldo ou reduza 1 dia da campanha pra ficar mais seguro.'
+                      : 'Reduza dias ou valor diário, ou coloque saldo no Meta antes de publicar.'}
                   </div>
                 )}
               </div>
