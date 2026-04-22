@@ -1914,6 +1914,27 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
     }
   }, [objective]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /* Mede dimensões reais da mídia pra validar contra o mínimo Meta (500×500).
+     Usa elementos off-screen: <video> pra vídeo, <img> pra imagem. */
+  async function getMediaDimensions(file) {
+    return new Promise((resolve) => {
+      const url = URL.createObjectURL(file);
+      const done = (w, h) => { URL.revokeObjectURL(url); resolve({ width: w, height: h }); };
+      if (file.type.startsWith('video/')) {
+        const v = document.createElement('video');
+        v.preload = 'metadata';
+        v.onloadedmetadata = () => done(v.videoWidth, v.videoHeight);
+        v.onerror = () => done(0, 0);
+        v.src = url;
+      } else {
+        const img = new Image();
+        img.onload = () => done(img.naturalWidth, img.naturalHeight);
+        img.onerror = () => done(0, 0);
+        img.src = url;
+      }
+    });
+  }
+
   async function handleFiles(files) {
     setUploadError('');
     setProcessing(true);
@@ -1933,6 +1954,14 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
         errors.push(`${f.name}: ${result.error}`);
         continue;
       }
+      /* Meta v20: mídia com largura/altura < 500px é recusada com erro 2875006.
+         Rejeita no navegador pra não fazer upload desnecessário nem publicar
+         campanha que vai virar WITH_ISSUES. */
+      const dim = await getMediaDimensions(result.file);
+      if (dim.width > 0 && (dim.width < 500 || dim.height < 500)) {
+        errors.push(`${f.name}: ${dim.width}×${dim.height} abaixo do mínimo Meta (500×500). Use ≥ 1080×1080.`);
+        continue;
+      }
       processed.push({
         id: Date.now() + Math.random(),
         file: result.file,
@@ -1942,6 +1971,8 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
         originalSize: result.originalSize,
         finalSize: result.finalSize,
         wasCompressed: result.wasCompressed,
+        width: dim.width,
+        height: dim.height,
       });
     }
     if (errors.length > 0) setUploadError(errors.join(' · '));
