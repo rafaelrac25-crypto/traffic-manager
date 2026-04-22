@@ -242,6 +242,12 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
       /* Se todos interesses falharam, remove o campo — broader é melhor que inválido */
       if (targeting.interests.length === 0) delete targeting.interests;
     }
+    /* Meta v20: campo obrigatório. Se frontend legado não enviou,
+       injeta advantage_audience=0 (respeita targeting manual da Cris
+       — regra Joinville não tolera expansão automática). */
+    if (!targeting.targeting_automation) {
+      targeting.targeting_automation = { advantage_audience: 0 };
+    }
     const asParams = {
       campaign_id:       campaignId,
       name:              a.name,
