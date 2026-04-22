@@ -148,6 +148,7 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
 
   // 2. Campaign
   const c = metaPayload.campaign;
+  const hasCampaignBudget = !!(c.daily_budget || c.lifetime_budget);
   const campParams = {
     name: c.name,
     objective: c.objective,
@@ -157,6 +158,12 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
   };
   if (c.daily_budget) campParams.daily_budget = c.daily_budget;
   if (c.lifetime_budget) campParams.lifetime_budget = c.lifetime_budget;
+  /* Meta v20: campo obrigatório quando NÃO tem budget na campaign (ABO).
+     false = cada ad_set com seu orçamento fixo, sem compartilhar 20% entre eles.
+     true = permitiria Meta realocar 20% entre ad_sets (similar ao CBO light). */
+  if (!hasCampaignBudget) {
+    campParams.is_adset_budget_sharing_enabled = false;
+  }
   const campResp = await request('POST', `/${accountId}/campaigns`, campParams, { token });
   const campaignId = campResp.id;
 
