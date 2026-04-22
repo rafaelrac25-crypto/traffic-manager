@@ -224,6 +224,12 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
   const storySpec = JSON.parse(JSON.stringify(cr.object_story_spec || {}));
   if (!storySpec.page_id && creds.page_id) storySpec.page_id = creds.page_id;
 
+  /* Fallback seguro p/ link_data.link: Meta v20 exige URL válida. Se o frontend
+     mandou null (destUrl vazio em CTA de Mensagens), usa URL da própria Page. */
+  const pageUrlFallback = storySpec.page_id
+    ? `https://www.facebook.com/${storySpec.page_id}`
+    : null;
+
   if (isVideo) {
     /* Creative de VÍDEO: video_data precisa de video_id + image_hash (capa).
        Preserva campos que o frontend já populou em video_data — só rebaixa
@@ -240,6 +246,10 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
     delete storySpec.link_data;
   } else if (storySpec.link_data) {
     if (mainImageHash) storySpec.link_data.image_hash = mainImageHash;
+    /* Null/empty link → fallback pra URL da Page (Meta rejeita link vazio) */
+    if (!storySpec.link_data.link && pageUrlFallback) {
+      storySpec.link_data.link = pageUrlFallback;
+    }
   }
 
   const crResp = await metaCall('creative', {

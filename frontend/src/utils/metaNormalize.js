@@ -113,6 +113,14 @@ export const CTA_TO_META = {
   'Ver mais':           'LEARN_MORE',
 };
 
+/* Meta v20 pro objetivo Mensagens: cada CTA exige destination_type específico.
+   Sem o mapeamento correto, Graph API recusa o adset com erro 100/2490408. */
+export const CTA_TO_DESTINATION = {
+  'WHATSAPP_MESSAGE': 'WHATSAPP',          /* wa.me/... via WhatsApp Business */
+  'MESSAGE_PAGE':     'INSTAGRAM_DIRECT',  /* DM do Instagram */
+  'CALL_NOW':         'PHONE_CALL',        /* Ligação direta */
+};
+
 // Gera IDs fake no formato do Meta pra o painel já trabalhar com a estrutura real.
 // Quando a API real estiver plugada, o ID real substitui o fake no primeiro sync.
 export function fakeMetaId(prefix) {
@@ -217,6 +225,11 @@ export function toMetaPayload(ad) {
   const videoIdFromUpload = firstVideo?.metaVideoId || null;
   const videoCoverHash = isRealMetaHash(firstVideo?.metaHash) ? firstVideo.metaHash : null;
 
+  /* link_data.link é obrigatório no Meta v20. Se destUrl vier vazio (caso
+     comum pros CTAs de mensagem), manda null — backend injeta fallback
+     seguro usando a URL da própria Facebook Page em publishCampaign. */
+  const safeLink = (ad.destUrl && String(ad.destUrl).startsWith('http')) ? ad.destUrl : null;
+
   const storySpec = videoIdFromUpload
     ? {
         page_id: ad.metaAccountId || null,
@@ -225,7 +238,10 @@ export function toMetaPayload(ad) {
           image_hash:     videoCoverHash,  /* CAPA obrigatória pro Meta aceitar */
           message:        ad.primaryText || '',
           title:          ad.headline || '',
-          call_to_action: { type: CTA_TO_META[ad.ctaButton] || 'LEARN_MORE' },
+          call_to_action: {
+            type:  CTA_TO_META[ad.ctaButton] || 'LEARN_MORE',
+            value: safeLink ? { link: safeLink } : undefined,
+          },
         },
       }
     : {
@@ -233,7 +249,7 @@ export function toMetaPayload(ad) {
         link_data: {
           message:          ad.primaryText,
           name:             ad.headline,
-          link:             ad.destUrl,
+          link:             safeLink,
           call_to_action:   { type: CTA_TO_META[ad.ctaButton] || 'LEARN_MORE' },
           image_hash:       imageHashFromUpload,
           attachment_style: 'link',
@@ -246,12 +262,16 @@ export function toMetaPayload(ad) {
     object_story_spec: storySpec,
   };
 
-  /* Mensagens: Cris atende só Instagram Direct — Meta v20 exige destination_type
-     quando optimization_goal=CONVERSATIONS. INSTAGRAM_DIRECT não aceita
-     facebook_positions, então restringimos pra publisher_platforms=[instagram]. */
+  /* Mensagens: destination_type depende do CTA escolhido.
+     INSTAGRAM_DIRECT restringe a IG; WHATSAPP e PHONE_CALL rodam em FB+IG. */
   const isMessages = ad.objective === 'messages';
+  const ctaMeta = CTA_TO_META[ad.ctaButton] || 'LEARN_MORE';
+  const destinationType = isMessages
+    ? (CTA_TO_DESTINATION[ctaMeta] || 'INSTAGRAM_DIRECT')
+    : undefined;
+  const onlyInstagram = destinationType === 'INSTAGRAM_DIRECT';
 
-  const baseTargeting = isMessages
+  const baseTargeting = onlyInstagram
     ? {
         age_min:              ad.ageRange?.[0] || 18,
         age_max:              ad.ageRange?.[1] || 65,
@@ -270,17 +290,21 @@ export function toMetaPayload(ad) {
         instagram_positions:  ['stream', 'story', 'reels'],
       };
 
+  /* Fuso fixo -03:00 (BR) — sem isso, new Date('2026-04-22T00:00:00') é
+     interpretado no fuso do navegador; usuários em outros fusos viam
+     campanha começando no dia errado. */
+  const BR_OFFSET = '-03:00';
   const adSetCommon = {
     optimization_goal:  OPTIMIZATION_GOAL[ad.objective] || 'LINK_CLICKS',
     billing_event:      BILLING_EVENT[ad.objective]     || 'IMPRESSIONS',
     bid_strategy:       'LOWEST_COST_WITHOUT_CAP',
     status:             'PAUSED',
-    start_time:         ad.startDate ? new Date(ad.startDate + 'T00:00:00').toISOString() : null,
-    end_time:           ad.endDate   ? new Date(ad.endDate   + 'T23:59:59').toISOString() : null,
+    start_time:         ad.startDate ? new Date(`${ad.startDate}T00:00:00${BR_OFFSET}`).toISOString() : null,
+    end_time:           ad.endDate   ? new Date(`${ad.endDate}T23:59:59${BR_OFFSET}`).toISOString()   : null,
     promoted_object:    ad.pixelId ? { pixel_id: ad.pixelId } : undefined,
     /* Meta v20: obrigatório p/ optimization_goal=CONVERSATIONS.
        Sem ele, Graph API retorna erro 100 / sub 2490408. */
-    destination_type:   isMessages ? 'INSTAGRAM_DIRECT' : undefined,
+    destination_type:   destinationType,
   };
 
   /* Aceita `ringsMode` (novo) ou `ringsEnabled` (legado) */
