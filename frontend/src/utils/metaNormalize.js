@@ -277,25 +277,35 @@ export function toMetaPayload(ad) {
      Sem esse campo, Graph retorna erro 100/1870227. */
   const targetingAutomation = { advantage_audience: 0 };
 
+  /* Bloqueia TODOS os outros "relaxamentos" automáticos do Meta:
+     - lookalike: 0 → não pega pessoas parecidas com quem já clicou
+     - custom_audience: 0 → não expande de públicos salvos
+     Mantém segmentação 100% manual, essencial pra negócio hiperlocal
+     (1 cidade, bairros específicos — qualquer expansão desperdiça
+     orçamento em gente fora de Joinville). */
+  const targetingRelaxation = { lookalike: 0, custom_audience: 0 };
+
   const baseTargeting = onlyInstagram
     ? {
-        age_min:              ad.ageRange?.[0] || 18,
-        age_max:              ad.ageRange?.[1] || 65,
+        age_min:                   ad.ageRange?.[0] || 18,
+        age_max:                   ad.ageRange?.[1] || 65,
         genders,
-        interests:            (ad.interests || []).map(toInterestObject),
-        publisher_platforms:  ['instagram'],
-        instagram_positions:  ['stream', 'story', 'reels'],
-        targeting_automation: targetingAutomation,
+        interests:                 (ad.interests || []).map(toInterestObject),
+        publisher_platforms:       ['instagram'],
+        instagram_positions:       ['stream', 'story', 'reels'],
+        targeting_automation:      targetingAutomation,
+        targeting_relaxation_types: targetingRelaxation,
       }
     : {
-        age_min:              ad.ageRange?.[0] || 18,
-        age_max:              ad.ageRange?.[1] || 65,
+        age_min:                   ad.ageRange?.[0] || 18,
+        age_max:                   ad.ageRange?.[1] || 65,
         genders,
-        interests:            (ad.interests || []).map(toInterestObject),
-        publisher_platforms:  ['facebook', 'instagram'],
-        facebook_positions:   ['feed'],
-        instagram_positions:  ['stream', 'story', 'reels'],
-        targeting_automation: targetingAutomation,
+        interests:                 (ad.interests || []).map(toInterestObject),
+        publisher_platforms:       ['facebook', 'instagram'],
+        facebook_positions:        ['feed'],
+        instagram_positions:       ['stream', 'story', 'reels'],
+        targeting_automation:      targetingAutomation,
+        targeting_relaxation_types: targetingRelaxation,
       };
 
   /* Fuso fixo -03:00 (BR) — sem isso, new Date('2026-04-22T00:00:00') é

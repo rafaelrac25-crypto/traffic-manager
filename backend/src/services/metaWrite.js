@@ -271,6 +271,10 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
     if (!targeting.targeting_automation) {
       targeting.targeting_automation = { advantage_audience: 0 };
     }
+    /* Bloqueia relaxamentos adicionais (lookalike/custom_audience auto). */
+    if (!targeting.targeting_relaxation_types) {
+      targeting.targeting_relaxation_types = { lookalike: 0, custom_audience: 0 };
+    }
     const asParams = {
       campaign_id:       campaignId,
       name:              a.name,
