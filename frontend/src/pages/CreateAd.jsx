@@ -115,7 +115,7 @@ const META_OBJECTIVES = [
    CTA_TO_META). O wizard só mostra os que são compatíveis com o
    objective escolhido no passo 1 — evita erro 1487891 do Meta. */
 const CTA_BY_OBJECTIVE = {
-  messages:     ['WhatsApp', 'Enviar mensagem', 'Mande uma mensagem', 'Chamar agora', 'Entrar em contato'],
+  messages:     ['WhatsApp', 'Enviar mensagem', 'Mande uma mensagem', 'Chamar agora'],
   traffic:      ['Saiba mais', 'Comprar agora', 'Inscrever-se', 'Entrar em contato', 'Ver mais'],
   engagement:   ['Saiba mais', 'Enviar mensagem', 'Entrar em contato'],
   leads:        ['Saiba mais', 'Inscrever-se', 'Entrar em contato'],
