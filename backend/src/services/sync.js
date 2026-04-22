@@ -74,15 +74,22 @@ async function syncPlatform(platform) {
         const conversions =
           (Array.isArray(row.actions) ? row.actions : [])
             .filter(a => CONVERSION_ACTION_TYPES.includes(a.action_type))
-            .reduce((s, a) => s + parseInt(a.value || 0, 10), 0);
+            .reduce((s, a) => {
+              const n = parseInt(a.value || 0, 10);
+              return s + (Number.isFinite(n) ? n : 0);
+            }, 0);
+        /* Protege contra NaN quando Meta retorna '' / null / undefined
+           (já vimos em insights de campanhas recém-criadas sem dados ainda). */
+        const safeFloat = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
+        const safeInt   = (v) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : 0; };
         await db.query(
           `INSERT INTO insights
             (campaign_id, date_start, date_stop, spend, impressions, reach, clicks, ctr, cpc, cpm, conversions, raw)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [campId, row.date_start, row.date_stop,
-           parseFloat(row.spend || 0), parseInt(row.impressions || 0, 10),
-           parseInt(row.reach || 0, 10), parseInt(row.clicks || 0, 10),
-           parseFloat(row.ctr || 0), parseFloat(row.cpc || 0), parseFloat(row.cpm || 0),
+           safeFloat(row.spend), safeInt(row.impressions),
+           safeInt(row.reach), safeInt(row.clicks),
+           safeFloat(row.ctr), safeFloat(row.cpc), safeFloat(row.cpm),
            conversions, JSON.stringify(row)]
         );
       }

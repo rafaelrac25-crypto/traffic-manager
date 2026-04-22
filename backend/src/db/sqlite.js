@@ -49,6 +49,7 @@ db.exec(`
     scopes TEXT,
     page_id TEXT,
     ig_business_id TEXT,
+    needs_reconnect INTEGER DEFAULT 0,
     updated_at TEXT DEFAULT (datetime('now'))
   );
 
@@ -185,6 +186,7 @@ const migrations = [
   'ALTER TABLE platform_credentials ADD COLUMN scopes TEXT',
   'ALTER TABLE platform_credentials ADD COLUMN page_id TEXT',
   'ALTER TABLE platform_credentials ADD COLUMN ig_business_id TEXT',
+  'ALTER TABLE platform_credentials ADD COLUMN needs_reconnect INTEGER DEFAULT 0',
 ];
 for (const sql of migrations) {
   try { db.exec(sql); } catch {}

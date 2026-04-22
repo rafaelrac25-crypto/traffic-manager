@@ -2567,11 +2567,29 @@ export default function CreateAd() {
         errs.budgetValue = 'Defina um valor de orçamento maior que zero.';
       } else if (budgetType === 'daily' && v < 7) {
         /* Meta BR exige ~R$6/dia/adset. Pedimos R$7 com folga de 15% pra não
-           bater no limite quando dividimos entre 2-3 anéis (ex: R$7/3 = R$2,33
-           já ficaria abaixo — por isso soma dos anéis precisa ser ≥ R$7). */
+           bater no limite quando dividimos entre 2-3 anéis. */
         errs.budgetValue = 'Orçamento diário mínimo R$ 7,00 (exigência Meta + folga).';
-      } else if (budgetType === 'total' && v < 35) {
-        errs.budgetValue = 'Orçamento total mínimo R$ 35,00 (5 dias × R$ 7).';
+      } else if (budgetType === 'total') {
+        /* Lifetime mínimo dinâmico: 5 dias × R$7 = R$35 absoluto.
+           Se o user já escolheu datas, calcula 5× a duração em dias × R$7. */
+        let minTotal = 35;
+        if (startDate && endDate) {
+          const diffDays = Math.max(1, Math.round((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)));
+          minTotal = Math.max(35, diffDays * 7);
+        }
+        if (v < minTotal) {
+          errs.budgetValue = `Orçamento total mínimo R$ ${minTotal},00 (${Math.max(5, Math.round(minTotal/7))} dias × R$ 7).`;
+        }
+      }
+      /* Datas: Meta rejeita end <= start */
+      if (startDate && endDate && new Date(endDate) <= new Date(startDate)) {
+        errs.endDate = 'Data de fim deve ser posterior à data de início.';
+      }
+      /* Idade: Meta aceita 13-65. Default 18-65 está ok, mas validar user override. */
+      if (Array.isArray(ageRange)) {
+        if (ageRange[0] < 13) errs.ageRange = 'Idade mínima é 13 (regra Meta).';
+        else if (ageRange[1] > 65) errs.ageRange = 'Idade máxima é 65 (regra Meta).';
+        else if (ageRange[0] > ageRange[1]) errs.ageRange = 'Idade mínima maior que máxima.';
       }
     }
     if (s === 3) {
