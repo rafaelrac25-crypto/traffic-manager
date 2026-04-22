@@ -124,6 +124,20 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
     throw new Error('Payload Meta incompleto (precisa de campaign, ad_set(s), creative, ad)');
   }
 
+  /* Helper: envelopa chamadas Meta pra enriquecer erro com contexto
+     (qual etapa + qual payload). Facilita debug quando Meta retorna
+     'Invalid parameter' sem error_user_msg específico. */
+  async function metaCall(stage, params, endpoint) {
+    try {
+      return await request('POST', endpoint, params, { token });
+    } catch (err) {
+      err.stage = stage;
+      err.params = params;
+      err.endpoint = endpoint;
+      throw err;
+    }
+  }
+
   // 1. Upload de mídia — detecta image vs video
   const { uploadVideo } = require('./metaMedia');
   const uploadedImages = [];
@@ -164,7 +178,7 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
   if (!hasCampaignBudget) {
     campParams.is_adset_budget_sharing_enabled = false;
   }
-  const campResp = await request('POST', `/${accountId}/campaigns`, campParams, { token });
+  const campResp = await metaCall('campaign', campParams, `/${accountId}/campaigns`);
   const campaignId = campResp.id;
 
   // 3. Creative ÚNICO — reutilizado entre N ads
@@ -190,10 +204,10 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
     if (mainImageHash) storySpec.link_data.image_hash = mainImageHash;
   }
 
-  const crResp = await request('POST', `/${accountId}/adcreatives`, {
+  const crResp = await metaCall('creative', {
     name: cr.name || `${c.name} — Criativo`,
     object_story_spec: storySpec,
-  }, { token });
+  }, `/${accountId}/adcreatives`);
   const creativeId = crResp.id;
 
   // 4. Para cada ad_set: cria AdSet + Ad. Erro em um dos anéis é fatal pra consistência.

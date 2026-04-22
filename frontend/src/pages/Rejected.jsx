@@ -74,6 +74,29 @@ function RejectedCard({ ad, onRemove, onEdit }) {
         </p>
       )}
 
+      {/* Painel de diagnóstico técnico (expansível) — mostra stage + params
+         enviados quando Meta retorna erro sem error_user_msg específico */}
+      {(ad.stage || ad.sentParams) && (
+        <details style={{ marginTop: '10px', fontSize: '11.5px' }}>
+          <summary style={{ cursor: 'pointer', color: 'var(--c-text-3)', fontWeight: 600 }}>
+            🔧 Diagnóstico técnico (pro dev)
+          </summary>
+          <div style={{ marginTop: '8px', padding: '10px 12px', background: 'var(--c-surface)', borderRadius: '8px', fontFamily: 'monospace', fontSize: '11px', color: 'var(--c-text-3)' }}>
+            {ad.stage && <div><strong>Etapa:</strong> {ad.stage}</div>}
+            {ad.code != null && <div><strong>Código Meta:</strong> {ad.code}{ad.subcode ? ` / ${ad.subcode}` : ''}</div>}
+            {ad.endpoint && <div><strong>Endpoint:</strong> {ad.endpoint}</div>}
+            {ad.sentParams && (
+              <div style={{ marginTop: '6px' }}>
+                <strong>Params enviados:</strong>
+                <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', marginTop: '4px', background: 'var(--c-card-bg)', padding: '8px', borderRadius: '6px', maxHeight: '200px', overflow: 'auto' }}>
+                  {JSON.stringify(ad.sentParams, null, 2)}
+                </pre>
+              </div>
+            )}
+          </div>
+        </details>
+      )}
+
       <SuggestionBox reason={ad.reason} />
 
       <div style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>

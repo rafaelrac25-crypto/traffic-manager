@@ -67,17 +67,24 @@ router.post('/', async (req, res) => {
       status = 'review';
     } catch (e) {
       /* Log detalhado pros logs do Vercel — payload completo + erro Meta */
-      console.error('[meta.publish] FALHA — payload:', JSON.stringify(payload.meta, null, 2));
+      console.error('[meta.publish] FALHA — stage:', e.stage || 'unknown');
+      console.error('[meta.publish] FALHA — params enviados:', JSON.stringify(e.params, null, 2));
       console.error('[meta.publish] FALHA — erro:', e.message, 'meta:', JSON.stringify(e.meta, null, 2));
       metaError = e.meta?.pt || e.message || 'Erro ao publicar no Meta';
-      /* Retorna TODOS os detalhes do erro pro frontend mostrar motivo específico */
+      const stageLabel = { campaign: 'Campanha', creative: 'Criativo', adset: 'Conjunto de anúncios', ad: 'Anúncio' }[e.stage] || null;
+      const reasonWithStage = stageLabel ? `[${stageLabel}] ${metaError}` : metaError;
+      /* Retorna TODOS os detalhes do erro pro frontend — inclusive campos enviados
+         pra facilitar diagnóstico quando Meta não devolve error_user_msg. */
       return res.status(200).json({
         rejected: true,
-        reason: metaError,
+        reason: reasonWithStage,
         details: e.meta?.user_msg || e.meta?.raw || null,
         user_title: e.meta?.user_title || null,
         code: e.meta?.code || null,
         subcode: e.meta?.subcode || null,
+        stage: e.stage || null,
+        sentParams: e.params || null,
+        endpoint: e.endpoint || null,
         meta: e.meta || null,
       });
     }

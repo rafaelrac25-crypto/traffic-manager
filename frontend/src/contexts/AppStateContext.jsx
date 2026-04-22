@@ -567,6 +567,11 @@ export function AppStateProvider({ children }) {
           reason: serverAd.reason || 'Meta recusou a publicação',
           details: serverAd.details || null,
           code: serverAd.code || null,
+          subcode: serverAd.subcode || null,
+          stage: serverAd.stage || null,
+          userTitle: serverAd.user_title || null,
+          sentParams: serverAd.sentParams || null,
+          endpoint: serverAd.endpoint || null,
           platform: newAd.platform,
           originalPayload: newAd,
         });
