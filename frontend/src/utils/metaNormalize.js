@@ -230,6 +230,16 @@ export function toMetaPayload(ad) {
      seguro usando a URL da própria Facebook Page em publishCampaign. */
   const safeLink = (ad.destUrl && String(ad.destUrl).startsWith('http')) ? ad.destUrl : null;
 
+  /* CTA compatível com o objetivo — Meta v20 rejeita (erro 1487891) creative
+     cujo CTA não combina com o objective da campaign.
+     Pra objetivo Mensagens, força um CTA da família messaging se user
+     escolheu algo incompatível (ex: "Saiba mais" → LEARN_MORE).
+     Default consistente com destination_type escolhido mais acima. */
+  const rawCtaMeta = CTA_TO_META[ad.ctaButton] || 'LEARN_MORE';
+  const isMessagingCTA = ['WHATSAPP_MESSAGE', 'MESSAGE_PAGE', 'CALL_NOW', 'SEND_MESSAGE'].includes(rawCtaMeta);
+  const isMessagesObjective = ad.objective === 'messages';
+  const finalCtaType = (isMessagesObjective && !isMessagingCTA) ? 'MESSAGE_PAGE' : rawCtaMeta;
+
   const storySpec = videoIdFromUpload
     ? {
         page_id: ad.metaAccountId || null,
@@ -239,7 +249,7 @@ export function toMetaPayload(ad) {
           message:        ad.primaryText || '',
           title:          ad.headline || '',
           call_to_action: {
-            type:  CTA_TO_META[ad.ctaButton] || 'LEARN_MORE',
+            type:  finalCtaType,
             value: safeLink ? { link: safeLink } : undefined,
           },
         },
@@ -250,7 +260,7 @@ export function toMetaPayload(ad) {
           message:          ad.primaryText,
           name:             ad.headline,
           link:             safeLink,
-          call_to_action:   { type: CTA_TO_META[ad.ctaButton] || 'LEARN_MORE' },
+          call_to_action:   { type: finalCtaType },
           image_hash:       imageHashFromUpload,
           attachment_style: 'link',
         },

@@ -221,6 +221,21 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
     ? `https://www.facebook.com/${storySpec.page_id}`
     : null;
 
+  /* CTA compatível com objective — Meta v20 rejeita (erro 1487891) creative
+     cujo call_to_action.type não combina com o objetivo da campanha.
+     Pro objetivo Mensagens (OUTCOME_ENGAGEMENT + CONVERSATIONS), força CTA
+     de família messaging se o payload chegou com algo incompatível. */
+  const MESSAGING_CTAS = ['WHATSAPP_MESSAGE', 'MESSAGE_PAGE', 'CALL_NOW', 'SEND_MESSAGE'];
+  const isMessagesCampaign = c.objective === 'OUTCOME_ENGAGEMENT' || c.objective === 'OUTCOME_LEADS';
+  function enforceMessagingCTA(ctaObj) {
+    if (!isMessagesCampaign) return ctaObj;
+    const current = ctaObj?.type;
+    if (!current || !MESSAGING_CTAS.includes(current)) {
+      return { ...ctaObj, type: 'MESSAGE_PAGE' };
+    }
+    return ctaObj;
+  }
+
   if (isVideo) {
     /* Creative de VÍDEO: video_data precisa de video_id + image_hash (capa).
        Meta v20 REJEITA video_data sem image_hash com erro 1815575. */
@@ -235,7 +250,7 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
       image_hash:     videoImageHash,
       message:        existingVideo.message || linkData.message || cr.primary_text || '',
       title:          existingVideo.title || linkData.name || linkData.title || '',
-      call_to_action: existingVideo.call_to_action || linkData.call_to_action || { type: 'LEARN_MORE' },
+      call_to_action: enforceMessagingCTA(existingVideo.call_to_action || linkData.call_to_action || { type: 'LEARN_MORE' }),
     };
     delete storySpec.link_data;
   } else if (storySpec.link_data) {
@@ -243,6 +258,10 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
     /* Null/empty link → fallback pra URL da Page (Meta rejeita link vazio) */
     if (!storySpec.link_data.link && pageUrlFallback) {
       storySpec.link_data.link = pageUrlFallback;
+    }
+    /* Força CTA compatível com objective (Meta v20 erro 1487891) */
+    if (storySpec.link_data.call_to_action) {
+      storySpec.link_data.call_to_action = enforceMessagingCTA(storySpec.link_data.call_to_action);
     }
   }
 
