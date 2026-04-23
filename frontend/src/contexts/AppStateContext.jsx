@@ -172,25 +172,72 @@ export function AppStateProvider({ children }) {
     try {
       const updates = await adsApi.syncMetaStatus();
       if (Array.isArray(updates) && updates.length > 0) {
-        setAds(prev => prev.map(a => {
-          const diff = updates.find(u => u.id === a.id || u.id === a.serverId || u.platform_campaign_id === a.metaCampaignId);
-          if (!diff) return a;
-          return {
-            ...a,
-            status: diff.status || a.status,
-            effective_status: diff.effective_status || a.effective_status,
-            spent: diff.spent ?? a.spent,
-            clicks: diff.clicks ?? a.clicks,
-            impressions: diff.impressions ?? a.impressions,
-            conversions: diff.conversions ?? a.conversions,
-            meta_synced_at: new Date().toISOString(),
-          };
-        }));
+        /* Detecta transições de effective_status pra tocar o sino.
+           - PENDING_REVIEW (primeira vez) → "Em revisão"
+           - ACTIVE depois de PENDING_REVIEW/PREAPPROVED → "Aprovado 🎉"
+           - DISAPPROVED (primeira vez) → "Reprovado após revisão"
+           Os eventos de rejeição IMEDIATA no publish (antes de revisão) já são
+           tratados por addRejectedAd — esta lógica cobre as mudanças que chegam
+           via sync periódico depois que o Meta termina a análise. */
+        const transitions = [];
+        setAds(prev => {
+          const byId = new Map(prev.map(a => [a.id, a]));
+          const next = prev.map(a => {
+            const diff = updates.find(u => u.id === a.id || u.id === a.serverId || u.platform_campaign_id === a.metaCampaignId);
+            if (!diff) return a;
+            const merged = {
+              ...a,
+              status: diff.status || a.status,
+              effective_status: diff.effective_status || a.effective_status,
+              spent: diff.spent ?? a.spent,
+              clicks: diff.clicks ?? a.clicks,
+              impressions: diff.impressions ?? a.impressions,
+              conversions: diff.conversions ?? a.conversions,
+              meta_synced_at: new Date().toISOString(),
+            };
+            const old = byId.get(a.id);
+            const oldES = old?.effective_status;
+            const newES = merged.effective_status;
+            if (oldES !== newES && newES) {
+              transitions.push({ ad: merged, from: oldES, to: newES });
+            }
+            return merged;
+          });
+          return next;
+        });
+
+        /* Dispara notificações depois do setAds pra não disparar dentro do render */
+        for (const t of transitions) {
+          const name = t.ad.name || 'Anúncio';
+          if (t.to === 'PENDING_REVIEW' && t.from !== 'PENDING_REVIEW') {
+            addNotification({
+              kind: 'info',
+              title: 'Anúncio em revisão no Meta',
+              message: `"${name}" foi enviado e está sendo analisado. Geralmente leva algumas horas.`,
+              link: '/anuncios',
+            });
+          } else if (t.to === 'ACTIVE' && (t.from === 'PENDING_REVIEW' || t.from === 'PREAPPROVED' || t.from === 'PENDING_BILLING_INFO')) {
+            addNotification({
+              kind: 'approved',
+              title: 'Anúncio aprovado e no ar 🎉',
+              message: `"${name}" foi aprovado pelo Meta e já está rodando.`,
+              link: '/anuncios',
+            });
+          } else if (t.to === 'DISAPPROVED' && t.from !== 'DISAPPROVED') {
+            addNotification({
+              kind: 'rejected',
+              title: 'Anúncio reprovado após revisão',
+              message: `"${name}" foi reprovado pelo Meta depois da análise. Veja o motivo em Reprovados.`,
+              link: '/reprovados',
+            });
+          }
+        }
       }
       setMetaSyncedAt(new Date().toISOString());
     } finally {
       setMetaSyncing(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
