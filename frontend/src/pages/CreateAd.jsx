@@ -1601,8 +1601,9 @@ function BudgetSummaryPanel({ budgetValue, budgetType, startDate, endDate, locat
         </div>
       </div>
 
-      {/* 2. Divisão por anel */}
-      {perRing.length > 0 && (
+      {/* 2. Divisão por anel — só faz sentido com 2+ anéis (1 anel = 100%
+         do orçamento, não tem o que dividir) */}
+      {perRing.length >= 2 && (
         <div style={{ padding: '10px 12px', borderRadius: '8px', background: 'var(--c-card-bg)' }}>
           <div style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--c-text-2)', marginBottom: '8px' }}>
             💰 Divisão diária por anel ({perRing.length === 1 ? '1 anel' : `${perRing.length} anéis`})
