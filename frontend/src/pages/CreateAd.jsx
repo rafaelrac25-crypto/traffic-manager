@@ -3501,15 +3501,9 @@ export default function CreateAd() {
           </div>
         </div>
 
-        {/* Painel de resumo */}
-        <SummaryPanel
-          step={step}
-          objective={objective}
-          locations={locations}
-          budgetType={budgetType}
-          budgetValue={budgetValue}
-          adFormat={adFormat}
-        />
+        {/* Painel lateral de resumo removido — resumo final no Step 6 (Revisão)
+           já cobre tudo. Mantendo a função SummaryPanel no arquivo caso seja
+           reativado no futuro. */}
       </div>
 
       {publishing && <PublishModal onClose={() => navigate('/anuncios')} scheduled={isScheduled} startDate={startDate} />}
