@@ -1430,6 +1430,19 @@ function computeDailyBudget(budgetValue, budgetType, days) {
   return v;
 }
 
+/* Converte um Date pra "YYYY-MM-DD" no fuso LOCAL do usuário.
+   new Date().toISOString() retorna em UTC — depois das 21h em Brasília
+   já virou o dia seguinte em UTC, bloqueando o calendário de selecionar
+   "hoje". Esta função usa os getters locais pra respeitar GMT-3. */
+function toLocalISODate(date) {
+  const d = date instanceof Date ? date : new Date(date);
+  if (isNaN(d.getTime())) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function computeDays(startDate, endDate) {
   if (!startDate || !endDate) return null;
   /* Fuso local fixo pra evitar deslocamento UTC do parser (YYYY-MM-DD vira UTC
@@ -1729,7 +1742,7 @@ function BudgetSummaryPanel({ budgetValue, budgetType, startDate, endDate, locat
 }
 
 function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, startDate, setStartDate, endDate, setEndDate, errors = {}, locations = [], budgetRingSplit, setBudgetRingSplit, ringsMode = 'auto', setRingsMode, budgetOptimization = 'adset', setBudgetOptimization }) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = toLocalISODate(new Date());
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -2962,13 +2975,13 @@ export default function CreateAd() {
     const target = new Date(commercialDate.dateISO);
     const start = new Date(target);
     start.setDate(start.getDate() - (commercialDate.daysBefore || 0));
-    return start.toISOString().split('T')[0];
+    return toLocalISODate(start);
   })();
 
   const initialEnd = (() => {
     if (source && source.endDate !== undefined) return source.endDate || '';
     if (!commercialDate?.dateISO) return '';
-    return new Date(commercialDate.dateISO).toISOString().split('T')[0];
+    return toLocalISODate(new Date(commercialDate.dateISO));
   })();
 
   const DEFAULT_QUICK_BUDGET = 25;
@@ -3092,7 +3105,7 @@ export default function CreateAd() {
     return all;
   }
 
-  const todayISO = new Date().toISOString().split('T')[0];
+  const todayISO = toLocalISODate(new Date());
   const isScheduled = !!startDate && startDate > todayISO;
 
   async function blobUrlToBase64(url) {
