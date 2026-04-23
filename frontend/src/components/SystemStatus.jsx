@@ -1,6 +1,11 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 
+/* Desktop tem sidebar fixa de 220px. Widget fica 14px depois dela (234).
+   Mobile (≤1024px) esconde a sidebar, então volta pro canto absoluto. */
+const SIDEBAR_WIDTH = 220;
+const GUTTER = 14;
+
 /**
  * Widget de status fixado no canto inferior esquerdo do painel.
  *
@@ -23,8 +28,15 @@ const STATUS_META = {
 export default function SystemStatus() {
   const [state, setState] = useState({ overall: 'loading', items: [], checked_at: null, error: null });
   const [open, setOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 1024);
   const panelRef = useRef(null);
   const abortRef = useRef(null);
+
+  useEffect(() => {
+    const h = () => setIsMobile(window.innerWidth <= 1024);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
 
   const fetchHealth = useCallback(async () => {
     if (abortRef.current) abortRef.current.abort();
@@ -68,9 +80,10 @@ export default function SystemStatus() {
       ref={panelRef}
       style={{
         position: 'fixed',
-        bottom: '14px',
-        left: '14px',
-        zIndex: 90, /* abaixo do modal da IA (que é 100+) */
+        bottom: `${GUTTER}px`,
+        /* Desktop: 220px (sidebar) + 14px de respiro; Mobile: 14px direto */
+        left: isMobile ? `${GUTTER}px` : `${SIDEBAR_WIDTH + GUTTER}px`,
+        zIndex: 101, /* acima da sidebar (z=100) pra não ficar escondido */
         fontFamily: 'inherit',
       }}
     >
