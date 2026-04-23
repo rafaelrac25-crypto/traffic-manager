@@ -1197,10 +1197,12 @@ function classifyLocationsByRing(locations, ringsMode = 'auto') {
   else if (ringsMode === '2') numRings = Math.min(2, valid.length);
   else if (ringsMode === '3') numRings = Math.min(3, valid.length);
   else {
-    /* 'auto' ou true: decide pelo spread e quantidade */
+    /* 'auto': decide pelo spread e quantidade. Mais conservador — favorece
+       1 anel nos casos comuns de Joinville (poucos bairros, distâncias
+       curtas). Só cai em 3 anéis com muitos bairros bem espalhados. */
     const spread = valid[valid.length - 1].d - valid[0].d;
-    if (spread <= 2 || valid.length === 1) numRings = 1;
-    else if (valid.length >= 6 && spread >= 4) numRings = 3;
+    if (valid.length <= 2 || spread <= 3) numRings = 1;
+    else if (valid.length >= 8 && spread >= 6) numRings = 3;
     else numRings = 2;
   }
 
@@ -1218,15 +1220,37 @@ function classifyLocationsByRing(locations, ringsMode = 'auto') {
   return buckets;
 }
 
-/* Split 100% entre anéis ativos com ajuste automático */
+/* Split 100% entre anéis ativos — garante que o %s dos activeKeys somem 100,
+   mesmo quando o split vem com valores de anéis que foram desativados.
+   Ex: default {primario:40, medio:40, externo:20} com activeKeys=['primario']
+   precisa virar {primario:100, ...} senão o daily por anel sai errado (40%
+   do daily em vez de 100%). */
 function normalizeSplit(split, activeKeys) {
   const base = { primario: 0, medio: 0, externo: 0 };
   const cleaned = { ...base, ...split };
+  if (activeKeys.length === 0) return cleaned;
+
+  /* 1 anel ativo: 100% nele, sempre. */
+  if (activeKeys.length === 1) {
+    return { ...base, [activeKeys[0]]: 100 };
+  }
+
   const activeSum = activeKeys.reduce((s, k) => s + (Number(cleaned[k]) || 0), 0);
-  if (activeSum === 0 && activeKeys.length > 0) {
+  /* Zerado em todos os ativos → divide igualmente */
+  if (activeSum === 0) {
     const even = Math.round(100 / activeKeys.length);
     const out = { ...base };
     activeKeys.forEach((k, i) => out[k] = i === activeKeys.length - 1 ? 100 - even * (activeKeys.length - 1) : even);
+    return out;
+  }
+  /* Soma dos ativos ≠ 100 → renormaliza proporcionalmente */
+  if (activeSum !== 100) {
+    const out = { ...base };
+    activeKeys.forEach(k => {
+      out[k] = Math.round((Number(cleaned[k]) || 0) * 100 / activeSum);
+    });
+    const diff = 100 - activeKeys.reduce((s, k) => s + out[k], 0);
+    if (diff !== 0) out[activeKeys[activeKeys.length - 1]] += diff;
     return out;
   }
   return cleaned;

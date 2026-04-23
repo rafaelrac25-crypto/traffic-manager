@@ -44,10 +44,11 @@ function classifyRings(locations, ringsMode = 'auto') {
   else if (ringsMode === '2') numRings = Math.min(2, valid.length);
   else if (ringsMode === '3') numRings = Math.min(3, valid.length);
   else {
-    /* 'auto' / true: decide pelo spread e quantidade */
+    /* 'auto': decide pelo spread e quantidade. Heurística conservadora
+       alinhada com a UI (CreateAd.jsx). Favorece 1 anel nos casos comuns. */
     const spread = valid[valid.length - 1].d - valid[0].d;
-    if (spread <= 2 || valid.length === 1) numRings = 1;
-    else if (valid.length >= 6 && spread >= 4) numRings = 3;
+    if (valid.length <= 2 || spread <= 3) numRings = 1;
+    else if (valid.length >= 8 && spread >= 6) numRings = 3;
     else numRings = 2;
   }
 
