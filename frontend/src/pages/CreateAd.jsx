@@ -1635,8 +1635,10 @@ function BudgetSummaryPanel({ budgetValue, budgetType, startDate, endDate, locat
           </div>
           {underMin.length > 0 && (
             <div style={{ marginTop: '8px', padding: '8px 10px', borderRadius: '6px', background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.3)', fontSize: '11px', color: '#DC2626', lineHeight: 1.5 }}>
-              <strong>Abaixo do mínimo.</strong> Cada anel precisa de pelo menos {fmtBRL(MIN_DAILY_PER_RING)}/dia.
-              {' '}Aumente o orçamento para {fmtBRL(MIN_DAILY_PER_RING * activeKeys.length)}/dia ou reduza os anéis.
+              <strong>Abaixo do mínimo.</strong>{' '}
+              {activeKeys.length === 1
+                ? `Meta exige no mínimo ${fmtBRL(MIN_DAILY_PER_RING)}/dia. Aumente o valor diário.`
+                : `Cada anel precisa de pelo menos ${fmtBRL(MIN_DAILY_PER_RING)}/dia. Aumente o orçamento para ${fmtBRL(MIN_DAILY_PER_RING * activeKeys.length)}/dia ou reduza os anéis.`}
             </div>
           )}
         </div>
@@ -1854,11 +1856,16 @@ function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, s
       {/* Seletor — quantos anéis (ad sets) criar */}
       {(locations || []).filter(l => l?.lat != null).length >= 2 && (() => {
         const validCount = (locations || []).filter(l => l?.lat != null).length;
+        /* Calcula quantos anéis o modo 'auto' vai escolher pra essa configuração
+           atual de bairros. Se auto == 1, mostra badge "= Automático" no botão
+           1 anel pra deixar claro que são equivalentes neste caso. */
+        const autoBuckets = classifyLocationsByRing(locations, 'auto');
+        const autoRings = ['primario', 'medio', 'externo'].filter(k => autoBuckets[k].length > 0).length;
         const options = [
-          { v: 'auto', l: 'Automático', d: 'O sistema escolhe 1, 2 ou 3 pela distância' },
-          { v: '1',    l: '1 anel',     d: 'Tudo num ad set só' },
-          { v: '2',    l: '2 anéis',    d: 'Divide em 2 grupos por distância', disabled: validCount < 2 },
-          { v: '3',    l: '3 anéis',    d: 'Divide em 3 grupos por distância', disabled: validCount < 3 },
+          { v: 'auto', l: 'Automático', d: `Sistema escolhe pela distância — agora daria ${autoRings} ${autoRings === 1 ? 'anel' : 'anéis'}` },
+          { v: '1',    l: '1 anel',     d: 'Tudo num ad set só', equiv: autoRings === 1 },
+          { v: '2',    l: '2 anéis',    d: 'Divide em 2 grupos por distância', disabled: validCount < 2, equiv: autoRings === 2 },
+          { v: '3',    l: '3 anéis',    d: 'Divide em 3 grupos por distância', disabled: validCount < 3, equiv: autoRings === 3 },
         ];
         return (
           <div style={{
@@ -1894,8 +1901,17 @@ function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, s
                       transition: 'all .15s',
                     }}
                   >
-                    <div style={{ fontSize: '12.5px', fontWeight: 700, color: selected ? 'var(--c-accent)' : 'var(--c-text-1)', marginBottom: '2px' }}>
-                      {o.l}
+                    <div style={{ fontSize: '12.5px', fontWeight: 700, color: selected ? 'var(--c-accent)' : 'var(--c-text-1)', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>{o.l}</span>
+                      {o.equiv && o.v !== 'auto' && (
+                        <span style={{
+                          fontSize: '9px', fontWeight: 700, letterSpacing: '.4px',
+                          padding: '1px 5px', borderRadius: '4px',
+                          background: 'rgba(193,53,132,.12)',
+                          color: 'var(--c-accent)',
+                          textTransform: 'uppercase',
+                        }}>= Auto</span>
+                      )}
                     </div>
                     <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', lineHeight: 1.4 }}>
                       {o.d}
@@ -3070,7 +3086,9 @@ export default function CreateAd() {
             const under = activeKeys.filter(k => (dailyBudget * (Number(normalized[k]) || 0) / 100) < MIN_DAILY_PER_RING);
             if (under.length > 0) {
               const minTotal = MIN_DAILY_PER_RING * activeKeys.length;
-              errs.budgetValue = `Cada anel precisa de R$ ${MIN_DAILY_PER_RING}/dia. Aumente pra R$ ${minTotal}/dia ou reduza os anéis (${under.length} abaixo do mínimo).`;
+              errs.budgetValue = activeKeys.length === 1
+                ? `Valor diário mínimo R$ ${MIN_DAILY_PER_RING} (exigência Meta).`
+                : `Cada anel precisa de R$ ${MIN_DAILY_PER_RING}/dia. Aumente pra R$ ${minTotal}/dia ou reduza os anéis (${under.length} abaixo do mínimo).`;
             }
           }
         }
