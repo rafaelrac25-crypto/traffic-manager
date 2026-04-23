@@ -1,42 +1,39 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 
-/* Desktop tem sidebar fixa de 220px. Widget fica 14px depois dela (234).
-   Mobile (≤1024px) esconde a sidebar, então volta pro canto absoluto. */
-const SIDEBAR_WIDTH = 220;
-const GUTTER = 14;
-
 /**
- * Widget de status fixado no canto inferior esquerdo do painel.
+ * Linha de status do sistema integrada na sidebar (acima do "Tema escuro").
+ * Mantém visual consistente com as outras linhas (Tema, Perfil) da sidebar.
  *
- * Mostra 4 peças do sistema (Banco, Meta Ads, IA Groq, Webhook) com semáforo.
- * Clique na pílula expande um card com detalhes + ações rápidas.
+ * Clique abre popover à direita da sidebar com os 4 semáforos detalhados:
+ * Banco Neon · Meta Ads · IA (Groq) · Webhook Meta.
  *
- * Polling automático a cada 60s; refetch manual via botão.
+ * Polling automático a cada 60s, com botão de refresh manual no popover.
  * Busca em GET /api/health/full (ver backend/src/routes/health.js).
  */
 
 const POLL_INTERVAL_MS = 60_000;
 
 const STATUS_META = {
-  ok:    { color: '#16A34A', bg: 'rgba(22,163,74,.10)',  label: 'Sistema ok',        icon: '🟢' },
-  warn:  { color: '#F59E0B', bg: 'rgba(245,158,11,.10)', label: 'Atenção',           icon: '🟡' },
-  error: { color: '#DC2626', bg: 'rgba(239,68,68,.10)',  label: 'Precisa atenção',   icon: '🔴' },
-  loading:{ color: '#9CA3AF', bg: 'rgba(156,163,175,.10)', label: 'Verificando…',    icon: '⚪' },
+  ok:      { color: '#16A34A', label: 'Sistema ok',      icon: '🟢' },
+  warn:    { color: '#F59E0B', label: 'Atenção',         icon: '🟡' },
+  error:   { color: '#DC2626', label: 'Precisa atenção', icon: '🔴' },
+  loading: { color: '#9CA3AF', label: 'Verificando…',    icon: '⚪' },
 };
+
+const StatusIcon = ({ color }) => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="9" />
+    <circle cx="12" cy="12" r="3" fill={color} stroke="none" />
+  </svg>
+);
 
 export default function SystemStatus() {
   const [state, setState] = useState({ overall: 'loading', items: [], checked_at: null, error: null });
   const [open, setOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 1024);
-  const panelRef = useRef(null);
+  const rowRef = useRef(null);
+  const popoverRef = useRef(null);
   const abortRef = useRef(null);
-
-  useEffect(() => {
-    const h = () => setIsMobile(window.innerWidth <= 1024);
-    window.addEventListener('resize', h);
-    return () => window.removeEventListener('resize', h);
-  }, []);
 
   const fetchHealth = useCallback(async () => {
     if (abortRef.current) abortRef.current.abort();
@@ -58,70 +55,71 @@ export default function SystemStatus() {
     return () => { clearInterval(id); if (abortRef.current) abortRef.current.abort(); };
   }, [fetchHealth]);
 
-  /* Fecha ao clicar fora */
+  /* Fecha popover ao clicar fora */
   useEffect(() => {
     if (!open) return;
-    function onClick(e) { if (panelRef.current && !panelRef.current.contains(e.target)) setOpen(false); }
+    function onClick(e) {
+      if (rowRef.current?.contains(e.target)) return;
+      if (popoverRef.current?.contains(e.target)) return;
+      setOpen(false);
+    }
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
   }, [open]);
 
   const s = STATUS_META[state.overall] || STATUS_META.loading;
 
-  function fmtTime(iso) {
+  const fmtTime = (iso) => {
     if (!iso) return '—';
-    try {
-      return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    } catch { return iso; }
-  }
+    try { return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); } catch { return iso; }
+  };
 
   return (
-    <div
-      ref={panelRef}
-      style={{
-        position: 'fixed',
-        bottom: `${GUTTER}px`,
-        /* Desktop: 220px (sidebar) + 14px de respiro; Mobile: 14px direto */
-        left: isMobile ? `${GUTTER}px` : `${SIDEBAR_WIDTH + GUTTER}px`,
-        zIndex: 101, /* acima da sidebar (z=100) pra não ficar escondido */
-        fontFamily: 'inherit',
-      }}
-    >
-      {/* Pílula compacta */}
-      <button
-        onClick={() => setOpen(o => !o)}
-        title="Status do sistema"
-        style={{
-          display: 'flex', alignItems: 'center', gap: '8px',
-          padding: '6px 12px',
-          background: 'var(--c-card-bg)',
-          border: `1.5px solid ${s.color}`,
-          borderRadius: '999px',
-          fontSize: '11.5px',
-          fontWeight: 700,
-          color: s.color,
-          cursor: 'pointer',
-          boxShadow: '0 4px 14px rgba(0,0,0,.08)',
-          transition: 'transform .14s ease, box-shadow .14s ease',
-          fontFamily: 'inherit',
-        }}
-        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(0,0,0,.12)'; }}
-        onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,.08)'; }}
-      >
-        <span style={{ fontSize: '12px', lineHeight: 1 }}>{s.icon}</span>
-        <span>{s.label}</span>
-      </button>
+    <>
+      {/* Linha de status — alinha com "Tema escuro" e "Perfil" na sidebar */}
+      <div style={{ padding: '8px 10px', borderTop: '1px solid var(--c-border-lt)' }}>
+        <div
+          ref={rowRef}
+          onClick={() => setOpen(o => !o)}
+          title="Clique pra ver detalhes das conexões"
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '9px 12px', borderRadius: '10px', cursor: 'pointer',
+            background: open ? 'var(--c-hover)' : 'transparent',
+            transition: 'background .15s',
+          }}
+          onMouseEnter={e => { if (!open) e.currentTarget.style.background = 'var(--c-hover)'; }}
+          onMouseLeave={e => { if (!open) e.currentTarget.style.background = 'transparent'; }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '9px', color: 'var(--c-text-3)' }}>
+            <StatusIcon color={s.color} />
+            <span style={{ fontSize: '12px', fontWeight: 500 }}>
+              Status do sistema
+            </span>
+          </div>
+          <div style={{
+            width: '8px', height: '8px', borderRadius: '50%',
+            background: s.color,
+            flexShrink: 0,
+            boxShadow: `0 0 0 3px ${s.color}22`,
+          }} />
+        </div>
+      </div>
 
-      {/* Painel expandido */}
+      {/* Popover detalhado — aparece à direita da sidebar quando aberto */}
       {open && (
         <div
+          ref={popoverRef}
           style={{
-            position: 'absolute', bottom: 'calc(100% + 8px)', left: 0,
+            position: 'fixed',
+            left: '230px', /* 220px sidebar + 10px gap */
+            bottom: '70px', /* alinhado acima da área do perfil */
             width: '340px',
             background: 'var(--c-card-bg)',
             border: '1px solid var(--c-border)',
             borderRadius: '14px',
-            boxShadow: '0 16px 48px rgba(214,141,143,.22)',
+            boxShadow: '0 16px 48px rgba(0,0,0,.18)',
+            zIndex: 101,
             overflow: 'hidden',
             animation: 'fadeIn .18s ease',
           }}
@@ -189,6 +187,6 @@ export default function SystemStatus() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

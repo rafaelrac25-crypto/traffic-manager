@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
+import SystemStatus from './SystemStatus';
 import { useAppState } from '../contexts/AppStateContext';
 import marcaBranca from '../assets/marca-branca.png';
 import marcaColorida from '../assets/marca-colorida.png';
@@ -331,6 +332,9 @@ export default function Sidebar({ open = false, isMobile = false }) {
           );
         })}
       </nav>
+
+      {/* ── Status do sistema (linha acima do tema escuro) ── */}
+      <SystemStatus />
 
       {/* ── Tema escuro ── */}
       <div style={{ padding: '8px 10px', borderTop: '1px solid var(--c-border-lt)' }}>
