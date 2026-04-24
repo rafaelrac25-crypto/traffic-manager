@@ -124,16 +124,18 @@ traffic-manager/
 
 ## Variáveis de ambiente (Vercel — Production)
 
-| Variável | Valor |
+**Todas configuradas e ativas** — `GET /api/health/full` confirma DB, Meta, IA e Webhook em verde. Para verificar antes de afirmar que algo "falta", **sempre rodar `curl https://criscosta.vercel.app/api/health/full` primeiro.**
+
+| Variável | Estado |
 |---|---|
-| `DATABASE_URL` | Neon PostgreSQL (`sslmode=require`) |
-| `NODE_ENV` | `production` |
-| `FRONTEND_URL` | https://criscosta.vercel.app |
-| `GROQ_API_KEY` | Chat IA (llama-3.3 + llama-4-scout com vision) |
-| `FB_APP_ID` | ⏳ obter em developers.facebook.com |
-| `FB_APP_SECRET` | ⏳ obter em developers.facebook.com |
-| `FB_WEBHOOK_VERIFY_TOKEN` | ⏳ string aleatória p/ validar webhook Meta |
-| `TOKEN_ENC_KEY` | ⏳ 32 bytes base64 p/ criptografar access_tokens no DB |
+| `DATABASE_URL` | ✅ Neon PostgreSQL (`sslmode=require`) |
+| `NODE_ENV` | ✅ `production` |
+| `FRONTEND_URL` | ✅ https://criscosta.vercel.app |
+| `GROQ_API_KEY` | ✅ Chat IA (llama-3.3 + llama-4-scout com vision) |
+| `FB_APP_ID` | ✅ App configurado em developers.facebook.com |
+| `FB_APP_SECRET` | ✅ secret do mesmo App |
+| `FB_WEBHOOK_VERIFY_TOKEN` | ✅ webhook Meta ativo (validado no health) |
+| `TOKEN_ENC_KEY` | ✅ token criptografado no DB decodifica (refresh ok) |
 | `GOOGLE_DEVELOPER_TOKEN` | (opcional) integração Google Ads futura |
 
 **Removidos:** `JWT_SECRET` (auth desabilitada), `GEMINI_API_KEY` (substituído por GROQ).
@@ -188,10 +190,11 @@ FB_APP_SECRET=<do developers.facebook.com>
 - **Diagnose** (`GET /:id/diagnose`, `GET /last/diagnose`) — status ao vivo + feedback de review
 - **Schema completo**: `campaigns`, `ad_sets`, `ads`, `creatives`, `media`, `insights`, `insights_by_district`, `platform_credentials`, `oauth_states`
 
-### ⏳ Falta apenas configuração pra testar E2E
-- Criar App em developers.facebook.com → obter `FB_APP_ID` + `FB_APP_SECRET`
-- Setar as variáveis no `.env` local e no painel Vercel
-- Primeiro clique em "Conectar Meta" na Investment page
+### ✅ Configuração concluída
+- App criado em developers.facebook.com → `FB_APP_ID` + `FB_APP_SECRET` setados na Vercel
+- Conta `act_1330468201431069` conectada via OAuth
+- Token long-lived válido (refresh automático ativo)
+- Page e IG Business descobertos automaticamente
 
 ### 🔧 Melhorias futuras (não bloqueantes)
 - Cron automático de sync (hoje é manual via botão em Investment)
@@ -213,9 +216,8 @@ FB_APP_SECRET=<do developers.facebook.com>
 ## O que falta implementar
 
 ### Alto
-- [ ] **Setar `FB_APP_ID` / `FB_APP_SECRET` na Vercel** (criar App em developers.facebook.com)
-- [ ] **Setar `TOKEN_ENC_KEY` na Vercel** (valor de 32 bytes base64 já existe no `.env` local)
 - [ ] Integração real Google Ads (ainda é stub)
+- [ ] Publicar 1ª campanha real e validar fluxo end-to-end (criação → revisão → ativo)
 
 ### Médio
 - [ ] Cron automático de sync do Meta (hoje só via botão em Investment)
