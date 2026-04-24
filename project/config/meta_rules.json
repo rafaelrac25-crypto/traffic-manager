@@ -1,0 +1,75 @@
+{
+  "_note": "Snapshot legível das regras Meta. Source of truth: frontend/src/config/metaRules.js (importado por CreateAd.jsx e metaNormalize.js). Mudou aqui? Não tem efeito — edite o .js.",
+  "required_campaign_fields": [
+    "name",
+    "objective",
+    "status",
+    "buying_type",
+    "special_ad_categories",
+    "daily_budget"
+  ],
+  "objectives_meta_v20_odax": {
+    "OUTCOME_AWARENESS": ["brand_awareness", "reach", "store_traffic"],
+    "OUTCOME_TRAFFIC": ["traffic"],
+    "OUTCOME_ENGAGEMENT": ["engagement", "messages"],
+    "OUTCOME_LEADS": ["leads"],
+    "OUTCOME_APP_PROMOTION": ["app_installs"],
+    "OUTCOME_SALES": ["sales"]
+  },
+  "status": ["PAUSED", "ACTIVE"],
+  "special_ad_categories": ["NONE", "HOUSING", "EMPLOYMENT", "CREDIT"],
+  "budget_brl": {
+    "min_daily_per_ring": 7,
+    "min_lifetime_total": 35,
+    "min_campaign_days": 5,
+    "meta_reserve_pct": 20
+  },
+  "geo": {
+    "joinville_max_radius_km": 60,
+    "min_radius_km": 3,
+    "dedupe_buffer_km": 0.3,
+    "fallback_radius_km": 15
+  },
+  "image": {
+    "min_width": 500,
+    "min_height": 500
+  },
+  "timezone": {
+    "br_offset": "-03:00"
+  },
+  "cta_pt_br_to_meta": {
+    "Saiba mais": "LEARN_MORE",
+    "Reservar agora": "BOOK_TRAVEL",
+    "Entrar em contato": "CONTACT_US",
+    "WhatsApp": "WHATSAPP_MESSAGE",
+    "Enviar mensagem": "MESSAGE_PAGE",
+    "Mande uma mensagem": "MESSAGE_PAGE",
+    "Chamar agora": "CALL_NOW",
+    "Inscrever-se": "SUBSCRIBE",
+    "Comprar agora": "SHOP_NOW",
+    "Ver cardápio": "VIEW_MENU",
+    "Ver mais": "LEARN_MORE"
+  },
+  "cta_to_destination_type": {
+    "WHATSAPP_MESSAGE": "WHATSAPP",
+    "MESSAGE_PAGE": "INSTAGRAM_DIRECT",
+    "CALL_NOW": "PHONE_CALL"
+  },
+  "messaging_ctas": [
+    "WHATSAPP_MESSAGE",
+    "MESSAGE_PAGE",
+    "CALL_NOW",
+    "SEND_MESSAGE"
+  ],
+  "gender_local_to_meta": {
+    "all": [],
+    "female": [1],
+    "male": [2]
+  },
+  "auto_rings_heuristic": {
+    "_description": "Quantos ad sets criar quando o usuário escolhe 'Automático'. Conservador pra Joinville.",
+    "1_ring": "count <= 2 OU spread_km <= 3",
+    "3_rings": "count >= 8 E spread_km >= 6",
+    "2_rings": "qualquer outro caso"
+  }
+}

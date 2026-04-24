@@ -6,139 +6,38 @@
  * de `ad_set: {...}` único. O backend publishCampaign detecta e cria N AdSets
  * sob a mesma Campaign, cada um com seu budget e targeting geográfico,
  * compartilhando 1 único Creative.
+ *
+ * Constantes / mapas / heurísticas vivem em `config/metaRules.js` — esse
+ * arquivo só faz a montagem do payload Meta a partir delas.
  */
 
-import { HOME_COORDS, distanceKm } from '../data/joinvilleDistricts';
+import { HOME_COORDS } from '../data/joinvilleDistricts';
+import {
+  classifyRings,
+  toMetaBudgetCents,
+  GENDER_TO_META,
+  OBJECTIVE_TO_META,
+  OPTIMIZATION_GOAL,
+  BILLING_EVENT,
+  CTA_TO_META,
+  CTA_TO_DESTINATION,
+  MESSAGING_CTAS,
+  GEO_MIN_RADIUS_KM,
+  GEO_DEDUPE_BUFFER_KM,
+  GEO_FALLBACK_RADIUS_KM,
+  BR_OFFSET,
+} from '../config/metaRules';
 
-/* Remove bairros duplicados por nome (mantém a 1ª ocorrência após sort por
-   distância → mantém o mais próximo do centro). Evita que o mesmo bairro
-   apareça em 2 anéis diferentes quando Rafa marca múltiplos pontos nele. */
-function dedupeLocationsByName(locations) {
-  const seen = new Set();
-  const out = [];
-  for (const loc of locations || []) {
-    const key = String(loc?.name || '').trim().toLowerCase()
-      .normalize('NFD').replace(/[̀-ͯ]/g, '');
-    if (!key) { out.push(loc); continue; }
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(loc);
-  }
-  return out;
-}
-
-/* Classifica bairros em anéis. ringsMode: 'auto' | '1' | '2' | '3'.
-   Mantém compat com a flag booleana legada `ringsEnabled`.
-   Dedupe por nome antes de distribuir — regra: bairro único por anel. */
-function classifyRings(locations, ringsMode = 'auto') {
-  const buckets = { primario: [], medio: [], externo: [] };
-  const deduped = dedupeLocationsByName(locations || []);
-  const valid = deduped
-    .filter(l => l?.lat != null && l?.lng != null)
-    .map(l => ({ loc: l, d: distanceKm(HOME_COORDS, { lat: l.lat, lng: l.lng }) }))
-    .sort((a, b) => a.d - b.d);
-  if (valid.length === 0) return buckets;
-
-  let numRings;
-  if (ringsMode === '1' || ringsMode === false) numRings = 1;
-  else if (ringsMode === '2') numRings = Math.min(2, valid.length);
-  else if (ringsMode === '3') numRings = Math.min(3, valid.length);
-  else {
-    /* 'auto': decide pelo spread e quantidade. Heurística conservadora
-       alinhada com a UI (CreateAd.jsx). Favorece 1 anel nos casos comuns. */
-    const spread = valid[valid.length - 1].d - valid[0].d;
-    if (valid.length <= 2 || spread <= 3) numRings = 1;
-    else if (valid.length >= 8 && spread >= 6) numRings = 3;
-    else numRings = 2;
-  }
-
-  if (numRings === 1) {
-    valid.forEach(({ loc }) => buckets.primario.push(loc));
-    return buckets;
-  }
-  const perGroup = Math.ceil(valid.length / numRings);
-  const keys = ['primario', 'medio', 'externo'];
-  valid.forEach(({ loc }, idx) => {
-    const ringIdx = Math.min(Math.floor(idx / perGroup), numRings - 1);
-    buckets[keys[ringIdx]].push(loc);
-  });
-  return buckets;
-}
-
-// Meta targeting.genders: omitido = todos, [1] = feminino, [2] = masculino
-export const GENDER_TO_META = {
-  all:    [],
-  female: [1],
-  male:   [2],
-};
-
-// Converte valor em reais (float) pra centavos (int) — Meta exige inteiro
-export function toMetaBudgetCents(reais) {
-  const n = Number(reais);
-  if (!Number.isFinite(n) || n <= 0) return 0;
-  return Math.round(n * 100);
-}
-
-// Local objective → Meta Campaign objective (v20 ODAX)
-export const OBJECTIVE_TO_META = {
-  brand_awareness: 'OUTCOME_AWARENESS',
-  reach:           'OUTCOME_AWARENESS',
-  traffic:         'OUTCOME_TRAFFIC',
-  engagement:      'OUTCOME_ENGAGEMENT',
-  leads:           'OUTCOME_LEADS',
-  messages:        'OUTCOME_ENGAGEMENT',
-  app_installs:    'OUTCOME_APP_PROMOTION',
-  sales:           'OUTCOME_SALES',
-  store_traffic:   'OUTCOME_AWARENESS',
-};
-
-// Local objective → optimization_goal (ad_set level)
-export const OPTIMIZATION_GOAL = {
-  brand_awareness: 'AD_RECALL_LIFT',
-  reach:           'REACH',
-  traffic:         'LINK_CLICKS',
-  engagement:      'POST_ENGAGEMENT',
-  leads:           'LEAD_GENERATION',
-  messages:        'CONVERSATIONS',
-  app_installs:    'APP_INSTALLS',
-  sales:           'OFFSITE_CONVERSIONS',
-  store_traffic:   'STORE_VISITS',
-};
-
-// Local objective → billing_event
-export const BILLING_EVENT = {
-  brand_awareness: 'IMPRESSIONS',
-  reach:           'IMPRESSIONS',
-  traffic:         'LINK_CLICKS',
-  engagement:      'IMPRESSIONS',
-  leads:           'IMPRESSIONS',
-  messages:        'IMPRESSIONS',
-  app_installs:    'IMPRESSIONS',
-  sales:           'IMPRESSIONS',
-  store_traffic:   'IMPRESSIONS',
-};
-
-// Label de CTA (PT-BR) → Meta enum
-export const CTA_TO_META = {
-  'Saiba mais':         'LEARN_MORE',
-  'Reservar agora':     'BOOK_TRAVEL',
-  'Entrar em contato':  'CONTACT_US',
-  'WhatsApp':           'WHATSAPP_MESSAGE',
-  'Enviar mensagem':    'MESSAGE_PAGE',
-  'Mande uma mensagem': 'MESSAGE_PAGE',
-  'Chamar agora':       'CALL_NOW',
-  'Inscrever-se':       'SUBSCRIBE',
-  'Comprar agora':      'SHOP_NOW',
-  'Ver cardápio':       'VIEW_MENU',
-  'Ver mais':           'LEARN_MORE',
-};
-
-/* Meta v20 pro objetivo Mensagens: cada CTA exige destination_type específico.
-   Sem o mapeamento correto, Graph API recusa o adset com erro 100/2490408. */
-export const CTA_TO_DESTINATION = {
-  'WHATSAPP_MESSAGE': 'WHATSAPP',          /* wa.me/... via WhatsApp Business */
-  'MESSAGE_PAGE':     'INSTAGRAM_DIRECT',  /* DM do Instagram */
-  'CALL_NOW':         'PHONE_CALL',        /* Ligação direta */
+/* Re-exporta os mapas pra manter compat retroativa caso outro módulo importe
+   diretamente de metaNormalize. Source of truth segue sendo config/metaRules. */
+export {
+  GENDER_TO_META,
+  OBJECTIVE_TO_META,
+  OPTIMIZATION_GOAL,
+  BILLING_EVENT,
+  CTA_TO_META,
+  CTA_TO_DESTINATION,
+  toMetaBudgetCents,
 };
 
 // Gera IDs fake no formato do Meta pra o painel já trabalhar com a estrutura real.
@@ -188,16 +87,16 @@ function dedupeOverlappingGeos(locations) {
       const d = distKm(loc, other);
       /* Se center do loc está dentro do círculo de other → redundante */
       if (d <= other.radius) { skip = true; break; }
-      /* Se círculos se sobrepõem → reduz raio pra ficar tangente (buffer 0.3km) */
-      const maxAllowed = d - other.radius - 0.3;
+      /* Se círculos se sobrepõem → reduz raio pra ficar tangente (buffer GEO_DEDUPE_BUFFER_KM) */
+      const maxAllowed = d - other.radius - GEO_DEDUPE_BUFFER_KM;
       if (maxAllowed < newRadius) {
         newRadius = maxAllowed;
       }
     }
     if (skip) continue;
     /* Meta rejeita raios muito pequenos (audiência insuficiente pra rodar).
-       Piso: 3km garante público mínimo viável mesmo em bairro pequeno. */
-    if (newRadius < 3) newRadius = 3;
+       Piso GEO_MIN_RADIUS_KM garante público mínimo viável. */
+    if (newRadius < GEO_MIN_RADIUS_KM) newRadius = GEO_MIN_RADIUS_KM;
     kept.push({ ...loc, radius: Number(newRadius.toFixed(2)) });
   }
   return kept;
@@ -256,7 +155,7 @@ export function toMetaPayload(ad) {
      escolheu algo incompatível (ex: "Saiba mais" → LEARN_MORE).
      Default consistente com destination_type escolhido mais acima. */
   const rawCtaMeta = CTA_TO_META[ad.ctaButton] || 'LEARN_MORE';
-  const isMessagingCTA = ['WHATSAPP_MESSAGE', 'MESSAGE_PAGE', 'CALL_NOW', 'SEND_MESSAGE'].includes(rawCtaMeta);
+  const isMessagingCTA = MESSAGING_CTAS.includes(rawCtaMeta);
   const isMessagesObjective = ad.objective === 'messages';
   const finalCtaType = (isMessagesObjective && !isMessagingCTA) ? 'MESSAGE_PAGE' : rawCtaMeta;
 
@@ -338,10 +237,9 @@ export function toMetaPayload(ad) {
         targeting_relaxation_types: targetingRelaxation,
       };
 
-  /* Fuso fixo -03:00 (BR) — sem isso, new Date('2026-04-22T00:00:00') é
-     interpretado no fuso do navegador; usuários em outros fusos viam
-     campanha começando no dia errado. */
-  const BR_OFFSET = '-03:00';
+  /* Fuso BR_OFFSET (-03:00) vem do config — sem ele, new Date('2026-04-22T00:00:00')
+     é interpretado no fuso do navegador; usuários em outros fusos viam campanha
+     começando no dia errado. */
   const adSetCommon = {
     optimization_goal:  OPTIMIZATION_GOAL[ad.objective] || 'LINK_CLICKS',
     billing_event:      BILLING_EVENT[ad.objective]     || 'IMPRESSIONS',
@@ -425,12 +323,12 @@ export function toMetaPayload(ad) {
 
   /* Caminho legado: 1 ad_set único com todos os bairros.
      Se allGeo ficou vazio (nenhum bairro passou no dedupe), usa HOME_COORDS
-     de Joinville com raio 15km como fallback — respeita a regra de negócio
+     de Joinville com raio GEO_FALLBACK_RADIUS_KM como fallback — respeita
      "só Joinville" sem violar cobrindo BR inteiro. */
   const fallbackJoinville = [{
     latitude:      HOME_COORDS.lat,
     longitude:     HOME_COORDS.lng,
-    radius:        15,
+    radius:        GEO_FALLBACK_RADIUS_KM,
     distance_unit: 'kilometer',
     name:          'Joinville (fallback)',
   }];

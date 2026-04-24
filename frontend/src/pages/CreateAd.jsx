@@ -26,9 +26,11 @@ import {
   nearestDistrict,
 } from '../data/joinvilleDistricts';
 import { toMetaPayload, newMetaIds } from '../utils/metaNormalize';
-
-// Geofence: aceita localizações até 60km da clínica (Joinville + região metropolitana)
-const JOINVILLE_MAX_RADIUS_KM = 60;
+import {
+  classifyRings,
+  JOINVILLE_MAX_RADIUS_KM,
+  MIN_DAILY_PER_RING_BRL,
+} from '../config/metaRules';
 
 function isWithinJoinville(lat, lng) {
   const d = distanceKm(HOME_COORDS, { lat, lng });
@@ -1175,49 +1177,12 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
    PASSO 3 — ORÇAMENTO
 ══════════════════════════════════════════ */
 
-/* Classifica bairros em anéis.
-   ringsMode: 'auto' | '1' | '2' | '3'
-   - '1' → força 1 ad set (todos bairros juntos)
-   - '2' → força 2 ad sets (divide por mediana da distância)
-   - '3' → força 3 ad sets (divide por tercis)
-   - 'auto' → escolhe 1/2/3 pelas regras de spread/N
-   Quando N de bairros < numRings solicitado, reduz automaticamente. */
+/* Classifica bairros em anéis. Delega à implementação única em
+   `config/metaRules.js` — esse wrapper só preserva a chave `fora: []`
+   esperada pelo código de UI legado (label "fora do raio de 8 km"). */
 function classifyLocationsByRing(locations, ringsMode = 'auto') {
-  const buckets = { primario: [], medio: [], externo: [], fora: [] };
-  /* Dedupe por nome ANTES de sortear — garante que o mesmo bairro nunca
-     apareça em 2 anéis se Rafa marcou 2 pontos no mesmo bairro. */
-  const valid = dedupeLocationsByName(locations || [])
-    .filter(l => l?.lat != null && l?.lng != null)
-    .map(l => ({ loc: l, d: distanceKm(HOME_COORDS, { lat: l.lat, lng: l.lng }) }))
-    .sort((a, b) => a.d - b.d);
-  if (valid.length === 0) return buckets;
-
-  let numRings;
-  if (ringsMode === '1' || ringsMode === false) numRings = 1;
-  else if (ringsMode === '2') numRings = Math.min(2, valid.length);
-  else if (ringsMode === '3') numRings = Math.min(3, valid.length);
-  else {
-    /* 'auto': decide pelo spread e quantidade. Mais conservador — favorece
-       1 anel nos casos comuns de Joinville (poucos bairros, distâncias
-       curtas). Só cai em 3 anéis com muitos bairros bem espalhados. */
-    const spread = valid[valid.length - 1].d - valid[0].d;
-    if (valid.length <= 2 || spread <= 3) numRings = 1;
-    else if (valid.length >= 8 && spread >= 6) numRings = 3;
-    else numRings = 2;
-  }
-
-  if (numRings === 1) {
-    valid.forEach(({ loc }) => buckets.primario.push(loc));
-    return buckets;
-  }
-
-  const perGroup = Math.ceil(valid.length / numRings);
-  const ringKeys = ['primario', 'medio', 'externo'];
-  valid.forEach(({ loc }, idx) => {
-    const ringIdx = Math.min(Math.floor(idx / perGroup), numRings - 1);
-    buckets[ringKeys[ringIdx]].push(loc);
-  });
-  return buckets;
+  const buckets = classifyRings(locations, ringsMode);
+  return { ...buckets, fora: [] };
 }
 
 /* Split 100% entre anéis ativos — garante que o %s dos activeKeys somem 100,
@@ -1443,7 +1408,7 @@ function RingBudgetSplit({ locations, budgetValue, budgetType, split, setSplit, 
    total previsto e comparação com saldo disponível no Meta.
    Saldo vem do /api/campaigns/preflight (debounced).
 ══════════════════════════════════════════ */
-const MIN_DAILY_PER_RING = 7;
+const MIN_DAILY_PER_RING = MIN_DAILY_PER_RING_BRL;
 
 function computeDailyBudget(budgetValue, budgetType, days) {
   const v = Number(budgetValue) || 0;
@@ -1482,27 +1447,6 @@ function computeDays(startDate, endDate) {
 
 /* Normaliza nome de bairro pra comparar (case/acento insensível).
    Ex: "Boa Vista" e "boa vista" viram a mesma chave. */
-function normalizeLocationName(name) {
-  return String(name || '').trim().toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '');
-}
-
-/* Remove bairros duplicados mantendo apenas o mais próximo do centro
-   quando Rafa marca dois pontos no mesmo bairro. Garante que o mesmo
-   bairro nunca apareça em 2 anéis diferentes. */
-function dedupeLocationsByName(locations) {
-  const seen = new Set();
-  const out = [];
-  for (const loc of locations || []) {
-    const key = normalizeLocationName(loc?.name);
-    if (!key) { out.push(loc); continue; } /* sem nome, não tem como comparar */
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(loc);
-  }
-  return out;
-}
-
 function BudgetSummaryPanel({ budgetValue, budgetType, startDate, endDate, locations, budgetRingSplit, ringsMode }) {
   const days = computeDays(startDate, endDate);
   const dailyBudget = computeDailyBudget(budgetValue, budgetType, days);
