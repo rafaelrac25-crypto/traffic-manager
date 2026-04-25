@@ -13,6 +13,8 @@
 
 const router = require('express').Router();
 const db = require('../db');
+const { metaGet } = require('../services/metaHttp');
+const { decrypt } = require('../services/crypto');
 
 router.get('/', (_, res) => res.json({ status: 'ok' }));
 
@@ -70,13 +72,60 @@ async function checkMeta() {
         meta: { account_id: creds.account_id, days_left: daysLeft },
       };
     }
+    /* Validação LIVE contra Meta Graph API. Antes deste check, healthCheck
+       confiava só na flag `needs_reconnect` do banco — se o token fosse
+       revogado externamente (Rafa removendo acesso no Facebook), a flag
+       não sabia e o health mentia "ok". Agora batemos `/me?fields=id` com
+       timeout curto pra confirmar que o token está vivo. */
+    const rawToken = String(creds.access_token).includes(':')
+      ? (() => { try { return decrypt(creds.access_token); } catch { return creds.access_token; } })()
+      : creds.access_token;
+
+    let liveStatus = 'ok';
+    let liveDetail = null;
+    try {
+      const livePing = await Promise.race([
+        metaGet('/me', { fields: 'id' }, { token: rawToken }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout 8s')), 8000)),
+      ]);
+      if (!livePing?.id) {
+        liveStatus = 'error';
+        liveDetail = 'Token retornou resposta inválida do Meta (sem id).';
+      }
+    } catch (e) {
+      const msg = String(e?.message || e);
+      /* Erro 190 / 102 = token inválido/expirado (não detectado pela flag) */
+      if (/190|102|invalid|expired|access_token/i.test(msg)) {
+        liveStatus = 'error';
+        liveDetail = 'Token rejeitado pelo Meta. Reconecte em Investimento.';
+      } else if (/timeout|ETIMEDOUT|ECONNRESET/i.test(msg)) {
+        liveStatus = 'warn';
+        liveDetail = `Meta lento ao validar token (${msg}). Token pode estar ok, mas vale verificar.`;
+      } else {
+        liveStatus = 'warn';
+        liveDetail = `Não consegui validar token agora: ${msg.slice(0, 80)}`;
+      }
+    }
+
+    if (liveStatus === 'error') {
+      return {
+        key: 'meta',
+        label: 'Meta Ads',
+        status: 'error',
+        details: liveDetail,
+        meta: { account_id: creds.account_id, page_id: creds.page_id, ig_business_id: creds.ig_business_id, days_left: daysLeft },
+      };
+    }
+
+    const baseDetails = daysLeft != null
+      ? `Conectado · conta ${creds.account_id || '—'} · token válido por ${daysLeft} dias.`
+      : `Conectado · conta ${creds.account_id || '—'}.`;
+
     return {
       key: 'meta',
       label: 'Meta Ads',
-      status: 'ok',
-      details: daysLeft != null
-        ? `Conectado · conta ${creds.account_id || '—'} · token válido por ${daysLeft} dias.`
-        : `Conectado · conta ${creds.account_id || '—'}.`,
+      status: liveStatus, /* 'ok' se ping passou, 'warn' se Meta lento */
+      details: liveStatus === 'warn' ? `${baseDetails} ${liveDetail}` : baseDetails,
       meta: { account_id: creds.account_id, page_id: creds.page_id, ig_business_id: creds.ig_business_id, days_left: daysLeft },
     };
   } catch (e) {
