@@ -158,12 +158,19 @@ db.exec(`
     impressions INTEGER DEFAULT 0,
     clicks INTEGER DEFAULT 0,
     conversions INTEGER DEFAULT 0,
+    ad_set_id TEXT,
+    ring_key TEXT,
+    region TEXT,
+    city TEXT,
     fetched_at TEXT DEFAULT (datetime('now'))
   );
 
   CREATE INDEX IF NOT EXISTS idx_insights_campaign_date ON insights(campaign_id, date_start);
   CREATE INDEX IF NOT EXISTS idx_insights_district ON insights_by_district(district, date_start);
   CREATE INDEX IF NOT EXISTS idx_insights_district_service ON insights_by_district(district, service);
+  /* Índices em ring_key/ad_set_id criados no loop de migrações abaixo,
+     porque dependem das colunas adicionadas via ALTER TABLE (db.exec
+     executa ANTES do loop de migrations). */
 
   CREATE TABLE IF NOT EXISTS oauth_states (
     state TEXT PRIMARY KEY,
@@ -187,6 +194,14 @@ const migrations = [
   'ALTER TABLE platform_credentials ADD COLUMN page_id TEXT',
   'ALTER TABLE platform_credentials ADD COLUMN ig_business_id TEXT',
   'ALTER TABLE platform_credentials ADD COLUMN needs_reconnect INTEGER DEFAULT 0',
+  /* Insights por anel/ad_set — pra HeatMap e card "Performance por anel" usar dado real do Meta */
+  'ALTER TABLE insights_by_district ADD COLUMN ad_set_id TEXT',
+  'ALTER TABLE insights_by_district ADD COLUMN ring_key TEXT',
+  'ALTER TABLE insights_by_district ADD COLUMN region TEXT',
+  'ALTER TABLE insights_by_district ADD COLUMN city TEXT',
+  /* Índices nas colunas novas — DEPOIS dos ALTER TABLE acima */
+  'CREATE INDEX IF NOT EXISTS idx_insights_ring ON insights_by_district(ring_key, date_start)',
+  'CREATE INDEX IF NOT EXISTS idx_insights_adset ON insights_by_district(ad_set_id, date_start)',
 ];
 for (const sql of migrations) {
   try { db.exec(sql); } catch {}

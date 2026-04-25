@@ -104,4 +104,33 @@ async function fetchAccountInsights(creds, { since, until, level = 'campaign', b
   return json.data || [];
 }
 
-module.exports = { fetchCampaigns, fetchAccountInsights, CONVERSION_ACTION_TYPES };
+/* Insights granulares POR ad_set — usados pra popular insights_by_district
+   com dado real do Meta (em vez de distribuir métricas de campaign
+   equitativamente entre bairros). Chamado pelo sync.js após o loop de
+   campanhas, uma vez por ad_set salvo no metaPublishResult.
+
+   `breakdowns` default 'region,city' permite reconciliar com os bairros
+   do payload original via matching de proximidade. */
+async function fetchAdSetInsights(creds, adSetId, { since, until, breakdowns = 'region,city' } = {}) {
+  const token = getToken(creds);
+  if (!adSetId) throw new Error('ad_set_id ausente');
+
+  const params = {
+    fields: 'adset_id,adset_name,spend,clicks,impressions,reach,ctr,cpc,cpm,actions,cost_per_action_type,date_start,date_stop',
+    level: 'adset',
+    limit: 500,
+    action_attribution_windows: ['7d_click', '1d_view'],
+  };
+  if (since && until) {
+    params.time_range = { since, until };
+  } else {
+    /* last_7d alinha com janela de relevância pro HeatMap (recente). */
+    params.date_preset = 'last_7d';
+  }
+  if (breakdowns) params.breakdowns = breakdowns;
+
+  const json = await metaGet(`/${adSetId}/insights`, params, { token });
+  return json.data || [];
+}
+
+module.exports = { fetchCampaigns, fetchAccountInsights, fetchAdSetInsights, CONVERSION_ACTION_TYPES };

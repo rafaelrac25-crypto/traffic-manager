@@ -59,6 +59,83 @@ async function syncPlatform(platform) {
     upserted++;
   }
 
+  /* Insights por ad_set + região/cidade — popula insights_by_district com
+     dado REAL do Meta (não mais distribuição equitativa). Roda só pra Meta
+     porque é o único que expõe ad_set_id por campanha publicada via wizard.
+     Best-effort: falha em um ad_set não bloqueia o sync inteiro. */
+  if (platform === 'meta' && handler.fetchAdSetInsights) {
+    try {
+      /* Pega só campanhas publicadas via wizard (têm metaPublishResult.ad_sets) */
+      const campsResult = await db.query(
+        `SELECT id, payload FROM campaigns
+          WHERE platform = 'meta' AND platform_campaign_id IS NOT NULL`,
+        []
+      );
+      let totalAdSetsScanned = 0;
+      let totalRowsInserted = 0;
+      for (const c of campsResult.rows) {
+        let payload = {};
+        try { payload = c.payload ? JSON.parse(c.payload) : {}; } catch {}
+        const adSets = payload?.metaPublishResult?.ad_sets || [];
+        const locations = Array.isArray(payload?.locations) ? payload.locations : [];
+        if (adSets.length === 0) continue;
+
+        for (const as of adSets) {
+          if (!as?.ad_set_id) continue;
+          totalAdSetsScanned++;
+          let rows = [];
+          try {
+            rows = await handler.fetchAdSetInsights(creds, as.ad_set_id, { breakdowns: 'region,city' });
+          } catch (e) {
+            console.warn('[sync] fetchAdSetInsights falhou pra ad_set', as.ad_set_id, '—', e.message);
+            continue;
+          }
+          for (const row of rows) {
+            /* Mapeia city/region pro bairro do payload por matching de nome.
+               Meta retorna nomes oficiais ("Boa Vista, Joinville") — nem sempre
+               1:1 com nossos bairros. Estratégia:
+               1. Match exato case-insensitive em locations[].name
+               2. Se falhar, usa o próprio city retornado como district label
+                  (mantém o dado, só não casa com o catálogo). */
+            const cityName = row.city || row.region || null;
+            if (!cityName) continue;
+            const norm = String(cityName).toLowerCase().trim();
+            const matched = locations.find(l =>
+              l?.name && String(l.name).toLowerCase().trim() === norm
+            );
+            const districtLabel = matched?.name || cityName;
+            const safeFloat = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
+            const safeInt = (v) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : 0; };
+            const conversions = (Array.isArray(row.actions) ? row.actions : [])
+              .filter(a => CONVERSION_ACTION_TYPES.includes(a.action_type))
+              .reduce((s, a) => s + safeInt(a.value), 0);
+            try {
+              await db.query(
+                `INSERT INTO insights_by_district
+                  (campaign_id, ad_set_id, ring_key, district, region, city,
+                   date_start, date_stop, spend, impressions, clicks, conversions)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [c.id, as.ad_set_id, as.ring_key || null, districtLabel,
+                 row.region || null, row.city || null,
+                 row.date_start, row.date_stop,
+                 safeFloat(row.spend), safeInt(row.impressions),
+                 safeInt(row.clicks), conversions]
+              );
+              totalRowsInserted++;
+            } catch (insertErr) {
+              console.warn('[sync] INSERT insights_by_district falhou:', insertErr.message);
+            }
+          }
+        }
+      }
+      if (totalAdSetsScanned > 0) {
+        console.warn('[sync] insights_by_district: scanned', totalAdSetsScanned, 'ad_sets, inseridas', totalRowsInserted, 'linhas');
+      }
+    } catch (e) {
+      console.warn('[sync] insights_by_district skip:', e.message);
+    }
+  }
+
   if (platform === 'meta' && handler.fetchAccountInsights) {
     try {
       const insights = await handler.fetchAccountInsights(creds, { level: 'campaign' });

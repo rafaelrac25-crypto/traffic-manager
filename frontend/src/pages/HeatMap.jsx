@@ -16,6 +16,7 @@ import 'leaflet/dist/leaflet.css';
 import { useAppState } from '../contexts/AppStateContext';
 import { buildHeatMapData, METRIC_CONFIG } from '../data/districtPerformance';
 import { HOME_COORDS } from '../data/joinvilleDistricts';
+import { fetchDistrictInsights } from '../data/districtInsights';
 
 const PERIODS = [
   { v: 7,         l: '7 dias'  },
@@ -390,6 +391,64 @@ function CampaignDetailPanel({ ad, data, daysFilter, history, onUpdateBudget }) 
   );
 }
 
+/* Badge no topo do HeatMap mostrando se os números são reais (insights da
+   Meta agregados por bairro) ou estimativa (distribuição derivada dos anéis
+   de segmentação enquanto o Meta ainda não devolveu breakdown). */
+function DataSourceBadge({ loading, dataSource }) {
+  let bg, border, color, icon, text, title;
+
+  if (loading || !dataSource) {
+    bg = 'var(--c-surface)';
+    border = 'var(--c-border)';
+    color = 'var(--c-text-4)';
+    icon = '⏳';
+    text = 'Carregando...';
+    title = 'Verificando fonte do dado...';
+  } else if (dataSource === 'real') {
+    /* Verde — Meta entregou dado por bairro */
+    bg = 'rgba(34, 197, 94, 0.10)';
+    border = 'rgba(34, 197, 94, 0.45)';
+    color = 'rgb(21, 128, 61)';
+    icon = '🟢';
+    text = 'Dado real do Meta';
+    title = 'Performance verdadeira por bairro vinda direto da Meta Ads API';
+  } else {
+    /* Amarelo — estimativa */
+    bg = 'rgba(250, 204, 21, 0.14)';
+    border = 'rgba(202, 138, 4, 0.45)';
+    color = 'rgb(161, 98, 7)';
+    icon = '🟡';
+    text = 'Estimativa';
+    title = 'Meta libera dado real ~24h após a 1ª campanha começar a entregar';
+  }
+
+  return (
+    <span
+      title={title}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: '6px',
+        padding: '4px 10px', borderRadius: '999px',
+        background: bg, border: `1px solid ${border}`,
+        color, fontSize: '11.5px', fontWeight: 700,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      <span style={{ fontSize: '10px' }}>{icon}</span>
+      <span>{text}</span>
+      {dataSource === 'estimated' && (
+        <span style={{ fontWeight: 500, opacity: 0.85, fontSize: '10.5px' }}>
+          — Meta libera real em ~24h
+        </span>
+      )}
+      {dataSource === 'real' && (
+        <span style={{ fontWeight: 500, opacity: 0.85, fontSize: '10.5px' }}>
+          — performance verdadeira por bairro
+        </span>
+      )}
+    </span>
+  );
+}
+
 function SummaryCard({ label, value, sub, color }) {
   return (
     <div style={{
@@ -454,6 +513,31 @@ export default function HeatMap() {
   const [metric, setMetric] = useState('conversions');
   const [campaignId, setCampaignId] = useState('all');
 
+  /* Insights vindos do backend (/api/campaigns/analytics/districts).
+     Carrega em paralelo ao render — usado pra mostrar a fonte do dado
+     (real Meta vs estimativa por anel) e melhorar o empty state. */
+  const [insights, setInsights] = useState(null);
+  const [insightsLoading, setInsightsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setInsightsLoading(true);
+    fetchDistrictInsights().then((data) => {
+      if (cancelled) return;
+      setInsights(data);
+      setInsightsLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  /* data_source vem do backend novo. Backend antigo nao manda — fica null
+     e mostramos badge cinza "Carregando...". Assim o frontend nao quebra
+     se o deploy do backend ainda nao subiu. */
+  const dataSource = insights?.data_source ?? null;
+  const dataQuality = insights?.dataQuality ?? null;
+  const isEstimated = dataSource === 'estimated';
+  const isReal = dataSource === 'real';
+
   const activeAds = useMemo(() => (ads || []).filter((a) => Number(a.budgetValue) > 0), [ads]);
   const selectedAd = useMemo(() => {
     if (campaignId === 'all') return null;
@@ -486,9 +570,12 @@ export default function HeatMap() {
       {/* Cabeçalho */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', marginBottom: '18px' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
-            Mapa de Calor
-          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '6px' }}>
+            <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--c-text-1)', margin: 0 }}>
+              Mapa de Calor
+            </h1>
+            <DataSourceBadge loading={insightsLoading} dataSource={dataSource} />
+          </div>
           <p style={{ fontSize: '13px', color: 'var(--c-text-3)', margin: 0, maxWidth: '640px' }}>
             Visualização térmica das regiões de Joinville por performance das campanhas. Azul = frio, vermelho = quente.
           </p>
@@ -586,8 +673,10 @@ export default function HeatMap() {
         </div>
       )}
 
-      {/* Aguardando insights reais por bairro do Meta */}
-      {activeAds.length > 0 && (
+      {/* Aguardando insights reais por bairro do Meta.
+          Mostrado quando ha campanhas ativas mas o Meta ainda nao devolveu
+          breakdown por regiao (dado insuficiente E fonte ainda estimada). */}
+      {activeAds.length > 0 && dataQuality === 'insufficient' && (isEstimated || !dataSource) && (
         <div style={{
           padding: '32px 24px', textAlign: 'center',
           background: 'var(--c-card-bg)', border: '1px dashed var(--c-border)',
@@ -595,11 +684,22 @@ export default function HeatMap() {
         }}>
           <div style={{ fontSize: '32px', marginBottom: '8px' }}>🌡️</div>
           <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '6px' }}>
-            Aguardando insights por bairro
+            Ainda sem dados de bairro
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--c-text-3)', maxWidth: '480px', margin: '0 auto', lineHeight: 1.5 }}>
-            O mapa de calor vai aparecer automaticamente quando o Meta começar a enviar o desempenho por região das suas campanhas ativas. Isso geralmente leva alguns dias após a primeira veiculação.
+          <div style={{ fontSize: '12.5px', color: 'var(--c-text-3)', maxWidth: '500px', margin: '0 auto 14px', lineHeight: 1.55 }}>
+            Quando você publicar uma campanha, o Meta começa a coletar performance
+            por região em ~24 horas. O mapa fica colorido conforme o dado chega.
           </div>
+          <button
+            onClick={() => navigate('/criar-anuncio')}
+            style={{
+              padding: '9px 16px', borderRadius: '10px',
+              background: 'var(--c-accent)', border: 'none', color: '#fff',
+              fontSize: '12.5px', fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            Publicar campanha
+          </button>
         </div>
       )}
 
@@ -657,6 +757,14 @@ export default function HeatMap() {
                           <span style={{ color: '#666' }}>
                             {d.conversions} conv · {d.clicks} cliq · R$&nbsp;{d.spend.toFixed(2)}
                           </span>
+                          {isEstimated && (
+                            <>
+                              <br/>
+                              <span style={{ color: '#a16207', fontStyle: 'italic', fontSize: '10px' }}>
+                                (estimativa)
+                              </span>
+                            </>
+                          )}
                         </div>
                       </Tooltip>
                     </CircleMarker>

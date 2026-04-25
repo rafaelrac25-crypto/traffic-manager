@@ -163,6 +163,16 @@ CREATE TABLE IF NOT EXISTS insights_by_district (
   fetched_at TIMESTAMP DEFAULT NOW()
 );
 
+/* Migração idempotente — ad_set_id (ID do conjunto Meta) + ring_key
+   (primario/medio/externo) pra agregar performance por anel sem
+   precisar reler payload. */
+ALTER TABLE insights_by_district ADD COLUMN IF NOT EXISTS ad_set_id VARCHAR(64);
+ALTER TABLE insights_by_district ADD COLUMN IF NOT EXISTS ring_key VARCHAR(20);
+ALTER TABLE insights_by_district ADD COLUMN IF NOT EXISTS region VARCHAR(120);
+ALTER TABLE insights_by_district ADD COLUMN IF NOT EXISTS city VARCHAR(120);
+
 CREATE INDEX IF NOT EXISTS idx_insights_campaign_date ON insights(campaign_id, date_start);
 CREATE INDEX IF NOT EXISTS idx_insights_district ON insights_by_district(district, date_start);
 CREATE INDEX IF NOT EXISTS idx_insights_district_service ON insights_by_district(district, service);
+CREATE INDEX IF NOT EXISTS idx_insights_ring ON insights_by_district(ring_key, date_start);
+CREATE INDEX IF NOT EXISTS idx_insights_adset ON insights_by_district(ad_set_id, date_start);

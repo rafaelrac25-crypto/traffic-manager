@@ -975,6 +975,254 @@ function HistoricalComparisonCard({ onViewCalendar }) {
   );
 }
 
+/* ── Performance por anel (dado real do Meta) ──
+   Consome GET /api/campaigns/analytics/rings, mostra 3 colunas (primário/médio/externo)
+   com investido + conversões + custo por resultado. Destaca o anel com MENOR cpr. */
+const RING_VISUAL = {
+  primario: { emoji: '🟢', color: '#16A34A', bg: '#DCFCE7', hint: 'perto do salão' },
+  medio:    { emoji: '🟡', color: '#CA8A04', bg: '#FEF9C3', hint: 'distância média' },
+  externo:  { emoji: '🔴', color: '#DC2626', bg: '#FEE2E2', hint: 'mais longe' },
+};
+
+function RingPerformanceCard() {
+  const [state, setState] = useState({ status: 'loading', data: null, error: null });
+
+  const fetchRings = async () => {
+    setState(prev => ({ ...prev, status: prev.data ? 'refetching' : 'loading' }));
+    try {
+      const res = await fetch('/api/campaigns/analytics/rings');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setState({ status: 'ok', data, error: null });
+    } catch (err) {
+      setState(prev => ({ ...prev, status: 'error', error: err?.message || 'fetch failed' }));
+    }
+  };
+
+  useEffect(() => {
+    fetchRings();
+    const id = setInterval(fetchRings, 5 * 60 * 1000); /* refetch a cada 5min */
+    return () => clearInterval(id);
+  }, []);
+
+  const cardWrap = (children) => (
+    <section
+      aria-label="Performance por anel de distância"
+      className="ccb-card"
+      style={{
+        background: 'var(--c-card-bg)',
+        borderRadius: '16px',
+        border: '1px solid var(--c-border)',
+        padding: '20px 24px',
+        boxShadow: '0 2px 8px var(--c-shadow)',
+        marginBottom: '20px',
+      }}
+    >
+      <div style={{
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+        gap: '12px', marginBottom: '14px', flexWrap: 'wrap',
+      }}>
+        <div>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '3px' }}>
+            Performance por anel
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>
+            Dado real do Meta — qual distância está convertendo melhor
+          </div>
+        </div>
+        <button
+          onClick={fetchRings}
+          aria-label="Atualizar performance por anel"
+          disabled={state.status === 'loading' || state.status === 'refetching'}
+          style={{
+            background: 'none', border: '1.5px solid var(--c-border)',
+            color: 'var(--c-text-3)', borderRadius: '8px',
+            padding: '5px 12px', fontSize: '11px', fontWeight: 600,
+            cursor: (state.status === 'loading' || state.status === 'refetching') ? 'default' : 'pointer',
+            opacity: (state.status === 'loading' || state.status === 'refetching') ? 0.5 : 1,
+          }}
+        >
+          {state.status === 'refetching' ? 'Atualizando…' : 'Atualizar'}
+        </button>
+      </div>
+      {children}
+    </section>
+  );
+
+  /* Loading skeleton */
+  if (state.status === 'loading') {
+    return cardWrap(
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+        gap: '12px',
+      }}>
+        {[0, 1, 2].map(i => (
+          <div key={i} style={{
+            background: 'var(--c-surface)', borderRadius: '12px',
+            padding: '14px 16px', minHeight: '128px',
+            border: '1px solid var(--c-border-lt)',
+          }}>
+            <div style={{ width: '60%', height: '12px', background: 'var(--c-border)', borderRadius: '4px', marginBottom: '10px', opacity: 0.6 }} />
+            <div style={{ width: '40%', height: '10px', background: 'var(--c-border)', borderRadius: '4px', marginBottom: '16px', opacity: 0.45 }} />
+            <div style={{ width: '80%', height: '10px', background: 'var(--c-border)', borderRadius: '4px', marginBottom: '6px', opacity: 0.45 }} />
+            <div style={{ width: '70%', height: '10px', background: 'var(--c-border)', borderRadius: '4px', marginBottom: '6px', opacity: 0.45 }} />
+            <div style={{ width: '85%', height: '10px', background: 'var(--c-border)', borderRadius: '4px', opacity: 0.45 }} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  /* Erro */
+  if (state.status === 'error') {
+    return cardWrap(
+      <div style={{
+        padding: '24px 16px', textAlign: 'center',
+        background: '#FEF2F2', borderRadius: '10px',
+        border: '1px dashed #FCA5A5',
+      }}>
+        <div style={{ fontSize: '20px', marginBottom: '6px' }}>⚠️</div>
+        <div style={{ fontSize: '12px', fontWeight: 600, color: '#B91C1C', marginBottom: '10px' }}>
+          Não foi possível carregar performance por anel
+        </div>
+        <button
+          onClick={fetchRings}
+          style={{
+            background: 'var(--c-accent)', color: '#fff',
+            border: 'none', borderRadius: '8px',
+            padding: '6px 14px', fontSize: '11px', fontWeight: 700,
+            cursor: 'pointer',
+          }}
+        >
+          Tentar novamente
+        </button>
+      </div>
+    );
+  }
+
+  const data = state.data || {};
+  const rings = Array.isArray(data.rings) ? data.rings : [];
+  const totalSpend = Number(data.total?.spend || 0);
+  const isEmpty = data.data_source === 'empty' || totalSpend === 0;
+
+  /* Empty state amigável */
+  if (isEmpty) {
+    return cardWrap(
+      <div style={{
+        padding: '28px 16px', textAlign: 'center',
+        background: 'var(--c-surface)', borderRadius: '10px',
+        border: '1px dashed var(--c-border)',
+      }}>
+        <div style={{ fontSize: '24px', marginBottom: '6px' }}>⏳</div>
+        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
+          Aguardando primeiros dados
+        </div>
+        <div style={{ fontSize: '12px', color: 'var(--c-text-3)', maxWidth: '420px', margin: '0 auto', lineHeight: 1.5 }}>
+          O Meta libera as informações em torno de <strong>24h</strong> depois que sua campanha começa a entregar.
+        </div>
+      </div>
+    );
+  }
+
+  /* Encontra o anel com MENOR cpr (melhor) — só conta se cpr > 0 */
+  const ringsWithCpr = rings.filter(r => r && Number(r.cpr) > 0);
+  const bestRingKey = ringsWithCpr.length
+    ? ringsWithCpr.reduce((best, r) => (Number(r.cpr) < Number(best.cpr) ? r : best)).ring_key
+    : null;
+
+  /* Garante a ordem fixa primário → médio → externo, mesmo se o backend mandar fora de ordem */
+  const RING_ORDER = ['primario', 'medio', 'externo'];
+  const ringsOrdered = RING_ORDER
+    .map(key => rings.find(r => r && r.ring_key === key))
+    .filter(Boolean);
+
+  return cardWrap(
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+      gap: '12px',
+    }}>
+      {ringsOrdered.map(ring => {
+        const visual = RING_VISUAL[ring.ring_key] || { emoji: '⚪', color: 'var(--c-text-3)', bg: 'var(--c-surface)', hint: '' };
+        const isBest = ring.ring_key === bestRingKey;
+        const conv = Number(ring.conversions || 0);
+        const spend = Number(ring.spend || 0);
+        const cpr = Number(ring.cpr || 0);
+
+        return (
+          <div
+            key={ring.ring_key}
+            style={{
+              background: 'var(--c-card-bg)',
+              borderRadius: '12px',
+              padding: '14px 16px',
+              border: isBest ? `2px solid ${visual.color}` : '1px solid var(--c-border)',
+              boxShadow: isBest ? `0 2px 12px ${visual.color}22` : '0 1px 4px var(--c-shadow)',
+              display: 'flex', flexDirection: 'column', gap: '10px',
+              position: 'relative',
+            }}
+          >
+            {isBest && (
+              <div style={{
+                position: 'absolute', top: '-10px', right: '12px',
+                background: visual.color, color: '#fff',
+                fontSize: '10px', fontWeight: 700,
+                padding: '3px 9px', borderRadius: '10px',
+                display: 'inline-flex', alignItems: 'center', gap: '4px',
+                letterSpacing: '.3px',
+                boxShadow: `0 2px 6px ${visual.color}55`,
+              }}>
+                🏆 Melhor retorno
+              </div>
+            )}
+
+            {/* Cabeçalho do anel */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '18px' }} aria-hidden="true">{visual.emoji}</span>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', lineHeight: 1.2 }}>
+                  {ring.ring_label || ring.ring_key}
+                </div>
+                {visual.hint && (
+                  <div style={{ fontSize: '10px', color: 'var(--c-text-4)', marginTop: '1px' }}>
+                    {visual.hint}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Métricas */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '8px' }}>
+                <span style={{ fontSize: '11px', color: 'var(--c-text-3)', fontWeight: 500 }}>Investido</span>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)' }}>
+                  {fmtBRL(spend)}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '8px' }}>
+                <span style={{ fontSize: '11px', color: 'var(--c-text-3)', fontWeight: 500 }}>Conversões</span>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)' }}>
+                  {conv.toLocaleString('pt-BR')}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '8px' }}>
+                <span style={{ fontSize: '11px', color: 'var(--c-text-3)', fontWeight: 500 }}>Custo por resultado</span>
+                <span style={{
+                  fontSize: '13px', fontWeight: 700,
+                  color: isBest ? visual.color : 'var(--c-text-1)',
+                }}>
+                  {conv > 0 && cpr > 0 ? fmtBRL(cpr) : '—'}
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ── Card alerta CPC alto ── */
 function CpcAlertCard({ ads, benchmark, benchmarkLabel, onOpenAds }) {
   if (!ads.length) {
@@ -1287,6 +1535,9 @@ export default function Dashboard() {
         onCreate={() => navigate('/criar-anuncio')}
         onOpenCampaigns={() => navigate('/anuncios')}
       />
+
+      {/* ── Performance por anel (dado real do Meta) ── */}
+      <RingPerformanceCard />
 
       {/* ── Linha: saldo + alerta CPC + desempenho por anel ── */}
       <div style={{

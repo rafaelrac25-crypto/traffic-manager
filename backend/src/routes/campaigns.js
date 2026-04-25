@@ -406,12 +406,88 @@ router.post('/sync-meta-status', async (req, res) => {
   }
 });
 
-/* Insights agregados por BAIRRO: somamos métricas por ad_set e expandimos pra
-   os bairros de cada ad_set (guardados no payload). Se houver múltiplas
-   campanhas histórico, agrega por bairro independente da campanha.
-   Retorna [{district, spend, clicks, impressions, conversions, cpr, adCount}]. */
+/* Insights agregados por BAIRRO.
+   Estratégia em 2 níveis:
+     1) Tenta dado REAL: agregação direta de `insights_by_district` (preenchida
+        pelo sync do Meta com breakdown por região/cidade nos últimos 30 dias).
+     2) Se não houver linha real, cai no fallback EQUITATIVO antigo: distribui
+        métricas da campaign entre seus bairros (estimativa baseada no payload).
+   Retorna { districts, avgCPR, totalConv, totalSpend, dataQuality,
+             data_source: 'real'|'estimated', _diagnostics }. */
 router.get('/analytics/districts', async (req, res) => {
   try {
+    /* Janela de 30 dias — comparamos como string ISO (YYYY-MM-DD...) que é
+       lexicograficamente comparável e funciona em SQLite e Postgres. */
+    const sinceIso = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    /* PARTE 1: tenta dado real do insights_by_district */
+    let realRows = [];
+    try {
+      const realQuery = await db.query(
+        `SELECT district,
+                SUM(spend) AS spend,
+                SUM(clicks) AS clicks,
+                SUM(impressions) AS impressions,
+                SUM(conversions) AS conversions,
+                COUNT(DISTINCT ad_set_id) AS ad_count
+           FROM insights_by_district
+          WHERE date_start >= ?
+          GROUP BY district
+         HAVING SUM(spend) > 0 OR SUM(conversions) > 0`,
+        [sinceIso]
+      );
+      realRows = realQuery.rows || [];
+    } catch (e) {
+      /* Tabela pode não existir em ambientes muito antigos — log mas não quebra */
+      console.warn('[analytics/districts] query real falhou, usando fallback:', e.message);
+    }
+
+    if (realRows.length >= 1) {
+      /* Tem dado real — usa direto */
+      const result = realRows.map(r => {
+        const spend = Number(r.spend || 0);
+        const clicks = Number(r.clicks || 0);
+        const impressions = Number(r.impressions || 0);
+        const conversions = Number(r.conversions || 0);
+        return {
+          district: r.district,
+          spend: Number(spend.toFixed(2)),
+          clicks: Math.round(clicks),
+          impressions: Math.round(impressions),
+          conversions: Math.round(conversions),
+          adCount: Number(r.ad_count || 0),
+          cpr: conversions > 0 ? Number((spend / conversions).toFixed(2)) : null,
+          cpc: clicks > 0 ? Number((spend / clicks).toFixed(2)) : null,
+        };
+      }).sort((a, b) => {
+        /* Menor CPR primeiro (melhor retorno). Bairros sem conversão ao final. */
+        if (a.cpr == null && b.cpr == null) return 0;
+        if (a.cpr == null) return 1;
+        if (b.cpr == null) return -1;
+        return a.cpr - b.cpr;
+      });
+
+      const totalConv = result.reduce((s, r) => s + r.conversions, 0);
+      const totalSpend = result.reduce((s, r) => s + r.spend, 0);
+      const avgCPR = totalConv > 0 ? Number((totalSpend / totalConv).toFixed(2)) : null;
+
+      return res.json({
+        districts: result,
+        avgCPR,
+        totalConv,
+        totalSpend: Number(totalSpend.toFixed(2)),
+        dataQuality: result.length > 0 && totalConv >= 10 ? 'usable' : 'insufficient',
+        data_source: 'real',
+        _diagnostics: {
+          source: 'insights_by_district',
+          window_days: 30,
+          since: sinceIso,
+          rows_found: realRows.length,
+        },
+      });
+    }
+
+    /* PARTE 2: fallback equitativo (sem dado real) */
     const camps = await db.query(
       `SELECT id, name, platform_campaign_id, spent, clicks, impressions, conversions, payload
          FROM campaigns
@@ -427,14 +503,7 @@ router.get('/analytics/districts', async (req, res) => {
     for (const c of camps.rows) {
       let payload = {};
       try { payload = c.payload ? JSON.parse(c.payload) : {}; } catch {}
-      const adSets = payload?.metaPublishResult?.ad_sets || [];
       const locations = payload?.locations || [];
-
-      /* Mapeia bairros por anel a partir do payload original */
-      const byRing = { primario: [], medio: [], externo: [] };
-      (locations || []).forEach(l => {
-        /* Aproximação: cada anel recebe porção equitativa se sem metadata */
-      });
 
       if (!Array.isArray(locations) || locations.length === 0) {
         skipped.no_locations++;
@@ -509,9 +578,11 @@ router.get('/analytics/districts', async (req, res) => {
       totalConv,
       totalSpend: Number(totalSpend.toFixed(2)),
       dataQuality: result.length > 0 && totalConv >= 10 ? 'usable' : 'insufficient',
+      data_source: 'estimated',
       /* Telemetria visível pro frontend pode mostrar "X campanhas sem bairros"
          em vez de HeatMap vazio sem explicação. */
       _diagnostics: {
+        source: 'campaigns.payload (fallback equitativo)',
         campaigns_total: camps.rows.length,
         campaigns_aggregated: camps.rows.length - skipped.no_locations - skipped.no_named_locations,
         skipped_no_locations: skipped.no_locations,
@@ -520,6 +591,89 @@ router.get('/analytics/districts', async (req, res) => {
     });
   } catch (err) {
     console.error('[analytics/districts]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* Performance agregada por ANEL (primário/médio/externo) — usa dado REAL do
+   Meta a partir de `insights_by_district.ring_key`. Sempre retorna 3 entradas
+   (preenche zeros se não houver dado pra algum anel) — facilita render do
+   card de "Performance por anel" sem branches no frontend. */
+router.get('/analytics/rings', async (req, res) => {
+  try {
+    const sinceIso = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    /* Definição canônica dos anéis — ordem fixa primario → medio → externo */
+    const RING_DEFS = [
+      { key: 'primario', label: 'Primário (0-5km)' },
+      { key: 'medio',    label: 'Médio (5-7km)'    },
+      { key: 'externo',  label: 'Externo (7-8km)'  },
+    ];
+
+    let rows = [];
+    try {
+      const q = await db.query(
+        `SELECT ring_key,
+                SUM(spend) AS spend,
+                SUM(clicks) AS clicks,
+                SUM(impressions) AS impressions,
+                SUM(conversions) AS conversions,
+                COUNT(DISTINCT ad_set_id) AS ad_set_count
+           FROM insights_by_district
+          WHERE date_start >= ? AND ring_key IS NOT NULL
+          GROUP BY ring_key`,
+        [sinceIso]
+      );
+      rows = q.rows || [];
+    } catch (e) {
+      console.warn('[analytics/rings] query falhou:', e.message);
+    }
+
+    /* Indexa por ring_key pra preencher os 3 anéis canônicos */
+    const byKey = {};
+    for (const r of rows) byKey[r.ring_key] = r;
+
+    const rings = RING_DEFS.map(def => {
+      const r = byKey[def.key] || {};
+      const spend = Number(r.spend || 0);
+      const clicks = Number(r.clicks || 0);
+      const impressions = Number(r.impressions || 0);
+      const conversions = Number(r.conversions || 0);
+      const ad_set_count = Number(r.ad_set_count || 0);
+      return {
+        ring_key: def.key,
+        ring_label: def.label,
+        spend: Number(spend.toFixed(2)),
+        clicks: Math.round(clicks),
+        impressions: Math.round(impressions),
+        conversions: Math.round(conversions),
+        cpr: conversions > 0 ? Number((spend / conversions).toFixed(2)) : null,
+        cpc: clicks > 0 ? Number((spend / clicks).toFixed(2)) : null,
+        ad_set_count,
+      };
+    });
+
+    const total = rings.reduce(
+      (acc, r) => ({
+        spend: acc.spend + r.spend,
+        clicks: acc.clicks + r.clicks,
+        conversions: acc.conversions + r.conversions,
+      }),
+      { spend: 0, clicks: 0, conversions: 0 }
+    );
+    total.spend = Number(total.spend.toFixed(2));
+
+    /* Empty state implícito: total spend == 0 → frontend mostra "aguardando dados" */
+    const data_source = total.spend > 0 || total.conversions > 0 ? 'real' : 'empty';
+
+    res.json({
+      rings,
+      total,
+      data_source,
+      generated_at: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error('[analytics/rings]', err);
     res.status(500).json({ error: err.message });
   }
 });
