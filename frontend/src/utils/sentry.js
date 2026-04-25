@@ -24,6 +24,7 @@ export function initSentry() {
   Sentry.init({
     dsn,
     environment: import.meta.env.MODE,
+    release: 'traffic-manager@1.0.0',
     /* 10% das navegações geram traces de performance — suficiente pra
        diagnóstico sem estourar quota free tier. */
     tracesSampleRate: 0.1,
