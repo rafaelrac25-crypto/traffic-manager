@@ -1,14 +1,10 @@
-const { decrypt } = require('./crypto');
+const { safeDecrypt } = require('./crypto');
 const { uploadImage } = require('./metaMedia');
 const { metaRequest } = require('./metaHttp');
 
 function getToken(creds) {
   if (!creds?.access_token) throw new Error('Plataforma não conectada');
-  if (String(creds.access_token).includes(':')) {
-    try { return decrypt(creds.access_token); }
-    catch { return creds.access_token; }
-  }
-  return creds.access_token;
+  return safeDecrypt(creds.access_token, 'metaWrite');
 }
 
 /* Thin wrapper: preserva a assinatura antiga `request(method, path, params, {token})`
@@ -116,6 +112,11 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
      achar, remove o interesse (melhor broader do que rejeitar).
      Usa metaGet pra herdar timeout + rate limit + auto-reconnect em 190/102. */
   const { metaGet } = require('./metaHttp');
+  /* Lista de interesses descartados (Meta não achou match) — propagada pro
+     resultado final pra que o frontend possa avisar a Cris ("interesse X
+     não foi encontrado, anúncio segue mais broader"). Antes era descarte
+     silencioso, agora fica visível. */
+  const droppedInterests = [];
   async function resolveInterestIds(interests) {
     if (!Array.isArray(interests) || interests.length === 0) return [];
     const resolved = [];
@@ -123,7 +124,7 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
       const name = it?.name || (typeof it === 'string' ? it : null);
       const hasValidId = it?.id && !String(it.id).startsWith('interest_');
       if (hasValidId) { resolved.push({ id: it.id, name: it.name || name }); continue; }
-      if (!name) continue;
+      if (!name) { droppedInterests.push({ name: null, reason: 'sem_nome' }); continue; }
       try {
         const result = await metaGet('/search', {
           type: 'adinterest',
@@ -131,9 +132,16 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
           limit: 1,
         }, { token });
         const first = result?.data?.[0];
-        if (first?.id) resolved.push({ id: first.id, name: first.name || name });
-        /* Sem match → simplesmente não inclui esse interesse */
-      } catch { /* ignora erro de search — só não inclui */ }
+        if (first?.id) {
+          resolved.push({ id: first.id, name: first.name || name });
+        } else {
+          console.warn('[metaWrite] interesse descartado (sem match no Meta):', name);
+          droppedInterests.push({ name, reason: 'sem_match' });
+        }
+      } catch (e) {
+        console.warn('[metaWrite] interesse descartado (erro search):', name, e.message);
+        droppedInterests.push({ name, reason: 'erro_search', error: e.message });
+      }
     }
     return resolved;
   }
@@ -188,15 +196,29 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
      loga e continua (não ofusca o erro original). */
   let createdCampaignId = null;
   let createdCreativeId = null;
+  /* Rastreia ad_sets/ads criados antes da falha pra logging detalhado.
+     Cleanup da Campaign cascateia no Meta, mas pro debug é útil saber
+     QUAIS ad_sets chegaram a ser criados antes do erro. */
+  const createdAdSets = [];
+  const createdAds = [];
   async function cleanupOrphans() {
+    console.warn('[cleanup] iniciando — campaign:', createdCampaignId, 'creative:', createdCreativeId, 'ad_sets:', createdAdSets.length, 'ads:', createdAds.length);
+    if (createdAdSets.length > 0) console.warn('[cleanup] ad_sets criados antes da falha:', createdAdSets.join(', '));
+    if (createdAds.length > 0) console.warn('[cleanup] ads criados antes da falha:', createdAds.join(', '));
     if (createdCreativeId) {
-      try { await request('DELETE', `/${createdCreativeId}`, {}, { token }); }
-      catch (e) { console.warn('[cleanup] creative falhou:', createdCreativeId, e.message); }
+      try {
+        await request('DELETE', `/${createdCreativeId}`, {}, { token });
+        console.warn('[cleanup] creative deletado:', createdCreativeId);
+      }
+      catch (e) { console.warn('[cleanup] creative DELETE falhou:', createdCreativeId, e.message); }
     }
     if (createdCampaignId) {
       /* Deletar a Campaign cascateia pra AdSets e Ads filhos no Meta */
-      try { await request('DELETE', `/${createdCampaignId}`, {}, { token }); }
-      catch (e) { console.warn('[cleanup] campaign falhou:', createdCampaignId, e.message); }
+      try {
+        await request('DELETE', `/${createdCampaignId}`, {}, { token });
+        console.warn('[cleanup] campaign deletada (cascade pra ad_sets/ads):', createdCampaignId);
+      }
+      catch (e) { console.warn('[cleanup] campaign DELETE falhou:', createdCampaignId, e.message); }
     }
   }
 
@@ -237,14 +259,23 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
 
   /* CTA compatível com objective — Meta v20 rejeita (erro 1487891) creative
      cujo call_to_action.type não combina com o objetivo da campanha.
-     Pro objetivo Mensagens (OUTCOME_ENGAGEMENT + CONVERSATIONS), força CTA
-     de família messaging se o payload chegou com algo incompatível. */
+     Pro objetivo Mensagens (OUTCOME_ENGAGEMENT + optimization_goal=CONVERSATIONS),
+     força CTA de família messaging.
+
+     IMPORTANTE: distinguir Mensagens (CONVERSATIONS) de Engajamento de Posts
+     (POST_ENGAGEMENT) — ambos mapeiam pra OUTCOME_ENGAGEMENT no Meta v20 ODAX,
+     mas só o primeiro precisa de CTA messaging. Antes detectávamos só pelo
+     objective; isso fazia engagement (curtidas/comentários) ser tratado
+     como messaging e LEARN_MORE virava MESSAGE_PAGE silenciosamente. Agora
+     olhamos o optimization_goal real dos ad_sets pra decidir. */
   const MESSAGING_CTAS = ['WHATSAPP_MESSAGE', 'MESSAGE_PAGE', 'CALL_NOW', 'SEND_MESSAGE'];
-  const isMessagesCampaign = c.objective === 'OUTCOME_ENGAGEMENT' || c.objective === 'OUTCOME_LEADS';
+  const hasConversationsGoal = adSetsList.some(a => a?.optimization_goal === 'CONVERSATIONS');
+  const isMessagesCampaign = hasConversationsGoal || c.objective === 'OUTCOME_LEADS';
   function enforceMessagingCTA(ctaObj) {
     if (!isMessagesCampaign) return ctaObj;
     const current = ctaObj?.type;
     if (!current || !MESSAGING_CTAS.includes(current)) {
+      console.warn('[metaWrite] CTA', current || '(vazio)', '→ MESSAGE_PAGE (campanha de mensagens exige CTA messaging)');
       return { ...ctaObj, type: 'MESSAGE_PAGE' };
     }
     return ctaObj;
@@ -344,6 +375,7 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
       throw e;
     }
     const adSetId = asResp.id;
+    createdAdSets.push(adSetId);
 
     const baseAdName = metaPayload.ad.name || a.name;
     const adName = adSetsList.length > 1 ? `${baseAdName} — Anúncio ${i + 1}` : baseAdName;
@@ -359,6 +391,7 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
       e.message = `Falha ao criar Ad "${adName}" (anel ${i + 1}/${adSetsList.length}): ${e.message}`;
       throw e;
     }
+    createdAds.push(adResp.id);
 
     adSetResults.push({
       ad_set_id:     adSetId,
@@ -374,6 +407,10 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
     creative_id:          creativeId,
     uploaded_images:      uploadedImages,
     ad_sets:              adSetResults,
+    /* Interesses descartados durante resolveInterestIds — frontend exibe
+       um aviso ("Avise a Cris: 2 interesses não foram aplicados") em vez
+       do descarte silencioso anterior. */
+    dropped_interests:    droppedInterests,
     /* Campos legados — apontam pro primeiro ad set/ad criado */
     ad_set_id:            adSetResults[0]?.ad_set_id || null,
     ad_id:                adSetResults[0]?.ad_id || null,

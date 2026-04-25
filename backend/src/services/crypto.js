@@ -34,4 +34,27 @@ function decrypt(combined) {
   return Buffer.concat([decipher.update(enc), decipher.final()]).toString('utf8');
 }
 
-module.exports = { encrypt, decrypt };
+/* Detecta o formato `<iv_b64>:<tag_b64>:<enc_b64>` produzido por encrypt().
+   Tokens long-lived do Meta SÃO strings opacas sem ':' (alfanuméricas).
+   Detectar por regex exato de 3 segmentos base64 em vez de heurística
+   `includes(':')` evita falsos positivos caso o Meta mude o formato. */
+const ENCRYPTED_TOKEN_RE = /^[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]+$/;
+function isEncryptedToken(s) {
+  if (s == null) return false;
+  return ENCRYPTED_TOKEN_RE.test(String(s));
+}
+
+/* Wrapper conveniente: se parece encriptado, tenta decrypt — se falhar
+   (chave errada, formato batido), devolve o original e loga warn em vez
+   de explodir. Substitui o try/catch repetido em metaWrite/metaAds/metaMedia/metaToken. */
+function safeDecrypt(s, label = 'token') {
+  if (!s) return s;
+  if (!isEncryptedToken(s)) return s;
+  try { return decrypt(s); }
+  catch (e) {
+    console.warn(`[crypto] safeDecrypt(${label}) falhou, devolvendo cru:`, e.message);
+    return s;
+  }
+}
+
+module.exports = { encrypt, decrypt, isEncryptedToken, safeDecrypt };

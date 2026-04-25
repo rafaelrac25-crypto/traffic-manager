@@ -14,16 +14,26 @@ router.get('/meta', (req, res) => {
 router.post('/meta', async (req, res) => {
   const sig = req.header('x-hub-signature-256');
   const appSecret = process.env.FB_APP_SECRET;
-  if (!sig || !appSecret) return res.status(401).send('unauthorized');
+  if (!sig || !appSecret) {
+    /* Defensivo: se o secret sumir do ambiente (ex.: rotação no Vercel sem
+       redeploy), webhook começa a 401 silenciosamente e o painel fica
+       desatualizado. Loga ALTO pra Sentry/Vercel pegarem. */
+    console.warn('[webhook/meta] rejeitado: ', !sig ? 'header x-hub-signature-256 ausente' : 'FB_APP_SECRET ausente no ambiente');
+    return res.status(401).send('unauthorized');
+  }
   const raw = req.rawBody || JSON.stringify(req.body || {});
   const expected = 'sha256=' + crypto.createHmac('sha256', appSecret).update(raw).digest('hex');
   try {
     const a = Buffer.from(sig);
     const b = Buffer.from(expected);
     if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+      /* Signature mismatch persistente = secret divergente entre Meta App
+         e Vercel (FB_APP_SECRET foi rotacionado de um lado só). */
+      console.warn('[webhook/meta] signature mismatch — verifique se FB_APP_SECRET no Vercel bate com o App Secret atual no Meta');
       return res.status(401).send('invalid signature');
     }
-  } catch {
+  } catch (e) {
+    console.warn('[webhook/meta] erro ao validar signature:', e.message);
     return res.status(401).send('invalid signature');
   }
 

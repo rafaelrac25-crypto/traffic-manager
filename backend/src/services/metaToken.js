@@ -13,7 +13,7 @@
  */
 
 const https = require('https');
-const { encrypt, decrypt } = require('./crypto');
+const { encrypt, safeDecrypt } = require('./crypto');
 const db = require('../db');
 
 const API_VERSION = 'v20.0';
@@ -47,11 +47,7 @@ function daysUntil(iso) {
 
 function getRawToken(creds) {
   if (!creds?.access_token) return null;
-  if (String(creds.access_token).includes(':')) {
-    try { return decrypt(creds.access_token); }
-    catch { return creds.access_token; }
-  }
-  return creds.access_token;
+  return safeDecrypt(creds.access_token, 'metaToken');
 }
 
 /* Lock por plataforma pra evitar race condition em refresh concorrente.

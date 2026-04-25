@@ -3266,7 +3266,13 @@ export default function CreateAd() {
 
       // Integração Meta
       pixelId:       pixel?.enabled ? pixel.pixelId : null,
-      metaAccountId: metaAccount?.pageId || null,
+      /* metaPageId é o ID da Facebook Page (necessário pro creative
+         object_story_spec.page_id). Antes era enviado como `metaAccountId`
+         — nome confuso porque metaAccount.pageId NÃO é o ad account ID
+         (que é creds.account_id, vindo do banco). O alias é mantido
+         abaixo até o backend ser atualizado pra ler metaPageId. */
+      metaPageId:    metaAccount?.pageId || null,
+      metaAccountId: metaAccount?.pageId || null, /* alias legado — deprecado */
       ...metaIds,
     };
 

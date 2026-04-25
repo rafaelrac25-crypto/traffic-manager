@@ -148,8 +148,17 @@ export function AppStateProvider({ children }) {
         setAds(prev => prev.filter(a => a.serverId || (Date.now() - new Date(a.createdAt).getTime() < 10 * 60 * 1000)));
         return;
       }
-      /* Merge: remoto é autoritativo + preserva ads pending de publicação recente (<10min) */
+      /* Merge: remoto é autoritativo + preserva ads pending de publicação recente (<10min).
+         Reconciliação: ads locais com serverId que NÃO aparecem no remoto foram
+         deletados no backend (cleanup, RGPD, ou bug de sync). Antes ficavam como
+         "ads fantasmas" até o usuário limpar localStorage manualmente. Agora
+         logamos quantos foram descartados pra ficar visível no console. */
       setAds(prev => {
+        const remoteIds = new Set(remote.map(r => String(r.id)));
+        const ghosts = prev.filter(a => a.serverId && !remoteIds.has(String(a.serverId)));
+        if (ghosts.length > 0) {
+          console.warn('[AppState] reconciliação: descartando', ghosts.length, 'ads locais sem espelho no servidor (deletados no backend):', ghosts.map(g => g.serverId).join(', '));
+        }
         const remoteWithServer = remote.map(r => ({ ...r, serverId: r.id }));
         const pendingLocal = prev.filter(a =>
           !a.serverId && (Date.now() - new Date(a.createdAt).getTime() < 10 * 60 * 1000)
@@ -435,15 +444,49 @@ export function AppStateProvider({ children }) {
   useEffect(() => save(KEY_HISTORY,   history),       [history]);
 
   const mountedAtRef = useRef(Date.now());
+  /* Anti-flood do sino: depois de tocar uma vez, supressa por 8s.
+     Se Rafa volta após dias offline e o sync gera 50 notificações de uma vez,
+     antes ele ouvia 50 dings em loop. Agora ouve 1, e o resto é agrupado. */
+  const lastBellAtRef = useRef(0);
+  /* Kinds que podem ser agrupados quando vários eventos do mesmo tipo
+     chegam em janela curta (60s). Em vez de empilhar 30 sinos "Anúncio
+     aprovado", criamos UMA notificação "5 anúncios aprovados". */
+  const GROUPABLE_KINDS = ['approved', 'rejected', 'info', 'meta-sync-error', 'low-balance'];
+  const GROUP_WINDOW_MS = 60000;
   const addNotification = useCallback((notif) => {
-    setNotifications(prev => [{
-      id: Date.now() + Math.random(),
-      createdAt: new Date().toISOString(),
-      read: false,
-      ...notif,
-    }, ...prev].slice(0, 50));
+    const now = Date.now();
+    setNotifications(prev => {
+      /* Tenta agrupar com a notificação mais recente do mesmo kind se
+         ainda estiver dentro da janela e não foi lida. */
+      if (notif.kind && GROUPABLE_KINDS.includes(notif.kind) && prev.length > 0) {
+        const head = prev[0];
+        const headAt = new Date(head.createdAt || 0).getTime();
+        if (head.kind === notif.kind && !head.read && (now - headAt) < GROUP_WINDOW_MS) {
+          const count = (head.groupCount || 1) + 1;
+          /* Atualiza head: aumenta contador e prefixa título com [N]. */
+          const baseTitle = (head.baseTitle || head.title || '').replace(/^\(\d+\)\s*/, '');
+          const updated = {
+            ...head,
+            baseTitle,
+            title: `(${count}) ${baseTitle}`,
+            message: `${count} eventos similares — último: ${notif.message || notif.body || baseTitle}`,
+            groupCount: count,
+            createdAt: new Date().toISOString(),
+          };
+          return [updated, ...prev.slice(1)];
+        }
+      }
+      return [{
+        id: now + Math.random(),
+        createdAt: new Date().toISOString(),
+        read: false,
+        ...notif,
+      }, ...prev].slice(0, 50);
+    });
     // Evita tocar som durante a rehidratação inicial (primeiros 1.5s após montar)
-    if (!notif.silent && Date.now() - mountedAtRef.current > 1500) {
+    // Anti-flood: 1 sino por 8s no máximo (evita "metralhadora" ao voltar online)
+    if (!notif.silent && (now - mountedAtRef.current) > 1500 && (now - lastBellAtRef.current) > 8000) {
+      lastBellAtRef.current = now;
       playBell();
     }
     /* Replica no histórico erros/warnings relevantes pro log de auditoria.
@@ -452,7 +495,7 @@ export function AppStateProvider({ children }) {
     const loggableKinds = ['publish-failed', 'rejected', 'meta-sync-error', 'reconnect-required', 'warning', 'insight-high-performer', 'insight-low-performer'];
     if (loggableKinds.includes(notif.kind)) {
       setHistory(prev => [{
-        id: `hist-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        id: `hist-${now}-${Math.random().toString(36).slice(2, 7)}`,
         createdAt: new Date().toISOString(),
         type: `notif-${notif.kind}`,
         title: notif.title || 'Notificação',

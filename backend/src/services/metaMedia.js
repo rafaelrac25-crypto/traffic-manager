@@ -1,5 +1,5 @@
 const https = require('https');
-const { decrypt } = require('./crypto');
+const { safeDecrypt } = require('./crypto');
 const { parseMetaError } = require('./metaErrors');
 const rateLimit = require('./metaRateLimit');
 
@@ -10,11 +10,7 @@ const VIDEO_TIMEOUT_MS = 180000;   /* Meta aceita até ~15MB; rede lenta → at�
 
 function getToken(creds) {
   if (!creds?.access_token) throw new Error('Plataforma não conectada');
-  if (String(creds.access_token).includes(':')) {
-    try { return decrypt(creds.access_token); }
-    catch { return creds.access_token; }
-  }
-  return creds.access_token;
+  return safeDecrypt(creds.access_token, 'metaMedia');
 }
 
 function stripDataPrefix(s) {

@@ -115,8 +115,34 @@ router.post('/', async (req, res) => {
     await log('create', 'campaign', camp?.id, desc, { platform, budget, mode, platform_campaign_id });
     res.status(201).json(camp);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Erro ao criar campanha' });
+    console.error('[campaigns.POST] INSERT falhou:', err);
+    /* Rollback transacional: se o INSERT local falhou DEPOIS de publishCampaign
+       criar a Campaign no Meta, deletamos do Meta pra evitar órfã (Meta tem
+       campanha publicada mas o painel não tem registro local — ad fantasma).
+       Best-effort: se delete também falhar, salvamos em pending_cleanup pra
+       reconciliação posterior. */
+    if (metaResult?.platform_campaign_id) {
+      try {
+        const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+        const creds = credResult.rows[0];
+        if (creds) {
+          const { deleteCampaign } = require('../services/metaWrite');
+          await deleteCampaign(creds, metaResult.platform_campaign_id);
+          console.warn('[campaigns.POST] rollback Meta OK — campaign deletada:', metaResult.platform_campaign_id);
+        }
+      } catch (rollbackErr) {
+        console.error('[campaigns.POST] ROLLBACK META FALHOU — órfã pode existir:', metaResult.platform_campaign_id, rollbackErr.message);
+        /* Marca pra cleanup posterior — best-effort, não bloqueia resposta */
+        try {
+          await db.query(
+            `INSERT INTO activity_log (action, entity, entity_id, description, meta) VALUES (?, ?, ?, ?, ?)`,
+            ['orphan_meta', 'campaign', null, `Campaign Meta ${metaResult.platform_campaign_id} órfã: INSERT local falhou e rollback no Meta também falhou`,
+             JSON.stringify({ platform_campaign_id: metaResult.platform_campaign_id, db_error: err.message, rollback_error: rollbackErr.message })]
+          );
+        } catch {}
+      }
+    }
+    res.status(500).json({ error: 'Erro ao criar campanha — registro local falhou' });
   }
 });
 
@@ -394,6 +420,10 @@ router.get('/analytics/districts', async (req, res) => {
 
     /* Bucket de métricas por bairro */
     const byDistrict = {};
+    /* Telemetria: antes campanhas sem locations.name eram puladas em silêncio
+       e o endpoint devolvia [] sem nenhuma pista. Agora contamos quantas
+       foram puladas e por quê — ajuda a debugar HeatMap vazio. */
+    const skipped = { no_locations: 0, no_named_locations: 0, ids: [] };
     for (const c of camps.rows) {
       let payload = {};
       try { payload = c.payload ? JSON.parse(c.payload) : {}; } catch {}
@@ -406,10 +436,21 @@ router.get('/analytics/districts', async (req, res) => {
         /* Aproximação: cada anel recebe porção equitativa se sem metadata */
       });
 
+      if (!Array.isArray(locations) || locations.length === 0) {
+        skipped.no_locations++;
+        skipped.ids.push(c.id);
+        continue;
+      }
+
       /* Pra versão v1 (sem breakdown real por região), distribui métricas
          equitativamente entre os bairros da campanha — ainda dá ranking útil. */
       const districtNames = locations.map(l => l?.name).filter(Boolean);
-      if (districtNames.length === 0) continue;
+      if (districtNames.length === 0) {
+        skipped.no_named_locations++;
+        skipped.ids.push(c.id);
+        console.warn('[analytics/districts] campanha', c.id, 'tem locations sem name — pulando. Sample:', JSON.stringify(locations[0] || null));
+        continue;
+      }
 
       const share = 1 / districtNames.length;
       const campConv = Number(c.conversions || 0);
@@ -452,12 +493,30 @@ router.get('/analytics/districts', async (req, res) => {
     const totalSpend = result.reduce((s, r) => s + r.spend, 0);
     const avgCPR = totalConv > 0 ? Number((totalSpend / totalConv).toFixed(2)) : null;
 
+    /* Se houve campanhas com locations sem name, loga consolidado pra
+       facilitar diagnóstico de HeatMap vazio (antes era silêncio total). */
+    if (skipped.no_locations || skipped.no_named_locations) {
+      console.warn('[analytics/districts] resumo:',
+        camps.rows.length, 'campanhas total |',
+        result.length, 'bairros agregados |',
+        skipped.no_locations, 'sem locations |',
+        skipped.no_named_locations, 'com locations sem name');
+    }
+
     res.json({
       districts: result,
       avgCPR,
       totalConv,
       totalSpend: Number(totalSpend.toFixed(2)),
       dataQuality: result.length > 0 && totalConv >= 10 ? 'usable' : 'insufficient',
+      /* Telemetria visível pro frontend pode mostrar "X campanhas sem bairros"
+         em vez de HeatMap vazio sem explicação. */
+      _diagnostics: {
+        campaigns_total: camps.rows.length,
+        campaigns_aggregated: camps.rows.length - skipped.no_locations - skipped.no_named_locations,
+        skipped_no_locations: skipped.no_locations,
+        skipped_no_named_locations: skipped.no_named_locations,
+      },
     });
   } catch (err) {
     console.error('[analytics/districts]', err);

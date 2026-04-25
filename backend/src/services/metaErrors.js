@@ -18,6 +18,11 @@ const META_ERROR_MAP = {
   1815203: { pt: 'Segmentação inválida — revisar áudio/interesses', retry: false },
   2635: { pt: 'Este App precisa passar por App Review para esta ação', retry: false },
   3018: { pt: 'Ad Account não está ativa — verificar pagamento', retry: false },
+  /* Subcodes específicos vistos em produção (antes caíam em "Parâmetro inválido") */
+  1870227: { pt: 'Audiência expandida (Advantage Audience) incompatível — desative ou ajuste o público', retry: false },
+  1487891: { pt: 'Botão (CTA) incompatível com o objetivo da campanha — escolha um botão de família compatível (ex: Mensagens p/ campanha de Mensagens)', retry: false },
+  2490408: { pt: 'Tipo de destino (destination_type) ausente ou inválido — escolha onde a conversa vai (Instagram Direct, Messenger ou WhatsApp)', retry: false },
+  1492013: { pt: 'Vídeo ainda não terminou de processar no Meta — aguarde 1-2 minutos e tente novamente', retry: true, backoffMs: 60000 },
 };
 
 function parseMetaError(err) {

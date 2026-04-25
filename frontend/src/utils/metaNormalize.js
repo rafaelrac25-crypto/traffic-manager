@@ -161,7 +161,7 @@ export function toMetaPayload(ad) {
 
   const storySpec = videoIdFromUpload
     ? {
-        page_id: ad.metaAccountId || null,
+        page_id: ad.metaPageId || ad.metaAccountId || null,
         video_data: {
           video_id:       videoIdFromUpload,
           image_hash:     videoCoverHash,  /* CAPA obrigatória pro Meta aceitar */
@@ -174,7 +174,7 @@ export function toMetaPayload(ad) {
         },
       }
     : {
-        page_id: ad.metaAccountId || null,
+        page_id: ad.metaPageId || ad.metaAccountId || null,
         link_data: {
           message:          ad.primaryText,
           name:             ad.headline,

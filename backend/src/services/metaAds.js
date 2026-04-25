@@ -1,13 +1,9 @@
-const { decrypt } = require('./crypto');
+const { safeDecrypt } = require('./crypto');
 const { metaGet } = require('./metaHttp');
 
 function getToken(creds) {
   if (!creds?.access_token) throw new Error('Plataforma não conectada');
-  if (String(creds.access_token).includes(':')) {
-    try { return decrypt(creds.access_token); }
-    catch { return creds.access_token; }
-  }
-  return creds.access_token;
+  return safeDecrypt(creds.access_token, 'metaAds');
 }
 
 function sumActions(actions, types) {
