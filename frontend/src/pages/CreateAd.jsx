@@ -2469,35 +2469,6 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
     }
   }, [objective]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* Cancelamento defensivo: se o usuário fez algum progresso (passou de
-     step 0 OU subiu mídia OU escreveu copy), confirma antes de descartar e
-     SEMPRE tenta salvar como rascunho — assim "OK por engano" não destrói
-     trabalho, ele pode voltar depois. */
-  function handleCancel() {
-    const hasContent = step > 0
-      || (mediaFiles && mediaFiles.length > 0)
-      || (headline || '').trim()
-      || (primaryText || '').trim()
-      || (locations && locations.length > 0);
-    if (!hasContent) {
-      navigate('/anuncios');
-      return;
-    }
-    const ok = window.confirm(
-      'Cancelar agora?\n\nSuas informações serão salvas como rascunho — você pode continuar depois.'
-    );
-    if (!ok) return;
-    try {
-      saveDraft?.({
-        objective, locations, ageRange, gender, interests,
-        budgetType, budgetValue, startDate, endDate,
-        adFormat, mediaFiles, primaryText, headline, destUrl, ctaButton,
-        budgetRingSplit, ringsMode, businessHours,
-      });
-    } catch { /* salvar é best-effort, não bloqueia saída */ }
-    navigate('/anuncios');
-  }
-
   /* Mede dimensões reais da mídia pra validar contra o mínimo Meta (500×500).
      Usa elementos off-screen: <video> pra vídeo, <img> pra imagem. */
   async function getMediaDimensions(file) {
@@ -3338,6 +3309,35 @@ export default function CreateAd() {
 
   /* Contexto da abertura do CreateAd (fixMode, data comercial, reuso) já é
      visível no próprio Wizard — notificações no sino são apenas para alertas. */
+
+  /* Cancelamento defensivo: se o usuário fez algum progresso (passou de
+     step 0 OU subiu mídia OU escreveu copy), confirma antes de descartar e
+     SEMPRE tenta salvar como rascunho — assim "OK por engano" não destrói
+     trabalho, ele pode voltar depois. */
+  function handleCancel() {
+    const hasContent = step > 0
+      || (mediaFiles && mediaFiles.length > 0)
+      || (headline || '').trim()
+      || (primaryText || '').trim()
+      || (locations && locations.length > 0);
+    if (!hasContent) {
+      navigate('/anuncios');
+      return;
+    }
+    const ok = window.confirm(
+      'Cancelar agora?\n\nSuas informações serão salvas como rascunho — você pode continuar depois.'
+    );
+    if (!ok) return;
+    try {
+      saveDraft?.({
+        objective, locations, ageRange, gender, interests,
+        budgetType, budgetValue, startDate, endDate,
+        adFormat, mediaFiles, primaryText, headline, destUrl, ctaButton,
+        budgetRingSplit, ringsMode, businessHours,
+      });
+    } catch { /* salvar é best-effort, não bloqueia saída */ }
+    navigate('/anuncios');
+  }
 
   function validateStep(s) {
     const errs = {};
