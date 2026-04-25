@@ -2506,12 +2506,13 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
         errors.push(`${f.name}: ${result.error}`);
         continue;
       }
-      /* Meta v20: mídia com largura/altura < 500px é recusada com erro 2875006.
-         Rejeita no navegador pra não fazer upload desnecessário nem publicar
-         campanha que vai virar WITH_ISSUES. */
+      /* Sanity check final: o processador (mediaProcessor + videoCompressor)
+         já tenta upscale automático pra atender mínimo Meta (500×500).
+         Se mesmo assim chegou aqui abaixo do mínimo, é porque o ajuste
+         falhou — avisa amigavelmente sem instruções técnicas. */
       const dim = await getMediaDimensions(result.file);
       if (dim.width > 0 && (dim.width < 500 || dim.height < 500)) {
-        errors.push(`${f.name}: ${dim.width}×${dim.height} abaixo do mínimo Meta (500×500). Use ≥ 1080×1080.`);
+        errors.push(`${f.name}: não consegui ajustar este arquivo automaticamente (ficou ${dim.width}×${dim.height}). Tente outro vídeo/imagem — qualquer um gravado pelo celular costuma funcionar.`);
         continue;
       }
       processed.push({

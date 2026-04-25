@@ -36,6 +36,57 @@ async function getFFmpeg(onLoadProgress) {
    overhead de multipart (boundary + headers). */
 const TARGET_MB = 4.0;
 
+/* Lê dimensões reais do vídeo via metadata. Necessário pra calcular o alvo
+   de scale: vídeos verticais de celular vêm 480×848 (abaixo do mínimo Meta
+   500×500), e o filter min(width,iw) sozinho não faz upscale. */
+async function readVideoDims(file) {
+  return new Promise((resolve) => {
+    const v = document.createElement('video');
+    v.preload = 'metadata';
+    v.muted = true;
+    v.src = URL.createObjectURL(file);
+    const cleanup = () => URL.revokeObjectURL(v.src);
+    v.onloadedmetadata = () => { cleanup(); resolve({ w: v.videoWidth || 0, h: v.videoHeight || 0 }); };
+    v.onerror = () => { cleanup(); resolve({ w: 0, h: 0 }); };
+    setTimeout(() => { cleanup(); resolve({ w: 0, h: 0 }); }, 5000);
+  });
+}
+
+/* Calcula dimensões finais respeitando regras:
+   1) Largura reduz pra maxWidth se for maior (downscale primeiro)
+   2) Menor lado SEMPRE atinge MIN_SIDE no final (upscale por último — vence o downscale)
+   3) Resultado par (codec yuv420p exige).
+   Aspect ratio SEMPRE preservado — mesma escala em w e h, nunca distorce.
+
+   Ordem importa: downscale → upscale garante que mesmo nos passes 2/3 (com
+   maxWidth=480 ou 360 pra reduzir bitrate), o mínimo Meta de 500px é
+   respeitado. Trade-off: pass 2/3 não reduzem dimensão tanto quanto
+   poderiam — compensam reduzindo só o bitrate. */
+function computeTargetDims(srcW, srcH, maxWidth) {
+  const MIN_SIDE = 600;
+  /* Sem dimensões conhecidas → cai no fallback genérico maxWidth × auto */
+  if (!srcW || !srcH) return { w: maxWidth, h: -2 };
+  let w = srcW, h = srcH;
+  /* 1. Downscale: largura > maxWidth (reduz proporcionalmente) */
+  if (w > maxWidth) {
+    const scale = maxWidth / w;
+    w = Math.round(w * scale);
+    h = Math.round(h * scale);
+  }
+  /* 2. Upscale FINAL: menor lado < MIN_SIDE (sobe proporcionalmente).
+     Vence o downscale acima — garante Meta-compliance mesmo se maxWidth < 600. */
+  const minSide = Math.min(w, h);
+  if (minSide < MIN_SIDE) {
+    const scale = MIN_SIDE / minSide;
+    w = Math.round(w * scale);
+    h = Math.round(h * scale);
+  }
+  /* Pares pra yuv420p */
+  w = Math.max(2, Math.floor(w / 2) * 2);
+  h = Math.max(2, Math.floor(h / 2) * 2);
+  return { w, h };
+}
+
 /* Extrai 1 frame do vídeo como JPEG pra usar como thumbnail no creative Meta.
    Meta video_data exige image_url OU image_hash além do video_id.
    GARANTE saída ≥ 600px em ambas dimensões: se vídeo source for menor, faz
@@ -124,6 +175,9 @@ export async function compressVideo(file, onProgress) {
     URL.revokeObjectURL(v.src);
   } catch { /* usa fallback */ }
 
+  /* Lê dimensões reais — usadas no scale proporcional (upscale + downscale). */
+  const srcDims = await readVideoDims(file);
+
   /* Calcula bitrate alvo: (target_mb × 8192 kbps por MB/s) / duração, reservando
      96k pro áudio e 10% de overhead. */
   const totalKbps = Math.floor((TARGET_MB * 8192) / Math.max(durationSec, 5));
@@ -141,6 +195,12 @@ export async function compressVideo(file, onProgress) {
     const outputName = 'output.mp4';
     const buffer = new Uint8Array(await file.arrayBuffer());
     await ffm.writeFile(inputName, buffer);
+    /* params.w + params.h calculados via computeTargetDims — escala proporcional
+       que respeita aspect ratio (vertical 9:16 continua 9:16, horizontal continua etc).
+       Se h = -2, FFmpeg calcula altura mantendo aspect ratio (fallback sem dims). */
+    const scaleArg = params.h === -2
+      ? `scale=${params.w}:-2`
+      : `scale=${params.w}:${params.h}`;
     await ffm.exec([
       '-i', inputName,
       '-c:v', 'libx264',
@@ -148,7 +208,7 @@ export async function compressVideo(file, onProgress) {
       '-b:v', `${params.vKbps}k`,
       '-maxrate', `${params.vKbps}k`,
       '-bufsize', `${params.vKbps * 2}k`,
-      '-vf', `scale='min(${params.width},iw)':'-2'`,
+      '-vf', scaleArg,
       '-c:a', 'aac',
       '-b:a', `${params.aKbps}k`,
       '-movflags', '+faststart',
@@ -162,22 +222,28 @@ export async function compressVideo(file, onProgress) {
   }
 
   try {
-    /* Pass 1: bitrate calculado, largura 720p */
+    /* Pass 1: bitrate calculado, largura alvo 720p (com upscale se preciso) */
     onProgress?.(0);
-    let data = await encode({ vKbps: videoKbps, aKbps: audioKbps, width: 720 });
+    const dim1 = computeTargetDims(srcDims.w, srcDims.h, 720);
+    let data = await encode({ vKbps: videoKbps, aKbps: audioKbps, ...dim1 });
     let outMB = data.byteLength / (1024 * 1024);
 
-    /* Pass 2: se ainda estourou, reencoda MUITO agressivo — 480p + bitrate baixo */
+    /* Pass 2: se ainda estourou, reencoda MUITO agressivo — bitrate menor.
+       Dimensão alvo 480px de largura; mas se vídeo for menor que 600 no
+       lado pequeno, computeTargetDims força upscale pro mínimo Meta. */
     if (outMB > TARGET_MB) {
       onProgress?.('Comprimindo mais…');
-      data = await encode({ vKbps: Math.max(200, Math.floor(videoKbps * 0.55)), aKbps: 64, width: 480 });
+      const dim2 = computeTargetDims(srcDims.w, srcDims.h, 480);
+      data = await encode({ vKbps: Math.max(200, Math.floor(videoKbps * 0.55)), aKbps: 64, ...dim2 });
       outMB = data.byteLength / (1024 * 1024);
     }
 
-    /* Pass 3 (último recurso): 360p + bitrate mínimo */
+    /* Pass 3 (último recurso): bitrate mínimo. Mesma garantia: dimensão
+       respeita mínimo Meta independente do alvo de 360px. */
     if (outMB > TARGET_MB) {
       onProgress?.('Reduzindo ainda mais…');
-      data = await encode({ vKbps: 200, aKbps: 48, width: 360 });
+      const dim3 = computeTargetDims(srcDims.w, srcDims.h, 360);
+      data = await encode({ vKbps: 200, aKbps: 48, ...dim3 });
     }
 
     onProgress?.(100);

@@ -71,12 +71,33 @@ export async function compressImage(file) {
   });
 }
 
-/* Comprime vídeo automaticamente via FFmpeg.wasm se acima do threshold.
+/* Lê dimensões do vídeo via metadata. Necessário pra detectar quando
+   o vídeo precisa de upscale (ex: 480×848 do iPhone vertical, abaixo
+   do mínimo Meta 500×500). */
+async function readVideoDims(file) {
+  return new Promise((resolve) => {
+    const v = document.createElement('video');
+    v.preload = 'metadata';
+    v.muted = true;
+    v.src = URL.createObjectURL(file);
+    const cleanup = () => URL.revokeObjectURL(v.src);
+    v.onloadedmetadata = () => { cleanup(); resolve({ w: v.videoWidth || 0, h: v.videoHeight || 0 }); };
+    v.onerror = () => { cleanup(); resolve({ w: 0, h: 0 }); };
+    setTimeout(() => { cleanup(); resolve({ w: 0, h: 0 }); }, 5000);
+  });
+}
+
+/* Comprime vídeo automaticamente via FFmpeg.wasm se acima do threshold OU
+   se dimensão estiver abaixo do mínimo Meta (precisa upscale).
    Retorna { ok: true, file, wasCompressed } ou { ok: false, reason }. */
 export async function processVideoAuto(file, onProgress) {
   const originalMB = file.size / (1024 * 1024);
-  /* Abaixo do threshold → passa direto (não vale a pena comprimir) */
-  if (originalMB < VIDEO_COMPRESS_THRESHOLD_MB) {
+  const dims = await readVideoDims(file);
+  /* Vídeo com algum lado < 600px precisa upscale (folga sobre 500 do Meta).
+     Mesmo que size esteja OK, força passagem pelo FFmpeg pra ampliar. */
+  const needsUpscale = dims.w > 0 && dims.h > 0 && (dims.w < 600 || dims.h < 600);
+  /* Abaixo do threshold E dimensões OK → passa direto (não vale a pena tocar) */
+  if (originalMB < VIDEO_COMPRESS_THRESHOLD_MB && !needsUpscale) {
     return { ok: true, file, wasCompressed: false };
   }
 
