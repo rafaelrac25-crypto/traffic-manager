@@ -1,6 +1,6 @@
 # CRITICAL_STATE — traffic-manager
 
-> **Atualizado:** 2026-04-25 09:02 GMT-3 (todos 11 bugs fechados, rumo aos 100%)
+> **Atualizado:** 2026-04-25 09:43 GMT-3 (insights por anel + edição público + recomendação automática)
 >
 > **Pra Claude:** este arquivo é o **estado crítico atual** do sistema. Lê-lo no início de cada sessão evita afirmações erradas. Atualizar no fim de cada sessão se algo mudar.
 >
@@ -29,6 +29,26 @@ NÃO afirmar que falta env var sem antes rodar `curl /api/health/full`.
 ## Última publicação Meta
 
 **Nenhuma campanha real publicada ainda.** Sistema verificado, pronto pra 1ª publicação.
+
+## Features novas hoje (2026-04-25) — pós-bugs
+
+Commits: `d5a10a9` (insights por anel) + `6250a17` (edição público + recomendação).
+
+| Feature | O que faz | Arquivo principal |
+|---|---|---|
+| **Insights por ad_set** | Sync coleta métricas POR anel + breakdown region/city do Meta. Popula `insights_by_district` com dado real. | `backend/src/services/sync.js`, `metaAds.js` |
+| **`GET /analytics/districts` real** | Tenta dado real primeiro; fallback equitativo se vazio. Devolve `data_source: 'real' \| 'estimated'`. | `backend/src/routes/campaigns.js` |
+| **`GET /analytics/rings` (novo)** | Performance agregada por anel (primário/médio/externo) — sempre 3 entradas. | `backend/src/routes/campaigns.js` |
+| **Card "Performance por anel"** | 3 colunas no Dashboard com investido/conversões/CPR. 🏆 destaca menor CPR. Refetch 5min. Empty state amigável. | `frontend/src/pages/Dashboard.jsx` |
+| **HeatMap badge real/estimativa** | Pill verde "Dado real do Meta" vs amarelo "Estimativa (~24h)". Empty state com CTA "Publicar campanha". | `frontend/src/pages/HeatMap.jsx` |
+| **Recomendação automática %** | Card sob o RingPerformanceCard sugere nova distribuição inversamente proporcional ao CPR (piso 10%, múltiplos 5%). Botão "Aplicar nas campanhas ativas". | `frontend/src/components/RingRecommendation.jsx` |
+| **Edição de público pós-pub** | Modal inline em Campaigns: faixa etária, gênero, interesses (chips + busca debounced). Aplica nos 3 anéis simultaneamente, bairros não mudam. | `frontend/src/pages/Campaigns.jsx`, `EditAudienceModal` |
+| **Endpoint busca interesses** | `GET /api/platforms/meta/search-interests?q=...` autocomplete via Meta `/search?type=adinterest`. | `backend/src/routes/platforms.js` |
+| **Migração schema** | `insights_by_district` ganha `ad_set_id`, `ring_key`, `region`, `city` + 2 índices. Idempotente. | `backend/src/db/{schema.sql,sqlite.js}` |
+| **Backend `updateAdSetMeta` estendido** | Aceita `targeting` + `status` (além de budget/datas/nome). Caller monta targeting reconciliado. | `backend/src/services/metaWrite.js` |
+| **PUT /campaigns/:id estendido** | Aceita `targeting` (patch parcial) e `ringSplit` (redistribuição entre anéis). Erro Meta = 502 com mensagem. | `backend/src/routes/campaigns.js` |
+
+> **Como o sistema publica anéis (confirmado com gestor de tráfego):** 1 campanha → N ad_sets (até 3 anéis primário/médio/externo), cada um com seus bairros + orçamento próprio. ABO é default (`is_adset_budget_sharing_enabled=false`). O método é exatamente o que profissionais de tráfego usam manualmente — automatizado.
 
 ## Bugs corrigidos hoje (2026-04-25) — rumo aos 100%
 
