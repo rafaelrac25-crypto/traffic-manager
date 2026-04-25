@@ -1149,39 +1149,42 @@ function RingPerformanceCard({ onDataChange, refreshSignal } = {}) {
     .map(key => rings.find(r => r && r.ring_key === key))
     .filter(Boolean);
 
+  /* Maior spend pra normalizar largura das barras (relativo ao maior anel). */
+  const maxSpend = Math.max(...ringsOrdered.map(r => Number(r.spend || 0)), 1);
+
   return cardWrap(
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-      gap: '12px',
-    }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
       {ringsOrdered.map(ring => {
         const visual = RING_VISUAL[ring.ring_key] || { emoji: '⚪', color: 'var(--c-text-3)', bg: 'var(--c-surface)', hint: '' };
         const isBest = ring.ring_key === bestRingKey;
         const conv = Number(ring.conversions || 0);
         const spend = Number(ring.spend || 0);
         const cpr = Number(ring.cpr || 0);
+        /* Largura proporcional ao maior anel (mín 4% pra sempre ser visível). */
+        const barPct = Math.max(4, Math.round((spend / maxSpend) * 100));
 
         return (
           <div
             key={ring.ring_key}
             style={{
               background: 'var(--c-card-bg)',
-              borderRadius: '12px',
-              padding: '14px 16px',
+              borderRadius: '10px',
+              padding: '12px 14px',
               border: isBest ? `2px solid ${visual.color}` : '1px solid var(--c-border)',
-              boxShadow: isBest ? `0 2px 12px ${visual.color}22` : '0 1px 4px var(--c-shadow)',
-              display: 'flex', flexDirection: 'column', gap: '10px',
+              boxShadow: isBest ? `0 2px 8px ${visual.color}22` : '0 1px 4px var(--c-shadow)',
+              display: 'grid',
+              gridTemplateColumns: 'minmax(140px, 200px) 1fr minmax(180px, auto)',
+              alignItems: 'center',
+              gap: '14px',
               position: 'relative',
             }}
           >
             {isBest && (
               <div style={{
-                position: 'absolute', top: '-10px', right: '12px',
+                position: 'absolute', top: '-9px', left: '12px',
                 background: visual.color, color: '#fff',
-                fontSize: '10px', fontWeight: 700,
-                padding: '3px 9px', borderRadius: '10px',
-                display: 'inline-flex', alignItems: 'center', gap: '4px',
+                fontSize: '9px', fontWeight: 700,
+                padding: '2px 8px', borderRadius: '8px',
                 letterSpacing: '.3px',
                 boxShadow: `0 2px 6px ${visual.color}55`,
               }}>
@@ -1189,8 +1192,8 @@ function RingPerformanceCard({ onDataChange, refreshSignal } = {}) {
               </div>
             )}
 
-            {/* Cabeçalho do anel */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* Coluna 1: identidade do anel */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
               <span style={{ fontSize: '18px' }} aria-hidden="true">{visual.emoji}</span>
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', lineHeight: 1.2 }}>
@@ -1204,28 +1207,59 @@ function RingPerformanceCard({ onDataChange, refreshSignal } = {}) {
               </div>
             </div>
 
-            {/* Métricas */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '8px' }}>
-                <span style={{ fontSize: '11px', color: 'var(--c-text-3)', fontWeight: 500 }}>Investido</span>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)' }}>
+            {/* Coluna 2: barra horizontal proporcional ao investimento */}
+            <div
+              style={{
+                position: 'relative',
+                height: '14px',
+                background: 'var(--c-surface)',
+                borderRadius: '7px',
+                overflow: 'hidden',
+                border: '1px solid var(--c-border-lt)',
+              }}
+              role="progressbar"
+              aria-valuenow={Math.round((spend / maxSpend) * 100)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label={`Investimento do anel ${ring.ring_label || ring.ring_key}: ${fmtBRL(spend)}`}
+            >
+              <div
+                style={{
+                  width: `${barPct}%`,
+                  height: '100%',
+                  background: visual.color,
+                  transition: 'width 0.3s ease',
+                  borderRadius: '7px',
+                }}
+              />
+            </div>
+
+            {/* Coluna 3: métricas compactas — gasto · conversões · custo */}
+            <div style={{
+              display: 'flex', alignItems: 'baseline', gap: '14px',
+              fontSize: '12px', justifyContent: 'flex-end', flexShrink: 0,
+            }}>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '10px', color: 'var(--c-text-4)', fontWeight: 500, lineHeight: 1 }}>Investido</div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', marginTop: '2px' }}>
                   {fmtBRL(spend)}
-                </span>
+                </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '8px' }}>
-                <span style={{ fontSize: '11px', color: 'var(--c-text-3)', fontWeight: 500 }}>Conversões</span>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)' }}>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '10px', color: 'var(--c-text-4)', fontWeight: 500, lineHeight: 1 }}>Conv.</div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', marginTop: '2px' }}>
                   {conv.toLocaleString('pt-BR')}
-                </span>
+                </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '8px' }}>
-                <span style={{ fontSize: '11px', color: 'var(--c-text-3)', fontWeight: 500 }}>Custo por resultado</span>
-                <span style={{
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '10px', color: 'var(--c-text-4)', fontWeight: 500, lineHeight: 1 }}>Custo/result.</div>
+                <div style={{
                   fontSize: '13px', fontWeight: 700,
                   color: isBest ? visual.color : 'var(--c-text-1)',
+                  marginTop: '2px',
                 }}>
                   {conv > 0 && cpr > 0 ? fmtBRL(cpr) : '—'}
-                </span>
+                </div>
               </div>
             </div>
           </div>

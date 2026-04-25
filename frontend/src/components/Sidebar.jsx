@@ -65,11 +65,6 @@ const IconReports = ({ active }) => (
     <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
   </svg>
 );
-const IconThermometer = ({ active }) => (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--c-accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4 4 0 1 0 5 0z"/>
-  </svg>
-);
 const IconMoon = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/>
@@ -110,7 +105,6 @@ const NAV = [
     { to: '/criativos',  label: 'Criativos',    Icon: IconCreatives },
     { to: '/referencias', label: 'Referências', Icon: IconReports },
   ]},
-  { to: '/mapa-de-calor', label: 'Mapa de Calor', Icon: IconThermometer },
   { to: '/investimento',  label: 'Investimento',  Icon: IconInvestment },
   { to: '/historico',     label: 'Histórico',     Icon: IconHistory },
 ];
