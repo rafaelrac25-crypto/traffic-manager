@@ -1,14 +1,14 @@
 # CRITICAL_STATE — traffic-manager
 
-> **Atualizado:** 2026-04-24 22:15 GMT-3 (após setup de proteções)
+> **Atualizado:** 2026-04-24 23:35 GMT-3 (checkpoint pré-100%)
 >
-> **Pra Claude:** este arquivo é o **estado crítico atual** do sistema. Lê-lo no início de cada sessão evita afirmações erradas (tipo "falta env var X" quando já está setada). Atualizar no fim de cada sessão se algo mudar.
+> **Pra Claude:** este arquivo é o **estado crítico atual** do sistema. Lê-lo no início de cada sessão evita afirmações erradas. Atualizar no fim de cada sessão se algo mudar.
 >
-> **Pra Rafa:** este é o "raio-X" rápido do projeto. Se algo aqui está errado, me avise.
+> **Pra Rafa:** raio-X rápido do projeto.
 
 ---
 
-## Integrações Meta (verificar via `curl https://criscosta.vercel.app/api/health/full`)
+## Integrações Meta (`curl https://criscosta.vercel.app/api/health/full`)
 
 | Item | Estado | Detalhe |
 |---|---|---|
@@ -18,80 +18,103 @@
 | Instagram Business | ✅ ok | `17841456891955614` |
 | IA Groq | ✅ ok | Configurado |
 | Webhook Meta | ✅ ok | Ativo |
+| Health endpoint live | ✅ ok | Bate `/me` no Meta a cada hit (não confia só na flag DB) |
 
 ## Env vars Vercel (todas configuradas)
 
-`DATABASE_URL`, `NODE_ENV`, `FRONTEND_URL`, `GROQ_API_KEY`, `FB_APP_ID`, `FB_APP_SECRET`, `FB_WEBHOOK_VERIFY_TOKEN`, `TOKEN_ENC_KEY` — **todas ✅**.
+`DATABASE_URL`, `NODE_ENV`, `FRONTEND_URL`, `GROQ_API_KEY`, `FB_APP_ID`, `FB_APP_SECRET`, `FB_WEBHOOK_VERIFY_TOKEN`, `TOKEN_ENC_KEY`, `VITE_SENTRY_DSN`, `SENTRY_DSN` — **todas ✅**.
 
-Desde 2026-04-24, NÃO afirmar que falta env var sem antes rodar `curl /api/health/full`.
+NÃO afirmar que falta env var sem antes rodar `curl /api/health/full`.
 
 ## Última publicação Meta
 
-**Nenhuma campanha real publicada ainda.** Sistema testado em dev, pronto pra 1ª publicação.
+**Nenhuma campanha real publicada ainda.** Sistema verificado, pronto pra 1ª publicação.
 
-## Bugs corrigidos recentes (últimos 7 dias)
+## Bugs corrigidos hoje (2026-04-24)
 
-| Data | Commit | O que |
-|---|---|---|
-| 2026-04-24 | `dbb7eeb` | Polling Meta: guard via useRef pra evitar overlap |
-| 2026-04-24 | `67b83e7` | Vídeo: aborta publish se não ficar pronto em 120s |
-| 2026-04-24 | `3a41b6a` | Token refresh: lock por Promise pra evitar race |
-| 2026-04-24 | `639a7f7` | Refactor regras Meta consolidadas em `frontend/src/config/metaRules.js` |
-| 2026-04-22 | `c31bfff` | normalizeSplit força 100% pra 1 anel + auto mais conservador |
-| 2026-04-22 | `34c9951` | Sino notifica em revisão / aprovado / reprovado pós-revisão |
+| Commit | O que |
+|---|---|
+| `dbb7eeb` | Polling Meta: guard via useRef pra evitar overlap |
+| `67b83e7` | Vídeo: aborta publish se não ficar pronto |
+| `3a41b6a` | Token refresh: lock por Promise pra evitar race |
+| `639a7f7` | Refactor regras Meta consolidadas em `frontend/src/config/metaRules.js` |
+| `095ab2c` | Health endpoint valida token Meta LIVE |
+| `91bb641` | Sentry SDK frontend + backend (no-op sem DSN) |
+| `9bcf061` | Vitest 23 tests cobrindo metaRules.js |
+| `64132d8` | GitHub Actions smoke + synthetic test |
+| `28033f3` | Vercel.json modernizado (`@vercel/static-build` roda npm run build) |
+| `84cf7c5` | Vídeo timeout 50s respeita Vercel maxDuration 60s |
+| `728240d` | Sentry sanitiza tokens em breadcrumbs + try/catch no init |
 
-## Bugs conhecidos (abertos)
+## Bugs conhecidos abertos (rumo aos 100%)
 
-Ver auditoria completa em `.planning/audit/SUMMARY.md`. Resumo dos principais:
+Após auditoria + re-auditoria, **11 itens em aberto** (nenhum bloqueia 1ª campanha):
 
-- 🟠 **Sem transação DB após publishCampaign** — se INSERT local falha após Meta criar, vira órfão
-- 🟠 **50 ads aprovados = 50 sinos** — sem agrupar notificações em massa
-- 🟠 **Insights por bairro retorna vazio em silêncio** se locations sem `name`
-- 🟡 **Cleanup de órfãos sem logging detalhado** dos ad_sets criados
-- 🟡 **CTA messaging com objetivo errado vira LEARN_MORE silenciosamente**
-- 🟡 **Cobertura incompleta de error codes Meta** (1870227, 1487891, 2490408, 1492013)
+### 🟠 Médio impacto — vou atacar agora rumo aos 100%
 
-## Pendência estrutural (não urgente)
+1. **Sem transação DB após publishCampaign** — Meta cria, INSERT local falha → órfã
+2. **50 sinos em massa** ao voltar após dias offline (sem agrupar notifications)
+3. **Insights por bairro retorna `[]` silencioso** se locations sem `name`
 
-⚠️ **`vercel.json` usa configuração `builds` antiga** — Vercel ignora `buildCommand` e só empacota o backend, usando `frontend/dist/` commitado. Toda vez que houver mudança em frontend que dependa de env var (tipo `VITE_SENTRY_DSN`), precisa **buildar local com a env setada** antes de commit. Solução estrutural: migrar pra `functions` config (próxima sessão, ~20min, requer cuidado pra não quebrar API routes).
+### 🟡 Baixo impacto / edge case
 
-Detectado via build log do dpl_2s29zvoPiFPmsbA3ggoaxmwYoztR (warning explícito: "Due to `builds` existing in your configuration file, the Build and Development Settings defined in your Project Settings will not apply").
+4. **localStorage divergente do banco** — ad fantasma se backend deletou
+5. **Cleanup de órfãos sem logging detalhado** dos ad sets criados
+6. **CTA WhatsApp com objetivo "Engajamento" vira LEARN_MORE silencioso**
+7. **4 codes Meta caem em "Parâmetro inválido" genérico** (1870227, 1487891, 2490408, 1492013)
+8. **Token decryption frágil com `:`** (heurística — risco ~1%)
+9. **page_id confundido com metaAccountId em vídeo** (front envia errado, back corrige)
+10. **Interesses fake silenciosamente descartados** se Meta não acha
+11. **Webhook signature sem log se FB_APP_SECRET mudar** (defensivo)
 
 ## Decisões pendentes (aguardando Rafa)
 
-- Plugar `dryRunCreateCampaign` em `metaWrite.js` antes da chamada Graph real? (decidido **não plugar agora** — `validation_engine`/`dry_run_simulator` ficam standalone em `project/core/`)
-- Implementar feature "recomendação de investimento por bairro × serviço" — aguardando 1º sync real Meta + lista de serviços da Cris
-- Integração real Google Ads — ainda stub (baixa prioridade)
+- Plugar `dryRunCreateCampaign` em `metaWrite.js`? (decidido **não** — fica standalone em `project/core/`)
+- Feature "recomendação por bairro × serviço" — aguarda 1º sync real Meta + lista de serviços
+- Integração real Google Ads — stub (baixa prioridade)
 
 ## Arquitetura — referência rápida
 
 - **Backend:** Node + Express + SQLite (dev) / Postgres Neon (prod)
 - **Frontend:** React + Vite + Tailwind, Vite build → `frontend/dist/` (commitado)
-- **Deploy:** Vercel (criscosta.vercel.app), GitHub repo `rafaelrac25-crypto/traffic-manager`
-- **Auth:** removida (sistema interno, abre direto no Dashboard)
-- **OAuth Meta:** completo, token criptografado AES-256-GCM no banco, refresh automático <15 dias
+- **Deploy:** Vercel (criscosta.vercel.app), repo `rafaelrac25-crypto/traffic-manager`
+- **Auth:** removida (uso interno)
+- **OAuth Meta:** completo, token criptografado AES-256-GCM, refresh automático <15 dias com lock por Promise
 
 ## Documentos importantes
 
-- `CLAUDE.md` — instruções principais pro Claude
-- `PROJECT_MAP.md` — mapa completo do código (3000+ linhas, longo)
+- `CLAUDE.md` — instruções pro Claude (regras Cris)
+- `~/CLAUDE.md` (global) — gatilho "retomar projeto" inclui `curl /api/health/full`
+- `PROJECT_MAP.md` — mapa completo do código (3000+ linhas)
 - `STATE_MACHINE.md` — estados Meta e reações do sistema
+- `PROTECTION_SETUP.md` — setup Sentry + Vercel email alerts
+- `.planning/audit/SUMMARY.md` — auditoria v1 completa
+- `.planning/audit/v2/auth.md` — re-auditoria v2 auth/Sentry
 - `SESSION_CHECKPOINT.md` — checkpoint manual da última sessão
-- `.planning/audit/SUMMARY.md` — auditoria completa Meta (2026-04-24)
-- `.planning/audit/auth.md`, `publish.md`, `sync.md` — auditorias detalhadas (não criadas — agentes entregaram inline)
 
 ## Skills/serviços externos
 
-- **Sentry** — ✅ ATIVO em frontend e backend desde 2026-04-24 22:55. Ambos DSNs setados na Vercel. Erros chegam por email em rafaelrac25@gmail.com. Conta Sentry: rafaelrac25@gmail.com (login GitHub).
-- **GitHub Actions** — `smoke-test.yml` (health check a cada 15min) + `synthetic-test.yml` (vitest diário 09h GMT-3). Abre issues automáticas se quebrar.
-- **Vercel email alerts** — Rafa precisa ativar em https://vercel.com/account/notifications. Ver `PROTECTION_SETUP.md`.
-- **Vercel** — deploy automático em push pra `main`.
+- **Sentry** — ✅ ATIVO front + back. DSN setados. Tokens sanitizados em breadcrumbs. Erros → email rafaelrac25@gmail.com.
+- **GitHub Actions** — smoke (15min) + synthetic (diário 09h GMT-3). Issues automáticas em falha.
+- **Vercel email alerts** — Rafa precisa ativar em https://vercel.com/account/notifications.
+- **Vercel** — deploy automático em push pra `main`. `vercel.json` modernizado roda `npm run vercel-build`.
 
-## Proteções ativas (2026-04-24)
+## Proteções ativas (2026-04-24, fim de sessão)
 
-✅ Health endpoint **valida token Meta live** (não só flag do banco)
-✅ Suíte vitest com 23 tests cobrindo metaRules.js (`npm test`)
-✅ Smoke test GitHub Actions a cada 15min
-✅ Synthetic test diário 09h GMT-3
-✅ Sentry SDK instalado (aguarda Rafa setar DSN)
-⏳ Vercel email alerts (aguarda Rafa ativar no dashboard)
+✅ Health endpoint valida token Meta LIVE
+✅ 23 tests Vitest (`npm test`, ~1s)
+✅ Smoke test GitHub Actions (a cada 15min)
+✅ Synthetic test GitHub Actions (diário 09h GMT-3)
+✅ Sentry frontend + backend ATIVO com sanitização de tokens
+✅ Vercel.json moderno: env vars propagam automaticamente em deploys
+⏳ Vercel email alerts (Rafa precisa ativar manualmente)
+
+## Próximo passo planejado
+
+**Rumo aos 100%:** atacar os 11 bugs abertos (3 🟠 + 8 🟡). Ordem prevista:
+
+1. Backend hardening (items 1, 5, 7, 8, 9, 11)
+2. Frontend UX (items 2, 6, 10)
+3. DB sync (items 3, 4)
+
+Cada um com commit atômico, build/teste antes de push.
