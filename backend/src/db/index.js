@@ -1,9 +1,12 @@
 // Usa SQLite em desenvolvimento (sem DATABASE_URL) e PostgreSQL em produção
 if (process.env.DATABASE_URL) {
-    const { Pool } = require('pg');
+    /* Driver oficial do Neon pra serverless. Resolve "Connection terminated
+       unexpectedly" causado pelo `pg` puro tentando reusar conexões que o
+       Neon fechou por idle timeout em Vercel Functions. API drop-in com pg.Pool. */
+    const { Pool, neonConfig } = require('@neondatabase/serverless');
+    neonConfig.webSocketConstructor = require('ws');
     const pool = new Pool({
           connectionString: process.env.DATABASE_URL,
-          ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
     });
     const originalQuery = pool.query.bind(pool);
     pool.query = (text, params) => {
