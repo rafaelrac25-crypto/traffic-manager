@@ -1,6 +1,6 @@
 # CRITICAL_STATE — traffic-manager
 
-> **Atualizado:** 2026-04-24 21:55 GMT-3
+> **Atualizado:** 2026-04-24 22:15 GMT-3 (após setup de proteções)
 >
 > **Pra Claude:** este arquivo é o **estado crítico atual** do sistema. Lê-lo no início de cada sessão evita afirmações erradas (tipo "falta env var X" quando já está setada). Atualizar no fim de cada sessão se algo mudar.
 >
@@ -76,6 +76,16 @@ Ver auditoria completa em `.planning/audit/SUMMARY.md`. Resumo dos principais:
 
 ## Skills/serviços externos
 
-- **Sentry** — configurado em código, **DSN ainda não setado** (Rafa precisa criar projeto + adicionar `SENTRY_DSN` na Vercel)
-- **GitHub Actions** — smoke test (a cada 15min) + synthetic test (diário)
-- **Vercel** — deploy automático em push pra `main`
+- **Sentry** — SDK instalado em frontend e backend, **DSN ainda não setado**. Rafa precisa: criar conta sentry.io → 2 projetos (React + Node) → adicionar `VITE_SENTRY_DSN` e `SENTRY_DSN` na Vercel. Ver `PROTECTION_SETUP.md`.
+- **GitHub Actions** — `smoke-test.yml` (health check a cada 15min) + `synthetic-test.yml` (vitest diário 09h GMT-3). Abre issues automáticas se quebrar.
+- **Vercel email alerts** — Rafa precisa ativar em https://vercel.com/account/notifications. Ver `PROTECTION_SETUP.md`.
+- **Vercel** — deploy automático em push pra `main`.
+
+## Proteções ativas (2026-04-24)
+
+✅ Health endpoint **valida token Meta live** (não só flag do banco)
+✅ Suíte vitest com 23 tests cobrindo metaRules.js (`npm test`)
+✅ Smoke test GitHub Actions a cada 15min
+✅ Synthetic test diário 09h GMT-3
+✅ Sentry SDK instalado (aguarda Rafa setar DSN)
+⏳ Vercel email alerts (aguarda Rafa ativar no dashboard)
