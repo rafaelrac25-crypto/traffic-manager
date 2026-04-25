@@ -2451,6 +2451,9 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
   const fileRef  = useRef(null);
   const [drag, setDrag] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  /* Quando o erro de upload for por HEVC, mostra também botões pra sites
+     gratuitos de conversão. Liga só nesse caso pra não poluir UX em outros erros. */
+  const [uploadIsHevc, setUploadIsHevc] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState('');
 
@@ -2489,10 +2492,12 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
 
   async function handleFiles(files) {
     setUploadError('');
+    setUploadIsHevc(false);
     setProcessing(true);
     setProgress('');
     const processed = [];
     const errors = [];
+    let hevcDetected = false;
     for (const f of Array.from(files)) {
       const isVideo = f.type.startsWith('video/');
       const sizeMB = f.size / (1024 * 1024);
@@ -2504,6 +2509,7 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
       const result = await processMediaFile(f, onProg);
       if (result.error) {
         errors.push(`${f.name}: ${result.error}`);
+        if (result.kind === 'hevc') hevcDetected = true;
         continue;
       }
       /* Sanity check final: o processador (mediaProcessor + videoCompressor)
@@ -2528,7 +2534,10 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
         height: dim.height,
       });
     }
-    if (errors.length > 0) setUploadError(errors.join(' · '));
+    if (errors.length > 0) {
+      setUploadError(errors.join(' · '));
+      setUploadIsHevc(hevcDetected);
+    }
     if (processed.length > 0) setMediaFiles(prev => [...prev, ...processed]);
     setProcessing(false);
     setProgress('');
@@ -2603,7 +2612,10 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
           </div>
         )}
 
-        {/* Erro de upload — mostra motivo específico */}
+        {/* Erro de upload — mostra motivo específico. Quando o motivo é HEVC,
+            adiciona 3 botões pra sites gratuitos de conversão (caminho rápido
+            pra acervo legado já em HEVC, sem regravar). 3 opções pra caso 1
+            esteja fora do ar. */}
         {uploadError && (
           <div style={{
             padding: '10px 14px', marginBottom: '8px',
@@ -2611,6 +2623,39 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
             borderRadius: '10px', fontSize: '12px', color: '#B91C1C', fontWeight: 600, lineHeight: 1.5,
           }}>
             🚫 {uploadError}
+            {uploadIsHevc && (
+              <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(220, 38, 38, 0.2)' }}>
+                <div style={{ fontWeight: 700, marginBottom: '6px', color: '#B91C1C' }}>
+                  Converter para MP4 num site grátis (escolha um):
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {[
+                    { label: 'CloudConvert', url: 'https://cloudconvert.com/mov-to-mp4', sub: '1 GB grátis' },
+                    { label: 'Convertio', url: 'https://convertio.co/mov-mp4/', sub: '100 MB grátis' },
+                    { label: 'FreeConvert', url: 'https://www.freeconvert.com/mov-to-mp4', sub: '1 GB grátis' },
+                  ].map(s => (
+                    <a
+                      key={s.url}
+                      href={s.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: 'inline-flex', flexDirection: 'column', alignItems: 'center',
+                        padding: '8px 14px', background: '#fff', border: '1.5px solid #B91C1C',
+                        borderRadius: '8px', textDecoration: 'none', color: '#B91C1C',
+                        fontSize: '12px', fontWeight: 700, lineHeight: 1.3,
+                      }}
+                    >
+                      🌐 {s.label}
+                      <span style={{ fontSize: '10px', fontWeight: 500, opacity: 0.75, marginTop: '2px' }}>{s.sub}</span>
+                    </a>
+                  ))}
+                </div>
+                <div style={{ marginTop: '8px', fontSize: '11px', fontWeight: 500, color: '#7F1D1D' }}>
+                  Suba o arquivo lá, escolha <strong>MP4</strong>, baixe o resultado e tente subir aqui de novo.
+                </div>
+              </div>
+            )}
           </div>
         )}
 

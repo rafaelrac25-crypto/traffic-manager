@@ -144,7 +144,8 @@ export async function processVideoAuto(file, onProgress) {
   if (needsUpscale) {
     return {
       ok: false,
-      reason: `Esse vídeo está em formato que não consigo redimensionar pelo navegador (provavelmente HEVC/H.265 — comum em iPhones recentes). Pra resolver: no iPhone, abra Ajustes → Câmera → Formatos → "Mais Compatível", grave de novo e tente subir. Ou use outro vídeo.`,
+      kind: 'hevc',
+      reason: `Esse vídeo está em formato HEVC/H.265 (comum em iPhones), que o navegador não consegue redimensionar. Você pode: (1) regravar no iPhone com Ajustes → Câmera → Formatos → "Mais Compatível", ou (2) converter o arquivo num site gratuito abaixo e subir o MP4 resultante.`,
     };
   }
 
@@ -246,7 +247,7 @@ export async function processMediaFile(file, onProgress) {
   if (file.type.startsWith('video/')) {
     const originalMB = Number((file.size / (1024 * 1024)).toFixed(2));
     const result = await processVideoAuto(file, onProgress);
-    if (!result.ok) return { error: result.reason };
+    if (!result.ok) return { error: result.reason, kind: result.kind };
     const finalMB = Number((result.file.size / (1024 * 1024)).toFixed(2));
     return {
       file: result.file,
