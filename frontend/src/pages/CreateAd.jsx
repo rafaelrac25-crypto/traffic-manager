@@ -95,7 +95,9 @@ const META_OBJECTIVES = [
     items: [
       { id: 'traffic',      label: 'Tráfego',             icon: '🔗', desc: 'Direcione pessoas para seu site, WhatsApp ou aplicativo.' },
       { id: 'engagement',   label: 'Engajamento',         icon: '💬', desc: 'Aumente curtidas, comentários e compartilhamentos.' },
-      { id: 'leads',        label: 'Geração de leads',    icon: '📋', desc: 'Colete cadastros de clientes em potencial com formulário nativo.' },
+      /* "Geração de leads" removido: Meta v20 exige lead_gen_form_id no creative
+         (Instant Forms), e ainda não temos UI pra criar formulários nativos.
+         Cris pode usar "Mensagens" pro mesmo objetivo (leads via WhatsApp). */
       { id: 'messages',     label: 'Mensagens',           icon: '💌', desc: 'Incentive conversas no WhatsApp, Messenger ou Instagram Direct.' },
       { id: 'app_installs', label: 'Instalações do app',  icon: '📱', desc: 'Aumente os downloads do seu aplicativo.' },
     ],
@@ -1712,7 +1714,214 @@ function BudgetSummaryPanel({ budgetValue, budgetType, startDate, endDate, locat
   );
 }
 
-function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, startDate, setStartDate, endDate, setEndDate, errors = {}, locations = [], budgetRingSplit, setBudgetRingSplit, ringsMode = 'auto', setRingsMode, budgetOptimization = 'adset', setBudgetOptimization }) {
+/* ══════════════════════════════════════════
+   HORÁRIO COMERCIAL — sub-componente
+══════════════════════════════════════════ */
+
+const DAYS_OF_WEEK = [
+  { v: 1, l: 'Seg' },
+  { v: 2, l: 'Ter' },
+  { v: 3, l: 'Qua' },
+  { v: 4, l: 'Qui' },
+  { v: 5, l: 'Sex' },
+  { v: 6, l: 'Sáb' },
+  { v: 0, l: 'Dom' },
+];
+
+function BusinessHoursPicker({ value, onChange, budgetType, error }) {
+  const v = value || { enabled: false, startTime: '08:00', endTime: '22:00', days: [1, 2, 3, 4, 5, 6] };
+  const [showCustom, setShowCustom] = useState(false);
+
+  const toggleEnabled = () => {
+    onChange?.({ ...v, enabled: !v.enabled });
+    if (v.enabled) setShowCustom(false);
+  };
+
+  const toggleDay = (d) => {
+    const current = Array.isArray(v.days) ? v.days : [];
+    const next = current.includes(d) ? current.filter(x => x !== d) : [...current, d];
+    onChange?.({ ...v, days: next });
+  };
+
+  const setStart = (t) => onChange?.({ ...v, startTime: t });
+  const setEnd   = (t) => onChange?.({ ...v, endTime: t });
+
+  /* Texto descritivo legível (PT-BR) das janelas selecionadas */
+  const daysLabel = (() => {
+    const days = Array.isArray(v.days) ? [...v.days].sort((a, b) => a - b) : [];
+    if (days.length === 0) return 'Nenhum dia selecionado';
+    if (days.length === 7) return 'Todos os dias';
+    /* seg-sex */
+    if (days.length === 5 && days.every(d => d >= 1 && d <= 5)) return 'Seg-Sex';
+    /* seg-sab */
+    if (days.length === 6 && days.every(d => d >= 1 && d <= 6)) return 'Seg-Sáb';
+    return days.map(d => DAYS_OF_WEEK.find(w => w.v === d)?.l).filter(Boolean).join(', ');
+  })();
+
+  const lifetimeRequired = budgetType !== 'total';
+
+  return (
+    <div style={{
+      border: `1.5px solid ${error ? '#EF4444' : 'var(--c-border)'}`,
+      borderRadius: '12px',
+      padding: '14px 18px',
+      background: 'var(--c-surface)',
+    }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+        <input
+          type="checkbox"
+          checked={!!v.enabled}
+          onChange={toggleEnabled}
+          aria-label="Rodar só em horário comercial"
+          style={{ width: '16px', height: '16px', accentColor: 'var(--c-accent)', cursor: 'pointer' }}
+        />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '2px' }}>
+            🕒 Rodar só em horário comercial
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--c-text-4)', lineHeight: 1.5 }}>
+            Pausa o anúncio fora do horário em que você atende. Evita gastar com mensagens que vão ficar sem resposta.
+          </div>
+        </div>
+      </label>
+
+      {v.enabled && (
+        <div style={{ marginTop: '12px', paddingLeft: '26px' }}>
+          <div style={{ fontSize: '12px', color: 'var(--c-text-2)', lineHeight: 1.5, marginBottom: '8px' }}>
+            Anúncio rodará <b>{daysLabel}</b> das <b>{v.startTime}</b> às <b>{v.endTime}</b>.
+            {Array.isArray(v.days) && !v.days.includes(0) && ' Domingos pausado.'}
+          </div>
+
+          {!showCustom ? (
+            <button
+              type="button"
+              onClick={() => setShowCustom(true)}
+              style={{
+                fontSize: '11.5px', fontWeight: 600,
+                color: 'var(--c-accent)', background: 'transparent',
+                border: 'none', cursor: 'pointer', padding: 0,
+                textDecoration: 'underline',
+              }}
+            >
+              ⚙ Personalizar horário
+            </button>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
+              {/* Dias da semana */}
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--c-text-3)', marginBottom: '6px' }}>
+                  Dias da semana
+                </div>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  {DAYS_OF_WEEK.map(d => {
+                    const active = (v.days || []).includes(d.v);
+                    return (
+                      <button
+                        key={d.v}
+                        type="button"
+                        onClick={() => toggleDay(d.v)}
+                        aria-pressed={active}
+                        aria-label={`Dia ${d.l}`}
+                        style={{
+                          padding: '6px 12px', borderRadius: '20px', minWidth: '46px',
+                          border: `1.5px solid ${active ? 'var(--c-accent)' : 'var(--c-border)'}`,
+                          background: active ? 'rgba(193,53,132,.08)' : 'var(--c-card-bg)',
+                          color: active ? 'var(--c-accent)' : 'var(--c-text-3)',
+                          fontSize: '11.5px', fontWeight: active ? 700 : 500,
+                          fontFamily: 'inherit', cursor: 'pointer',
+                          transition: 'all .12s',
+                        }}
+                      >
+                        {d.l}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Horários */}
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: '120px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--c-text-3)', display: 'block', marginBottom: '4px' }} htmlFor="bh-start">
+                    Hora início
+                  </label>
+                  <input
+                    id="bh-start"
+                    type="time"
+                    value={v.startTime || '08:00'}
+                    onChange={e => setStart(e.target.value)}
+                    aria-label="Hora de início do horário comercial"
+                    style={{
+                      width: '100%', padding: '8px 12px',
+                      border: '1.5px solid var(--c-border)', borderRadius: '8px',
+                      background: 'var(--c-card-bg)', color: 'var(--c-text-1)',
+                      fontSize: '13px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+                <div style={{ flex: 1, minWidth: '120px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--c-text-3)', display: 'block', marginBottom: '4px' }} htmlFor="bh-end">
+                    Hora fim
+                  </label>
+                  <input
+                    id="bh-end"
+                    type="time"
+                    value={v.endTime || '22:00'}
+                    onChange={e => setEnd(e.target.value)}
+                    aria-label="Hora de término do horário comercial"
+                    style={{
+                      width: '100%', padding: '8px 12px',
+                      border: '1.5px solid var(--c-border)', borderRadius: '8px',
+                      background: 'var(--c-card-bg)', color: 'var(--c-text-1)',
+                      fontSize: '13px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowCustom(false)}
+                style={{
+                  alignSelf: 'flex-start',
+                  fontSize: '11px', color: 'var(--c-text-4)',
+                  background: 'transparent', border: 'none', cursor: 'pointer', padding: 0,
+                  textDecoration: 'underline',
+                }}
+              >
+                Ocultar
+              </button>
+            </div>
+          )}
+
+          {/* Aviso: precisa lifetime_budget */}
+          {lifetimeRequired && (
+            <div style={{
+              marginTop: '10px',
+              padding: '10px 12px',
+              background: 'rgba(245, 158, 11, .08)',
+              border: '1px solid rgba(245, 158, 11, .35)',
+              borderLeft: '3px solid #F59E0B',
+              borderRadius: '8px',
+              fontSize: '11.5px', color: 'var(--c-text-2)', lineHeight: 1.5,
+            }}>
+              ⚠ <b>Atenção:</b> horário comercial só funciona com <b>"Orçamento total"</b>. Mude o tipo de orçamento acima ou desative essa opção.
+            </div>
+          )}
+        </div>
+      )}
+
+      {error && (
+        <div style={{
+          marginTop: '10px',
+          fontSize: '12px', color: '#EF4444', fontWeight: 600,
+        }}>⚠ {error}</div>
+      )}
+    </div>
+  );
+}
+
+function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, startDate, setStartDate, endDate, setEndDate, errors = {}, locations = [], budgetRingSplit, setBudgetRingSplit, ringsMode = 'auto', setRingsMode, budgetOptimization = 'adset', setBudgetOptimization, businessHours, setBusinessHours }) {
   const today = toLocalISODate(new Date());
 
   return (
@@ -1929,6 +2138,15 @@ function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, s
         </div>
         {!endDate && <p style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '6px' }}>Sem data de término: o anúncio ficará ativo até ser pausado manualmente.</p>}
       </div>
+
+      {/* Horário comercial — opcional. Pausa anúncio fora do expediente
+          em que a Cris atende WhatsApp/IG Direct. Requer lifetime_budget. */}
+      <BusinessHoursPicker
+        value={businessHours}
+        onChange={setBusinessHours}
+        budgetType={budgetType}
+        error={errors.businessHours}
+      />
 
       {/* Resumo final: duração + divisão por anel + total previsto + saldo Meta */}
       <BudgetSummaryPanel
@@ -2543,6 +2761,19 @@ function Step6Review({ data, onGoTo }) {
       rows: [
         data.budgetValue ? `💰 R$\u00A0${Number(data.budgetValue).toFixed(2).replace('.', ',')} / ${{ daily: 'dia', weekly: 'semana', total: 'campanha' }[data.budgetType] || 'campanha'}` : '💰 — valor não definido',
         `📅 Início: ${data.startDate || 'hoje'} ${data.endDate ? `· Término: ${data.endDate}` : '· Sem data de término'}`,
+        /* Horário comercial — só mostra se estiver ativo */
+        data.businessHours?.enabled
+          ? (() => {
+              const days = Array.isArray(data.businessHours.days) ? [...data.businessHours.days].sort((a, b) => a - b) : [];
+              const DLBL = { 0: 'Dom', 1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sáb' };
+              let label;
+              if (days.length === 7) label = 'Todos os dias';
+              else if (days.length === 5 && days.every(d => d >= 1 && d <= 5)) label = 'Seg-Sex';
+              else if (days.length === 6 && days.every(d => d >= 1 && d <= 6)) label = 'Seg-Sáb';
+              else label = days.map(d => DLBL[d]).filter(Boolean).join(', ');
+              return `🕒 Horário comercial: ${label}, ${data.businessHours.startTime || '08:00'}–${data.businessHours.endTime || '22:00'}`;
+            })()
+          : null,
       ].filter(Boolean),
     },
     {
@@ -3000,6 +3231,16 @@ export default function CreateAd() {
   const [budgetOptimization, setBudgetOptimization] = useState(source?.budgetOptimization || 'adset');
   const [startDate,          setStartDate]          = useState(initialStart);
   const [endDate,            setEndDate]            = useState(initialEnd);
+  /* Horário comercial (adset_schedule no Meta v20).
+     Default: desligado. Quando ligado: seg-sab 8h-22h (0=dom..6=sab).
+     Cris atende WhatsApp/IG Direct nesse horário — sem isso anúncio
+     pode rodar 3h da manhã e mensagem ficar sem resposta. */
+  const [businessHours, setBusinessHours] = useState(source?.businessHours || {
+    enabled:   false,
+    startTime: '08:00',
+    endTime:   '22:00',
+    days:      [1, 2, 3, 4, 5, 6], /* segunda a sábado */
+  });
   const [adFormat,           setAdFormat]           = useState(source?.adFormat || 'image');
   const [mediaFiles,         setMediaFiles]         = useState(source?.mediaFiles || []);
   const [videoThumbnail,     setVideoThumbnail]     = useState(source?.videoThumbnail || null); /* { file, url } se manual, null = automático */
@@ -3040,6 +3281,31 @@ export default function CreateAd() {
       /* Datas: Meta rejeita end <= start */
       if (startDate && endDate && new Date(endDate) <= new Date(startDate)) {
         errs.endDate = 'Data de fim deve ser posterior à data de início.';
+      }
+      /* Meta v20 rejeita lifetime_budget sem end_time. Sem isso, payload sai
+         com end_time:null e Graph retorna erro 100/2446117. */
+      if (budgetType === 'total' && !endDate) {
+        errs.endDate = 'Quando você escolhe orçamento total, é obrigatório definir uma data de término. Defina a data fim da campanha pra continuar.';
+      }
+      /* Horário comercial só funciona com lifetime_budget (Meta v20).
+         Se user ligou businessHours mas budget é daily, bloqueia. */
+      if (businessHours?.enabled && budgetType !== 'total') {
+        errs.businessHours = 'Horário comercial só funciona com "Orçamento total" (não com "Orçamento diário"). Mude o tipo de orçamento ou desative essa opção.';
+      }
+      /* Se ligou horário comercial mas não escolheu nenhum dia, anúncio
+         nunca rodaria — bloqueia. */
+      if (businessHours?.enabled && Array.isArray(businessHours.days) && businessHours.days.length === 0) {
+        errs.businessHours = 'Selecione ao menos 1 dia da semana para o horário comercial.';
+      }
+      /* Hora fim precisa ser depois da hora início. */
+      if (businessHours?.enabled && businessHours.startTime && businessHours.endTime) {
+        const toMin = (s) => {
+          const [h, m] = String(s).split(':').map(Number);
+          return (h || 0) * 60 + (m || 0);
+        };
+        if (toMin(businessHours.endTime) <= toMin(businessHours.startTime)) {
+          errs.businessHours = 'A hora de término precisa ser depois da hora de início.';
+        }
       }
       /* Divisão por anel: cada anel precisa de R$ 7/dia mínimo.
          Bloqueia antes de chegar no Meta, evita "ad set under minimum" (code 1815113). */
@@ -3251,6 +3517,7 @@ export default function CreateAd() {
       budgetRingSplit,
       ringsMode,
       budgetOptimization,
+      businessHours,
 
       // Público (local)
       objective, locations, ageRange, gender, interests,
@@ -3311,12 +3578,12 @@ export default function CreateAd() {
     /* Publicação/correção já aparece no histórico — não vira notificação */
   }
 
-  const reviewData = { objective, locations, ageRange, gender, interests, budgetType, budgetValue, startDate, endDate, adFormat, mediaFiles, primaryText, headline, destUrl, ctaButton, budgetRingSplit, ringsMode, budgetOptimization };
+  const reviewData = { objective, locations, ageRange, gender, interests, budgetType, budgetValue, startDate, endDate, adFormat, mediaFiles, primaryText, headline, destUrl, ctaButton, budgetRingSplit, ringsMode, budgetOptimization, businessHours };
 
   const stepComponents = [
     <Step1Objective objective={objective} setObjective={setObjective} errors={errors} />,
     <Step2Audience  locations={locations} setLocations={setLocations} ageRange={ageRange} setAgeRange={setAgeRange} gender={gender} setGender={setGender} interests={interests} setInterests={setInterests} ringsMode={ringsMode} setRingsMode={setRingsMode} />,
-    <Step4Budget budgetType={budgetType} setBudgetType={setBudgetType} budgetValue={budgetValue} setBudgetValue={setBudgetValue} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} errors={errors} locations={locations} budgetRingSplit={budgetRingSplit} setBudgetRingSplit={setBudgetRingSplit} ringsMode={ringsMode} setRingsMode={setRingsMode} budgetOptimization={budgetOptimization} setBudgetOptimization={setBudgetOptimization} />,
+    <Step4Budget budgetType={budgetType} setBudgetType={setBudgetType} budgetValue={budgetValue} setBudgetValue={setBudgetValue} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} errors={errors} locations={locations} budgetRingSplit={budgetRingSplit} setBudgetRingSplit={setBudgetRingSplit} ringsMode={ringsMode} setRingsMode={setRingsMode} budgetOptimization={budgetOptimization} setBudgetOptimization={setBudgetOptimization} businessHours={businessHours} setBusinessHours={setBusinessHours} />,
     <Step5Creative objective={objective} adFormat={adFormat} setAdFormat={setAdFormat} mediaFiles={mediaFiles} setMediaFiles={setMediaFiles} videoThumbnail={videoThumbnail} setVideoThumbnail={setVideoThumbnail} primaryText={primaryText} setPrimaryText={setPrimaryText} headline={headline} setHeadline={setHeadline} destUrl={destUrl} setDestUrl={setDestUrl} ctaButton={ctaButton} setCtaButton={setCtaButton} errors={errors} />,
     <Step6Review data={reviewData} onGoTo={(s) => { setErrors({}); setStep(s); }} />,
   ];
@@ -3477,17 +3744,31 @@ export default function CreateAd() {
             ) : (
               <button
                 onClick={handlePublish}
+                /* Bloqueia double-click — sem isso, 2 cliques rápidos criam
+                   2 campanhas Meta + 2 INSERTs locais. handlePublish é async
+                   e leva alguns segundos (upload de mídia → create campaign). */
+                disabled={publishing}
+                aria-disabled={publishing}
+                aria-busy={publishing}
                 style={{
                   padding: '11px 28px',
                   background: fixMode
                     ? 'linear-gradient(135deg,#22C55E,#16A34A)'
                     : 'linear-gradient(135deg,#E8A9AB,#d68d8f)',
                   color: '#fff', border: 'none', borderRadius: '10px',
-                  fontSize: '14px', fontWeight: 700, cursor: 'pointer',
+                  fontSize: '14px', fontWeight: 700,
+                  cursor: publishing ? 'not-allowed' : 'pointer',
+                  opacity: publishing ? 0.6 : 1,
+                  pointerEvents: publishing ? 'none' : 'auto',
                   boxShadow: fixMode ? '0 4px 16px rgba(22,163,74,.35)' : '0 4px 16px rgba(214,141,143,.35)',
+                  transition: 'opacity .15s',
                 }}
               >
-                {fixMode ? '✅ Corrigir e publicar' : (isScheduled ? '📅 Agendar campanha' : '🚀 Publicar campanha')}
+                {publishing
+                  ? '⏳ Publicando...'
+                  : fixMode
+                    ? '✅ Corrigir e publicar'
+                    : (isScheduled ? '📅 Agendar campanha' : '🚀 Publicar campanha')}
               </button>
             )}
           </div>

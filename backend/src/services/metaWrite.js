@@ -64,6 +64,11 @@ async function updateAdSetMeta(creds, platformAdSetId, fields) {
   if (fields.end_time != null) clean.end_time = fields.end_time;
   if (fields.targeting != null) clean.targeting = fields.targeting;
   if (fields.status != null) clean.status = fields.status;
+  /* Edição pós-pub do horário de exibição / frequency / bid cap / atribuição */
+  if (Array.isArray(fields.adset_schedule)) clean.adset_schedule = fields.adset_schedule;
+  if (Array.isArray(fields.frequency_control_specs)) clean.frequency_control_specs = fields.frequency_control_specs;
+  if (fields.bid_amount != null) clean.bid_amount = Math.round(Number(fields.bid_amount));
+  if (fields.bid_strategy != null) clean.bid_strategy = fields.bid_strategy;
   if (Object.keys(clean).length === 0) return null;
   return request('POST', `/${platformAdSetId}`, clean, { token });
 }
@@ -358,6 +363,26 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
     if (a.start_time) asParams.start_time = a.start_time;
     if (a.end_time) asParams.end_time = a.end_time;
     if (a.promoted_object) asParams.promoted_object = a.promoted_object;
+    /* Horário de exibição — Meta v20 aceita array de janelas ativas.
+       Se Cris escolher "rodar só em horário comercial", front envia
+       adset_schedule: [{start_minute, end_minute, days: [1..6]}].
+       start_minute/end_minute são minutos desde 00:00 (ex: 8h = 480, 22h = 1320).
+       days: 0=domingo .. 6=sábado. */
+    if (Array.isArray(a.adset_schedule) && a.adset_schedule.length > 0) {
+      asParams.adset_schedule = a.adset_schedule;
+    }
+    /* Frequency capping — limita exibições por pessoa numa janela.
+       Ex: max 3 impressões por usuário em 7 dias.
+       Usado se Cris ativar anti-fadiga pro anel primário (público pequeno). */
+    if (Array.isArray(a.frequency_control_specs) && a.frequency_control_specs.length > 0) {
+      asParams.frequency_control_specs = a.frequency_control_specs;
+    }
+    /* Bid cap (COST_CAP / BID_CAP / LOWEST_COST_WITH_BID_CAP) precisa de bid_amount em centavos */
+    if (a.bid_amount != null) asParams.bid_amount = Math.round(Number(a.bid_amount));
+    /* Janela de atribuição customizada por ad_set (default Meta v20 são valores fixos) */
+    if (Array.isArray(a.attribution_spec) && a.attribution_spec.length > 0) {
+      asParams.attribution_spec = a.attribution_spec;
+    }
     /* CONVERSATIONS (objetivo Mensagens) exige promoted_object.page_id.
        Fallback: se frontend não mandou, usa page_id das credenciais. */
     if (asParams.optimization_goal === 'CONVERSATIONS' && !asParams.promoted_object && creds.page_id) {

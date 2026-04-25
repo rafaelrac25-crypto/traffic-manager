@@ -237,6 +237,31 @@ export function toMetaPayload(ad) {
         targeting_relaxation_types: targetingRelaxation,
       };
 
+  /* Horário comercial (adset_schedule) — Cris atende no WhatsApp/IG Direct
+     em horário comercial. Sem isso, anúncios podem rodar 3h da manhã e
+     mensagens entram fora de hora (cliente espera resposta imediata).
+     Meta v20 exige: lifetime_budget (não funciona com daily) + lista de
+     janelas {start_minute, end_minute, days[]} (minutos desde meia-noite,
+     days = 0..6 onde 0=domingo, 1=segunda, ..., 6=sábado). */
+  const bh = ad.businessHours;
+  let adsetSchedule;
+  if (bh?.enabled && Array.isArray(bh.days) && bh.days.length > 0) {
+    const parseHM = (s, fallback) => {
+      if (typeof s !== 'string' || !/^\d{1,2}:\d{2}$/.test(s)) return fallback;
+      const [h, m] = s.split(':').map(Number);
+      return h * 60 + m;
+    };
+    const startMin = parseHM(bh.startTime, 8 * 60);   /* default 08:00 */
+    const endMin   = parseHM(bh.endTime,   22 * 60);  /* default 22:00 */
+    if (endMin > startMin) {
+      adsetSchedule = [{
+        start_minute: startMin,
+        end_minute:   endMin,
+        days:         [...bh.days].sort((a, b) => a - b),
+      }];
+    }
+  }
+
   /* Fuso BR_OFFSET (-03:00) vem do config — sem ele, new Date('2026-04-22T00:00:00')
      é interpretado no fuso do navegador; usuários em outros fusos viam campanha
      começando no dia errado. */
@@ -251,6 +276,10 @@ export function toMetaPayload(ad) {
     /* Meta v20: obrigatório p/ optimization_goal=CONVERSATIONS.
        Sem ele, Graph API retorna erro 100 / sub 2490408. */
     destination_type:   destinationType,
+    /* adset_schedule só faz sentido com lifetime_budget (Meta v20). Quando
+       budget é daily, o campo é ignorado; o validador do wizard impede
+       essa combinação, então aqui é seguro injetar sempre que houver. */
+    adset_schedule:     adsetSchedule,
   };
 
   /* Aceita `ringsMode` (novo) ou `ringsEnabled` (legado) */
