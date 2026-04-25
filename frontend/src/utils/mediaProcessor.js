@@ -151,10 +151,37 @@ export async function processVideoAuto(file, onProgress) {
       return { ok: true, file: compressed, wasCompressed: true };
     }
     lastFfmpegError = `output ${compressedMB.toFixed(1)} MB ainda > ${MAX_VIDEO_MB_AFTER} MB`;
-    console.warn('[compress] FFmpeg produziu', compressedMB.toFixed(1), 'MB — tentando MediaRecorder');
+    console.warn('[compress] FFmpeg produziu', compressedMB.toFixed(1), 'MB — tentando alternativa');
   } catch (e) {
     lastFfmpegError = e?.message || String(e);
     console.warn('[compress] FFmpeg falhou:', lastFfmpegError);
+  }
+
+  /* Tentativa 1.5: canvas + MediaRecorder com upscale via redesenho.
+     Contorna falha do FFmpeg.wasm por memória. Só vale se precisa upscale
+     (caso contrário Tentativa 2 do MediaRecorder direto basta). */
+  if (needsUpscale && dims.w > 0 && dims.h > 0) {
+    try {
+      onProgress?.('Ajustando vídeo (modo alternativo)…');
+      /* Calcula dimensão alvo: garante menor lado >= 600 com aspect ratio preservado */
+      const MIN_SIDE = 600;
+      const MAX_W = 720;
+      let tW = dims.w, tH = dims.h;
+      if (tW > MAX_W) { const s = MAX_W / tW; tW = Math.round(tW * s); tH = Math.round(tH * s); }
+      const minSide = Math.min(tW, tH);
+      if (minSide < MIN_SIDE) { const s = MIN_SIDE / minSide; tW = Math.round(tW * s); tH = Math.round(tH * s); }
+      tW = Math.max(2, Math.floor(tW / 2) * 2);
+      tH = Math.max(2, Math.floor(tH / 2) * 2);
+      const compressed = await compressWithCanvasUpscale(file, tW, tH, onProgress);
+      const compressedMB = compressed.size / (1024 * 1024);
+      console.log('[canvas upscale] saída:', compressedMB.toFixed(2), 'MB', tW + 'x' + tH);
+      if (compressedMB <= MAX_VIDEO_MB_AFTER) {
+        return { ok: true, file: compressed, wasCompressed: true };
+      }
+      console.warn('[canvas upscale] output ainda muito grande:', compressedMB.toFixed(1), 'MB');
+    } catch (e) {
+      console.warn('[canvas upscale] falhou:', e?.message || e);
+    }
   }
 
   /* Tentativa 2: MediaRecorder nativo. Pulada quando precisa upscale
@@ -197,6 +224,94 @@ export async function processVideoAuto(file, onProgress) {
 
 /* Fallback: comprime vídeo via MediaRecorder nativo do browser.
    Usa captureStream + bitrate controlado pra atingir ≤4MB. */
+/* Upscale + recompress via canvas + captureStream + MediaRecorder.
+   Funciona quando FFmpeg.wasm falha (limite de memória do navegador) E
+   precisa upscale (MediaRecorder direto não amplia). Estratégia: desenha
+   cada frame do vídeo num canvas em dimensão alvo (ex: 600×1060), captura
+   o canvas como stream de vídeo, mistura com áudio do vídeo original,
+   grava com MediaRecorder. Resultado: vídeo na dimensão alvo. */
+async function compressWithCanvasUpscale(file, targetW, targetH, onProgress) {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    video.src = URL.createObjectURL(file);
+    video.muted = true;
+    video.playsInline = true;
+
+    const cleanup = () => { try { URL.revokeObjectURL(video.src); } catch {} };
+    const timeout = setTimeout(() => { cleanup(); reject(new Error('canvas upscale timeout (90s)')); }, 90000);
+
+    video.onloadedmetadata = async () => {
+      try {
+        const duration = video.duration || 30;
+        const canvas = document.createElement('canvas');
+        canvas.width = targetW;
+        canvas.height = targetH;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+
+        /* Stream do canvas (vídeo) + áudio do vídeo original */
+        const canvasStream = canvas.captureStream(30);
+        try {
+          const vStream = video.captureStream ? video.captureStream() : video.mozCaptureStream?.();
+          const audioTracks = vStream?.getAudioTracks?.() || [];
+          audioTracks.forEach(t => canvasStream.addTrack(t));
+        } catch { /* sem áudio é aceitável */ }
+
+        /* Bitrate pra ficar < 4MB no resultado */
+        const totalKbps = Math.floor((4 * 8192) / Math.max(duration, 5));
+        const videoKbps = Math.max(500, totalKbps - 96);
+
+        const mimeOptions = [
+          'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+          'video/mp4',
+          'video/webm;codecs=vp9,opus',
+          'video/webm',
+        ];
+        const mimeType = mimeOptions.find(m => MediaRecorder.isTypeSupported(m));
+        if (!mimeType) { cleanup(); clearTimeout(timeout); return reject(new Error('Browser sem codec compatível')); }
+
+        const recorder = new MediaRecorder(canvasStream, {
+          mimeType,
+          videoBitsPerSecond: videoKbps * 1000,
+          audioBitsPerSecond: 96000,
+        });
+
+        const chunks = [];
+        recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+        recorder.onstop = () => {
+          cleanup();
+          clearTimeout(timeout);
+          const ext = mimeType.startsWith('video/mp4') ? '.mp4' : '.webm';
+          const blob = new Blob(chunks, { type: mimeType.split(';')[0] });
+          resolve(new File([blob], file.name.replace(/\.[^.]+$/, ext), { type: blob.type }));
+        };
+        recorder.onerror = (e) => { cleanup(); clearTimeout(timeout); reject(new Error(`canvas recorder erro: ${e.error?.message || 'unknown'}`)); };
+
+        /* Loop de desenho — copia o frame atual do vídeo pro canvas em
+           dimensão alvo (faz upscale via interpolação bilinear do browser) */
+        const drawLoop = () => {
+          if (video.ended || video.paused) { recorder.stop(); return; }
+          ctx.drawImage(video, 0, 0, targetW, targetH);
+          const pct = Math.min(99, Math.round((video.currentTime / duration) * 100));
+          onProgress?.(pct);
+          requestAnimationFrame(drawLoop);
+        };
+
+        recorder.start();
+        await video.play();
+        drawLoop();
+      } catch (e) {
+        cleanup();
+        clearTimeout(timeout);
+        reject(e);
+      }
+    };
+
+    video.onerror = () => { cleanup(); clearTimeout(timeout); reject(new Error('Não consegui carregar o vídeo pra canvas')); };
+  });
+}
+
 async function compressWithMediaRecorder(file, onProgress) {
   return new Promise((resolve, reject) => {
     const video = document.createElement('video');
