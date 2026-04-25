@@ -127,9 +127,19 @@ export async function processVideoAuto(file, onProgress) {
     console.warn('[compress] MediaRecorder falhou:', e.message);
   }
 
-  /* Tentativa 3: se original já cabe, manda sem comprimir */
-  if (originalMB <= MAX_VIDEO_MB_AFTER) {
+  /* Tentativa 3: se original já cabe E não precisa upscale, manda sem mexer.
+     Se PRECISAVA upscale e nem FFmpeg nem MediaRecorder produziram saída
+     válida, NÃO devolver o original (Meta vai rejeitar mesmo). Sinaliza
+     o motivo provável (HEVC do iPhone) com instrução prática. */
+  if (originalMB <= MAX_VIDEO_MB_AFTER && !needsUpscale) {
     return { ok: true, file, wasCompressed: false };
+  }
+
+  if (needsUpscale) {
+    return {
+      ok: false,
+      reason: `Esse vídeo está em formato que não consigo redimensionar pelo navegador (provavelmente HEVC/H.265 — comum em iPhones recentes). Pra resolver: no iPhone, abra Ajustes → Câmera → Formatos → "Mais Compatível", grave de novo e tente subir. Ou use outro vídeo.`,
+    };
   }
 
   /* Derrota total — vídeo muito grande e compressão não funcionou */
