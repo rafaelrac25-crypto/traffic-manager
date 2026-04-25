@@ -1,0 +1,84 @@
+name: Smoke test produção
+
+# Bate em /api/health/full a cada 15 minutos. Se Meta cair, banco cair, IA cair
+# ou webhook cair, abre uma issue automaticamente. Roda também em push pra main
+# pra checar deploy logo após subir.
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'  # a cada 15 minutos
+  push:
+    branches: [main]
+  workflow_dispatch:  # permite rodar manualmente pelo GitHub
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Aguarda deploy estabilizar (push only)
+        if: github.event_name == 'push'
+        run: sleep 60
+
+      - name: Verifica health endpoint
+        id: health
+        run: |
+          set -e
+          response=$(curl -s -m 30 -w "\n%{http_code}" https://criscosta.vercel.app/api/health/full)
+          http_code=$(echo "$response" | tail -1)
+          body=$(echo "$response" | head -n -1)
+
+          echo "HTTP: $http_code"
+          echo "$body" | python3 -m json.tool || echo "$body"
+
+          if [ "$http_code" != "200" ]; then
+            echo "::error::HTTP code $http_code (esperado 200)"
+            exit 1
+          fi
+
+          overall=$(echo "$body" | python3 -c "import sys, json; print(json.load(sys.stdin)['overall'])")
+          echo "Overall: $overall"
+          echo "overall=$overall" >> "$GITHUB_OUTPUT"
+          echo "body<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$body" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+          if [ "$overall" = "error" ]; then
+            echo "::error::Pelo menos uma integração está em ERROR"
+            echo "$body" | python3 -m json.tool
+            exit 1
+          fi
+
+          if [ "$overall" = "warn" ]; then
+            echo "::warning::Pelo menos uma integração está em WARN"
+          fi
+
+      - name: Cria issue se health falhar
+        if: failure() && github.event_name == 'schedule'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const overall = '${{ steps.health.outputs.overall || 'error' }}';
+            const body = `${{ steps.health.outputs.body }}` || 'Health endpoint não respondeu ou retornou HTTP != 200';
+
+            const title = `[smoke] /api/health/full retornou ${overall || 'falha'} em ${new Date().toISOString()}`;
+
+            // Evita criar issue duplicada — só cria se não houver issue aberta com mesmo prefixo
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'smoke-test',
+            });
+            if (existing.data.some(i => i.title.startsWith('[smoke]'))) {
+              console.log('Issue smoke-test já aberta, não duplico.');
+              return;
+            }
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body: `Smoke test detectou problema de saúde em produção.\n\n**Endpoint:** https://criscosta.vercel.app/api/health/full\n\n**Resposta:**\n\`\`\`json\n${body}\n\`\`\`\n\nVerifique:\n- [ ] Vercel dashboard\n- [ ] Logs de função\n- [ ] Sentry (se configurado)\n- [ ] Status da Meta (https://metastatus.com)`,
+              labels: ['smoke-test', 'incident'],
+            });

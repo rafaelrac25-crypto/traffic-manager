@@ -1,0 +1,58 @@
+name: Synthetic test diário Meta
+
+# Roda os testes da suíte Vitest 1x por dia. Detecta se alguma mudança
+# no código (feita por Rafa, por mim, ou por upgrade de dep) quebrou o
+# pacto contratual com Meta API antes de bater no usuário.
+
+on:
+  schedule:
+    - cron: '0 12 * * *'  # 09:00 GMT-3 (12:00 UTC)
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/src/config/metaRules.js'
+      - 'frontend/src/utils/metaNormalize.js'
+      - 'frontend/src/config/**.test.js'
+  workflow_dispatch:
+
+jobs:
+  test-meta:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install deps (frontend)
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run Vitest
+        working-directory: frontend
+        run: npm test
+
+      - name: Cria issue se test falhar
+        if: failure() && github.event_name == 'schedule'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'synthetic-test',
+            });
+            if (existing.data.some(i => i.title.startsWith('[synthetic]'))) return;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[synthetic] suite Vitest falhou em ${new Date().toISOString()}`,
+              body: 'Suíte de testes Meta falhou na rodada diária. Veja log do GitHub Action pra detalhe.',
+              labels: ['synthetic-test', 'incident'],
+            });
