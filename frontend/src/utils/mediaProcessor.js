@@ -115,16 +115,22 @@ export async function processVideoAuto(file, onProgress) {
     console.warn('[compress] FFmpeg falhou:', e.message, '— tentando MediaRecorder');
   }
 
-  /* Tentativa 2: MediaRecorder nativo (fallback — funciona se browser suporta) */
-  try {
-    onProgress?.('Comprimindo (modo alternativo)…');
-    const compressed = await compressWithMediaRecorder(file, onProgress);
-    const compressedMB = compressed.size / (1024 * 1024);
-    if (compressedMB <= MAX_VIDEO_MB_AFTER) {
-      return { ok: true, file: compressed, wasCompressed: true };
+  /* Tentativa 2: MediaRecorder nativo (fallback — funciona se browser suporta).
+     Pulada quando precisa upscale: MediaRecorder captura o que é renderizado,
+     não amplia. Se chegasse aqui retornaria arquivo no tamanho original e o
+     sanity check do CreateAd rejeitaria com mensagem genérica em vez da nova
+     instrução do iPhone abaixo. */
+  if (!needsUpscale) {
+    try {
+      onProgress?.('Comprimindo (modo alternativo)…');
+      const compressed = await compressWithMediaRecorder(file, onProgress);
+      const compressedMB = compressed.size / (1024 * 1024);
+      if (compressedMB <= MAX_VIDEO_MB_AFTER) {
+        return { ok: true, file: compressed, wasCompressed: true };
+      }
+    } catch (e) {
+      console.warn('[compress] MediaRecorder falhou:', e.message);
     }
-  } catch (e) {
-    console.warn('[compress] MediaRecorder falhou:', e.message);
   }
 
   /* Tentativa 3: se original já cabe E não precisa upscale, manda sem mexer.
