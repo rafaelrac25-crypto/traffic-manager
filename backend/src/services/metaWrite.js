@@ -161,10 +161,20 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
   const isVideo = !!mainVideoId && !mainImageHash;
 
   /* Meta processa vídeo de forma assíncrona — se criarmos o creative antes
-     do processamento terminar, dá erro 1492013. Aguarda até 60s. */
+     do processamento terminar, dá erro 1492013. Aguarda até 120s e ABORTA
+     a publicação se não ficar pronto (antes a função retornava ready:false
+     em timeout e publishCampaign seguia mesmo assim, criando creative com
+     vídeo "processing" — Meta rejeitava com erro genérico, mais difícil de
+     diagnosticar pro usuário). */
   if (isVideo && mainVideoId && uploadedVideos.length > 0) {
-    try { await waitForVideoReady(creds, mainVideoId); }
-    catch (e) { throw new Error(`Vídeo não ficou pronto no Meta: ${e.message}`); }
+    try {
+      const result = await waitForVideoReady(creds, mainVideoId, { maxWaitMs: 120000 });
+      if (!result?.ready) {
+        throw new Error('Vídeo ainda em processamento no Meta após 2min. Aguarde 1-2 minutos e tente novamente, ou use uma versão menor (≤30s, <10MB).');
+      }
+    } catch (e) {
+      throw new Error(`Vídeo não ficou pronto no Meta: ${e.message}`);
+    }
   }
 
   /* Cleanup transacional: se qualquer etapa depois da criação da campaign
