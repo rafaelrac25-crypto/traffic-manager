@@ -16,35 +16,62 @@ import * as Sentry from '@sentry/react';
 
 let initialized = false;
 
+/* Sanitiza URLs que possam conter token Meta antes de gravar em
+   breadcrumb. Mesma proteção do backend (sentry.js). */
+function sanitizeUrl(url) {
+  if (typeof url !== 'string') return url;
+  return url
+    .replace(/access_token=[^&]+/gi, 'access_token=[REDACTED]')
+    .replace(/client_secret=[^&]+/gi, 'client_secret=[REDACTED]')
+    .replace(/fb_exchange_token=[^&]+/gi, 'fb_exchange_token=[REDACTED]')
+    .replace(/code=[^&]+/gi, 'code=[REDACTED]');
+}
+
 export function initSentry() {
   if (initialized) return;
   const dsn = import.meta.env.VITE_SENTRY_DSN;
   if (!dsn) return; /* Sem DSN, modo no-op silencioso */
 
-  Sentry.init({
-    dsn,
-    environment: import.meta.env.MODE,
-    release: 'traffic-manager@1.0.0',
-    /* 10% das navegações geram traces de performance — suficiente pra
-       diagnóstico sem estourar quota free tier. */
-    tracesSampleRate: 0.1,
-    /* Replay desligado em sessão normal; só grava sessão quando há erro. */
-    replaysSessionSampleRate: 0,
-    replaysOnErrorSampleRate: 1.0,
-    integrations: [
-      Sentry.browserTracingIntegration(),
-      Sentry.replayIntegration({
-        maskAllText: false,
-        blockAllMedia: false,
-      }),
-    ],
-    /* Filtra ruído conhecido — ajuda a manter quota saudável */
-    ignoreErrors: [
-      'ResizeObserver loop limit exceeded',
-      'Non-Error promise rejection captured',
-    ],
-  });
-  initialized = true;
+  /* Try/catch defensivo — DSN malformado lança SyntaxError sincronamente
+     e derrubaria o React mount. Falhamos silencioso e logamos. */
+  try {
+    Sentry.init({
+      dsn,
+      environment: import.meta.env.MODE,
+      release: 'traffic-manager@1.0.0',
+      tracesSampleRate: 0.1,
+      replaysSessionSampleRate: 0,
+      replaysOnErrorSampleRate: 1.0,
+      integrations: [
+        Sentry.browserTracingIntegration(),
+        Sentry.replayIntegration({
+          maskAllText: false,
+          blockAllMedia: false,
+        }),
+      ],
+      ignoreErrors: [
+        'ResizeObserver loop limit exceeded',
+        'Non-Error promise rejection captured',
+      ],
+      /* Sanitiza URLs em breadcrumbs HTTP — protege contra vazamento de
+         token Meta caso alguma chamada de fetch falhe e seja capturada. */
+      beforeBreadcrumb(breadcrumb) {
+        if (breadcrumb?.category === 'fetch' || breadcrumb?.category === 'xhr') {
+          if (breadcrumb.data?.url) {
+            breadcrumb.data.url = sanitizeUrl(breadcrumb.data.url);
+          }
+        }
+        return breadcrumb;
+      },
+      beforeSend(event) {
+        if (event.request?.url) event.request.url = sanitizeUrl(event.request.url);
+        return event;
+      },
+    });
+    initialized = true;
+  } catch (e) {
+    console.error('[sentry] falha ao inicializar (DSN malformado?):', e?.message || e);
+  }
 }
 
 /* Re-exporta o ErrorBoundary do Sentry pra quem quiser usar em vez do
