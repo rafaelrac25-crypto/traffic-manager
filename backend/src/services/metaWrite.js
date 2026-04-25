@@ -281,14 +281,43 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
   const MESSAGING_CTAS = ['WHATSAPP_MESSAGE', 'MESSAGE_PAGE', 'CALL_NOW', 'SEND_MESSAGE'];
   const hasConversationsGoal = adSetsList.some(a => a?.optimization_goal === 'CONVERSATIONS');
   const isMessagesCampaign = hasConversationsGoal || c.objective === 'OUTCOME_LEADS';
-  function enforceMessagingCTA(ctaObj) {
-    if (!isMessagesCampaign) return ctaObj;
-    const current = ctaObj?.type;
-    if (!current || !MESSAGING_CTAS.includes(current)) {
-      console.warn('[metaWrite] CTA', current || '(vazio)', '→ MESSAGE_PAGE (campanha de mensagens exige CTA messaging)');
-      return { ...ctaObj, type: 'MESSAGE_PAGE' };
+
+  /* Saneia o `value` do CTA conforme o `type` exige.
+     Meta v20 rejeita params extras: WHATSAPP_MESSAGE não aceita `link`,
+     MESSAGE_PAGE/SEND_MESSAGE precisam app_destination: MESSENGER, etc.
+     Erro reportado: 105 / 1815630 ("muitos parâmetros na chamada para ação"). */
+  function sanitizeCtaValue(ctaObj) {
+    if (!ctaObj || !ctaObj.type) return ctaObj;
+    const value = ctaObj.value || {};
+    switch (ctaObj.type) {
+      case 'WHATSAPP_MESSAGE':
+        /* WhatsApp puxa da Page (precisa ter WhatsApp Business linkado nas
+           settings da Page no Facebook). NÃO aceita link no value. */
+        return { type: 'WHATSAPP_MESSAGE', value: { app_destination: 'WHATSAPP' } };
+      case 'MESSAGE_PAGE':
+      case 'SEND_MESSAGE':
+        return { type: ctaObj.type, value: { app_destination: 'MESSENGER' } };
+      case 'CALL_NOW':
+        /* Aceita tel: link; sem isso, puxa da Page */
+        if (typeof value.link === 'string' && value.link.startsWith('tel:')) return ctaObj;
+        return { type: 'CALL_NOW', value: {} };
+      default:
+        /* LEARN_MORE, BOOK_TRAVEL, SHOP_NOW, etc — mantém link */
+        return ctaObj;
     }
-    return ctaObj;
+  }
+
+  function enforceMessagingCTA(ctaObj) {
+    let normalized = ctaObj;
+    if (isMessagesCampaign) {
+      const current = ctaObj?.type;
+      if (!current || !MESSAGING_CTAS.includes(current)) {
+        console.warn('[metaWrite] CTA', current || '(vazio)', '→ MESSAGE_PAGE (campanha de mensagens exige CTA messaging)');
+        normalized = { ...ctaObj, type: 'MESSAGE_PAGE' };
+      }
+    }
+    /* Sempre sanitiza o value conforme o type final, independente do objetivo */
+    return sanitizeCtaValue(normalized);
   }
 
   if (isVideo) {
