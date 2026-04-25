@@ -71,6 +71,34 @@ export async function compressImage(file) {
   });
 }
 
+/* Detecta codec do vídeo lendo FourCC nos primeiros bytes do container.
+   Não decodifica — só procura strings do tipo 'avc1' (H.264), 'hvc1'/'hev1'
+   (HEVC) no header. Suficiente pra distinguir formatos antes de tentar
+   processamento pesado e dar mensagem certa em caso de falha. */
+async function detectVideoCodec(file) {
+  try {
+    const slice = file.slice(0, 200000);
+    const buf = new Uint8Array(await slice.arrayBuffer());
+    /* Busca direta por bytes ASCII dos FourCCs */
+    const findStr = (s) => {
+      const bytes = Array.from(s).map(c => c.charCodeAt(0));
+      for (let i = 0; i < buf.length - bytes.length; i++) {
+        let match = true;
+        for (let j = 0; j < bytes.length; j++) {
+          if (buf[i + j] !== bytes[j]) { match = false; break; }
+        }
+        if (match) return true;
+      }
+      return false;
+    };
+    if (findStr('hvc1') || findStr('hev1')) return 'hevc';
+    if (findStr('avc1')) return 'h264';
+    return 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
+
 /* Lê dimensões do vídeo via metadata. Necessário pra detectar quando
    o vídeo precisa de upscale (ex: 480×848 do iPhone vertical, abaixo
    do mínimo Meta 500×500). */
@@ -93,6 +121,8 @@ async function readVideoDims(file) {
 export async function processVideoAuto(file, onProgress) {
   const originalMB = file.size / (1024 * 1024);
   const dims = await readVideoDims(file);
+  const codec = await detectVideoCodec(file);
+  console.log('[processVideo]', { sizeMB: originalMB.toFixed(2), dims, codec });
   /* Vídeo com algum lado < 600px precisa upscale (folga sobre 500 do Meta).
      Mesmo que size esteja OK, força passagem pelo FFmpeg pra ampliar. */
   const needsUpscale = dims.w > 0 && dims.h > 0 && (dims.w < 600 || dims.h < 600);
@@ -101,7 +131,18 @@ export async function processVideoAuto(file, onProgress) {
     return { ok: true, file, wasCompressed: false };
   }
 
-  /* Tentativa 1: FFmpeg.wasm (melhor qualidade, suporta H.264 direto) */
+  /* HEVC detectado direto no header → não tenta FFmpeg.wasm (sem decoder
+     HEVC no build single-threaded). Vai direto pra mensagem com botões. */
+  if (codec === 'hevc') {
+    return {
+      ok: false,
+      kind: 'hevc',
+      reason: `Esse vídeo está em formato HEVC/H.265 (comum em iPhones com config padrão), que o navegador não consegue processar. Você pode: (1) regravar com "Mais Compatível" nos Ajustes do iPhone, ou (2) converter o arquivo num site gratuito abaixo.`,
+    };
+  }
+
+  /* Tentativa 1: FFmpeg.wasm (decodifica H.264 nativamente) */
+  let lastFfmpegError = null;
   try {
     const { compressVideo } = await import('./videoCompressor');
     const compressed = await compressVideo(file, onProgress);
@@ -109,17 +150,15 @@ export async function processVideoAuto(file, onProgress) {
     if (compressedMB <= MAX_VIDEO_MB_AFTER) {
       return { ok: true, file: compressed, wasCompressed: true };
     }
-    /* Se ainda estourou depois dos 3 passes, tenta fallback MediaRecorder */
+    lastFfmpegError = `output ${compressedMB.toFixed(1)} MB ainda > ${MAX_VIDEO_MB_AFTER} MB`;
     console.warn('[compress] FFmpeg produziu', compressedMB.toFixed(1), 'MB — tentando MediaRecorder');
   } catch (e) {
-    console.warn('[compress] FFmpeg falhou:', e.message, '— tentando MediaRecorder');
+    lastFfmpegError = e?.message || String(e);
+    console.warn('[compress] FFmpeg falhou:', lastFfmpegError);
   }
 
-  /* Tentativa 2: MediaRecorder nativo (fallback — funciona se browser suporta).
-     Pulada quando precisa upscale: MediaRecorder captura o que é renderizado,
-     não amplia. Se chegasse aqui retornaria arquivo no tamanho original e o
-     sanity check do CreateAd rejeitaria com mensagem genérica em vez da nova
-     instrução do iPhone abaixo. */
+  /* Tentativa 2: MediaRecorder nativo. Pulada quando precisa upscale
+     (MediaRecorder não amplia, só captura no tamanho original). */
   if (!needsUpscale) {
     try {
       onProgress?.('Comprimindo (modo alternativo)…');
@@ -133,26 +172,26 @@ export async function processVideoAuto(file, onProgress) {
     }
   }
 
-  /* Tentativa 3: se original já cabe E não precisa upscale, manda sem mexer.
-     Se PRECISAVA upscale e nem FFmpeg nem MediaRecorder produziram saída
-     válida, NÃO devolver o original (Meta vai rejeitar mesmo). Sinaliza
-     o motivo provável (HEVC do iPhone) com instrução prática. */
+  /* Tentativa 3: se original já cabe E não precisa upscale, manda sem mexer. */
   if (originalMB <= MAX_VIDEO_MB_AFTER && !needsUpscale) {
     return { ok: true, file, wasCompressed: false };
   }
 
-  if (needsUpscale) {
+  /* Falha confirmada após tentativa real. 3 mensagens distintas pra cada
+     causa raiz (em vez do antigo "tudo é HEVC"). Todas oferecem o caminho
+     do conversor online (kind:'hevc' ativa os botões na UI). */
+  if (codec === 'h264') {
     return {
       ok: false,
-      kind: 'hevc',
-      reason: `Esse vídeo está em formato HEVC/H.265 (comum em iPhones), que o navegador não consegue redimensionar. Você pode: (1) regravar no iPhone com Ajustes → Câmera → Formatos → "Mais Compatível", ou (2) converter o arquivo num site gratuito abaixo e subir o MP4 resultante.`,
+      kind: 'hevc', /* reusa o flag pra mostrar os botões de conversão */
+      reason: `O compressor de vídeo do navegador travou processando esse arquivo (codec H.264, ${originalMB.toFixed(1)} MB${dims.w ? `, ${dims.w}×${dims.h}` : ''}). Pode ser limite de memória do navegador. Resolve convertendo num site gratuito abaixo:`,
     };
   }
 
-  /* Derrota total — vídeo muito grande e compressão não funcionou */
   return {
     ok: false,
-    reason: `Não conseguimos comprimir o vídeo (${originalMB.toFixed(1)} MB). Tente um vídeo mais curto (≤30s).`,
+    kind: 'hevc',
+    reason: `Não consegui processar esse vídeo no navegador (formato/codec não reconhecido${lastFfmpegError ? `: ${lastFfmpegError}` : ''}). Resolve convertendo num site gratuito abaixo:`,
   };
 }
 

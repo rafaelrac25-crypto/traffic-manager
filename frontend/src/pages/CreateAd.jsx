@@ -2571,7 +2571,7 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
       {/* Upload de mídia */}
       <div>
         <SectionLabel>Mídia</SectionLabel>
-        <input ref={fileRef} type="file" accept="image/*,video/*" multiple style={{ display: 'none' }} onChange={e => handleFiles(e.target.files)} />
+        <input ref={fileRef} type="file" accept="image/*,video/*" multiple style={{ display: 'none' }} onChange={e => { handleFiles(e.target.files); e.target.value = ''; }} />
 
         {/* Previews com indicador de compressão */}
         {mediaFiles.length > 0 && (
