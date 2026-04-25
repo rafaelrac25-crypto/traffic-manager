@@ -2,7 +2,13 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { initSentry } from './utils/sentry';
 import './index.css';
+
+/* Inicializa Sentry ANTES de tudo — assim qualquer throw em import,
+   ThemeProvider ou App é capturado. Se VITE_SENTRY_DSN não estiver
+   setado, vira no-op silencioso. */
+initSentry();
 
 class ErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { error: null }; }

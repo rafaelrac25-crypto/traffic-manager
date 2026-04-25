@@ -10,6 +10,7 @@
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
+    "@sentry/react": "^10.50.0",
     "axios": "^1.7.2",
     "leaflet": "^1.9.4",
     "leaflet.heat": "^0.2.0",

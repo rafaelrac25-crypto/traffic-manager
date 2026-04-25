@@ -1,4 +1,11 @@
 require('dotenv').config();
+
+/* Sentry deve ser inicializado ANTES de qualquer require que possa lançar
+   ou de criar o app — assim erros em import/setup também são capturados.
+   Se SENTRY_DSN não estiver setado, vira no-op silencioso. */
+const { initSentry, setupExpressErrorHandler } = require('./services/sentry');
+initSentry();
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -63,6 +70,11 @@ if (fs.existsSync(frontendDist)) {
     res.sendFile(path.join(frontendDist, 'index.html'));
   });
 }
+
+/* Sentry error handler DEVE ser registrado depois de todas as rotas/middlewares
+   pra capturar erros que escapam do try/catch dos handlers. No-op se DSN
+   não estiver setado. */
+setupExpressErrorHandler(app);
 
 // Modo local: inicia o servidor HTTP
 // Modo Vercel (serverless): apenas exporta o app
