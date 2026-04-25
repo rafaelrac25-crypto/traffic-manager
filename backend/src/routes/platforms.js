@@ -253,6 +253,52 @@ router.get('/meta/oauth/callback', async (req, res) => {
   }
 });
 
+/* Busca de interesses no Ad Interest Library do Meta — usado pelo modal
+   de edição de público em Campaigns.jsx. Retorna IDs reais que podem ser
+   enviados em `targeting.interests` no PUT /api/campaigns/:id.
+   Query: ?q=texto&limit=8 (limit default 8, max 25). Read-only. */
+router.get('/meta/search-interests', async (req, res) => {
+  const q = String(req.query.q || '').trim();
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 8, 1), 25);
+  if (q.length < 2) return res.json({ results: [] });
+  try {
+    const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+    const creds = credResult.rows[0];
+    if (!creds) return res.status(400).json({ error: 'Meta não conectado' });
+
+    const { refreshIfNeeded } = require('../services/metaToken');
+    const token = await refreshIfNeeded(creds);
+    if (!token) return res.status(400).json({ error: 'Token Meta ausente' });
+
+    try {
+      const json = await metaGet('/search', {
+        type: 'adinterest',
+        q,
+        limit,
+        locale: 'pt_BR',
+      }, { token });
+      const results = (json?.data || []).map(it => ({
+        id: it.id,
+        name: it.name,
+        audience_size: it.audience_size_lower_bound != null
+          ? { lower: it.audience_size_lower_bound, upper: it.audience_size_upper_bound }
+          : (it.audience_size != null ? { lower: it.audience_size, upper: it.audience_size } : null),
+        path: Array.isArray(it.path) ? it.path : null,
+        topic: it.topic || null,
+      }));
+      return res.json({ results });
+    } catch (e) {
+      if (e.meta?.reconnect) {
+        return res.status(401).json({ error: e.message, needs_reconnect: true });
+      }
+      return res.status(502).json({ error: e.message, meta: e.meta || null });
+    }
+  } catch (err) {
+    console.error('[meta/search-interests]', err);
+    return res.status(500).json({ error: err.message || 'Erro na busca' });
+  }
+});
+
 /* Check rápido do status de uma campanha direto no Meta (usando o
    platform_campaign_id, não o ID local). Útil pra verificar se um
    DELETE propagou ou pra diagnosticar fora do fluxo normal. Read-only. */

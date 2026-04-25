@@ -50,7 +50,10 @@ async function updateCampaignMeta(creds, platformCampaignId, fields) {
   return request('POST', `/${platformCampaignId}`, clean, { token });
 }
 
-/* Atualiza campos mutáveis de um AdSet (budget, datas, nome). */
+/* Atualiza campos mutáveis de um AdSet (budget, datas, nome, targeting).
+   Targeting é um objeto Meta v20 — passar parcial substitui o targeting
+   completo no Meta, então o caller deve mandar o targeting INTEIRO já
+   reconciliado com o que existe (não só os campos que mudaram). */
 async function updateAdSetMeta(creds, platformAdSetId, fields) {
   const token = getToken(creds);
   const clean = {};
@@ -59,6 +62,8 @@ async function updateAdSetMeta(creds, platformAdSetId, fields) {
   if (fields.lifetime_budget != null) clean.lifetime_budget = Math.round(fields.lifetime_budget);
   if (fields.start_time != null) clean.start_time = fields.start_time;
   if (fields.end_time != null) clean.end_time = fields.end_time;
+  if (fields.targeting != null) clean.targeting = fields.targeting;
+  if (fields.status != null) clean.status = fields.status;
   if (Object.keys(clean).length === 0) return null;
   return request('POST', `/${platformAdSetId}`, clean, { token });
 }

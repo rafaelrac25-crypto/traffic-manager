@@ -123,6 +123,42 @@ export async function uploadMedia(file) {
   }
 }
 
+/* Edita SÓ o público (targeting) de uma campanha Meta já publicada.
+   Backend propaga pra TODOS os ad_sets da campanha preservando geo_locations.
+   Body: { age_min, age_max, genders: [], interests: [{id, name}] }.
+   Lança Error com .meta em 502 (Meta recusou); propaga 500 como Error genérico. */
+export async function updateAdTargeting(id, targeting) {
+  if (id == null) return null;
+  try {
+    const { data } = await api.put(`${BASE}/${id}`, { targeting });
+    return data;
+  } catch (err) {
+    const status = err?.response?.status;
+    const body = err?.response?.data;
+    const e = new Error(body?.error || err.message || 'Falha ao salvar público');
+    e.status = status;
+    e.meta = body?.meta || null;
+    throw e;
+  }
+}
+
+/* Busca interesses no Ad Interest Library do Meta — usado pelo input de
+   chips no modal de edição de público. Retorna lista de {id, name, ...}.
+   Throttle/debounce é responsabilidade do caller. */
+export async function searchInterests(q, { limit = 8 } = {}) {
+  const query = String(q || '').trim();
+  if (query.length < 2) return [];
+  try {
+    const { data } = await api.get('/api/platforms/meta/search-interests', {
+      params: { q: query, limit },
+    });
+    return Array.isArray(data?.results) ? data.results : [];
+  } catch (err) {
+    console.warn('[adsApi] searchInterests falhou', err?.message);
+    return [];
+  }
+}
+
 /* Faz sync cirúrgico de status + métricas dos ads Meta já publicados.
    Retorna { updated: [{ id, platform_campaign_id, status, spent, clicks, ... }] }. */
 export async function syncMetaStatus() {

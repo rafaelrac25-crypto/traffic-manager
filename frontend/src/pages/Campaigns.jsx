@@ -5,9 +5,10 @@
  * Do not persist mock values.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../contexts/AppStateContext';
+import { updateAdTargeting, searchInterests } from '../services/adsApi';
 
 
 /* ── Configurações visuais ── */
@@ -752,10 +753,433 @@ function PerformanceReport({ ads, avgCostPerResult }) {
   );
 }
 
+/* ── Modal de edição de PÚBLICO (idade/gênero/interesses) ──
+   Aplica nos 3 anéis simultaneamente via PUT /api/campaigns/:id { targeting }.
+   Bairros e raios NÃO são tocados. Só faz sentido pra campanhas Meta publicadas
+   (com platform_campaign_id). */
+function EditAudienceModal({ ad, onClose, onSaved }) {
+  /* Lê valores atuais do payload — tenta ad_sets[0].targeting primeiro,
+     depois cai pra ad_set, depois pros campos planos no topo. */
+  const initial = (() => {
+    const adSetsList = ad?.meta?.ad_sets || (ad?.meta?.ad_set ? [ad.meta.ad_set] : []);
+    const t = adSetsList[0]?.targeting || {};
+    const ageRange = ad?.ageRange || {};
+    return {
+      age_min: Number(t.age_min ?? ageRange.min ?? ageRange[0] ?? 25),
+      age_max: Number(t.age_max ?? ageRange.max ?? ageRange[1] ?? 45),
+      genders: Array.isArray(t.genders) && t.genders.length > 0
+        ? t.genders.map(Number)
+        : (ad?.gender === 1 || ad?.gender === 2 ? [Number(ad.gender)] : []),
+      interests: Array.isArray(t.interests) && t.interests.length > 0
+        ? t.interests.map(it => ({ id: String(it.id), name: it.name || '' }))
+        : (Array.isArray(ad?.interests)
+            ? ad.interests
+                .filter(i => i?.id && !String(i.id).startsWith('interest_'))
+                .map(i => ({ id: String(i.id), name: i.name || '' }))
+            : []),
+    };
+  })();
+
+  const [ageMin, setAgeMin] = useState(initial.age_min);
+  const [ageMax, setAgeMax] = useState(initial.age_max);
+  /* Genero: '' = Todos, '2' = Mulheres, '1' = Homens */
+  const [genderRadio, setGenderRadio] = useState(
+    initial.genders.length === 0 ? '' : String(initial.genders[0])
+  );
+  const [interests, setInterests] = useState(initial.interests);
+
+  const [searchQ, setSearchQ] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  const debounceRef = useRef(null);
+
+  /* Busca de interesses com debounce de 400ms */
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    const q = searchQ.trim();
+    if (q.length < 2) {
+      setSuggestions([]);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const results = await searchInterests(q, { limit: 8 });
+        /* Remove já adicionados */
+        const filtered = results.filter(r => !interests.some(it => String(it.id) === String(r.id)));
+        setSuggestions(filtered);
+      } catch {
+        setSuggestions([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 400);
+    return () => debounceRef.current && clearTimeout(debounceRef.current);
+  }, [searchQ, interests]);
+
+  const addInterest = useCallback((it) => {
+    setInterests(prev => prev.some(x => String(x.id) === String(it.id))
+      ? prev
+      : [...prev, { id: String(it.id), name: it.name }]);
+    setSearchQ('');
+    setSuggestions([]);
+    setShowDropdown(false);
+  }, []);
+
+  const removeInterest = useCallback((id) => {
+    setInterests(prev => prev.filter(x => String(x.id) !== String(id)));
+  }, []);
+
+  /* Validações leves */
+  const canSave = (() => {
+    if (saving) return false;
+    if (ageMin < 18 || ageMin > 65) return false;
+    if (ageMax < 18 || ageMax > 65) return false;
+    if (ageMin > ageMax) return false;
+    return true;
+  })();
+
+  const handleSave = async () => {
+    setError(null);
+    setSaving(true);
+    /* IDs locais do servidor — usa serverId quando disponível, senão id puro */
+    const serverId = ad?.serverId || ad?.id;
+    const targeting = {
+      age_min: Number(ageMin),
+      age_max: Number(ageMax),
+      genders: genderRadio === '' ? [] : [Number(genderRadio)],
+      interests: interests.map(it => ({ id: it.id, name: it.name || '' })),
+    };
+    try {
+      const updated = await updateAdTargeting(serverId, targeting);
+      setSaving(false);
+      onSaved && onSaved(updated, targeting);
+      onClose();
+    } catch (err) {
+      setSaving(false);
+      /* 502 = Meta recusou — mostra mensagem do backend e MANTÉM o painel aberto */
+      if (err?.status === 502) {
+        setError(err.message || 'Meta recusou a alteração. Revise os campos e tente novamente.');
+      } else {
+        setError('Falha ao salvar público — tente novamente.');
+      }
+    }
+  };
+
+  /* Estilos compartilhados */
+  const labelStyle = {
+    display: 'block', fontSize: '11px', fontWeight: 700,
+    color: 'var(--c-text-3)', textTransform: 'uppercase',
+    letterSpacing: '.5px', marginBottom: '8px',
+  };
+  const inputStyle = {
+    width: '90px', padding: '8px 10px', fontSize: '13px',
+    borderRadius: '8px', border: '1.5px solid var(--c-border)',
+    background: 'var(--c-card-bg)', color: 'var(--c-text-1)',
+    fontFamily: 'inherit',
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 250, padding: '20px',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: 'var(--c-card-bg)', borderRadius: '16px',
+          border: '1px solid var(--c-border)',
+          width: '100%', maxWidth: '540px', maxHeight: '90vh', overflow: 'auto',
+          boxShadow: '0 20px 60px rgba(0,0,0,.4)',
+        }}
+      >
+        {/* Header */}
+        <div style={{
+          padding: '16px 20px', borderBottom: '1px solid var(--c-border-lt)',
+          display: 'flex', alignItems: 'flex-start', gap: '12px',
+          position: 'sticky', top: 0, background: 'var(--c-card-bg)', zIndex: 2,
+        }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--c-text-1)' }}>
+              Editar público
+            </div>
+            <div style={{ fontSize: '11.5px', color: 'var(--c-text-4)', marginTop: '2px', wordBreak: 'break-word' }}>
+              {ad?.name || 'Anúncio sem nome'}
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'transparent', border: 'none',
+              fontSize: '22px', lineHeight: 1, color: 'var(--c-text-3)',
+              cursor: 'pointer', padding: '0 4px', flexShrink: 0,
+            }}
+          >×</button>
+        </div>
+
+        <div style={{ padding: '18px 20px' }}>
+
+          {/* Aviso */}
+          <div style={{
+            background: 'rgba(193, 53, 132, 0.08)',
+            border: '1px solid rgba(193, 53, 132, 0.25)',
+            borderRadius: '10px', padding: '10px 12px',
+            marginBottom: '18px',
+            fontSize: '11.5px', color: 'var(--c-text-2)', lineHeight: 1.5,
+          }}>
+            <strong style={{ color: 'var(--c-accent)' }}>Importante:</strong> mudanças
+            no público aplicam aos <strong>3 anéis simultaneamente</strong>. Bairros
+            e raios <strong>não são alterados</strong>.
+          </div>
+
+          {/* Faixa etária */}
+          <div style={{ marginBottom: '20px' }}>
+            <label style={labelStyle}>Faixa etária</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div>
+                <input
+                  type="number"
+                  min={18}
+                  max={65}
+                  value={ageMin}
+                  onChange={(e) => setAgeMin(Math.max(18, Math.min(65, Number(e.target.value) || 18)))}
+                  style={inputStyle}
+                />
+                <div style={{ fontSize: '10px', color: 'var(--c-text-4)', marginTop: '4px', textAlign: 'center' }}>
+                  Mínima
+                </div>
+              </div>
+              <span style={{ color: 'var(--c-text-4)', fontSize: '14px', alignSelf: 'center', marginTop: '-14px' }}>até</span>
+              <div>
+                <input
+                  type="number"
+                  min={18}
+                  max={65}
+                  value={ageMax}
+                  onChange={(e) => setAgeMax(Math.max(18, Math.min(65, Number(e.target.value) || 65)))}
+                  style={inputStyle}
+                />
+                <div style={{ fontSize: '10px', color: 'var(--c-text-4)', marginTop: '4px', textAlign: 'center' }}>
+                  Máxima
+                </div>
+              </div>
+              <div style={{ marginLeft: 'auto', fontSize: '12px', color: 'var(--c-text-3)', alignSelf: 'center', marginTop: '-14px' }}>
+                {ageMin > ageMax
+                  ? <span style={{ color: '#DC2626', fontWeight: 600 }}>Intervalo inválido</span>
+                  : `${ageMax - ageMin + 1} anos de faixa`
+                }
+              </div>
+            </div>
+          </div>
+
+          {/* Gênero */}
+          <div style={{ marginBottom: '20px' }}>
+            <label style={labelStyle}>Gênero</label>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {[
+                { val: '',  label: 'Todos' },
+                { val: '2', label: 'Mulheres' },
+                { val: '1', label: 'Homens' },
+              ].map(opt => {
+                const isOn = genderRadio === opt.val;
+                return (
+                  <button
+                    key={opt.val}
+                    type="button"
+                    onClick={() => setGenderRadio(opt.val)}
+                    style={{
+                      padding: '8px 16px', borderRadius: '10px',
+                      border: `1.5px solid ${isOn ? 'var(--c-accent)' : 'var(--c-border)'}`,
+                      background: isOn ? 'var(--c-accent)' : 'var(--c-card-bg)',
+                      color: isOn ? '#fff' : 'var(--c-text-2)',
+                      fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+                      fontFamily: 'inherit', transition: 'all .15s',
+                    }}
+                  >{opt.label}</button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Interesses */}
+          <div style={{ marginBottom: '20px' }}>
+            <label style={labelStyle}>Interesses</label>
+
+            {/* Chips atuais */}
+            {interests.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+                {interests.map(it => (
+                  <span
+                    key={it.id}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '6px',
+                      padding: '5px 10px', borderRadius: '14px',
+                      background: 'var(--c-surface)',
+                      border: '1px solid var(--c-border)',
+                      fontSize: '11.5px', color: 'var(--c-text-1)', fontWeight: 500,
+                    }}
+                  >
+                    {it.name || it.id}
+                    <button
+                      type="button"
+                      onClick={() => removeInterest(it.id)}
+                      title="Remover"
+                      style={{
+                        background: 'transparent', border: 'none', cursor: 'pointer',
+                        color: 'var(--c-text-4)', fontSize: '14px', lineHeight: 1,
+                        padding: 0, display: 'flex', alignItems: 'center',
+                      }}
+                    >×</button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Input de busca + dropdown */}
+            <div style={{ position: 'relative' }}>
+              <input
+                type="text"
+                value={searchQ}
+                onChange={(e) => { setSearchQ(e.target.value); setShowDropdown(true); }}
+                onFocus={() => setShowDropdown(true)}
+                placeholder="Buscar interesse no Meta (ex: maquiagem, estética...)"
+                style={{
+                  width: '100%', padding: '9px 12px', fontSize: '12.5px',
+                  borderRadius: '8px', border: '1.5px solid var(--c-border)',
+                  background: 'var(--c-card-bg)', color: 'var(--c-text-1)',
+                  fontFamily: 'inherit', boxSizing: 'border-box',
+                }}
+              />
+              {showDropdown && (searching || suggestions.length > 0) && (
+                <div style={{
+                  position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
+                  background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',
+                  borderRadius: '10px',
+                  boxShadow: '0 8px 24px rgba(0,0,0,.18)',
+                  zIndex: 5, maxHeight: '280px', overflow: 'auto',
+                }}>
+                  {searching && (
+                    <div style={{ padding: '10px 12px', fontSize: '11.5px', color: 'var(--c-text-4)' }}>
+                      Buscando…
+                    </div>
+                  )}
+                  {!searching && suggestions.length === 0 && searchQ.trim().length >= 2 && (
+                    <div style={{ padding: '10px 12px', fontSize: '11.5px', color: 'var(--c-text-4)' }}>
+                      Nenhum resultado
+                    </div>
+                  )}
+                  {!searching && suggestions.map(s => {
+                    const audLabel = s.audience_size?.lower != null
+                      ? ` · ~${Number(s.audience_size.lower).toLocaleString('pt-BR')} pessoas`
+                      : '';
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => addInterest(s)}
+                        style={{
+                          display: 'block', width: '100%', textAlign: 'left',
+                          padding: '8px 12px', background: 'transparent',
+                          border: 'none', borderBottom: '1px solid var(--c-border-lt)',
+                          cursor: 'pointer', fontFamily: 'inherit',
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--c-surface)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                      >
+                        <div style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--c-text-1)' }}>
+                          {s.name}
+                        </div>
+                        <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', marginTop: '2px' }}>
+                          {s.topic || (s.path && s.path.length > 0 ? s.path.slice(0, 2).join(' › ') : 'Interesse Meta')}
+                          {audLabel}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', marginTop: '6px' }}>
+              Os interesses ficam combinados com OU (qualquer um deles dispara o anúncio).
+            </div>
+          </div>
+
+          {/* Erro */}
+          {error && (
+            <div style={{
+              background: '#FEF2F2', border: '1px solid #FCA5A5',
+              borderRadius: '10px', padding: '10px 12px',
+              fontSize: '12px', color: '#991B1B', marginBottom: '14px',
+              wordBreak: 'break-word',
+            }}>
+              {error}
+            </div>
+          )}
+
+          {/* Ações */}
+          <div style={{
+            display: 'flex', gap: '8px', marginTop: '8px',
+            borderTop: '1px solid var(--c-border-lt)', paddingTop: '14px',
+          }}>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={saving}
+              style={{
+                flex: 1, padding: '11px', borderRadius: '10px',
+                background: 'var(--c-card-bg)', color: 'var(--c-text-2)',
+                border: '1.5px solid var(--c-border)',
+                fontSize: '12px', fontWeight: 700,
+                cursor: saving ? 'not-allowed' : 'pointer',
+                opacity: saving ? 0.6 : 1,
+                fontFamily: 'inherit',
+              }}
+            >Cancelar</button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={!canSave}
+              style={{
+                flex: 2, padding: '11px', borderRadius: '10px',
+                background: canSave ? 'var(--c-accent)' : 'var(--c-border)',
+                color: '#fff', border: 'none',
+                fontSize: '12px', fontWeight: 700,
+                cursor: canSave ? 'pointer' : 'not-allowed',
+                fontFamily: 'inherit',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              }}
+            >
+              {saving && (
+                <span style={{
+                  width: '12px', height: '12px',
+                  border: '2px solid rgba(255,255,255,.4)',
+                  borderTopColor: '#fff', borderRadius: '50%',
+                  display: 'inline-block', animation: 'spin .9s linear infinite',
+                }} />
+              )}
+              {saving ? 'Salvando…' : 'Salvar público'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Página Anúncios ── */
 export default function Campaigns() {
   const navigate = useNavigate();
-  const { ads: userAds, toggleAdStatus, duplicateAd, removeAd, runMetaSync, metaSyncedAt, metaSyncing } = useAppState();
+  const { ads: userAds, toggleAdStatus, duplicateAd, removeAd, updateAd, runMetaSync, metaSyncedAt, metaSyncing } = useAppState();
   const [statusFilter, setStatusFilter] = useState('');
   const [platformFilter, setPlatformFilter] = useState('');
   const [page, setPage] = useState(1);
@@ -763,12 +1187,51 @@ export default function Campaigns() {
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState('desc');
   const [previewAd, setPreviewAd] = useState(null);
+  const [editingAudienceAd, setEditingAudienceAd] = useState(null);
 
   const allAds = userAds;
   const TOTAL = allAds.length;
 
+  /* Pra campanhas Meta JÁ PUBLICADAS, "Editar" abre o modal de público inline
+     (rápido). Pra rascunhos/agendadas, segue o fluxo antigo: reabre o wizard
+     pra editar tudo (criativo, copy, bairros, etc). */
   function handleEdit(ad) {
-    navigate('/criar-anuncio', { state: { editId: ad.id } });
+    const isPublishedMeta = (ad.platform === 'meta' || ad.platform === 'instagram')
+      && (ad.platform_campaign_id || ad.metaCampaignId);
+    if (isPublishedMeta) {
+      setEditingAudienceAd(ad);
+    } else {
+      navigate('/criar-anuncio', { state: { editId: ad.id } });
+    }
+  }
+
+  /* Sucesso no PUT /api/campaigns/:id { targeting } — atualiza estado local
+     da ad pra o painel não mostrar valores antigos no próximo clique. */
+  function handleAudienceSaved(_serverResp, targetingApplied) {
+    if (!editingAudienceAd) return;
+    const id = editingAudienceAd.id;
+    /* Reflete no payload.meta.ad_sets[i].targeting + nos campos planos lidos pelo modal de preview */
+    const patch = {
+      ageRange: { min: targetingApplied.age_min, max: targetingApplied.age_max },
+      gender: targetingApplied.genders.length === 0 ? 0 : targetingApplied.genders[0],
+      interests: targetingApplied.interests,
+    };
+    /* Mescla também no meta.ad_sets[*].targeting pra ficar consistente caso
+       o usuário reabra o modal — sem refetch, evita corrida. */
+    if (editingAudienceAd.meta?.ad_sets?.length) {
+      const newAdSets = editingAudienceAd.meta.ad_sets.map(as => ({
+        ...as,
+        targeting: {
+          ...(as.targeting || {}),
+          age_min: targetingApplied.age_min,
+          age_max: targetingApplied.age_max,
+          genders: targetingApplied.genders,
+          interests: targetingApplied.interests,
+        },
+      }));
+      patch.meta = { ...editingAudienceAd.meta, ad_sets: newAdSets };
+    }
+    updateAd && updateAd(id, patch);
   }
 
   function handleSort(key) {
@@ -1062,6 +1525,14 @@ export default function Campaigns() {
         onDuplicate={previewAd && userAds.some(u => u.id === previewAd.id) ? (a) => duplicateAd(a.id) : null}
         onEdit={previewAd && userAds.some(u => u.id === previewAd.id) ? handleEdit : null}
       />
+
+      {editingAudienceAd && (
+        <EditAudienceModal
+          ad={editingAudienceAd}
+          onClose={() => setEditingAudienceAd(null)}
+          onSaved={handleAudienceSaved}
+        />
+      )}
     </div>
   );
 }

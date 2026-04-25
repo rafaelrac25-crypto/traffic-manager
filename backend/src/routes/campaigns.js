@@ -147,7 +147,9 @@ router.post('/', async (req, res) => {
 });
 
 router.put('/:id', async (req, res) => {
-  const { name, budget, start_date, end_date, spent, clicks, impressions, conversions, status, payload } = req.body;
+  const { name, budget, start_date, end_date, spent, clicks, impressions, conversions, status, payload,
+          /* Novos campos: edição pós-publicação de targeting + redistribuição entre anéis */
+          targeting: targetingPatch, ringSplit } = req.body;
   const payloadStr = payload !== undefined ? (payload ? JSON.stringify(payload) : null) : undefined;
   try {
     /* Propaga mudanças pro Meta antes de gravar local (name/budget/datas).
@@ -235,6 +237,58 @@ router.put('/:id', async (req, res) => {
           }
         } catch (e) {
           return res.status(502).json({ error: `Meta recusou a mudança de datas: ${e.message}`, meta: e.meta || null });
+        }
+      }
+
+      /* 4) Targeting (interesses/idade/gênero) — patch parcial.
+         Meta v20 substitui o objeto targeting INTEIRO no POST, então
+         precisamos reconstruir a partir do existente (no payload salvo)
+         + aplicar só os campos que mudaram. geo_locations,
+         targeting_automation, targeting_relaxation_types e custom_locations
+         dos bairros NÃO são tocados aqui. */
+      if (targetingPatch && typeof targetingPatch === 'object' && adSetIds.length > 0) {
+        const adSetsList = prevPayload?.meta?.ad_sets || (prevPayload?.meta?.ad_set ? [prevPayload.meta.ad_set] : []);
+        try {
+          for (let i = 0; i < adSetIds.length; i++) {
+            const existingTargeting = adSetsList[i]?.targeting || adSetsList[0]?.targeting || {};
+            const merged = { ...existingTargeting };
+            if (targetingPatch.age_min != null) merged.age_min = Number(targetingPatch.age_min);
+            if (targetingPatch.age_max != null) merged.age_max = Number(targetingPatch.age_max);
+            if (Array.isArray(targetingPatch.genders)) merged.genders = targetingPatch.genders;
+            if (Array.isArray(targetingPatch.interests)) {
+              /* Reusa resolveInterestIds via publishCampaign? Não — é função
+                 interna. Aceita IDs reais OU nomes; backend (Meta) rejeita
+                 IDs fake `interest_*` então o caller deve mandar IDs reais
+                 obtidos via /api/meta/search. Frontend consome /search e
+                 envia IDs+name corretos aqui. */
+              merged.interests = targetingPatch.interests
+                .filter(it => it?.id && !String(it.id).startsWith('interest_'))
+                .map(it => ({ id: it.id, name: it.name || '' }));
+            }
+            await updateAdSetMeta(creds, adSetIds[i], { targeting: merged });
+          }
+        } catch (e) {
+          return res.status(502).json({ error: `Meta recusou a mudança de público: ${e.message}`, meta: e.meta || null });
+        }
+      }
+
+      /* 5) Redistribuição entre anéis (ringSplit) — recebe novos % por anel
+         e reaplica nos ad_sets existentes proporcionalmente ao budget total
+         atual (ou novo, se também veio na request). Só faz sentido em ABO. */
+      if (ringSplit && typeof ringSplit === 'object' && !isCBO && ringSplit && Object.keys(ringSplit).length > 0) {
+        const totalBRL = budget != null ? Number(budget) : Number(current.budget);
+        const totalCents = Math.round(totalBRL * 100);
+        const budgetType = prevPayload?.budgetType === 'total' ? 'lifetime_budget' : 'daily_budget';
+        const adSetsWithKey = prevPayload?.metaPublishResult?.ad_sets || [];
+        try {
+          for (const as of adSetsWithKey) {
+            const newPct = ringSplit[as.ring_key];
+            if (newPct == null) continue;
+            const ringCents = Math.round(totalCents * (Number(newPct) / 100));
+            await updateAdSetMeta(creds, as.ad_set_id, { [budgetType]: ringCents });
+          }
+        } catch (e) {
+          return res.status(502).json({ error: `Meta recusou a redistribuição entre anéis: ${e.message}`, meta: e.meta || null });
         }
       }
     }

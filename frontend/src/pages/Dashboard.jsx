@@ -1,8 +1,9 @@
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../contexts/AppStateContext';
 import { getUpcomingCommercialDates } from '../data/commercialDates';
 import { globalRingPerformance } from '../data/performanceMock';
+import RingRecommendation from '../components/RingRecommendation';
 
 const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const WEEK_DAYS_SHORT = ['DOM','SEG','TER','QUA','QUI','SEX','SÁB'];
@@ -984,7 +985,7 @@ const RING_VISUAL = {
   externo:  { emoji: '🔴', color: '#DC2626', bg: '#FEE2E2', hint: 'mais longe' },
 };
 
-function RingPerformanceCard() {
+function RingPerformanceCard({ onDataChange, refreshSignal } = {}) {
   const [state, setState] = useState({ status: 'loading', data: null, error: null });
 
   const fetchRings = async () => {
@@ -994,8 +995,10 @@ function RingPerformanceCard() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setState({ status: 'ok', data, error: null });
+      if (typeof onDataChange === 'function') onDataChange(data);
     } catch (err) {
       setState(prev => ({ ...prev, status: 'error', error: err?.message || 'fetch failed' }));
+      if (typeof onDataChange === 'function') onDataChange(null);
     }
   };
 
@@ -1003,7 +1006,16 @@ function RingPerformanceCard() {
     fetchRings();
     const id = setInterval(fetchRings, 5 * 60 * 1000); /* refetch a cada 5min */
     return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /* Re-fetch externo: quando o pai bumpar refreshSignal (ex: após aplicar
+     redistribuição entre anéis), atualiza os dados sem esperar o intervalo. */
+  useEffect(() => {
+    if (refreshSignal === undefined || refreshSignal === 0) return;
+    fetchRings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshSignal]);
 
   const cardWrap = (children) => (
     <section
@@ -1470,6 +1482,34 @@ export default function Dashboard() {
      O top [0] é a "melhor"; o usuário pode trocar via seletor. */
   const liveCampaigns = useMemo(() => rankLiveCampaigns(ads), [ads]);
   const [selectedCampaignId, setSelectedCampaignId] = useState(null);
+
+  /* Compartilha o snapshot de rings entre o card de Performance (faz o fetch)
+     e o card de Recomendação (consome). Evita 2 chamadas duplicadas ao backend
+     e mantém ambos sincronizados. */
+  const [ringsData, setRingsData] = useState(null);
+  const [ringsRefreshSignal, setRingsRefreshSignal] = useState(0);
+  const handleRingsData = useCallback((data) => setRingsData(data), []);
+  const handleRecommendationApplied = useCallback(() => {
+    /* Bump força o RingPerformanceCard a re-fetchar imediatamente.
+       O Meta pode levar minutos pra refletir, mas pelo menos puxa o estado
+       atual já reportado (e mantém os dois cards alinhados). */
+    setRingsRefreshSignal(s => s + 1);
+  }, []);
+
+  /* Campanhas ativas que aceitam redistribuição entre anéis: precisam ter
+     id real do backend (serverId) e estar no ar/em revisão. Pausadas também
+     valem — só não faz sentido aplicar em rascunhos. */
+  const ringApplicableCampaigns = useMemo(() => {
+    return ads
+      .filter(a => (a.serverId || (typeof a.id === 'number' && !String(a.id).startsWith('DRAFT-')))
+        && (a.status === 'active' || a.status === 'paused' || a.status === 'review'))
+      .map(a => ({
+        id: a.serverId || a.id,
+        name: a.name || `Campanha #${a.serverId || a.id}`,
+        budget: a.budget,
+      }));
+  }, [ads]);
+
   /* Se a campanha escolhida sair do ar, volta pra melhor atual */
   useEffect(() => {
     if (selectedCampaignId && !liveCampaigns.find(c => c.id === selectedCampaignId)) {
@@ -1537,7 +1577,18 @@ export default function Dashboard() {
       />
 
       {/* ── Performance por anel (dado real do Meta) ── */}
-      <RingPerformanceCard />
+      <RingPerformanceCard
+        onDataChange={handleRingsData}
+        refreshSignal={ringsRefreshSignal}
+      />
+
+      {/* ── Recomendação automática de redistribuição entre anéis ──
+         Esconde silenciosamente se não houver dado real ou só 1 anel ativo. */}
+      <RingRecommendation
+        rings={ringsData?.rings || []}
+        activeCampaigns={ringApplicableCampaigns}
+        onApplied={handleRecommendationApplied}
+      />
 
       {/* ── Linha: saldo + alerta CPC + desempenho por anel ── */}
       <div style={{
