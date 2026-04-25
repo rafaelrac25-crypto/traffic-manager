@@ -2139,6 +2139,23 @@ function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, s
         {!endDate && <p style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '6px' }}>Sem data de término: o anúncio ficará ativo até ser pausado manualmente.</p>}
       </div>
 
+      {/* Contador simples de duração — mostra quantos dias o anúncio vai rodar. */}
+      {startDate && endDate && (() => {
+        const d = computeDays(startDate, endDate);
+        if (!d) return null;
+        return (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '10px',
+            padding: '10px 14px', borderRadius: '10px',
+            border: '1.5px solid var(--c-border)', background: 'var(--c-surface)',
+            fontSize: '13px', color: 'var(--c-text-1)',
+          }}>
+            <span style={{ fontSize: '16px' }}>📅</span>
+            <span><strong>{d} {d === 1 ? 'dia' : 'dias'}</strong> de campanha</span>
+          </div>
+        );
+      })()}
+
       {/* Horário comercial — opcional. Pausa anúncio fora do expediente
           em que a Cris atende WhatsApp/IG Direct. Requer lifetime_budget. */}
       <BusinessHoursPicker
@@ -2146,17 +2163,6 @@ function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, s
         onChange={setBusinessHours}
         budgetType={budgetType}
         error={errors.businessHours}
-      />
-
-      {/* Resumo final: duração + divisão por anel + total previsto + saldo Meta */}
-      <BudgetSummaryPanel
-        budgetValue={budgetValue}
-        budgetType={budgetType}
-        startDate={startDate}
-        endDate={endDate}
-        locations={locations}
-        budgetRingSplit={budgetRingSplit}
-        ringsMode={ringsMode}
       />
 
     </div>
