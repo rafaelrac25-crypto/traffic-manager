@@ -1,6 +1,6 @@
 # CRITICAL_STATE — traffic-manager
 
-> **Atualizado:** 2026-04-24 23:35 GMT-3 (checkpoint pré-100%)
+> **Atualizado:** 2026-04-25 09:02 GMT-3 (todos 11 bugs fechados, rumo aos 100%)
 >
 > **Pra Claude:** este arquivo é o **estado crítico atual** do sistema. Lê-lo no início de cada sessão evita afirmações erradas. Atualizar no fim de cada sessão se algo mudar.
 >
@@ -30,42 +30,31 @@ NÃO afirmar que falta env var sem antes rodar `curl /api/health/full`.
 
 **Nenhuma campanha real publicada ainda.** Sistema verificado, pronto pra 1ª publicação.
 
-## Bugs corrigidos hoje (2026-04-24)
+## Bugs corrigidos hoje (2026-04-25) — rumo aos 100%
 
-| Commit | O que |
-|---|---|
-| `dbb7eeb` | Polling Meta: guard via useRef pra evitar overlap |
-| `67b83e7` | Vídeo: aborta publish se não ficar pronto |
-| `3a41b6a` | Token refresh: lock por Promise pra evitar race |
-| `639a7f7` | Refactor regras Meta consolidadas em `frontend/src/config/metaRules.js` |
-| `095ab2c` | Health endpoint valida token Meta LIVE |
-| `91bb641` | Sentry SDK frontend + backend (no-op sem DSN) |
-| `9bcf061` | Vitest 23 tests cobrindo metaRules.js |
-| `64132d8` | GitHub Actions smoke + synthetic test |
-| `28033f3` | Vercel.json modernizado (`@vercel/static-build` roda npm run build) |
-| `84cf7c5` | Vídeo timeout 50s respeita Vercel maxDuration 60s |
-| `728240d` | Sentry sanitiza tokens em breadcrumbs + try/catch no init |
+Commit consolidado: `cc2759c` — fechou os 11 itens abertos.
 
-## Bugs conhecidos abertos (rumo aos 100%)
+| # | O que | Arquivo principal |
+|---|---|---|
+| 1 | Rollback transacional: se INSERT local falhar pós-publishCampaign, deleta no Meta | `backend/src/routes/campaigns.js` |
+| 2 | Notificações agrupadas por kind+janela 60s + sino anti-flood 8s (fim dos 50 dings) | `frontend/src/contexts/AppStateContext.jsx` |
+| 3 | Insights por bairro: log + `_diagnostics` no payload (era silencioso) | `backend/src/routes/campaigns.js` |
+| 4 | Reconciliação localStorage × banco: log de ads "fantasma" descartados | `frontend/src/contexts/AppStateContext.jsx` |
+| 5 | cleanupOrphans loga IDs de ad_sets/ads criados antes da falha | `backend/src/services/metaWrite.js` |
+| 6 | enforceMessagingCTA detecta por optimization_goal=CONVERSATIONS, não objective genérico | `backend/src/services/metaWrite.js` |
+| 7 | 4 codes Meta antes genéricos: 1870227 / 1487891 / 2490408 / 1492013 | `backend/src/services/metaErrors.js` |
+| 8 | Token decrypt: regex exata `<b64>:<b64>:<b64>` + helper `safeDecrypt` central | `backend/src/services/crypto.js` (+4 services) |
+| 9 | metaPageId em vez de metaAccountId (alias legado mantido) | `frontend/src/pages/CreateAd.jsx`, `metaNormalize.js` |
+| 10 | Interesses descartados rastreados em `dropped_interests` no resultado | `backend/src/services/metaWrite.js` |
+| 11 | Webhook signature mismatch loga warn explícito (FB_APP_SECRET divergente) | `backend/src/routes/webhooks.js` |
 
-Após auditoria + re-auditoria, **11 itens em aberto** (nenhum bloqueia 1ª campanha):
+**Bugs corrigidos antes (2026-04-24):** ver commits `dbb7eeb`..`728240d` (polling guard, vídeo abort, token refresh lock, regras Meta consolidadas, health LIVE, Sentry, Vitest, GH Actions, Vercel.json modernizado).
 
-### 🟠 Médio impacto — vou atacar agora rumo aos 100%
+## Bugs conhecidos abertos
 
-1. **Sem transação DB após publishCampaign** — Meta cria, INSERT local falha → órfã
-2. **50 sinos em massa** ao voltar após dias offline (sem agrupar notifications)
-3. **Insights por bairro retorna `[]` silencioso** se locations sem `name`
+**Nenhum.** Os 11 itens da auditoria foram fechados em `cc2759c` (2026-04-25).
 
-### 🟡 Baixo impacto / edge case
-
-4. **localStorage divergente do banco** — ad fantasma se backend deletou
-5. **Cleanup de órfãos sem logging detalhado** dos ad sets criados
-6. **CTA WhatsApp com objetivo "Engajamento" vira LEARN_MORE silencioso**
-7. **4 codes Meta caem em "Parâmetro inválido" genérico** (1870227, 1487891, 2490408, 1492013)
-8. **Token decryption frágil com `:`** (heurística — risco ~1%)
-9. **page_id confundido com metaAccountId em vídeo** (front envia errado, back corrige)
-10. **Interesses fake silenciosamente descartados** se Meta não acha
-11. **Webhook signature sem log se FB_APP_SECRET mudar** (defensivo)
+Próxima auditoria: rodar `gsd-audit-uat` ou peer review antes da 1ª campanha real.
 
 ## Decisões pendentes (aguardando Rafa)
 
@@ -111,10 +100,8 @@ Após auditoria + re-auditoria, **11 itens em aberto** (nenhum bloqueia 1ª camp
 
 ## Próximo passo planejado
 
-**Rumo aos 100%:** atacar os 11 bugs abertos (3 🟠 + 8 🟡). Ordem prevista:
+**100% pronto pra 1ª campanha real.** Sugestões:
 
-1. Backend hardening (items 1, 5, 7, 8, 9, 11)
-2. Frontend UX (items 2, 6, 10)
-3. DB sync (items 3, 4)
-
-Cada um com commit atômico, build/teste antes de push.
+1. **Publicar 1ª campanha real** — sistema verificado, todos bugs conhecidos fechados
+2. **Ativar Vercel email alerts** — https://vercel.com/account/notifications (1 min, manual)
+3. **Aguardar 1º sync real Meta** — destrava feature "recomendação por bairro × serviço"
