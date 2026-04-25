@@ -2469,6 +2469,35 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
     }
   }, [objective]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /* Cancelamento defensivo: se o usuário fez algum progresso (passou de
+     step 0 OU subiu mídia OU escreveu copy), confirma antes de descartar e
+     SEMPRE tenta salvar como rascunho — assim "OK por engano" não destrói
+     trabalho, ele pode voltar depois. */
+  function handleCancel() {
+    const hasContent = step > 0
+      || (mediaFiles && mediaFiles.length > 0)
+      || (headline || '').trim()
+      || (primaryText || '').trim()
+      || (locations && locations.length > 0);
+    if (!hasContent) {
+      navigate('/anuncios');
+      return;
+    }
+    const ok = window.confirm(
+      'Cancelar agora?\n\nSuas informações serão salvas como rascunho — você pode continuar depois.'
+    );
+    if (!ok) return;
+    try {
+      saveDraft?.({
+        objective, locations, ageRange, gender, interests,
+        budgetType, budgetValue, startDate, endDate,
+        adFormat, mediaFiles, primaryText, headline, destUrl, ctaButton,
+        budgetRingSplit, ringsMode, businessHours,
+      });
+    } catch { /* salvar é best-effort, não bloqueia saída */ }
+    navigate('/anuncios');
+  }
+
   /* Mede dimensões reais da mídia pra validar contra o mínimo Meta (500×500).
      Usa elementos off-screen: <video> pra vídeo, <img> pra imagem. */
   async function getMediaDimensions(file) {
@@ -2983,7 +3012,13 @@ function PreflightCheckPanel({ data }) {
         const json = await res.json();
         if (!cancelled) setState({ loading: false, ...json });
       } catch (e) {
-        if (!cancelled) setState({ loading: false, ok_overall: false, checks: [], error: e.message });
+        /* Traduz erros nativos do navegador pra mensagem amigável.
+           "Failed to fetch" / "Load failed" → sem internet ou servidor offline. */
+        const raw = String(e?.message || e);
+        const friendly = /Failed to fetch|Load failed|NetworkError|TypeError.*fetch/i.test(raw)
+          ? 'Sem conexão com o servidor. Verifique sua internet e tente de novo.'
+          : raw;
+        if (!cancelled) setState({ loading: false, ok_overall: false, checks: [], error: friendly });
       }
     })();
     return () => { cancelled = true; };
@@ -3662,7 +3697,7 @@ export default function CreateAd() {
           </p>
         </div>
         <button
-          onClick={() => navigate('/anuncios')}
+          onClick={handleCancel}
           style={{ padding: '8px 16px', border: '1.5px solid var(--c-border)', background: 'var(--c-surface)', color: 'var(--c-text-3)', borderRadius: '10px', fontSize: '13px', cursor: 'pointer', flexShrink: 0 }}
         >
           Cancelar
@@ -3769,7 +3804,7 @@ export default function CreateAd() {
           {/* Navegação */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '36px', paddingTop: '20px', borderTop: '1px solid var(--c-border-lt)' }}>
             <button
-              onClick={() => { setErrors({}); step > 0 ? setStep(s => s - 1) : navigate('/anuncios'); }}
+              onClick={() => { setErrors({}); step > 0 ? setStep(s => s - 1) : handleCancel(); }}
               style={{ padding: '10px 20px', border: '1.5px solid var(--c-border)', background: 'var(--c-surface)', color: 'var(--c-text-2)', borderRadius: '10px', fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}
             >
               {step === 0 ? 'Cancelar' : '← Voltar'}
