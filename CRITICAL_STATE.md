@@ -51,6 +51,12 @@ Ver auditoria completa em `.planning/audit/SUMMARY.md`. Resumo dos principais:
 - 🟡 **CTA messaging com objetivo errado vira LEARN_MORE silenciosamente**
 - 🟡 **Cobertura incompleta de error codes Meta** (1870227, 1487891, 2490408, 1492013)
 
+## Pendência estrutural (não urgente)
+
+⚠️ **`vercel.json` usa configuração `builds` antiga** — Vercel ignora `buildCommand` e só empacota o backend, usando `frontend/dist/` commitado. Toda vez que houver mudança em frontend que dependa de env var (tipo `VITE_SENTRY_DSN`), precisa **buildar local com a env setada** antes de commit. Solução estrutural: migrar pra `functions` config (próxima sessão, ~20min, requer cuidado pra não quebrar API routes).
+
+Detectado via build log do dpl_2s29zvoPiFPmsbA3ggoaxmwYoztR (warning explícito: "Due to `builds` existing in your configuration file, the Build and Development Settings defined in your Project Settings will not apply").
+
 ## Decisões pendentes (aguardando Rafa)
 
 - Plugar `dryRunCreateCampaign` em `metaWrite.js` antes da chamada Graph real? (decidido **não plugar agora** — `validation_engine`/`dry_run_simulator` ficam standalone em `project/core/`)
@@ -76,7 +82,7 @@ Ver auditoria completa em `.planning/audit/SUMMARY.md`. Resumo dos principais:
 
 ## Skills/serviços externos
 
-- **Sentry** — SDK instalado em frontend e backend, **DSN ainda não setado**. Rafa precisa: criar conta sentry.io → 2 projetos (React + Node) → adicionar `VITE_SENTRY_DSN` e `SENTRY_DSN` na Vercel. Ver `PROTECTION_SETUP.md`.
+- **Sentry** — ✅ ATIVO em frontend e backend desde 2026-04-24 22:55. Ambos DSNs setados na Vercel. Erros chegam por email em rafaelrac25@gmail.com. Conta Sentry: rafaelrac25@gmail.com (login GitHub).
 - **GitHub Actions** — `smoke-test.yml` (health check a cada 15min) + `synthetic-test.yml` (vitest diário 09h GMT-3). Abre issues automáticas se quebrar.
 - **Vercel email alerts** — Rafa precisa ativar em https://vercel.com/account/notifications. Ver `PROTECTION_SETUP.md`.
 - **Vercel** — deploy automático em push pra `main`.
