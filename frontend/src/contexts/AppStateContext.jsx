@@ -166,8 +166,15 @@ export function AppStateProvider({ children }) {
      mostrar claramente se ad está entregando de verdade ou só aprovado-em-espera. */
   const [metaSyncedAt, setMetaSyncedAt] = useState(null);
   const [metaSyncing, setMetaSyncing] = useState(false);
+  /* Ref pra evitar overlap real entre ticks. setInterval dispara a cada 90s
+     mesmo se a sync anterior ainda está rodando (Promise no `tick` não pausa
+     o intervalo). Antes desse guard, sync >90s causava chamadas empilhadas
+     ao Meta e, se uma travasse, polling ficava em loop morto sem aviso. */
+  const metaSyncingRef = useRef(false);
 
   const runMetaSync = useCallback(async () => {
+    if (metaSyncingRef.current) return; /* sync anterior ainda rodando — pula esse tick */
+    metaSyncingRef.current = true;
     setMetaSyncing(true);
     try {
       const updates = await adsApi.syncMetaStatus();
@@ -235,6 +242,7 @@ export function AppStateProvider({ children }) {
       }
       setMetaSyncedAt(new Date().toISOString());
     } finally {
+      metaSyncingRef.current = false;
       setMetaSyncing(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
