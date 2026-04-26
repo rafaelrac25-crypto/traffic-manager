@@ -159,7 +159,7 @@ export default function Sidebar({ open = false, isMobile = false }) {
       {/* ── Navegação ── */}
       <nav style={{ flex: 1, overflowY: 'auto', padding: '14px 10px 0' }}>
         {/* ── Destaques: Dashboard + Criar anúncio (linha única, apenas contorno) ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '14px' }}>
           {PRIMARY_NAV.map(({ to, label }) => {
             const active   = isActive(to);
             const isCreate = to === '/criar-anuncio';
