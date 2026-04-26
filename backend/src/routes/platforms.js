@@ -92,6 +92,61 @@ router.get('/', async (req, res) => {
   }
 });
 
+/* Diagnostica a Page atual: retorna se tem WhatsApp Business linkado,
+   IG Business linkado, e capabilities relevantes pra publicar Click-to-WhatsApp.
+   Útil pra debug do erro 100/2446885 ("Page sem WhatsApp Business"). */
+router.get('/meta/diagnose-page', async (req, res) => {
+  try {
+    const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+    const creds = credResult.rows[0];
+    if (!creds) return res.status(400).json({ error: 'Meta não conectado' });
+    if (!creds.page_id) return res.status(400).json({ error: 'page_id ausente em platform_credentials' });
+
+    const { refreshIfNeeded } = require('../services/metaToken');
+    const token = await refreshIfNeeded(creds);
+    if (!token) return res.status(400).json({ error: 'Token Meta ausente' });
+
+    /* Campos relevantes:
+       - whatsapp_number: número linkado (sem distinguir Business)
+       - connected_whatsapp_business_account: WA Business API oficial
+       - is_messenger_platform_bot_step_enabled: messenger pronto
+       - instagram_business_account: IG Business linkado */
+    let json = {};
+    try {
+      json = await metaGet(`/${creds.page_id}`, {
+        fields: 'name,whatsapp_number,connected_whatsapp_business_account,instagram_business_account,messaging_feature_status',
+      }, { token });
+    } catch (e) {
+      return res.status(502).json({ error: e.message, meta: e.meta || null });
+    }
+
+    /* Pergunta separada: a Page consegue rodar Click-to-WhatsApp?
+       Endpoint custom: /act_X/cta_destination_uri com app_destination=WHATSAPP
+       não é público. Inferimos pela presença de whatsapp_number ou connected_whatsapp_business_account. */
+    const hasWhatsappNumber = !!json.whatsapp_number;
+    const hasWhatsappBusinessApi = !!json.connected_whatsapp_business_account?.id;
+    const canRunClickToWhatsApp = hasWhatsappNumber || hasWhatsappBusinessApi;
+
+    res.json({
+      page_id: creds.page_id,
+      page_name: json.name || null,
+      whatsapp: {
+        number_linked: json.whatsapp_number || null,
+        business_account_linked: json.connected_whatsapp_business_account || null,
+        can_run_click_to_whatsapp: canRunClickToWhatsApp,
+      },
+      instagram_business_account: json.instagram_business_account || null,
+      messaging_feature_status: json.messaging_feature_status || null,
+      diagnosis: canRunClickToWhatsApp
+        ? '✅ Page tem WhatsApp linkado — Click-to-WhatsApp deveria funcionar'
+        : '❌ Page NÃO tem WhatsApp linkado oficialmente — usar fallback de link wa.me/...',
+    });
+  } catch (err) {
+    console.error('[meta/diagnose-page]', err);
+    res.status(500).json({ error: err.message || 'Erro ao diagnosticar Page' });
+  }
+});
+
 router.get('/meta/billing', async (req, res) => {
   try {
     const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
