@@ -1,6 +1,7 @@
 node_modules/
 .env
 *.env.local
+.vercel
 .vercel/
 backend/dist/
 build/
@@ -9,4 +10,7 @@ build/
 *.db-shm
 *.db-wal
 
-.vercel
+# Prints/screenshots de debug — uso local
+Print duvida/
+*.tmp.png
+
