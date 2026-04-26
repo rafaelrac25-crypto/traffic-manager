@@ -27,7 +27,33 @@ async function syncPlatform(platform) {
   const campaigns = await handler.fetchCampaigns(creds);
   let upserted = 0;
 
+  /* Mapa de transições de effective_status que merecem log em activity_log.
+     "DE→PARA" tem prioridade sobre "*→PARA" (wildcard).
+     Esses eventos são lidos pelo frontend via polling (AppStateContext) e
+     disparam sino + push notification ao usuário. */
+  const STATUS_TRANSITIONS = {
+    'PENDING_REVIEW→ACTIVE':      { action: 'ad_approved',          description: 'Anuncio aprovado pelo Meta e entrou em veiculacao.' },
+    'IN_PROCESS→ACTIVE':          { action: 'ad_approved',          description: 'Anuncio aprovado pelo Meta e entrou em veiculacao.' },
+    'PREAPPROVED→ACTIVE':         { action: 'ad_approved',          description: 'Anuncio aprovado pelo Meta e entrou em veiculacao.' },
+    'PENDING_BILLING_INFO→ACTIVE':{ action: 'ad_approved',          description: 'Anuncio aprovado pelo Meta e entrou em veiculacao.' },
+    'PENDING_REVIEW→DISAPPROVED': { action: 'ad_disapproved',       description: 'Anuncio reprovado apos revisao do Meta.' },
+    'IN_PROCESS→DISAPPROVED':     { action: 'ad_disapproved',       description: 'Anuncio reprovado apos revisao do Meta.' },
+    'ACTIVE→DISAPPROVED':         { action: 'ad_disapproved_live',  description: 'Anuncio reprovado enquanto estava no ar.' },
+    'PAUSED→DISAPPROVED':         { action: 'ad_disapproved',       description: 'Anuncio reprovado pelo Meta.' },
+    '*→WITH_ISSUES':              { action: 'ad_with_issues',       description: 'Anuncio com problema detectado pelo Meta.' },
+  };
+
   for (const c of campaigns) {
+    /* Busca o effective_status anterior ANTES de sobrescrever — detecta transições */
+    let prevEffectiveStatus = null;
+    try {
+      const prevResult = await db.query(
+        `SELECT effective_status FROM campaigns WHERE platform = ? AND platform_campaign_id = ?`,
+        [platform, c.id]
+      );
+      prevEffectiveStatus = prevResult.rows[0]?.effective_status || null;
+    } catch { /* best-effort — não bloqueia sync se falhar */ }
+
     const payload = {
       objective: c.objective,
       reach: c.reach,
@@ -60,6 +86,33 @@ async function syncPlatform(platform) {
        c.conversions, c.start_date, c.end_date, JSON.stringify(payload)]
     );
     upserted++;
+
+    /* Registra transição em activity_log se o effective_status mudou */
+    const newES = c.effective_status;
+    if (newES && prevEffectiveStatus !== newES) {
+      const transitionKey = `${prevEffectiveStatus || 'null'}→${newES}`;
+      const wildcardKey   = `*→${newES}`;
+      const event = STATUS_TRANSITIONS[transitionKey] || STATUS_TRANSITIONS[wildcardKey];
+      if (event) {
+        try {
+          await db.query(
+            `INSERT INTO activity_log (action, entity, entity_id, description, meta, created_at)
+             VALUES (?, ?, ?, ?, ?, datetime('now'))`,
+            [
+              event.action,
+              'campaign',
+              null,
+              `${event.description} (${c.name})`,
+              JSON.stringify({ campaign_name: c.name, platform_campaign_id: c.id, from: prevEffectiveStatus, to: newES }),
+            ]
+          );
+          console.log(`[sync] transicao de status: "${c.name}" ${prevEffectiveStatus} → ${newES} (${event.action})`);
+        } catch (logErr) {
+          /* Falha no log nunca bloqueia o sync */
+          console.warn('[sync] activity_log insert falhou:', logErr.message);
+        }
+      }
+    }
   }
 
   /* Insights por ad_set + região/cidade — popula insights_by_district com

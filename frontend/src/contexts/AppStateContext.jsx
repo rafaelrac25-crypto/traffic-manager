@@ -239,12 +239,26 @@ export function AppStateProvider({ children }) {
               message: `"${name}" foi aprovado pelo Meta e já está rodando.`,
               link: '/anuncios',
             });
+          } else if (t.to === 'DISAPPROVED' && t.from === 'ACTIVE') {
+            addNotification({
+              kind: 'rejected',
+              title: 'Anúncio reprovado durante a veiculação ⚠️',
+              message: `"${name}" estava no ar e foi reprovado pelo Meta. Verifique as políticas em Reprovados.`,
+              link: '/reprovados',
+            });
           } else if (t.to === 'DISAPPROVED' && t.from !== 'DISAPPROVED') {
             addNotification({
               kind: 'rejected',
               title: 'Anúncio reprovado após revisão',
               message: `"${name}" foi reprovado pelo Meta depois da análise. Veja o motivo em Reprovados.`,
               link: '/reprovados',
+            });
+          } else if (t.to === 'WITH_ISSUES' && t.from !== 'WITH_ISSUES') {
+            addNotification({
+              kind: 'warning',
+              title: 'Anúncio com problema no Meta ⚠️',
+              message: `"${name}" está com problemas detectados pelo Meta. Verifique o painel de anúncios.`,
+              link: '/anuncios',
             });
           }
         }
