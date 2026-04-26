@@ -175,21 +175,23 @@ export default function Sidebar({ open = false, isMobile = false }) {
                   cursor: 'pointer',
                   fontSize: '13px', fontWeight: 700,
                   letterSpacing: '-0.1px',
-                  transition: 'all .18s var(--ease-out-soft)',
+                  /* Só anima transform e box-shadow (efeitos de hover/click).
+                     Background e border MUDAM instantaneamente quando o active
+                     state muda — sem isso, ao clicar num botão o anterior
+                     "desbota" suavemente fazendo parecer que ambos animam. */
+                  transition: 'transform .15s var(--ease-out-soft), box-shadow .15s var(--ease-out-soft)',
                   background: active ? 'var(--c-active-bg)' : 'transparent',
                   color: 'var(--c-accent)',
-                  border: `1.5px solid ${active ? 'var(--c-accent)' : 'var(--c-accent)'}`,
-                  boxShadow: active ? '0 2px 8px rgba(214,141,143,.14)' : 'none',
+                  border: '1.5px solid var(--c-accent)',
+                  boxShadow: 'none',
                 }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.background = 'var(--c-active-bg)';
                   e.currentTarget.style.transform = 'translateY(-1px)';
                   e.currentTarget.style.boxShadow = '0 6px 16px rgba(214,141,143,.22)';
                 }}
                 onMouseLeave={e => {
-                  e.currentTarget.style.background = active ? 'var(--c-active-bg)' : 'transparent';
                   e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = active ? '0 2px 8px rgba(214,141,143,.14)' : 'none';
+                  e.currentTarget.style.boxShadow = 'none';
                 }}
               >
                 <span>{label}</span>
