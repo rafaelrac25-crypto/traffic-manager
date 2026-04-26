@@ -211,6 +211,7 @@ export default function Relatorios() {
   const [error, setError]     = useState(null);
   const [filter, setFilter]   = useState('all'); // all | campaign | system | reminder
   const [expanded, setExpanded] = useState({});  // { [id]: boolean }
+  const [refreshing, setRefreshing] = useState(null); // null | 'campaign' | 'system'
 
   async function load() {
     setLoading(true);
@@ -260,6 +261,51 @@ export default function Relatorios() {
     }
   }
 
+  async function generateNow(kind) {
+    setRefreshing(kind);
+    try {
+      await axios.post(`/api/reports/generate/${kind}`);
+      await load();
+      // Foca na aba correspondente pra usuário ver o relatório novo
+      setFilter(kind);
+    } catch (e) {
+      alert('Erro ao gerar relatório: ' + (e?.response?.data?.error || e?.message || ''));
+    } finally {
+      setRefreshing(null);
+    }
+  }
+
+  function RefreshButton({ kind, label, color }) {
+    const isLoading = refreshing === kind;
+    const isAnyLoading = refreshing !== null;
+    return (
+      <button
+        onClick={() => generateNow(kind)}
+        disabled={isAnyLoading}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: '6px',
+          padding: '7px 12px',
+          background: isLoading ? color : 'transparent',
+          color: isLoading ? '#fff' : color,
+          border: `1.5px solid ${color}`,
+          borderRadius: '8px',
+          fontSize: '12px', fontWeight: 600,
+          cursor: isAnyLoading ? 'not-allowed' : 'pointer',
+          opacity: isAnyLoading && !isLoading ? 0.45 : 1,
+          transition: 'all .15s',
+        }}
+        onMouseEnter={e => { if (!isAnyLoading) e.currentTarget.style.background = color + '20'; }}
+        onMouseLeave={e => { if (!isAnyLoading) e.currentTarget.style.background = 'transparent'; }}
+      >
+        <span style={{
+          display: 'inline-block',
+          animation: isLoading ? 'spin 0.9s linear infinite' : 'none',
+        }}>↻</span>
+        <span>{isLoading ? 'Gerando…' : label}</span>
+      </button>
+    );
+  }
+
   return (
     <div style={{ padding: '28px 32px', maxWidth: '880px', margin: '0 auto' }}>
       {/* ── Cabeçalho ── */}
@@ -287,6 +333,38 @@ export default function Relatorios() {
           Resumos automáticos do que está acontecendo: como sua campanha vai,
           se o sistema está saudável, e lembretes que você marcou.
         </p>
+      </div>
+
+      {/* ── Barra de atualização manual ── */}
+      <div style={{
+        display: 'flex', gap: '10px', flexWrap: 'wrap',
+        alignItems: 'center', marginBottom: '14px',
+        padding: '12px 14px',
+        background: 'var(--c-surface)',
+        border: '1px dashed var(--c-border-lt)',
+        borderRadius: '12px',
+      }}>
+        <div style={{
+          fontSize: '12px', color: 'var(--c-text-3)', fontWeight: 500,
+          marginRight: '4px',
+        }}>
+          ⚡ Gerar relatório agora:
+        </div>
+        {(filter === 'all' || filter === 'campaign') && (
+          <RefreshButton kind="campaign" label="Sua campanha" color={KINDS.campaign.color} />
+        )}
+        {(filter === 'all' || filter === 'system') && (
+          <RefreshButton kind="system" label="Sistema" color={KINDS.system.color} />
+        )}
+        {filter === 'reminder' && (
+          <span style={{ fontSize: '12px', color: 'var(--c-text-4)', fontStyle: 'italic' }}>
+            Lembretes são pontuais — disparados pela rotina que você programou.
+          </span>
+        )}
+        <span style={{ flex: 1 }} />
+        <span style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>
+          Atualização automática: semanal · sem custo de IA
+        </span>
       </div>
 
       {/* ── Filtros ── */}
