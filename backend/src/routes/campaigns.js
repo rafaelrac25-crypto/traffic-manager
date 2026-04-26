@@ -440,10 +440,11 @@ router.post('/sync-meta-status', async (req, res) => {
       await db.query(
         `UPDATE campaigns SET
            status = COALESCE(?, status),
+           effective_status = COALESCE(?, effective_status),
            spent = ?, clicks = ?, impressions = ?, conversions = ?,
            updated_at = datetime('now')
          WHERE id = ?`,
-        [r.status || null, nextSpent, nextClicks, nextImpressions, nextConversions, local.id]
+        [r.status || null, r.effective_status || null, nextSpent, nextClicks, nextImpressions, nextConversions, local.id]
       );
       updated.push({
         id: local.id,

@@ -37,13 +37,16 @@ async function syncPlatform(platform) {
       effective_status: c.effective_status,
       synced_at: new Date().toISOString(),
     };
+    /* Preserva effective_status existente se Meta não retornar (failsafe) */
+    const effectiveStatus = c.effective_status || null;
     await db.query(
       `INSERT INTO campaigns
-        (name, platform, platform_campaign_id, status, budget, spent, clicks, impressions, conversions, start_date, end_date, payload, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        (name, platform, platform_campaign_id, status, effective_status, budget, spent, clicks, impressions, conversions, start_date, end_date, payload, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
        ON CONFLICT (platform, platform_campaign_id) DO UPDATE SET
          name = excluded.name,
          status = excluded.status,
+         effective_status = COALESCE(excluded.effective_status, campaigns.effective_status),
          budget = excluded.budget,
          spent = excluded.spent,
          clicks = excluded.clicks,
@@ -53,7 +56,7 @@ async function syncPlatform(platform) {
          end_date = excluded.end_date,
          payload = excluded.payload,
          updated_at = datetime('now')`,
-      [c.name, platform, c.id, c.status, c.budget, c.spent, c.clicks, c.impressions,
+      [c.name, platform, c.id, c.status, effectiveStatus, c.budget, c.spent, c.clicks, c.impressions,
        c.conversions, c.start_date, c.end_date, JSON.stringify(payload)]
     );
     upserted++;

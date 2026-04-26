@@ -16,6 +16,10 @@ const ADD_COLUMNS = [
   'ALTER TABLE platform_credentials ADD COLUMN IF NOT EXISTS page_id VARCHAR(255)',
   'ALTER TABLE platform_credentials ADD COLUMN IF NOT EXISTS ig_business_id VARCHAR(255)',
   'ALTER TABLE platform_credentials ADD COLUMN IF NOT EXISTS needs_reconnect INTEGER DEFAULT 0',
+  /* effective_status: status real do Meta (ACTIVE/PENDING_REVIEW/IN_PROCESS/DISAPPROVED/WITH_ISSUES/PAUSED) */
+  'ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS effective_status TEXT',
+  'ALTER TABLE ad_sets ADD COLUMN IF NOT EXISTS effective_status TEXT',
+  'ALTER TABLE ads ADD COLUMN IF NOT EXISTS effective_status TEXT',
 ];
 
 async function runMigrations(pool) {
