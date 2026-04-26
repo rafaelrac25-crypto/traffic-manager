@@ -453,15 +453,36 @@ function getAvgCpc(ads) {
 
 function getPerformanceIssues(ad, avgCostPerResult) {
   const issues = [];
-  if (ad.clicks && ad.results && (ad.results / ad.clicks) < 0.01) {
-    issues.push('Taxa de conversão baixa (<1%). Revise o texto e a oferta.');
+  if (ad.status !== 'active') return issues;
+
+  const ageDays = ad.createdAt
+    ? (Date.now() - new Date(ad.createdAt).getTime()) / 86_400_000
+    : 0;
+
+  // Sinais críticos (sempre alertam, mesmo em aprendizado)
+  if (ageDays >= 1 && (!ad.clicks || ad.clicks === 0)) {
+    issues.push('Zero cliques após 24h. Verifique se a campanha foi aprovada e se o anúncio está sendo entregue.');
+  }
+  if (ad.clicks > 100 && ad.results && (ad.results / ad.clicks) < 0.01) {
+    issues.push('Taxa de conversão baixa (<1%) com volume relevante. Revise oferta e destino.');
+  }
+
+  // Fase de aprendizado Meta (~7 dias) — não sugerir ajustes que resetam aprendizado
+  if (ageDays < 7) {
+    const dias = Math.max(1, Math.ceil(7 - ageDays));
+    issues.push(`Em fase de aprendizado (${dias} dia${dias > 1 ? 's' : ''} restante${dias > 1 ? 's' : ''}). Não altere orçamento, criativo ou público — reseta o aprendizado do Meta.`);
+    return issues;
+  }
+
+  // Pós-aprendizado: avalia proporcionalmente
+  const cpc = getCpc(ad);
+  if (cpc && cpc > 2) {
+    issues.push(`CPC alto (R$ ${cpc.toFixed(2)}). Teste novo criativo (CTR pode estar baixo) ou refine público.`);
   }
   if (ad.costPerResult && avgCostPerResult && ad.costPerResult > avgCostPerResult * 1.3) {
-    issues.push('Custo por resultado acima da média. Teste nova criativo ou público.');
+    issues.push('Custo por resultado 30% acima da média da conta. Teste novo criativo ou público.');
   }
-  if (ad.clicks && ad.clicks < 500 && ad.status === 'active') {
-    issues.push('Poucos cliques. Aumente o orçamento ou melhore a imagem do anúncio.');
-  }
+
   return issues;
 }
 
