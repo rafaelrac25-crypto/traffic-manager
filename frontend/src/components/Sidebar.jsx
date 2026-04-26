@@ -98,6 +98,7 @@ const PRIMARY_NAV = [
 
 const NAV = [
   { to: '/anuncios',      label: 'Anúncios',      Icon: IconAds },
+  { to: '/relatorios',    label: 'Relatórios',    Icon: IconReports, badgeKey: 'unreadReportsCount' },
   { to: '/reprovados',    label: 'Reprovados',    Icon: IconRejected, badgeKey: 'rejectedCount' },
   { to: '/calendario',    label: 'Calendário',    Icon: IconCalendar },
   { kind: 'group', label: 'Biblioteca', description: 'Reutilize contexto, narrativa e público', items: [
@@ -113,7 +114,7 @@ export default function Sidebar({ open = false, isMobile = false }) {
   const navigate             = useNavigate();
   const location             = useLocation();
   const { isDark, toggle }   = useTheme();
-  const { rejectedCount, metaAccount, syncStatus } = useAppState();
+  const { rejectedCount, metaAccount, syncStatus, unreadReportsCount = 0 } = useAppState();
 
   const syncInfo = (() => {
     const s = syncStatus?.status || 'checking';
@@ -126,7 +127,7 @@ export default function Sidebar({ open = false, isMobile = false }) {
     ? `Última verificação: ${new Date(syncStatus.lastCheck).toLocaleTimeString('pt-BR')}${syncStatus?.error ? ` · ${syncStatus.error}` : ''}`
     : 'Aguardando primeira verificação';
 
-  const badgeValues = { rejectedCount };
+  const badgeValues = { rejectedCount, unreadReportsCount };
 
   function isActive(to) {
     if (to === '/') return location.pathname === '/';

@@ -11,6 +11,7 @@ import Audiences from './pages/Audiences';
 import CreativeLibrary from './pages/CreativeLibrary';
 import References from './pages/References';
 import History from './pages/History';
+import Relatorios from './pages/Relatorios';
 import AIAssistant from './components/AIAssistant';
 import SplashScreen from './components/SplashScreen';
 import { useTheme } from './contexts/ThemeContext';
@@ -20,6 +21,7 @@ import { AppStateProvider, useAppState } from './contexts/AppStateContext';
 const SEARCH_MAP = [
   { terms: ['dashboard','home','início','inicio','resumo'], to: '/',              label: 'Dashboard' },
   { terms: ['anúncio','anuncio','anúncios','anuncios','campanhas','campanha','ads'], to: '/anuncios', label: 'Anúncios' },
+  { terms: ['relatório','relatorio','relatórios','relatorios','report','reports','análise','analise','performance','desempenho'], to: '/relatorios', label: 'Relatórios' },
   { terms: ['reprovado','reprovados','rejeitado','recusado','negado'], to: '/reprovados', label: 'Reprovados' },
   { terms: ['calendário','calendario','agenda','datas'], to: '/calendario', label: 'Calendário' },
   { terms: ['investimento','saldo','fundos','cartão','cartao','pix','pagamento','recarga','orçamento','orcamento','pixel','rastreamento','conversão','conversao'], to: '/investimento', label: 'Investimento' },
@@ -479,6 +481,7 @@ function Layout() {
           <Routes>
             <Route path="/"              element={<Dashboard />} />
             <Route path="/anuncios"      element={<Campaigns />} />
+            <Route path="/relatorios"    element={<Relatorios />} />
             <Route path="/campanhas"     element={<Navigate to="/anuncios" replace />} />
             <Route path="/reprovados"    element={<Rejected />} />
             <Route path="/calendario"    element={<Calendar />} />
