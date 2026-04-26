@@ -18,23 +18,34 @@ async function updateCampaignStatus(creds, platformCampaignId, status) {
   const metaStatus = status === 'active' ? 'ACTIVE' : status === 'paused' ? 'PAUSED' : String(status).toUpperCase();
   const result = await request('POST', `/${platformCampaignId}`, { status: metaStatus }, { token });
 
-  /* Defensivo: ao PAUSAR, também pausa todos os ad_sets descendentes.
-     Meta já pausa cascata via effective_status quando campaign pausa, mas
-     alguns cenários (CBO em reativação parcial) deixam ad_sets em ACTIVE.
-     Pausar explícito garante que a Cris pare de gastar imediatamente. */
-  if (metaStatus === 'PAUSED') {
+  /* Cascata em ambos sentidos: PAUSE e ACTIVATE propagam pra ad_sets e ads.
+     Sem isso, ativar a campanha deixa ad_sets/ads em PAUSED (que era o status
+     default quando foram criados) — campanha "ativa" mas anúncio sem rodar.
+     Cris/Rafa não precisam mexer no Meta Ads Manager: 1 clique no painel
+     basta pra estado consistente. */
+  if (metaStatus === 'PAUSED' || metaStatus === 'ACTIVE') {
     try {
       const { metaGet } = require('./metaHttp');
+      /* Ad_sets descendentes */
       const adsetsResp = await metaGet(`/${platformCampaignId}/adsets`, { fields: 'id,status', limit: 100 }, { token });
       for (const as of (adsetsResp?.data || [])) {
-        if (as?.id && as?.status !== 'PAUSED') {
-          try { await request('POST', `/${as.id}`, { status: 'PAUSED' }, { token }); }
-          catch (e) { console.warn('[metaWrite] pause adset falhou:', as.id, e.message); }
+        if (as?.id && as?.status !== metaStatus) {
+          try { await request('POST', `/${as.id}`, { status: metaStatus }, { token }); }
+          catch (e) { console.warn('[metaWrite] cascade adset', as.id, e.message); }
+        }
+      }
+      /* Ads descendentes — ad criado fica PAUSED por default (publishCampaign
+         seta assim por segurança). Sem ativar aqui, anúncio nunca roda mesmo
+         com campanha+adset ativos. */
+      const adsResp = await metaGet(`/${platformCampaignId}/ads`, { fields: 'id,status,effective_status', limit: 100 }, { token });
+      for (const ad of (adsResp?.data || [])) {
+        if (ad?.id && ad?.status !== metaStatus) {
+          try { await request('POST', `/${ad.id}`, { status: metaStatus }, { token }); }
+          catch (e) { console.warn('[metaWrite] cascade ad', ad.id, e.message); }
         }
       }
     } catch (e) {
-      /* Não bloqueia: a campaign JÁ está pausada, ad_sets em cascata é defensivo */
-      console.warn('[metaWrite] pause cascade falhou:', e.message);
+      console.warn('[metaWrite] cascade falhou:', e.message);
     }
   }
 
