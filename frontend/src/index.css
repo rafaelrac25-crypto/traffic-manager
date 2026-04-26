@@ -481,10 +481,10 @@ input[type="range"] { accent-color: #d68d8f; }
   transform: translateX(2px);
 }
 
-/* Links da sidebar — já tem transition, só adiciona micro-scale no active */
-.sidebar-fixed nav > div:active {
-  transform: scale(.98);
-}
+/* Removido o `nav > div:active scale(.98)` que vazava pro container do
+   PRIMARY_NAV (Dashboard + Criar Anúncio): clicar num filho disparava
+   :active no pai, encolhendo os 2 botões juntos. Cada botão da sidebar
+   tem hover/click feedback próprio via inline style nos componentes. */
 
 /* Abertura animada do dropdown de notificações */
 @keyframes bellOpen {
