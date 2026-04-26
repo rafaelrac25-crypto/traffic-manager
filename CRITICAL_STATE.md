@@ -1,6 +1,6 @@
 # CRITICAL_STATE — traffic-manager
 
-> **Atualizado:** 2026-04-26 (fim de sessão — 1ª campanha real publicada com sucesso, em PAUSED)
+> **Atualizado:** 2026-04-26 09:55 GMT-3 (sessão 2 do dia — Página /relatorios + routine Sonnet semanal + fix do Consultor IA)
 >
 > **Pra Claude:** este arquivo é o **estado crítico atual** do sistema. Lê-lo no início de cada sessão evita afirmações erradas. Atualizar no fim de cada sessão se algo mudar.
 >
@@ -28,7 +28,52 @@
 
 ## Última publicação Meta
 
-✅ **1ª campanha real publicada em 2026-04-26 (status PAUSED).** Validou pipeline completo: upload de vídeo + targeting + CTA + criação. Aguardando Rafa/Cris ativarem manualmente no painel ou Ads Manager.
+✅ **1ª campanha real ATIVA em 2026-04-26 madrugada.** Rafa ativou no Ads Manager.
+
+**Métricas das primeiras ~10h** (snapshot 09:56 GMT-3):
+- Cliques: 40
+- Gasto: R$ 6,02
+- CPC implícito: R$ 0,15 — **excelente** pra Joinville/estética
+- Status: em fase de aprendizado Meta (~7 dias até estabilizar)
+- Próxima revisão: 02/05 (sábado, 7 dias) e 04/05 (segunda, routine semanal)
+
+## Página /relatorios (sessão 2026-04-26 segunda parte)
+
+Nova seção na sidebar abaixo de Anúncios. 3 tipos amigáveis pra leigos:
+
+- **📊 Sua campanha** — performance, gasto, cliques, mensagens
+- **🩺 Sistema** — saúde da plataforma, integrações Meta
+- **⏰ Lembretes** — avisos pontuais programados
+
+**Endpoints:**
+- `GET /api/reports` (lista, filtros: kind, severity, campaign_id)
+- `POST /api/reports` (ingestão, header `X-Report-Secret` opcional)
+- `POST /api/reports/generate/campaign` (snapshot grátis, sem IA)
+- `POST /api/reports/generate/system` (snapshot grátis, sem IA)
+- `PATCH /api/reports/:id/read` + `DELETE /api/reports/:id`
+
+**Tabela `reports`** criada lazy (CREATE IF NOT EXISTS na 1ª chamada). Zero impacto em sqlite.js / schema.sql do core.
+
+**Routine Claude semanal** — `trig_01A45kPNkKtbhWpXTFdPrVJL`
+- Cron: `0 11 * * 1` = toda segunda 8h GMT-3
+- Modelo: claude-sonnet-4-6 (~R$ 0,40-2/mês)
+- Repo: rafaelrac25-crypto/traffic-manager
+- Painel: https://claude.ai/code/routines/trig_01A45kPNkKtbhWpXTFdPrVJL
+- Próximo disparo: 2026-04-27 (amanhã)
+- Posta automaticamente em `/api/reports` com `kind=campaign source=routine-weekly`
+
+## DECISÃO ARQUITETURAL importante (2026-04-26): Consultor IA respeita aprendizado Meta
+
+`getPerformanceIssues` em `frontend/src/pages/Campaigns.jsx:454` **não tinha** noção de idade da campanha nem proporcionalidade. Sugeria "Aumente o orçamento ou melhore a imagem" pra qualquer anúncio com <500 cliques — incluindo campanhas com 9h de vida.
+
+**Pior anti-padrão:** aumentar orçamento >20% **reseta** a fase de aprendizado do Meta. Sistema sugeria exatamente o que prejudicava o algoritmo.
+
+**Nova lógica (commit `5976046`):**
+- Bloqueia sugestões de ajuste nos primeiros 7 dias (mostra dias restantes)
+- Sinais críticos sempre alertam (zero cliques após 24h, conversão baixa com volume relevante)
+- Pós-aprendizado: avalia CPC proporcional (R$2 threshold) em vez de cliques absolutos
+
+Sistema agora concorda com gestor de tráfego humano que recomendou "não mexer 6-7 dias".
 
 ## DECISÃO ARQUITETURAL importante (2026-04-26): Fallback wa.me/
 
@@ -80,6 +125,7 @@ Comportamento pro usuário final = idêntico ao Click-to-WhatsApp formal. Mesmo 
 - Rotas `/mapa-de-calor` e `/desempenho` redirecionam pra `/` sem aviso (legado)
 - Flash visual de ~2s ao adicionar ad antes da resposta do servidor (otimismo aceitável)
 - API_VERSION hardcoded `v20.0` em 4 arquivos backend (v22 é a recomendada)
+- **`/api/reports/generate/system` checa `META_APP_SECRET` que não existe na env** — falso positivo "Webhook sem secret". Webhook FUNCIONA na real (HMAC validado em `/health/full`). Ajustar o gerador na próxima sprint pra usar a env var correta (provavelmente `META_WEBHOOK_VERIFY_TOKEN` ou similar).
 
 Esses itens não impedem 1ª campanha rodar — backlog pra próxima sprint.
 
