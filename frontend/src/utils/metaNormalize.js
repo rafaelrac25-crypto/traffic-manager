@@ -114,13 +114,27 @@ export function toMetaPayload(ad) {
   const genders = GENDER_TO_META[ad.gender] ?? [];
   const budgetCents = toMetaBudgetCents(ad.budgetValue);
 
+  /* ─── Fallback "link wa.me/" automático ─────────────────────────────
+     Quando o objetivo é "messages" E o destURL é wa.me/, NÃO usa
+     Click-to-WhatsApp formal (que exige WhatsApp linkado oficialmente
+     na Page e dá erro 100/2446885 quando ausente). Em vez disso, cria
+     campanha de TRÁFEGO apontando direto pro link wa.me/. Funciona em
+     qualquer Page/conta — mesmo método de outras agências.
+     Pessoa clica no anúncio → app abre conversa no WhatsApp da Cris. */
+  const usingWaLink = ad.objective === 'messages'
+    && typeof ad.destUrl === 'string'
+    && /wa\.me\//i.test(ad.destUrl);
+
   /* CBO = budget no nível da Campaign, Meta redistribui entre ad_sets.
      ABO (padrão) = budget no nível do ad_set, controle manual. */
   const useCBO = ad.budgetOptimization === 'campaign';
   const campaign = {
     id:                     ad.metaCampaignId,
     name:                   ad.name,
-    objective:              OBJECTIVE_TO_META[ad.objective] || 'OUTCOME_TRAFFIC',
+    /* Fallback wa.me/ força OUTCOME_TRAFFIC mesmo se objective for "messages" */
+    objective:              usingWaLink
+                              ? 'OUTCOME_TRAFFIC'
+                              : (OBJECTIVE_TO_META[ad.objective] || 'OUTCOME_TRAFFIC'),
     status:                 'PAUSED',
     buying_type:            'AUCTION',
     special_ad_categories:  [],
@@ -157,7 +171,11 @@ export function toMetaPayload(ad) {
   const rawCtaMeta = CTA_TO_META[ad.ctaButton] || 'LEARN_MORE';
   const isMessagingCTA = MESSAGING_CTAS.includes(rawCtaMeta);
   const isMessagesObjective = ad.objective === 'messages';
-  const finalCtaType = (isMessagesObjective && !isMessagingCTA) ? 'MESSAGE_PAGE' : rawCtaMeta;
+  /* Fallback wa.me/: força LEARN_MORE (CTA universal que aceita link).
+     Pessoa clica → abre o link wa.me/ → app WhatsApp abre na conversa. */
+  const finalCtaType = usingWaLink
+    ? 'LEARN_MORE'
+    : ((isMessagesObjective && !isMessagingCTA) ? 'MESSAGE_PAGE' : rawCtaMeta);
 
   const storySpec = videoIdFromUpload
     ? {
@@ -192,10 +210,11 @@ export function toMetaPayload(ad) {
   };
 
   /* Mensagens: destination_type depende do CTA escolhido.
-     INSTAGRAM_DIRECT restringe a IG; WHATSAPP e PHONE_CALL rodam em FB+IG. */
+     INSTAGRAM_DIRECT restringe a IG; WHATSAPP e PHONE_CALL rodam em FB+IG.
+     Fallback wa.me/: NÃO envia destination_type (campanha de tráfego comum). */
   const isMessages = ad.objective === 'messages';
   const ctaMeta = CTA_TO_META[ad.ctaButton] || 'LEARN_MORE';
-  const destinationType = isMessages
+  const destinationType = (isMessages && !usingWaLink)
     ? (CTA_TO_DESTINATION[ctaMeta] || 'INSTAGRAM_DIRECT')
     : undefined;
   const onlyInstagram = destinationType === 'INSTAGRAM_DIRECT';
@@ -266,8 +285,15 @@ export function toMetaPayload(ad) {
      é interpretado no fuso do navegador; usuários em outros fusos viam campanha
      começando no dia errado. */
   const adSetCommon = {
-    optimization_goal:  OPTIMIZATION_GOAL[ad.objective] || 'LINK_CLICKS',
-    billing_event:      BILLING_EVENT[ad.objective]     || 'IMPRESSIONS',
+    /* Fallback wa.me/: força LINK_CLICKS (Meta otimiza por clique no link).
+       Sem isso, com objective forçado a OUTCOME_TRAFFIC mas optimization_goal
+       herdado de "messages" (CONVERSATIONS), Meta rejeita inconsistência. */
+    optimization_goal:  usingWaLink
+                          ? 'LINK_CLICKS'
+                          : (OPTIMIZATION_GOAL[ad.objective] || 'LINK_CLICKS'),
+    billing_event:      usingWaLink
+                          ? 'IMPRESSIONS'
+                          : (BILLING_EVENT[ad.objective] || 'IMPRESSIONS'),
     bid_strategy:       'LOWEST_COST_WITHOUT_CAP',
     status:             'PAUSED',
     start_time:         ad.startDate ? new Date(`${ad.startDate}T00:00:00${BR_OFFSET}`).toISOString() : null,
