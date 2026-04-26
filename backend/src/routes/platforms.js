@@ -106,40 +106,50 @@ router.get('/meta/diagnose-page', async (req, res) => {
     const token = await refreshIfNeeded(creds);
     if (!token) return res.status(400).json({ error: 'Token Meta ausente' });
 
-    /* Campos relevantes:
-       - whatsapp_number: número linkado (sem distinguir Business)
-       - connected_whatsapp_business_account: WA Business API oficial
-       - is_messenger_platform_bot_step_enabled: messenger pronto
-       - instagram_business_account: IG Business linkado */
+    /* Campos válidos no Meta v20 pra inspecionar Page:
+       - whatsapp_number: número exibido publicamente como contato (pode ser
+         qualquer WhatsApp pessoal, não necessariamente Business API)
+       - phone: telefone publicado
+       - instagram_business_account: IG Business linkado
+       - link, username, fan_count: identidade da Page */
     let json = {};
     try {
       json = await metaGet(`/${creds.page_id}`, {
-        fields: 'name,whatsapp_number,connected_whatsapp_business_account,instagram_business_account,messaging_feature_status',
+        fields: 'name,whatsapp_number,phone,instagram_business_account,link,username,fan_count',
       }, { token });
     } catch (e) {
       return res.status(502).json({ error: e.message, meta: e.meta || null });
     }
 
-    /* Pergunta separada: a Page consegue rodar Click-to-WhatsApp?
-       Endpoint custom: /act_X/cta_destination_uri com app_destination=WHATSAPP
-       não é público. Inferimos pela presença de whatsapp_number ou connected_whatsapp_business_account. */
+    /* Verifica WhatsApp Business API conectado via endpoint específico —
+       /{page_id}/whatsapp_numbers ou /me/businesses retorna WA Business
+       Accounts (WABA). Esse SIM identifica a integracão oficial. */
+    let waBusinessAccounts = null;
+    try {
+      const wabaJson = await metaGet(`/${creds.page_id}/businesses`, {}, { token });
+      waBusinessAccounts = wabaJson?.data || null;
+    } catch (e) {
+      /* sem permissão ou Page sem WABA — não é fatal pro diagnóstico */
+      waBusinessAccounts = { error: e?.meta?.code || e.message };
+    }
+
     const hasWhatsappNumber = !!json.whatsapp_number;
-    const hasWhatsappBusinessApi = !!json.connected_whatsapp_business_account?.id;
-    const canRunClickToWhatsApp = hasWhatsappNumber || hasWhatsappBusinessApi;
+    const canRunClickToWhatsApp = hasWhatsappNumber;
 
     res.json({
       page_id: creds.page_id,
       page_name: json.name || null,
+      page_username: json.username || null,
       whatsapp: {
-        number_linked: json.whatsapp_number || null,
-        business_account_linked: json.connected_whatsapp_business_account || null,
+        number_publicly_listed: json.whatsapp_number || null,
+        phone_listed: json.phone || null,
         can_run_click_to_whatsapp: canRunClickToWhatsApp,
       },
       instagram_business_account: json.instagram_business_account || null,
-      messaging_feature_status: json.messaging_feature_status || null,
+      whatsapp_businesses_associated: waBusinessAccounts,
       diagnosis: canRunClickToWhatsApp
-        ? '✅ Page tem WhatsApp linkado — Click-to-WhatsApp deveria funcionar'
-        : '❌ Page NÃO tem WhatsApp linkado oficialmente — usar fallback de link wa.me/...',
+        ? '✅ Page tem WhatsApp listado publicamente — Click-to-WhatsApp deveria funcionar'
+        : '❌ Page NÃO mostra WhatsApp listado nas info públicas — provavelmente está em outro local. Cris precisa adicionar WhatsApp em "Sobre" / "Informações" da Page do Facebook',
     });
   } catch (err) {
     console.error('[meta/diagnose-page]', err);
