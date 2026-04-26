@@ -246,6 +246,14 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
   };
   if (c.daily_budget) campParams.daily_budget = c.daily_budget;
   if (c.lifetime_budget) campParams.lifetime_budget = c.lifetime_budget;
+  /* Meta v20 + CBO (orçamento na campanha) + objetivos como CONVERSATIONS/WHATSAPP
+     às vezes assume default que exige bid_amount (erro 100/1815857). Forçando
+     LOWEST_COST_WITHOUT_CAP explicitamente no nível da campanha garante que
+     o adset herde a estratégia correta sem exigir lance manual. Só vale pra CBO
+     — em ABO (budget no adset), Meta rejeita bid_strategy na campanha. */
+  if (c.daily_budget || c.lifetime_budget) {
+    campParams.bid_strategy = c.bid_strategy || 'LOWEST_COST_WITHOUT_CAP';
+  }
   /* Meta v20: campo obrigatório quando NÃO tem budget na campaign (ABO).
      false = cada ad_set com seu orçamento fixo, sem compartilhar 20% entre eles.
      true = permitiria Meta realocar 20% entre ad_sets (similar ao CBO light). */
