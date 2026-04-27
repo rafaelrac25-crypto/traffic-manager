@@ -4,8 +4,8 @@ const https = require('https');
 const db = require('../db');
 const { encrypt } = require('../services/crypto');
 const { metaGet } = require('../services/metaHttp');
+const { GRAPH_BASE: GRAPH } = require('../services/metaApiVersion');
 
-const GRAPH = 'https://graph.facebook.com/v20.0';
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000; /* 10 minutos */
 const HTTPS_TIMEOUT_MS = 15000;
 

@@ -13,9 +13,8 @@
 const https = require('https');
 const rateLimit = require('./metaRateLimit');
 const { parseMetaError } = require('./metaErrors');
+const { API_VERSION, GRAPH_HOST } = require('./metaApiVersion');
 
-const API_VERSION = 'v20.0';
-const GRAPH_HOST = 'graph.facebook.com';
 const DEFAULT_TIMEOUT_MS = 30000;
 
 function pathFor(endpoint) {

@@ -2,9 +2,8 @@ const https = require('https');
 const { safeDecrypt } = require('./crypto');
 const { parseMetaError } = require('./metaErrors');
 const rateLimit = require('./metaRateLimit');
+const { API_VERSION, GRAPH_HOST } = require('./metaApiVersion');
 
-const API_VERSION = 'v20.0';
-const GRAPH_HOST = 'graph.facebook.com';
 const IMAGE_TIMEOUT_MS = 60000;    /* uploads podem demorar em imagens grandes */
 const VIDEO_TIMEOUT_MS = 180000;   /* Meta aceita até ~15MB; rede lenta → até 3min */
 

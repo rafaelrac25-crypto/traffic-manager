@@ -15,9 +15,8 @@
 const https = require('https');
 const { encrypt, safeDecrypt } = require('./crypto');
 const db = require('../db');
+const { GRAPH_BASE: GRAPH } = require('./metaApiVersion');
 
-const API_VERSION = 'v20.0';
-const GRAPH = `https://graph.facebook.com/${API_VERSION}`;
 const REFRESH_THRESHOLD_DAYS = 15;
 const REQUEST_TIMEOUT_MS = 15000;
 
