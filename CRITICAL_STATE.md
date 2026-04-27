@@ -1,6 +1,6 @@
 # CRITICAL_STATE — traffic-manager
 
-> **Atualizado:** 2026-04-26 09:55 GMT-3 (sessão 2 do dia — Página /relatorios + routine Sonnet semanal + fix do Consultor IA)
+> **Atualizado:** 2026-04-27 11:20 GMT-3 (sprint de limpeza pós-1ª campanha: webhook secret + API v20→v22 + CTAs dead code + redirect /desempenho)
 >
 > **Pra Claude:** este arquivo é o **estado crítico atual** do sistema. Lê-lo no início de cada sessão evita afirmações erradas. Atualizar no fim de cada sessão se algo mudar.
 >
@@ -119,15 +119,22 @@ Comportamento pro usuário final = idêntico ao Click-to-WhatsApp formal. Mesmo 
 
 ## Bugs conhecidos abertos
 
-**Nenhum bloqueante.** Itens 🟡 da auditoria de hoje:
-- CTAs `'Reservar agora'` e `'Ver cardápio'` em metaRules.js sem objective mapeado (dead code)
-- `'Mande uma mensagem'` e `'Enviar mensagem'` ambos mapeados pra MESSAGE_PAGE (redundância)
-- Rotas `/mapa-de-calor` e `/desempenho` redirecionam pra `/` sem aviso (legado)
+**Nenhum bloqueante.** Itens 🟡 da auditoria:
+- `'Mande uma mensagem'` e `'Enviar mensagem'` ambos mapeados pra MESSAGE_PAGE (redundância benigna — mantido, ambos válidos)
+- `/mapa-de-calor` redireciona pra `/` (HeatMap removido conscientemente — Meta não diferencia bairros do mesmo anel)
 - Flash visual de ~2s ao adicionar ad antes da resposta do servidor (otimismo aceitável)
-- API_VERSION hardcoded `v20.0` em 4 arquivos backend (v22 é a recomendada)
-- **`/api/reports/generate/system` checa `META_APP_SECRET` que não existe na env** — falso positivo "Webhook sem secret". Webhook FUNCIONA na real (HMAC validado em `/health/full`). Ajustar o gerador na próxima sprint pra usar a env var correta (provavelmente `META_WEBHOOK_VERIFY_TOKEN` ou similar).
 
-Esses itens não impedem 1ª campanha rodar — backlog pra próxima sprint.
+## Sprint de limpeza 2026-04-27 (manhã)
+
+5 commits aplicados em prod, sem mexer na campanha rodando:
+
+- `065e873` — fix(reports): checar `FB_APP_SECRET` em vez de `META_APP_SECRET` (corrige falso positivo do snapshot de sistema)
+- `1f8d775` — refactor(meta): centralizar `API_VERSION` em `services/metaApiVersion.js` + bump v20→v22 (com env override `META_API_VERSION`)
+- `df10ca7` — chore(cta): remover CTAs dead code (`Reservar agora`, `Ver cardápio` — turismo/restaurante, fora do nicho)
+- `fadbefd` — feat(routes): `/desempenho` redireciona pra `/relatorios` em vez de `/`
+- `458e024` — chore(build): rebuild frontend dist
+
+**Validado em prod (2026-04-27 11:20 GMT-3):** `POST /api/reports/generate/system` agora retorna "✅ Webhook Meta — Secret configurado" (era falso positivo). 23 testes Vitest passando.
 
 ## Decisões registradas (memória do Claude)
 
