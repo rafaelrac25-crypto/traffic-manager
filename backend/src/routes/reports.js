@@ -279,8 +279,8 @@ router.post('/generate/system', async (req, res) => {
     // 3. Groq
     items.push({ key: 'groq', label: 'IA (Groq)', ok: !!process.env.GROQ_API_KEY, note: process.env.GROQ_API_KEY ? 'Configurado.' : 'Sem API key.' });
 
-    // 4. Webhook secret
-    items.push({ key: 'webhook', label: 'Webhook Meta', ok: !!process.env.META_APP_SECRET, note: process.env.META_APP_SECRET ? 'Secret configurado.' : 'Sem secret.' });
+    // 4. Webhook secret — webhooks.js usa FB_APP_SECRET pra validar HMAC
+    items.push({ key: 'webhook', label: 'Webhook Meta', ok: !!process.env.FB_APP_SECRET, note: process.env.FB_APP_SECRET ? 'Secret configurado.' : 'Sem secret.' });
 
     const broken = items.filter(i => !i.ok);
     const severity = broken.length === 0 ? 'success' : broken.length === 1 ? 'warn' : 'critical';
