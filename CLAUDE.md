@@ -4,6 +4,20 @@ Painel de gestão de tráfego pago para a cliente Cris Costa Beauty (estúdio de
 
 **Sempre responder em português do Brasil.**
 
+## 🏛️ Claude Council (decisões não-triviais passam por aqui)
+
+Antes de aceitar uma tarefa que envolva orçamento, criativo, targeting, fase de aprendizado Meta ou qualquer ação estratégica, rodar o Council mental (5 agentes: Planner, Validator, Risk Reviewer, Domain Expert/Gestor de Tráfego, Auditor de Verdade).
+
+**Vetos críticos (Validator e Risk Reviewer rejeitam → REJECTED, sem maioria que salve):**
+- Geo fora de Joinville
+- Aumentar/reduzir orçamento de campanha em fase de aprendizado (<7 dias)
+- Adicionar campo descrição em anúncios (decisão registrada — IG/mobile não exibe)
+- Trocar pra CBO sem ser toggle opcional
+- Criar/editar criativos aqui (pertencem a `cris-costa-criativos`)
+- Operações destrutivas (`--no-verify`, force push, deletar recurso Meta sem confirmação)
+
+**Detalhes:** `COUNCIL.md`. **Engine programático opcional:** `council/engine.js`.
+
 ## ⚡ Triggers automáticos (NÃO IGNORAR)
 
 Ao iniciar qualquer sessão neste projeto, verificar:
