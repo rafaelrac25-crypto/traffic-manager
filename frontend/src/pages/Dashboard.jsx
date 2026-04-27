@@ -31,13 +31,48 @@ function computeCampaignMetrics(ad) {
   const spent = Number(ad?.spent || 0);
   const clicks = Number(ad?.clicks || 0);
   const conversions = Number(ad?.conversions || ad?.results || 0);
+  const impressions = Number(ad?.impressions || 0);
+  const reach = Number(ad?.reach || 0);
+  /* Frequência vem direto do Meta (insights) OU calculada via impressions/reach.
+     >2,5 = público saturando — sinal pra trocar criativo. */
+  const frequency = Number(ad?.frequency || (reach > 0 ? impressions / reach : 0));
   const cpr = conversions > 0 ? spent / conversions : 0;
-  return [
-    { label: 'Investimento',        value: fmtBRL(spent),                       icon: <WalletIcon />, iconBg: '#FDF0F8', iconColor: '#d68d8f' },
-    { label: 'Cliques',             value: clicks.toLocaleString('pt-BR'),      icon: <CursorIcon />, iconBg: '#EFF6FF', iconColor: '#3B82F6' },
-    { label: 'Resultados',          value: conversions.toLocaleString('pt-BR'), icon: <ResultIcon />, iconBg: '#F0FDF4', iconColor: '#22C55E' },
-    { label: 'Custo por resultado', value: conversions > 0 ? fmtBRL(cpr) : '—', icon: <DollarIcon />, iconBg: '#FFF7ED', iconColor: '#F97316' },
+  /* CTR em % com 2 casas. Estética facial: <0,8% fraco, 1-2% médio, >2% bom. */
+  const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
+
+  const metrics = [
+    { label: 'Investimento',        value: fmtBRL(spent),                       icon: <WalletIcon />, iconBg: '#FDF0F8', iconColor: '#d68d8f',
+      hint: 'Quanto já foi gasto desta campanha.' },
+    { label: 'Cliques',             value: clicks.toLocaleString('pt-BR'),      icon: <CursorIcon />, iconBg: '#EFF6FF', iconColor: '#3B82F6',
+      hint: 'Pessoas que clicaram no anúncio.' },
+    { label: 'Resultados',          value: conversions.toLocaleString('pt-BR'), icon: <ResultIcon />, iconBg: '#F0FDF4', iconColor: '#22C55E',
+      hint: 'Mensagens recebidas (objetivo da campanha).' },
+    { label: 'Custo por resultado', value: conversions > 0 ? fmtBRL(cpr) : '—', icon: <DollarIcon />, iconBg: '#FFF7ED', iconColor: '#F97316',
+      hint: 'Quanto cada mensagem está custando.' },
   ];
+
+  if (impressions > 0) {
+    metrics.push({
+      label: 'CTR',
+      value: `${ctr.toFixed(2).replace('.', ',')}%`,
+      icon: <CursorIcon />, iconBg: '#EEF2FF', iconColor: '#6366F1',
+      hint: 'De cada 100 que viram, quantas clicaram. >1% bom, >2% ótimo.',
+    });
+  }
+
+  if (frequency > 0) {
+    const freqAlert = frequency > 2.5;
+    metrics.push({
+      label: 'Frequência',
+      value: frequency.toFixed(2).replace('.', ','),
+      icon: <ResultIcon />, iconBg: freqAlert ? '#FEF3C7' : '#F5F3FF', iconColor: freqAlert ? '#B45309' : '#8B5CF6',
+      hint: freqAlert
+        ? 'Cada pessoa viu mais de 2,5x — público começando a cansar. Considere novo criativo.'
+        : 'Quantas vezes em média a mesma pessoa viu o anúncio.',
+    });
+  }
+
+  return metrics;
 }
 
 const CAMPAIGN_STATUS_LABEL = {
@@ -667,7 +702,7 @@ function MiniCalendar({ onViewFull, onPickCommercialDate }) {
 }
 
 /* ── Card de métrica (compacto — visão geral) ── */
-function MetricCard({ label, value, trend, trendUp, sub, icon, iconBg, iconColor }) {
+function MetricCard({ label, value, trend, trendUp, sub, icon, iconBg, iconColor, hint }) {
   return (
     <div className="ccb-card" style={{
       background: 'var(--c-card-bg)',
@@ -690,8 +725,20 @@ function MetricCard({ label, value, trend, trendUp, sub, icon, iconBg, iconColor
         {React.cloneElement(icon, { width: 15, height: 15 })}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '10px', color: 'var(--c-text-4)', lineHeight: 1.2, marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '.3px', fontWeight: 600 }}>
+        <div style={{ fontSize: '10px', color: 'var(--c-text-4)', lineHeight: 1.2, marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '.3px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
           {label}
+          {hint && (
+            <span title={hint} style={{
+              cursor: 'help',
+              width: '13px', height: '13px',
+              borderRadius: '50%',
+              border: '1px solid var(--c-text-4)',
+              color: 'var(--c-text-4)',
+              fontSize: '9px', fontWeight: 700,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              lineHeight: 1, opacity: 0.6,
+            }}>?</span>
+          )}
         </div>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', flexWrap: 'wrap' }}>
           <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--c-text-1)', lineHeight: 1.1 }}>
@@ -724,8 +771,12 @@ function computeHighCpcAds(ads) {
 }
 
 /* ── Card de saldo ── */
-function BalanceCard({ funds, lowBalance, threshold, onAdd }) {
+function BalanceCard({ funds, lowBalance, threshold, onAdd, dailyBudget }) {
   const pct = Math.min(100, (funds / 200) * 100);
+  /* Estimativa de quantos dias o saldo cobre, com base no budget diário da
+     campanha mais ativa. Útil pra leigo entender "R$ 101 ≈ 6,7 dias" em vez
+     de só ver o número cru. */
+  const daysLeft = (dailyBudget && dailyBudget > 0) ? funds / dailyBudget : null;
   return (
     <div className="ccb-card" style={{
       background: 'var(--c-card-bg)',
@@ -764,7 +815,9 @@ function BalanceCard({ funds, lowBalance, threshold, onAdd }) {
           R$ {funds.toFixed(2).replace('.', ',')}
         </div>
         <div style={{ fontSize: '10px', color: 'var(--c-text-4)', marginTop: '3px' }}>
-          {lowBalance ? `Abaixo do mínimo de R$\u00A0${threshold},00` : 'Disponível para veicular anúncios'}
+          {lowBalance ? `Abaixo do mínimo de R$\u00A0${threshold},00` : (daysLeft != null
+              ? `≈ ${daysLeft.toFixed(1).replace('.', ',')} dias de veiculação`
+              : 'Disponível para veicular anúncios')}
         </div>
       </div>
 
@@ -1118,24 +1171,9 @@ function RingPerformanceCard({ onDataChange, refreshSignal } = {}) {
   const totalSpend = Number(data.total?.spend || 0);
   const isEmpty = data.data_source === 'empty' || totalSpend === 0;
 
-  /* Empty state amigável */
-  if (isEmpty) {
-    return cardWrap(
-      <div style={{
-        padding: '28px 16px', textAlign: 'center',
-        background: 'var(--c-surface)', borderRadius: '10px',
-        border: '1px dashed var(--c-border)',
-      }}>
-        <div style={{ fontSize: '24px', marginBottom: '6px' }}>⏳</div>
-        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
-          Aguardando primeiros dados
-        </div>
-        <div style={{ fontSize: '12px', color: 'var(--c-text-3)', maxWidth: '420px', margin: '0 auto', lineHeight: 1.5 }}>
-          O Meta libera as informações em torno de <strong>24h</strong> depois que sua campanha começa a entregar.
-        </div>
-      </div>
-    );
-  }
+  /* Empty: oculta a seção inteira até existir dado real (Rafa pediu — seção
+     vazia polui o Dashboard). Aparece sozinha quando Meta começar a retornar. */
+  if (isEmpty) return null;
 
   /* Encontra o anel com MENOR cpr (melhor) — só conta se cpr > 0 */
   const ringsWithCpr = rings.filter(r => r && Number(r.cpr) > 0);
@@ -1499,6 +1537,68 @@ function CampaignMetricsBlock({ campaigns, selectedId, onSelect, onCreate, onOpe
   );
 }
 
+/* ── Card adaptativo: fase de aprendizado Meta ──
+   Aparece quando há campanha ATIVA com <7 dias de vida; some sozinho quando
+   todas estabilizam. Avisa o Rafa pra não mexer no orçamento (>20% reseta o
+   algoritmo). Bate com a regra documentada em CRITICAL_STATE.md. */
+function LearningPhaseCard({ campaigns }) {
+  const learning = useMemo(() => {
+    return campaigns
+      .filter(c => c.status === 'active')
+      .map(c => {
+        const start = c.live_at || c.submitted_at || c.created_at || c.createdAt;
+        if (!start) return null;
+        const ageMs = Date.now() - new Date(start).getTime();
+        if (ageMs < 0) return null;
+        const ageDays = ageMs / 86_400_000;
+        if (ageDays >= 7) return null;
+        return { name: c.name, ageDays, remainingDays: 7 - ageDays };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.remainingDays - b.remainingDays);
+  }, [campaigns]);
+
+  if (learning.length === 0) return null;
+
+  const head = learning[0];
+  const remH = Math.floor(head.remainingDays * 24);
+  const remD = Math.floor(remH / 24);
+  const remHRest = remH % 24;
+  const remLabel = remD > 0
+    ? `${remD}d ${remHRest}h`
+    : `${remH}h`;
+  const ageH = Math.floor(head.ageDays * 24);
+  const ageD = Math.floor(ageH / 24);
+  const ageHRest = ageH % 24;
+  const ageLabel = ageD > 0 ? `${ageD}d ${ageHRest}h` : `${ageH}h`;
+
+  return (
+    <div className="ccb-card" style={{
+      background: 'linear-gradient(135deg, #FFF7ED 0%, #FEF3C7 100%)',
+      borderRadius: '14px',
+      border: '1px solid #FCD34D',
+      padding: '14px 18px',
+      marginBottom: '20px',
+      boxShadow: '0 2px 8px rgba(180, 83, 9, 0.08)',
+      display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap',
+    }}>
+      <div style={{ fontSize: '24px', flexShrink: 0 }}>⏳</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '13px', fontWeight: 700, color: '#92400E', marginBottom: '2px' }}>
+          {learning.length === 1
+            ? `Campanha em fase de aprendizado — ${ageLabel} de 7d`
+            : `${learning.length} campanhas em fase de aprendizado`}
+        </div>
+        <div style={{ fontSize: '11px', color: '#78350F', lineHeight: 1.4 }}>
+          {learning.length === 1
+            ? <>Estabiliza em <strong>{remLabel}</strong>. Não mexer no orçamento até lá — alterações &gt;20% resetam o algoritmo do Meta.</>
+            : <>A mais nova estabiliza em <strong>{remLabel}</strong>. Não mexer nos orçamentos até lá.</>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Dashboard ── */
 const MESES_PT = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 function saudacaoPorHora() {
@@ -1560,6 +1660,15 @@ export default function Dashboard() {
   const LOW_BALANCE_THRESHOLD = 20;
   const lowBalance = metaBilling ? funds < LOW_BALANCE_THRESHOLD : false;
 
+  /* Soma diária de orçamento das campanhas no ar — usado no BalanceCard pra
+     traduzir saldo em "≈ X dias de veiculação". Pula valores 0/falsy. */
+  const totalDailyBudget = useMemo(() => {
+    return liveCampaigns.reduce((sum, c) => {
+      const b = Number(c.budgetValue || c.budget || 0);
+      return c.budgetType === 'daily' || !c.budgetType ? sum + b : sum;
+    }, 0);
+  }, [liveCampaigns]);
+
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
@@ -1574,10 +1683,12 @@ export default function Dashboard() {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
-            {saudacao}, Cris! 👋
+            {saudacao} 👋
           </h1>
           <p style={{ fontSize: '13px', color: 'var(--c-text-3)' }}>
-            Aqui está o desempenho dos seus anúncios hoje.
+            {liveCampaigns.length === 1
+              ? 'Aqui está o desempenho do seu anúncio hoje.'
+              : 'Aqui está o desempenho dos seus anúncios hoje.'}
           </p>
         </div>
         <div className="hide-mobile" style={{
@@ -1600,6 +1711,9 @@ export default function Dashboard() {
           </span>
         </div>
       </div>
+
+      {/* ── Aviso de fase de aprendizado (some sozinho quando não há campanha <7d) ── */}
+      <LearningPhaseCard campaigns={liveCampaigns} />
 
       {/* ── Bloco: métricas da campanha selecionada (ou melhor/única no ar) ── */}
       <CampaignMetricsBlock
@@ -1635,6 +1749,7 @@ export default function Dashboard() {
           funds={funds}
           lowBalance={lowBalance}
           threshold={LOW_BALANCE_THRESHOLD}
+          dailyBudget={totalDailyBudget}
           onAdd={() => navigate('/investimento')}
         />
         <CpcAlertCard
@@ -1645,47 +1760,12 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* ── Gráfico de séries temporais (aguardando histórico de insights) ── */}
-      <div style={{ marginBottom: '20px' }}>
-        <div className="ccb-card" style={{
-          background: 'var(--c-card-bg)',
-          borderRadius: '16px',
-          border: '1px solid var(--c-border)',
-          padding: '20px 24px 16px',
-          boxShadow: '0 2px 8px var(--c-shadow)',
-        }}>
-          <div style={{ marginBottom: '12px' }}>
-            <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '3px' }}>
-              Resultados ao longo do tempo
-            </div>
-            <div style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>
-              Investimento × Cliques — últimos 7 dias
-            </div>
-          </div>
-          <div style={{
-            padding: '40px 16px', textAlign: 'center',
-            background: 'var(--c-surface)', borderRadius: '10px',
-            border: '1px dashed var(--c-border)',
-            color: 'var(--c-text-4)', fontSize: '13px',
-          }}>
-            📊 Sem dados históricos ainda — o gráfico vai aparecer automaticamente após alguns dias de veiculação de anúncios reais.
-          </div>
-        </div>
-      </div>
-
-      {/* ── Calendário mini (largura total) ── */}
-      <div style={{
-        background: 'var(--c-card-bg)',
-        borderRadius: '16px',
-        border: '1px solid var(--c-border)',
-        padding: '20px 24px',
-        boxShadow: '0 2px 8px var(--c-shadow)',
-      }}>
-        <MiniCalendar
-          onViewFull={() => navigate('/calendario')}
-          onPickCommercialDate={(entry) => navigate('/calendario', { state: { openCommercialKey: entry.key } })}
-        />
-      </div>
+      {/* Gráfico de séries temporais e MiniCalendar foram removidos do
+          Dashboard a pedido do Rafa: o gráfico ficava com placeholder
+          permanente "sem dados" e o calendário/datas comerciais já têm
+          páginas dedicadas (/calendario + sino de notificações). O gráfico
+          volta automaticamente quando houver ≥3 dias de histórico de
+          insights — basta reativar a seção condicional aqui. */}
     </div>
   );
 }
