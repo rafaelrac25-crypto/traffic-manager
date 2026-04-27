@@ -52,13 +52,22 @@ router.post('/meta', async (req, res) => {
   });
 
   if (shouldSync) {
-    /* Fire-and-forget: sync não-bloqueante */
+    /* Fire-and-forget: sync não-bloqueante.
+       IMPORTANTE: como já respondemos 200, qualquer erro aqui some no
+       console.warn se não for capturado explicitamente pelo Sentry. */
     (async () => {
       try {
         const { syncPlatform } = require('../services/sync');
         await syncPlatform('meta');
-      } catch (e) {
-        console.warn('[webhook/meta] sync falhou:', e.message);
+      } catch (err) {
+        console.error('[webhook/meta] sync background error:', err);
+        try {
+          const { Sentry } = require('../services/sentry');
+          Sentry.captureException(err, {
+            tags: { component: 'webhook', event: 'meta_sync' },
+            extra: { webhookEntries: entries?.length || 0 },
+          });
+        } catch { /* Sentry pode não estar configurado em dev — best-effort */ }
       }
     })();
   }
