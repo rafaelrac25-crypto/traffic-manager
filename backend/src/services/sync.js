@@ -27,6 +27,30 @@ async function syncPlatform(platform) {
   const campaigns = await handler.fetchCampaigns(creds);
   let upserted = 0;
 
+  /* ─── Detector "campanha de mensagens via wa.me/" ───────────────────
+     Decisão registrada no CRITICAL_STATE.md: quando objetivo do usuário
+     é "messages" E destURL é wa.me/, a campanha é montada como TRÁFEGO
+     (OUTCOME_TRAFFIC + LINK_CLICKS), não Click-to-WhatsApp formal.
+     Nesses casos, "click no anúncio" = "mensagem iniciada no WhatsApp",
+     mas Meta só contabiliza como link_click — conversions fica em 0 e
+     o card "Custo por resultado" do Dashboard mostra "—" passando
+     impressão de campanha falhando ao usuário leigo.
+
+     Quando detectamos esse padrão, mapeamos conversions = clicks
+     (mantendo clicks/impressions originais — só preenchemos o que
+     está zerado quando faz sentido). */
+  function isMessagesViaWaLink(platformObjective, payload) {
+    const obj = String(platformObjective || '').toUpperCase();
+    /* OUTCOME_ENGAGEMENT / MESSAGES = objetivo formal "Mensagens" do Meta */
+    if (obj === 'MESSAGES' || obj === 'OUTCOME_ENGAGEMENT') return true;
+    /* OUTCOME_TRAFFIC + destUrl wa.me/ = fallback wa.me/ (caso da Cris) */
+    if (obj.includes('TRAFFIC')) {
+      const destUrl = payload?.destUrl || payload?.meta?.ad?.destUrl || null;
+      if (typeof destUrl === 'string' && /wa\.me\//i.test(destUrl)) return true;
+    }
+    return false;
+  }
+
   /* Mapa de transições de effective_status que merecem log em activity_log.
      "DE→PARA" tem prioridade sobre "*→PARA" (wildcard).
      Esses eventos são lidos pelo frontend via polling (AppStateContext) e
@@ -44,17 +68,43 @@ async function syncPlatform(platform) {
   };
 
   for (const c of campaigns) {
-    /* Busca o effective_status anterior ANTES de sobrescrever — detecta transições */
+    /* Busca o effective_status anterior ANTES de sobrescrever — detecta transições.
+       Também lê payload local pra recuperar destUrl (necessário pra detectar
+       fallback wa.me/ — Meta só retorna OUTCOME_TRAFFIC sem destino). */
     let prevEffectiveStatus = null;
+    let prevPayload = {};
     try {
       const prevResult = await db.query(
-        `SELECT effective_status FROM campaigns WHERE platform = ? AND platform_campaign_id = ?`,
+        `SELECT effective_status, payload FROM campaigns WHERE platform = ? AND platform_campaign_id = ?`,
         [platform, c.id]
       );
       prevEffectiveStatus = prevResult.rows[0]?.effective_status || null;
+      try {
+        prevPayload = prevResult.rows[0]?.payload
+          ? (typeof prevResult.rows[0].payload === 'string'
+              ? JSON.parse(prevResult.rows[0].payload)
+              : prevResult.rows[0].payload)
+          : {};
+      } catch { /* payload corrompido — segue com {} */ }
     } catch { /* best-effort — não bloqueia sync se falhar */ }
 
+    /* Override conversions = clicks pra campanhas de mensagens via wa.me/.
+       Sem isso, conversions fica em 0 e o Dashboard mostra "—" no card
+       "Custo por resultado", passando impressão de campanha falhando.
+       Mantém clicks/impressions/spent originais — só preenche conversions
+       quando ele está em 0 e o padrão wa.me/ está presente. */
+    let mappedConversions = c.conversions;
+    const wasMappedFromClicks = (
+      (!c.conversions || c.conversions === 0)
+      && c.clicks > 0
+      && isMessagesViaWaLink(c.objective, prevPayload)
+    );
+    if (wasMappedFromClicks) {
+      mappedConversions = c.clicks;
+    }
+
     const payload = {
+      ...prevPayload, /* preserva destUrl, locations, metaPublishResult, etc */
       objective: c.objective,
       reach: c.reach,
       ctr: c.ctr,
@@ -62,6 +112,7 @@ async function syncPlatform(platform) {
       cpm: c.cpm,
       effective_status: c.effective_status,
       synced_at: new Date().toISOString(),
+      conversions_mapped_from_clicks: wasMappedFromClicks || undefined,
     };
     /* Preserva effective_status existente se Meta não retornar (failsafe) */
     const effectiveStatus = c.effective_status || null;
@@ -83,7 +134,7 @@ async function syncPlatform(platform) {
          payload = excluded.payload,
          updated_at = datetime('now')`,
       [c.name, platform, c.id, c.status, effectiveStatus, c.budget, c.spent, c.clicks, c.impressions,
-       c.conversions, c.start_date, c.end_date, JSON.stringify(payload)]
+       mappedConversions, c.start_date, c.end_date, JSON.stringify(payload)]
     );
     upserted++;
 
@@ -197,14 +248,21 @@ async function syncPlatform(platform) {
       const insights = await handler.fetchAccountInsights(creds, { level: 'campaign' });
       for (const row of insights) {
         const campResult = await db.query(
-          'SELECT id FROM campaigns WHERE platform = ? AND platform_campaign_id = ?',
+          'SELECT id, payload, conversions FROM campaigns WHERE platform = ? AND platform_campaign_id = ?',
           ['meta', row.campaign_id]
         );
-        const campId = campResult.rows[0]?.id;
+        const campRow = campResult.rows[0];
+        const campId = campRow?.id;
         if (!campId) continue;
+        let campPayload = {};
+        try {
+          campPayload = campRow?.payload
+            ? (typeof campRow.payload === 'string' ? JSON.parse(campRow.payload) : campRow.payload)
+            : {};
+        } catch { /* payload corrompido — segue com {} */ }
         /* Mesma lista que fetchCampaigns usa — evita divergência entre
            número de conversões mostrado na campanha vs. nos insights. */
-        const conversions =
+        let conversions =
           (Array.isArray(row.actions) ? row.actions : [])
             .filter(a => CONVERSION_ACTION_TYPES.includes(a.action_type))
             .reduce((s, a) => {
@@ -215,13 +273,45 @@ async function syncPlatform(platform) {
            (já vimos em insights de campanhas recém-criadas sem dados ainda). */
         const safeFloat = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
         const safeInt   = (v) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : 0; };
+
+        /* Mesma regra do loop de campaigns acima: para campanhas messages
+           via wa.me/, conversions = clicks (link click no Meta = mensagem
+           iniciada na prática). Mantém raw original — só sobrescreve o
+           valor agregado que o Dashboard consome. */
+        const rowClicks = safeInt(row.clicks);
+        const objectiveForInsight = campPayload?.objective || row.objective;
+        if (
+          conversions === 0
+          && rowClicks > 0
+          && isMessagesViaWaLink(objectiveForInsight, campPayload)
+        ) {
+          conversions = rowClicks;
+        }
+
+        /* ON CONFLICT casa com o índice parcial uniq_insights_period_camp
+           (WHERE ad_id IS NULL). Esse INSERT só passa campaign_id, sem
+           ad_id — campanha-level. PG exige WHERE no ON CONFLICT pra
+           bater com índice parcial; SQLite aceita também.
+           Em SQLite, datetime('now') (substituído por NOW() no driver PG)
+           atualiza fetched_at no UPDATE. */
         await db.query(
           `INSERT INTO insights
             (campaign_id, date_start, date_stop, spend, impressions, reach, clicks, ctr, cpc, cpm, conversions, raw)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT (campaign_id, date_start, date_stop) WHERE ad_id IS NULL DO UPDATE SET
+             spend = excluded.spend,
+             impressions = excluded.impressions,
+             reach = excluded.reach,
+             clicks = excluded.clicks,
+             ctr = excluded.ctr,
+             cpc = excluded.cpc,
+             cpm = excluded.cpm,
+             conversions = excluded.conversions,
+             raw = excluded.raw,
+             fetched_at = datetime('now')`,
           [campId, row.date_start, row.date_stop,
            safeFloat(row.spend), safeInt(row.impressions),
-           safeInt(row.reach), safeInt(row.clicks),
+           safeInt(row.reach), rowClicks,
            safeFloat(row.ctr), safeFloat(row.cpc), safeFloat(row.cpm),
            conversions, JSON.stringify(row)]
         );

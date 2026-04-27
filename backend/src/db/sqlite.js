@@ -202,6 +202,10 @@ const migrations = [
   /* Índices nas colunas novas — DEPOIS dos ALTER TABLE acima */
   'CREATE INDEX IF NOT EXISTS idx_insights_ring ON insights_by_district(ring_key, date_start)',
   'CREATE INDEX IF NOT EXISTS idx_insights_adset ON insights_by_district(ad_set_id, date_start)',
+  /* UNIQUE parcial pra dedup de insights — espelha schema.sql do PG.
+     SQLite suporta partial indexes desde 3.8.0. */
+  'CREATE UNIQUE INDEX IF NOT EXISTS uniq_insights_period_camp ON insights (campaign_id, date_start, date_stop) WHERE ad_id IS NULL',
+  'CREATE UNIQUE INDEX IF NOT EXISTS uniq_insights_period_ad ON insights (campaign_id, ad_id, date_start, date_stop) WHERE ad_id IS NOT NULL',
 ];
 for (const sql of migrations) {
   try { db.exec(sql); } catch {}

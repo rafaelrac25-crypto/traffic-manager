@@ -179,3 +179,29 @@ CREATE INDEX IF NOT EXISTS idx_insights_district ON insights_by_district(distric
 CREATE INDEX IF NOT EXISTS idx_insights_district_service ON insights_by_district(district, service);
 CREATE INDEX IF NOT EXISTS idx_insights_ring ON insights_by_district(ring_key, date_start);
 CREATE INDEX IF NOT EXISTS idx_insights_adset ON insights_by_district(ad_set_id, date_start);
+
+/* Dedup webhook/ insights — Meta pode reentregar o MESMO evento se
+   nossa resposta passar de ~20s (Meta retry policy). Sem UNIQUE,
+   cada retry vira uma linha duplicada e os contadores (clicks/spend/
+   conversions) ficam inflados.
+
+   Usa CREATE UNIQUE INDEX em vez de ADD CONSTRAINT porque:
+   1. SQLite NÃO suporta ALTER TABLE ADD CONSTRAINT
+   2. PG não suporta ADD CONSTRAINT IF NOT EXISTS direto
+   3. UNIQUE INDEX funciona em ambos drivers e é equivalente pra ON CONFLICT
+
+   Dois índices PARCIAIS: ad_id pode ser NULL (sync de campaign-level
+   sem ad específico) e em UNIQUE NULL é tratado como distinto, então
+   dedup falha. Solução: índice parcial pra ad_id NULL (campanha) +
+   índice parcial pra ad_id NOT NULL (ad-level). Ambos são suportados
+   em PG 9.0+ e SQLite 3.8+.
+
+   Idempotente: IF NOT EXISTS + try/catch no migrate.js cobrem o caso
+   de já existirem linhas duplicadas em prod (CREATE UNIQUE INDEX falha
+   se há duplicatas — o catch mantém o sync rodando). */
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_insights_period_camp
+  ON insights (campaign_id, date_start, date_stop)
+  WHERE ad_id IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_insights_period_ad
+  ON insights (campaign_id, ad_id, date_start, date_stop)
+  WHERE ad_id IS NOT NULL;
