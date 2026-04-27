@@ -494,7 +494,7 @@ function Layout() {
             {/* HeatMap removido — Meta não diferencia performance entre bairros do mesmo anel.
                 Métricas por anel ficam no Dashboard (RingPerformanceCard). */}
             <Route path="/mapa-de-calor" element={<Navigate to="/" replace />} />
-            <Route path="/desempenho"    element={<Navigate to="/" replace />} />
+            <Route path="/desempenho"    element={<Navigate to="/relatorios" replace />} />
             <Route path="/novo"          element={<Navigate to="/criar-anuncio" replace />} />
             <Route path="*"              element={<Dashboard />} />
           </Routes>
