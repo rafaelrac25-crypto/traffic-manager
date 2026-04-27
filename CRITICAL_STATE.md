@@ -1,6 +1,6 @@
 # CRITICAL_STATE — traffic-manager
 
-> **Atualizado:** 2026-04-27 11:20 GMT-3 (sprint de limpeza pós-1ª campanha: webhook secret + API v20→v22 + CTAs dead code + redirect /desempenho)
+> **Atualizado:** 2026-04-27 14:00 GMT-3 (refactor UX do Dashboard pra leigo + Council instalado + log do videoCompressor)
 >
 > **Pra Claude:** este arquivo é o **estado crítico atual** do sistema. Lê-lo no início de cada sessão evita afirmações erradas. Atualizar no fim de cada sessão se algo mudar.
 >
@@ -123,6 +123,34 @@ Comportamento pro usuário final = idêntico ao Click-to-WhatsApp formal. Mesmo 
 - `'Mande uma mensagem'` e `'Enviar mensagem'` ambos mapeados pra MESSAGE_PAGE (redundância benigna — mantido, ambos válidos)
 - `/mapa-de-calor` redireciona pra `/` (HeatMap removido conscientemente — Meta não diferencia bairros do mesmo anel)
 - Flash visual de ~2s ao adicionar ad antes da resposta do servidor (otimismo aceitável)
+
+## Sprint UX Dashboard 2026-04-27 (tarde) — refactor pra leigo
+
+Commit `8625371`. Decidido com Rafa via Council (decisões expostas).
+
+**Tirado** (Rafa pediu — eu tinha enviesado pra "só adicionar"):
+- MiniCalendar do Dashboard (já tem `/calendario`)
+- Histórico de datas comerciais (sino + página de calendário cobrem)
+- Gráfico "Resultados ao longo do tempo" com placeholder permanente
+- Empty state visual do RingPerformanceCard (oculta seção inteira até ter dado real)
+
+**Adicionado** (poucos, alto valor):
+- **LearningPhaseCard adaptativo** — aparece quando há campanha active <7d, some sozinho quando estabiliza. Avisa pra não mexer em orçamento (regra Meta: alterações >20% resetam aprendizado)
+- **CTR e Frequência** no CampaignMetricsBlock (condicional, só mostra quando dado existe). Frequência fica laranja >2,5 (público saturando)
+- **Saldo "≈ X dias de veiculação"** no BalanceCard, calculado via soma dos daily budgets das campanhas active
+- **Tooltips `?`** em cada métrica explicando em PT-BR pra leigo
+
+**Ajustado**:
+- Saudação neutra: "Boa tarde 👋" (sem nome — pode ser Rafa, Cris, ou outra pessoa)
+- "seus anúncios" → "seu anúncio" quando 1 só
+
+**Council** (instalado em commit `70d90c0`): 5 agentes especializados em
+gestor de tráfego pago Cris/Joinville. Veto crítico: Validator e Risk
+Reviewer. Documentado em `COUNCIL.md`.
+
+**videoCompressor logging** (commit `d262479`): log estruturado quando
+upload de vídeo termina — quando Rafa for fazer próximo upload, console
+mostra qual pass venceu (720p/480p/360p).
 
 ## Sprint de limpeza 2026-04-27 (manhã)
 
