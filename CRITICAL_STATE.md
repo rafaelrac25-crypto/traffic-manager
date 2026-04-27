@@ -1,6 +1,6 @@
 # CRITICAL_STATE — traffic-manager
 
-> **Atualizado:** 2026-04-27 14:00 GMT-3 (refactor UX do Dashboard pra leigo + Council instalado + log do videoCompressor)
+> **Atualizado:** 2026-04-27 14:50 GMT-3 (checkup geral + 4 fixes P0/P1: conversions mapping, insights dedup, webhook Sentry, retry exponencial Meta)
 >
 > **Pra Claude:** este arquivo é o **estado crítico atual** do sistema. Lê-lo no início de cada sessão evita afirmações erradas. Atualizar no fim de cada sessão se algo mudar.
 >
@@ -123,6 +123,61 @@ Comportamento pro usuário final = idêntico ao Click-to-WhatsApp formal. Mesmo 
 - `'Mande uma mensagem'` e `'Enviar mensagem'` ambos mapeados pra MESSAGE_PAGE (redundância benigna — mantido, ambos válidos)
 - `/mapa-de-calor` redireciona pra `/` (HeatMap removido conscientemente — Meta não diferencia bairros do mesmo anel)
 - Flash visual de ~2s ao adicionar ad antes da resposta do servidor (otimismo aceitável)
+
+## Checkup geral 2026-04-27 (tarde) — 4 fixes P0/P1 aplicados
+
+Auditoria via 2 agentes paralelos (backend+Meta / frontend+ghost) +
+checks ao vivo. Sistema em PROD continuou green durante o trabalho.
+
+**Fixes aplicados (3 commits):**
+
+- `12ab4b1` — fix(sync): mapear `clicks → conversions` em
+  messages/wa.me/ + dedup insights (UNIQUE INDEX parcial em PG e
+  SQLite). Resolve "card Custo por resultado mostrava — apesar de 176
+  mensagens recebidas".
+- `e0c5572` — fix(webhook): IIFE async fire-and-forget agora captura
+  exceções pelo Sentry com tags. Painel não fica desatualizado em
+  silêncio se sync falhar.
+- `4d85aee` — feat(meta): retry exponencial com `MAX_RETRIES=3`,
+  backoff por código (`META_ERROR_MAP.backoffMs`), e
+  `POST_RETRY_WHITELIST = {4,17,32,613}` pra evitar duplicar criação de
+  recurso. Rate limit consumido a cada tentativa.
+
+**Findings P0/P1 ainda abertos (backlog priorizado):**
+
+- (P1) Race condition em `metaToken.js` refresh — lock em `Map()` local
+  não protege multi-instância serverless. Baixa probabilidade. Fix:
+  lock distribuído via DB row.
+- (P1) `metaRateLimit.js` em memória — multi-instância pode duplicar
+  quota. Fix: bucket persistido em DB ou Vercel KV (mas KV foi
+  descontinuado — usar Postgres com SELECT FOR UPDATE).
+- (P1) Sync não popula `reach` nem `frequency` (sync.js fields incompletos).
+  Métrica Frequência adicionada hoje no Dashboard só aparece quando
+  sync puxar isso. Fix: adicionar `reach,frequency` à lista de fields
+  do GET insights.
+- (P1) `health.js` faz live ping no Meta a cada hit — smoke test 15min
+  queima ~96 pings/dia da quota 180/h. Fix: cache 60s no resultado do
+  ping live.
+- (P1) FFmpeg.wasm nunca dá `.dispose()` — memory leak no upload de
+  vídeo. Fix: chamar `ffm.terminate()` em cleanup do `compressVideo`.
+- (P1) `CreateAd.jsx` preflight sem AbortController — setState em
+  componente desmontado. Fix: `AbortSignal` no fetch.
+- (P1) Bump v22 pode ter quebrado `insights.date_preset` em endpoint
+  específico (hipótese, não verificado). Fix: testar GET insights ao
+  vivo após próxima campanha.
+
+**Findings P2/P3 (tech debt, não urgente):**
+
+- Ghost code: 3 funções no `Dashboard.jsx` declaradas mas não
+  renderizadas (`DualLineChart`, `MiniCalendar`, `RingPerformanceTeaser`)
+  — sobra do refactor. Bundle gordo.
+- `setTimeout` sem cleanup em `AIAssistant.jsx`.
+- Hardcoded colors em alguns componentes (não usam `var(--c-...)`).
+- `alt` text genérico em previews do Wizard.
+- `console.info` do videoCompressor em prod (intencional pra
+  observabilidade — manter).
+- Sentry sanitize cobre breadcrumb mas não `request.body` em error
+  context.
 
 ## Backlog (decidido em 2026-04-27)
 
