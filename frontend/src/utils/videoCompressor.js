@@ -221,12 +221,28 @@ export async function compressVideo(file, onProgress) {
     return data;
   }
 
+  /* Report acumulado pra observabilidade — qual pass venceu, dims, tamanho.
+     Sai pelo console.info no fim + dispara CustomEvent('video:compress:report')
+     pra futura ingestão em /api/reports sem precisar refatorar este arquivo. */
+  const report = {
+    file: { name: file.name, sizeMB: +(file.size / 1024 / 1024).toFixed(2) },
+    src: { width: srcDims.w, height: srcDims.h, durationSec: +durationSec.toFixed(1) },
+    targetMB: TARGET_MB,
+    initialBitrateKbps: videoKbps,
+    passes: [],
+    finalPass: null,
+    finalDims: null,
+    finalSizeMB: null,
+  };
+
   try {
     /* Pass 1: bitrate calculado, largura alvo 720p (com upscale se preciso) */
     onProgress?.(0);
     const dim1 = computeTargetDims(srcDims.w, srcDims.h, 720);
     let data = await encode({ vKbps: videoKbps, aKbps: audioKbps, ...dim1 });
     let outMB = data.byteLength / (1024 * 1024);
+    report.passes.push({ n: 1, target: 720, dims: dim1, vKbps: videoKbps, sizeMB: +outMB.toFixed(2), kept: outMB <= TARGET_MB });
+    report.finalPass = 1; report.finalDims = dim1; report.finalSizeMB = +outMB.toFixed(2);
 
     /* Pass 2: se ainda estourou, reencoda MUITO agressivo — bitrate menor.
        Dimensão alvo 480px de largura; mas se vídeo for menor que 600 no
@@ -234,8 +250,11 @@ export async function compressVideo(file, onProgress) {
     if (outMB > TARGET_MB) {
       onProgress?.('Comprimindo mais…');
       const dim2 = computeTargetDims(srcDims.w, srcDims.h, 480);
-      data = await encode({ vKbps: Math.max(200, Math.floor(videoKbps * 0.55)), aKbps: 64, ...dim2 });
+      const v2 = Math.max(200, Math.floor(videoKbps * 0.55));
+      data = await encode({ vKbps: v2, aKbps: 64, ...dim2 });
       outMB = data.byteLength / (1024 * 1024);
+      report.passes.push({ n: 2, target: 480, dims: dim2, vKbps: v2, sizeMB: +outMB.toFixed(2), kept: outMB <= TARGET_MB });
+      report.finalPass = 2; report.finalDims = dim2; report.finalSizeMB = +outMB.toFixed(2);
     }
 
     /* Pass 3 (último recurso): bitrate mínimo. Mesma garantia: dimensão
@@ -244,9 +263,28 @@ export async function compressVideo(file, onProgress) {
       onProgress?.('Reduzindo ainda mais…');
       const dim3 = computeTargetDims(srcDims.w, srcDims.h, 360);
       data = await encode({ vKbps: 200, aKbps: 48, ...dim3 });
+      outMB = data.byteLength / (1024 * 1024);
+      report.passes.push({ n: 3, target: 360, dims: dim3, vKbps: 200, sizeMB: +outMB.toFixed(2), kept: true });
+      report.finalPass = 3; report.finalDims = dim3; report.finalSizeMB = +outMB.toFixed(2);
     }
 
     onProgress?.(100);
+
+    /* Log estruturado — Rafa pede observabilidade pra saber qual pass foi usado.
+       Quanto MAIOR o finalPass, MENOR a qualidade do vídeo final. */
+    const qualityLabel = { 1: '🟢 720p (alta)', 2: '🟡 480p (média)', 3: '🔴 360p (baixa)' }[report.finalPass];
+    console.info(`%c[videoCompressor] Pass ${report.finalPass} venceu — ${qualityLabel}`,
+      'background:#7D4A5E;color:#fff;padding:2px 6px;border-radius:3px;font-weight:bold');
+    console.info('  origem:', `${report.src.width}×${report.src.height} · ${report.src.durationSec}s · ${report.file.sizeMB}MB`);
+    console.info('  saída: ', `${report.finalDims.w}×${report.finalDims.h} · ${report.finalSizeMB}MB`);
+    console.table(report.passes);
+
+    /* Evento global — outros módulos podem capturar pra ingestão futura em
+       /api/reports sem acoplar este arquivo a fetch/db. */
+    try {
+      window.dispatchEvent(new CustomEvent('video:compress:report', { detail: report }));
+    } catch { /* SSR/test envs sem window — ignora */ }
+
     return new File(
       [data.buffer],
       file.name.replace(/\.[^.]+$/, '.mp4'),
