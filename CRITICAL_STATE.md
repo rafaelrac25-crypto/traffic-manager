@@ -124,6 +124,14 @@ Comportamento pro usuário final = idêntico ao Click-to-WhatsApp formal. Mesmo 
 - `/mapa-de-calor` redireciona pra `/` (HeatMap removido conscientemente — Meta não diferencia bairros do mesmo anel)
 - Flash visual de ~2s ao adicionar ad antes da resposta do servidor (otimismo aceitável)
 
+## Backlog (decidido em 2026-04-27)
+
+- **Alerta email saldo < R$ 20:** adiado. Caminho recomendado quando voltar:
+  hook no `/api/health/full` (já é batido a cada 15min pelo smoke test do
+  GitHub Actions) + Resend pra envio + flag `last_balance_alert_at` no DB
+  pra não duplicar. Janela útil entre R$ 20 e R$ 0 ≈ 32h com budget diário
+  R$ 15. Implementação ~30min em 1 commit.
+
 ## Decisão (2026-04-27): redesign visual fica pra DEPOIS
 
 Skill oficial Anthropic `frontend-design` confirmada como confiável e
