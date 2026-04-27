@@ -39,7 +39,6 @@
   },
   "cta_pt_br_to_meta": {
     "Saiba mais": "LEARN_MORE",
-    "Reservar agora": "BOOK_TRAVEL",
     "Entrar em contato": "CONTACT_US",
     "WhatsApp": "WHATSAPP_MESSAGE",
     "Enviar mensagem": "MESSAGE_PAGE",
@@ -47,7 +46,6 @@
     "Chamar agora": "CALL_NOW",
     "Inscrever-se": "SUBSCRIBE",
     "Comprar agora": "SHOP_NOW",
-    "Ver cardápio": "VIEW_MENU",
     "Ver mais": "LEARN_MORE"
   },
   "cta_to_destination_type": {

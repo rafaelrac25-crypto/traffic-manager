@@ -82,7 +82,6 @@ export const BILLING_EVENT = {
 /* ── CTA: rótulo PT-BR (display) ⇄ Meta enum ──────────────────────────── */
 export const CTA_TO_META = {
   'Saiba mais':         'LEARN_MORE',
-  'Reservar agora':     'BOOK_TRAVEL',
   'Entrar em contato':  'CONTACT_US',
   'WhatsApp':           'WHATSAPP_MESSAGE',
   'Enviar mensagem':    'MESSAGE_PAGE',
@@ -90,7 +89,6 @@ export const CTA_TO_META = {
   'Chamar agora':       'CALL_NOW',
   'Inscrever-se':       'SUBSCRIBE',
   'Comprar agora':      'SHOP_NOW',
-  'Ver cardápio':       'VIEW_MENU',
   'Ver mais':           'LEARN_MORE',
 };
 
