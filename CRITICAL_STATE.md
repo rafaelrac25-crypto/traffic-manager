@@ -124,6 +124,15 @@ Comportamento pro usuário final = idêntico ao Click-to-WhatsApp formal. Mesmo 
 - `/mapa-de-calor` redireciona pra `/` (HeatMap removido conscientemente — Meta não diferencia bairros do mesmo anel)
 - Flash visual de ~2s ao adicionar ad antes da resposta do servidor (otimismo aceitável)
 
+## Decisão (2026-04-27): redesign visual fica pra DEPOIS
+
+Skill oficial Anthropic `frontend-design` confirmada como confiável e
+disponível pra instalação (`/plugin install anthropics/claude-code`).
+Rafa decidiu **adiar** o redesign visual pra validar o aplicativo
+primeiro com a 1ª campanha real. Sequência prevista: validar → coletar
+dados (~2-3 semanas pós fase de aprendizado) → aí sim aplicar
+`frontend-design` em branch isolada.
+
 ## Sprint UX Dashboard 2026-04-27 (tarde) — refactor pra leigo
 
 Commit `8625371`. Decidido com Rafa via Council (decisões expostas).
