@@ -1,6 +1,6 @@
 const META_ERROR_MAP = {
-  1: { pt: 'Erro desconhecido da Meta — tentar novamente', retry: true },
-  2: { pt: 'Serviço Meta temporariamente indisponível', retry: true },
+  1: { pt: 'Erro desconhecido da Meta — tentar novamente', retry: true, backoffMs: 2000 },
+  2: { pt: 'Serviço Meta temporariamente indisponível', retry: true, backoffMs: 5000 },
   4: { pt: 'Limite de taxa atingido — aguardar antes de tentar de novo', retry: true, backoffMs: 60000 },
   10: { pt: 'Permissão negada para esta ação', retry: false },
   17: { pt: 'Limite de chamadas do usuário atingido', retry: true, backoffMs: 300000 },
@@ -55,4 +55,34 @@ function parseMetaError(err) {
   };
 }
 
-module.exports = { META_ERROR_MAP, parseMetaError };
+/**
+ * Whitelist de códigos seguros pra retry em métodos NÃO-idempotentes
+ * (POST/DELETE). Inclui apenas códigos onde a Meta confirma que a
+ * request NÃO foi processada (rate limit pré-execução).
+ *
+ * Em GET, qualquer código com `retry: true` pode ser tentado de novo.
+ * Em POST/DELETE, só esses — pra evitar criar campanha duplicada se
+ * a Meta processou mas o cliente desconectou antes de receber 200.
+ */
+const POST_RETRY_WHITELIST = new Set([4, 17, 32, 613]);
+
+/**
+ * Decide se um erro pode ser tentado de novo dado o método HTTP.
+ *
+ * @param {object} parsed — resultado de parseMetaError
+ * @param {string} method — 'GET' | 'POST' | 'DELETE'
+ * @returns {boolean}
+ */
+function isRetryableForMethod(parsed, method) {
+  if (!parsed?.retry) return false;
+  if (method === 'GET') return true;
+  /* POST/DELETE: só rate limit confirmado (pré-execução) */
+  return parsed.code != null && POST_RETRY_WHITELIST.has(parsed.code);
+}
+
+module.exports = {
+  META_ERROR_MAP,
+  parseMetaError,
+  POST_RETRY_WHITELIST,
+  isRetryableForMethod,
+};

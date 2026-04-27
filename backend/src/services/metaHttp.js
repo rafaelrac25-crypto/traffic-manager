@@ -12,10 +12,14 @@
 
 const https = require('https');
 const rateLimit = require('./metaRateLimit');
-const { parseMetaError } = require('./metaErrors');
+const { parseMetaError, isRetryableForMethod } = require('./metaErrors');
 const { API_VERSION, GRAPH_HOST } = require('./metaApiVersion');
 
 const DEFAULT_TIMEOUT_MS = 30000;
+const MAX_RETRIES = 3;
+const DEFAULT_BACKOFF_MS = 2000;
+
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 function pathFor(endpoint) {
   if (endpoint.startsWith('/')) return `/${API_VERSION}${endpoint}`;
@@ -32,19 +36,11 @@ function encodeParams(params) {
 }
 
 /**
- * Faz uma request ao Meta e aplica rate limit + timeout + parse de erro.
- * Em erro 190/102 (token inválido/expirado), marca needs_reconnect no DB.
- *
- * @param {'GET'|'POST'|'DELETE'} method
- * @param {string} endpoint — ex: '/act_123/campaigns' ou 'me/accounts'
- * @param {object} params — query/body params (serializados via URLSearchParams)
- * @param {object} opts — { token, rateLimitKey, timeoutMs }
+ * Faz uma única tentativa HTTP ao Meta — sem retry, sem rate limit.
+ * Usado por metaRequest dentro do loop de retry.
  */
-async function metaRequest(method, endpoint, params = {}, opts = {}) {
-  const { token, rateLimitKey = token || 'global', timeoutMs = DEFAULT_TIMEOUT_MS } = opts;
-  /* Rate limit bloqueia curto se necessário — Meta retorna 4/17/613 se exceder */
-  await rateLimit.take(rateLimitKey, 1);
-
+async function singleAttempt(method, endpoint, params, opts) {
+  const { token, timeoutMs = DEFAULT_TIMEOUT_MS } = opts;
   const fullParams = { ...params };
   if (token) fullParams.access_token = token;
   const qs = encodeParams(fullParams);
@@ -57,7 +53,7 @@ async function metaRequest(method, endpoint, params = {}, opts = {}) {
     body = qs;
   }
 
-  const json = await new Promise((resolve, reject) => {
+  return new Promise((resolve, reject) => {
     const req = https.request({
       host: GRAPH_HOST,
       path: fullPath,
@@ -82,9 +78,62 @@ async function metaRequest(method, endpoint, params = {}, opts = {}) {
     if (body) req.write(body);
     req.end();
   });
+}
 
-  if (json.error) {
+/**
+ * Faz uma request ao Meta e aplica rate limit + timeout + parse de erro + retry.
+ * Em erro 190/102 (token inválido/expirado), marca needs_reconnect no DB.
+ *
+ * Retry policy:
+ * - Até MAX_RETRIES (3) tentativas para erros marcados `retry: true` no map.
+ * - Backoff exponencial: backoffMs * 2^(tentativa-1).
+ * - Em POST/DELETE, só faz retry se code está em POST_RETRY_WHITELIST
+ *   (rate limit confirmado pré-execução) — evita duplicar criação de recurso.
+ * - Rate limit é consumido ANTES de cada tentativa (não só na primeira),
+ *   senão retry burlaria o limit.
+ *
+ * @param {'GET'|'POST'|'DELETE'} method
+ * @param {string} endpoint — ex: '/act_123/campaigns' ou 'me/accounts'
+ * @param {object} params — query/body params (serializados via URLSearchParams)
+ * @param {object} opts — { token, rateLimitKey, timeoutMs }
+ */
+async function metaRequest(method, endpoint, params = {}, opts = {}) {
+  const { token, rateLimitKey = token || 'global' } = opts;
+
+  let attempt = 0;
+  let lastError = null;
+
+  while (attempt < MAX_RETRIES) {
+    attempt++;
+
+    /* Rate limit bloqueia curto se necessário — Meta retorna 4/17/613 se exceder.
+       Consome 1 token a cada tentativa pra retry não burlar o limit. */
+    await rateLimit.take(rateLimitKey, 1);
+
+    let json;
+    try {
+      json = await singleAttempt(method, endpoint, params, opts);
+    } catch (netErr) {
+      /* Erro de rede/timeout (não é resposta JSON do Meta).
+         Trata como retryável em GET; em POST/DELETE propaga
+         (não dá pra saber se request foi processada). */
+      lastError = netErr;
+      if (method === 'GET' && attempt < MAX_RETRIES) {
+        const backoff = DEFAULT_BACKOFF_MS * Math.pow(2, attempt - 1);
+        console.warn(`[metaHttp] retry ${attempt}/${MAX_RETRIES} para ${method} ${endpoint} após erro de rede com backoff ${backoff}ms: ${netErr.message}`);
+        await sleep(backoff);
+        continue;
+      }
+      throw netErr;
+    }
+
+    if (!json.error) {
+      return json; /* sucesso */
+    }
+
+    /* Resposta de erro do Meta */
     const parsed = parseMetaError(json.error);
+
     /* Auto-marca needs_reconnect pra qualquer endpoint bater 190/102.
        Lazy require pra evitar ciclo (metaToken → db → ...). */
     if (parsed.reconnect === true) {
@@ -93,14 +142,26 @@ async function metaRequest(method, endpoint, params = {}, opts = {}) {
         await markNeedsReconnect('meta');
       } catch { /* best-effort, não quebra o erro original */ }
     }
-    const e = new Error(parsed.pt);
-    e.meta = parsed;
-    e.endpoint = endpoint;
-    e.params = params;
-    throw e;
+
+    const err = new Error(parsed.pt);
+    err.meta = parsed;
+    err.endpoint = endpoint;
+    err.params = params;
+    lastError = err;
+
+    /* Decide se faz retry: respeita whitelist de POST/DELETE */
+    const canRetry = isRetryableForMethod(parsed, method);
+    if (!canRetry || attempt >= MAX_RETRIES) {
+      throw err;
+    }
+
+    const backoff = (parsed.backoffMs || DEFAULT_BACKOFF_MS) * Math.pow(2, attempt - 1);
+    console.warn(`[metaHttp] retry ${attempt}/${MAX_RETRIES} para code ${parsed.code} com backoff ${backoff}ms (${method} ${endpoint})`);
+    await sleep(backoff);
   }
 
-  return json;
+  /* Se sair do loop sem return/throw, propaga o último erro (defensivo) */
+  throw lastError || new Error(`metaRequest: esgotou ${MAX_RETRIES} tentativas em ${method} ${endpoint}`);
 }
 
 function metaGet(endpoint, params, opts)    { return metaRequest('GET',    endpoint, params, opts); }
