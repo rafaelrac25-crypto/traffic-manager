@@ -114,6 +114,24 @@ async function syncPlatform(platform) {
       synced_at: new Date().toISOString(),
       conversions_mapped_from_clicks: wasMappedFromClicks || undefined,
     };
+    /* Bug A fix: snapshot de payload.campaign / payload.ad_set salvo no publish
+       fica desatualizado pra sempre se não atualizarmos no sync. Sobrescreve
+       status com valor fresco do Meta (raw vem do fetchCampaigns). Adset status
+       normalmente segue campaign (best-effort sync). */
+    const rawStatus = c.raw?.status || null;
+    if (prevPayload?.campaign && rawStatus) {
+      payload.campaign = {
+        ...prevPayload.campaign,
+        status: rawStatus,
+        effective_status: c.effective_status || prevPayload.campaign.effective_status,
+      };
+    }
+    if (prevPayload?.ad_set && rawStatus) {
+      payload.ad_set = {
+        ...prevPayload.ad_set,
+        status: rawStatus,
+      };
+    }
     /* Preserva effective_status existente se Meta não retornar (failsafe) */
     const effectiveStatus = c.effective_status || null;
     await db.query(

@@ -13,13 +13,24 @@ async function log(action, entity, entity_id, description, meta) {
 /* Transforma row do banco em objeto com payload deserializado */
 function rowToAd(row) {
   if (!row) return null;
-  const out = { ...row };
+  let out = { ...row };
   if (out.payload && typeof out.payload === 'string') {
     try { out.payload = JSON.parse(out.payload); } catch { /* leave as is */ }
   }
   /* Merge de campos do payload na raiz pra consumo direto no frontend */
   if (out.payload && typeof out.payload === 'object') {
-    return { ...out.payload, ...out, payload: undefined };
+    out = { ...out.payload, ...out, payload: undefined };
+  }
+  /* Bug B fix: derivar results/costPerResult de conversions/spent vindos do sync.
+     Sem isso, esses campos ficam grudados nos defaults do payload (results: 0,
+     costPerResult: null) mesmo quando o sync já mapeou conversions corretamente. */
+  const conv = Number(out.conversions);
+  if (Number.isFinite(conv) && conv > 0) {
+    out.results = conv;
+    const spent = Number(out.spent);
+    if (Number.isFinite(spent) && spent > 0) {
+      out.costPerResult = Number((spent / conv).toFixed(2));
+    }
   }
   return out;
 }
