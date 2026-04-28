@@ -40,6 +40,26 @@
 - Backlog: feature "duplicar campanha pausada" no wizard (não existe rota /duplicate hoje)
 - Backlog: campos `meta.ad_set.status` derivam de campaign — ideal seria buscar status real do adset separadamente
 
+### Backlog priorizado (decidido por Rafa em 2026-04-28)
+- **Feature: "Adicionar novo anúncio em campanha existente"** — permitir trocar criativo (vídeo/texto) mantendo campanha+conjunto+aprendizado. Útil pra: (1) trocar vídeo cansado após 30+ dias, (2) substituir criativo sem zerar fase de aprendizado.
+- **Feature: A/B test de criativos no mesmo conjunto** — publicar 2-3 anúncios competindo pelo mesmo público; Meta entrega mais pro que converte mais. Útil pra escolher copy/visual vencedor sem palpite.
+- **Status:** Rafa quer fazer DEPOIS. Não nesta sessão. Implementar quando ele tiver uma campanha já validada pra cima da qual rodar A/B.
+
+### Próxima campanha (Rafa vai criar 2026-04-28 à noite)
+- **Serviço:** Nanopigmentação de sobrancelhas
+- **Valor:** R$ 672 (12x de R$ 56) — confirmado por Rafa
+- **Copy escolhida (V2 do conjunto de 3):**
+  - Texto principal: `Acordar todo dia pronta. Nanopigmentação em 12x de R$ 56. Só 3 vagas pra esta semana — me chama agora no WhatsApp.`
+  - Título: `3 vagas de nanopigmentação`
+- **Targeting recomendado:**
+  - 4-5 bairros classe média-alta de Joinville (sugestão: Anita Garibaldi, Atiradores, Saguaçu, Boa Vista — confirmar com Cris quais aparecem mais na agenda real)
+  - Faixa etária: 28-42
+  - Gênero: feminino
+  - Interesses específicos (em vez de "Estética facial" genérico): Sobrancelhas micropigmentadas, Maquiagem permanente, Procedimentos estéticos
+  - CPC esperado: R$ 0,40-0,80 (mais qualificado que os R$ 0,17 anteriores)
+- **Vídeo:** novo, com legendas em 3 momentos (gancho inicial, valor 12x R$ 56 no meio, CTA "Maio com agenda apertada — chama no WhatsApp" no final). Capa custom só se 1º frame for fraco.
+- **Campanha anterior:** Rafa vai pausar antes de subir a nova.
+
 ---
 
 ## Integrações Meta (`curl https://criscosta.vercel.app/api/health/full`)
