@@ -45,20 +45,21 @@
 - **Feature: A/B test de criativos no mesmo conjunto** — publicar 2-3 anúncios competindo pelo mesmo público; Meta entrega mais pro que converte mais. Útil pra escolher copy/visual vencedor sem palpite.
 - **Status:** Rafa quer fazer DEPOIS. Não nesta sessão. Implementar quando ele tiver uma campanha já validada pra cima da qual rodar A/B.
 
-### Próxima campanha (Rafa vai criar 2026-04-28 à noite)
+### Próxima campanha (Rafa vai criar 2026-04-28 à noite) — PACOTE FECHADO
 - **Serviço:** Nanopigmentação de sobrancelhas
-- **Valor:** R$ 672 (12x de R$ 56) — confirmado por Rafa
-- **Copy escolhida (V2 do conjunto de 3):**
-  - Texto principal: `Acordar todo dia pronta. Nanopigmentação em 12x de R$ 56. Só 3 vagas pra esta semana — me chama agora no WhatsApp.`
+- **Valor:** R$ 672 (12x de R$ 56)
+- **Copy (V2 escolhida):**
   - Título: `3 vagas de nanopigmentação`
-- **Targeting recomendado:**
-  - 4-5 bairros classe média-alta de Joinville (sugestão: Anita Garibaldi, Atiradores, Saguaçu, Boa Vista — confirmar com Cris quais aparecem mais na agenda real)
-  - Faixa etária: 28-42
-  - Gênero: feminino
-  - Interesses específicos (em vez de "Estética facial" genérico): Sobrancelhas micropigmentadas, Maquiagem permanente, Procedimentos estéticos
-  - CPC esperado: R$ 0,40-0,80 (mais qualificado que os R$ 0,17 anteriores)
-- **Vídeo:** novo, com legendas em 3 momentos (gancho inicial, valor 12x R$ 56 no meio, CTA "Maio com agenda apertada — chama no WhatsApp" no final). Capa custom só se 1º frame for fraco.
-- **Campanha anterior:** Rafa vai pausar antes de subir a nova.
+  - Texto principal: `Acordar todo dia pronta. Nanopigmentação em 12x de R$ 56. Só 3 vagas pra esta semana — me chama agora no WhatsApp.`
+- **Targeting fechado:**
+  - **Bairros (6, 3km de raio cada):** Anita Garibaldi, Atiradores, Saguaçu, Boa Vista, América, Glória
+  - **Faixa etária:** 28-45
+  - **Gênero:** feminino
+  - **Interesses:** Design de sobrancelhas, Maquiagem permanente, Sobrancelhas micropigmentadas, Estética avançada, Procedimentos estéticos
+  - **CPC esperado:** R$ 0,40-0,80 (mais qualificado que os R$ 0,17 anteriores)
+- **Destino:** wa.me/5547997071161 (mesmo número, fallback wa.me como antes)
+- **Vídeo:** novo, com legendas em 3 momentos (gancho inicial → valor 12x R$ 56 no meio → CTA "chama no WhatsApp" no final). Capa custom só se 1º frame for fraco.
+- **Antes de subir nova:** pausar campanha 424 atual no AdManager.
 
 ---
 
