@@ -1,10 +1,44 @@
 # CRITICAL_STATE — traffic-manager
 
-> **Atualizado:** 2026-04-27 14:50 GMT-3 (checkup geral + 4 fixes P0/P1: conversions mapping, insights dedup, webhook Sentry, retry exponencial Meta)
+> **Atualizado:** 2026-04-28 14:50 GMT-3 (sessão diagnóstico campanha real + 2 fixes painel)
 >
 > **Pra Claude:** este arquivo é o **estado crítico atual** do sistema. Lê-lo no início de cada sessão evita afirmações erradas. Atualizar no fim de cada sessão se algo mudar.
 >
 > **Pra Rafa:** raio-X rápido do projeto.
+
+---
+
+## Sessão 2026-04-28 — Diagnóstico campanha real + 2 fixes painel
+
+### Estado real da campanha 424 ("Últimas vagas para nanopigmentação!")
+- **Status:** ACTIVE (rodando 2,5 dias contínuos sem pausa)
+- **Spent:** R$ 40,04 (matemática Rafa: 15/dia × 2,5d = R$ 37,5 — bate)
+- **Clicks:** 235 / **Impressions:** 7.252 / **Reach:** 5.275
+- **CTR:** 3,24% (excelente, 3x média estética)
+- **CPC:** R$ 0,17 (excelente)
+- **Conversions internas (mapeadas de clicks):** 235
+- **Mensagens reais no WhatsApp da Cris:** 0 (Cris confirmou)
+
+### Decisão estratégica registrada
+- Diagnóstico: anúncio chama atenção MUITO bem (CTR alto), mas oferta/criativo NÃO fecha
+- 235 cliques sem 1 mensagem em 2,5 dias = sinal estatístico suficiente
+- Não vale esperar mais 4 dias do mesmo criativo
+- Hipóteses Rafa (legenda no meio + valor visível + condição/urgência) = corretas
+- **Próximo anúncio:** 4-5 bairros classe média-alta (Anita Garibaldi, Atiradores, Saguaçu, Boa Vista) + faixa 28-42 + interesses específicos + novo vídeo (legenda+valor+urgência) + aceitar CPC R$ 0,40-0,80 pra qualificar
+
+### 2 fixes aplicados (commits e120260 + a50ed45)
+- **Bug B (e120260):** `rowToAd` em routes/campaigns.js — `results` e `costPerResult` ficavam zerados mesmo com sync mapeando conversions. Agora deriva: results=conversions, costPerResult=spent/conversions.
+- **Bug A (a50ed45):** sync.js — `payload.meta.campaign.status` e `payload.meta.ad_set.status` ficavam grudados em PAUSED do snapshot do publish. Agora atualiza com c.raw.status fresco do Meta a cada sync.
+
+### Erro de método registrado (memória global atualizada)
+- Afirmei "campanha PAUSED" olhando `m.campaign.status` (cache antigo) sem conferir `c.status` raiz (estado vivo)
+- Rafa percebeu pela matemática (gastou R$ 40 = 2,5d × R$15 = consistente com rodando)
+- Nova memória: `feedback_verify_primary_source_not_cache.md` — fonte primária sempre, nunca cache
+
+### Pendências (após Rafa pausar)
+- Confirmar com Cris quais bairros mais aparecem na agenda dela (refinar lista de bairros)
+- Backlog: feature "duplicar campanha pausada" no wizard (não existe rota /duplicate hoje)
+- Backlog: campos `meta.ad_set.status` derivam de campaign — ideal seria buscar status real do adset separadamente
 
 ---
 
