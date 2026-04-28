@@ -114,23 +114,32 @@ async function syncPlatform(platform) {
       synced_at: new Date().toISOString(),
       conversions_mapped_from_clicks: wasMappedFromClicks || undefined,
     };
-    /* Bug A fix: snapshot de payload.campaign / payload.ad_set salvo no publish
-       fica desatualizado pra sempre se não atualizarmos no sync. Sobrescreve
-       status com valor fresco do Meta (raw vem do fetchCampaigns). Adset status
-       normalmente segue campaign (best-effort sync). */
-    const rawStatus = c.raw?.status || null;
-    if (prevPayload?.campaign && rawStatus) {
-      payload.campaign = {
-        ...prevPayload.campaign,
-        status: rawStatus,
-        effective_status: c.effective_status || prevPayload.campaign.effective_status,
-      };
-    }
-    if (prevPayload?.ad_set && rawStatus) {
-      payload.ad_set = {
-        ...prevPayload.ad_set,
-        status: rawStatus,
-      };
+    /* Bug A fix: snapshot de meta.campaign / meta.ad_set salvo no publish
+       fica desatualizado pra sempre se não atualizarmos no sync. Frontend salva
+       essa estrutura como payload.meta.{campaign,ad_set,ad,creative} no momento
+       do wizard. Sobrescreve status com valor fresco do Meta (c.raw.status é
+       UPPERCASE 'ACTIVE'/'PAUSED'; fallback derivado de c.status lowercase).
+       Adset status normalmente segue campaign (best-effort sync). */
+    const rawStatus = c.raw?.status
+      || (c.status === 'active' ? 'ACTIVE'
+        : c.status === 'paused' ? 'PAUSED'
+        : null);
+    if (prevPayload?.meta && rawStatus) {
+      const nextMeta = { ...prevPayload.meta };
+      if (nextMeta.campaign) {
+        nextMeta.campaign = {
+          ...nextMeta.campaign,
+          status: rawStatus,
+          effective_status: c.effective_status || nextMeta.campaign.effective_status,
+        };
+      }
+      if (nextMeta.ad_set) {
+        nextMeta.ad_set = {
+          ...nextMeta.ad_set,
+          status: rawStatus,
+        };
+      }
+      payload.meta = nextMeta;
     }
     /* Preserva effective_status existente se Meta não retornar (failsafe) */
     const effectiveStatus = c.effective_status || null;
