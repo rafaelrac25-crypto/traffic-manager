@@ -8,6 +8,27 @@
 
 ---
 
+## Sessão 2026-04-28 noite — 1ª tentativa de publicação + bug bairros
+
+### Campanha 433 (deletada pelo Rafa)
+- **Publicada:** 2026-04-28 20:32 GMT-3, ATIVA no Meta (ID `120245720496670627`)
+- **Headline final escolhida:** `Nanopigmentação em Joinville!`
+- **Texto final:** `Fio a fio, feito à mão pela Cris. De R$ 699,00 por R$ 497 ou 12x de R$ 58. Só esta semana! Me chama no WhatsApp.` (variação do Rafa misturando Opção 3 + desconto cruzado)
+- **Vídeo:** "Nano 12x 58.mp4"
+- **Orçamento:** R$ 15/dia, fim 05/05/2026 23:59
+- **Bairros configurados:** 6 (Anita, Atiradores, Saguaçu, América, Glória, Boa Vista)
+- **Bairros que chegaram no Meta:** apenas 3 (Anita, Saguaçu, Glória) — bug do split de anéis
+- **Status final no Meta:** Campaign+AdSet ACTIVE, Ad PENDING_REVIEW
+- **Decisão Rafa:** DELETOU pra refazer (provavelmente quer corrigir bairros + ajustar copy/vídeo)
+
+### Bug confirmado: split de anéis perde bairros
+- Painel tinha 5 bairros com `radius:1` e Boa Vista com `radius:2`
+- Sistema enviou pro Meta só os 3 com radius coincidente (3km cada)
+- 3 bairros desapareceram silenciosamente
+- **Backlog técnico:** investigar `metaNormalize.js` / `publishCampaign` — quando `ringsMode:"1"` e bairros têm raios diferentes, alguns são descartados sem aviso ao usuário
+
+---
+
 ## Sessão 2026-04-28 — Diagnóstico campanha real + 2 fixes painel
 
 ### Estado real da campanha 424 ("Últimas vagas para nanopigmentação!")
@@ -47,10 +68,19 @@
 
 ### Próxima campanha (Rafa vai criar 2026-04-28 à noite) — PACOTE FECHADO
 - **Serviço:** Nanopigmentação de sobrancelhas
-- **Valor:** R$ 672 (12x de R$ 56)
-- **Copy (V2 escolhida):**
-  - Título: `3 vagas de nanopigmentação`
-  - Texto principal: `Acordar todo dia pronta. Nanopigmentação em 12x de R$ 56. Só 3 vagas pra esta semana — me chama agora no WhatsApp.`
+- **Valor:** R$ 696 (12x de R$ 58) — corrigido em 2026-04-28 19:30 (era R$ 56, valor real é R$ 58)
+- **Copy (V3 — 3 opções refeitas com base no print do vídeo, 2026-04-28 19:30):**
+  - **Opção 1 (recomendada — escassez direta):**
+    - Título: `Nanopigmentação · 3 vagas esta semana`
+    - Texto: `Sobrancelha pronta sem maquiagem. 12x R$ 58. Só 3 vagas pra esta semana — me chama no WhatsApp.`
+  - **Opção 2 (rotina aspiracional):**
+    - Título: `Acorde pronta · Nanopigmentação`
+    - Texto: `Sobrancelha desenhada todo dia, sem retoque. 12x R$ 58. Vagas limitadas esta semana — chama no WhatsApp.`
+  - **Opção 3 (artesanal + autoridade):**
+    - Título: `Nanopigmentação em Joinville · 3 vagas`
+    - Texto: `Fio a fio, feito à mão pela Cris. 12x R$ 58. Só 3 vagas esta semana — me chama no WhatsApp.`
+  - **Decisão Rafa:** _pendente — vai escolher antes de subir_
+  - **Decisão sobre vídeo:** Rafa vai REFAZER o vídeo (em vez de mostrar valor com desconto cruzado). Valor 12x R$ 58 vai pra copy do anúncio, não pro overlay do vídeo.
 - **Targeting fechado:**
   - **Bairros (6, 3km de raio cada):** Anita Garibaldi, Atiradores, Saguaçu, Boa Vista, América, Glória
   - **Faixa etária:** 28-45
@@ -58,7 +88,7 @@
   - **Interesses:** Design de sobrancelhas, Maquiagem permanente, Sobrancelhas micropigmentadas, Estética avançada, Procedimentos estéticos
   - **CPC esperado:** R$ 0,40-0,80 (mais qualificado que os R$ 0,17 anteriores)
 - **Destino:** wa.me/5547997071161 (mesmo número, fallback wa.me como antes)
-- **Vídeo:** novo, com legendas em 3 momentos (gancho inicial → valor 12x R$ 56 no meio → CTA "chama no WhatsApp" no final). Capa custom só se 1º frame for fraco.
+- **Vídeo:** Rafa vai REFAZER o vídeo. Valor 12x R$ 58 SAI do overlay do vídeo (vai pra copy do anúncio). Manter gancho inicial + CTA "chama no WhatsApp" no final. Capa custom só se 1º frame for fraco.
 - **Antes de subir nova:** pausar campanha 424 atual no AdManager.
 
 ---

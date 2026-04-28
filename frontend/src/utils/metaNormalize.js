@@ -23,7 +23,6 @@ import {
   CTA_TO_DESTINATION,
   MESSAGING_CTAS,
   GEO_MIN_RADIUS_KM,
-  GEO_DEDUPE_BUFFER_KM,
   GEO_FALLBACK_RADIUS_KM,
   BR_OFFSET,
 } from '../config/metaRules';
@@ -60,44 +59,30 @@ function toInterestObject(name) {
  * Converte o estado local do wizard no payload Meta completo (4 níveis).
  * Estrutura final: campaign → ad_set → ad → creative (exatamente como a API espera).
  */
-/* Remove sobreposição de localizações (Meta v20 rejeita com erro 1487756).
-   Algoritmo: ordena do mais próximo do HOME pro mais distante; pra cada
-   ponto, se ele já está DENTRO da área de outro anterior, descarta.
-   Senão, reduz o raio pra não encostar no anterior (buffer 0.3km).
-   Se raio ficar < 1km, descarta (área muito pequena pro Meta rodar). */
+/* Normaliza localizações pro Meta:
+   1) dedup por nome+coord (bairros idênticos viram 1)
+   2) força raio mínimo GEO_MIN_RADIUS_KM (Meta nega audiência abaixo)
+
+   NÃO descarta mais por sobreposição. Versões antigas da Marketing API
+   (v17/v18) rejeitavam custom_locations sobrepostas com erro 1487756 —
+   v20+ aceita sem problema (Meta deduplica usuários internamente, ninguém
+   é contado 2x). Em Joinville bairros ficam ~1-3km uns dos outros: o filtro
+   antigo combinado com o piso de 3km descartava silenciosamente metade dos
+   bairros configurados pelo usuário. Removido em 2026-04-28. */
 function dedupeOverlappingGeos(locations) {
   const valid = (locations || []).filter(l => l?.lat != null && l?.lng != null && l?.radius > 0);
-  if (valid.length <= 1) return valid;
-  /* Haversine inline */
-  const distKm = (a, b) => {
-    const R = 6371, toRad = x => (x * Math.PI) / 180;
-    const dLat = toRad(b.lat - a.lat), dLng = toRad(b.lng - a.lng);
-    const la1 = toRad(a.lat), la2 = toRad(b.lat);
-    const h = Math.sin(dLat / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dLng / 2) ** 2;
-    return 2 * R * Math.asin(Math.sqrt(h));
-  };
-
-  /* Ordena do mais denso pro menos (menor raio primeiro, depois mais próximo do 1º) */
-  const sorted = [...valid].sort((a, b) => a.radius - b.radius);
+  if (valid.length === 0) return valid;
+  const seen = new Set();
   const kept = [];
-  for (const loc of sorted) {
-    let skip = false;
-    let newRadius = loc.radius;
-    for (const other of kept) {
-      const d = distKm(loc, other);
-      /* Se center do loc está dentro do círculo de other → redundante */
-      if (d <= other.radius) { skip = true; break; }
-      /* Se círculos se sobrepõem → reduz raio pra ficar tangente (buffer GEO_DEDUPE_BUFFER_KM) */
-      const maxAllowed = d - other.radius - GEO_DEDUPE_BUFFER_KM;
-      if (maxAllowed < newRadius) {
-        newRadius = maxAllowed;
-      }
-    }
-    if (skip) continue;
-    /* Meta rejeita raios muito pequenos (audiência insuficiente pra rodar).
-       Piso GEO_MIN_RADIUS_KM garante público mínimo viável. */
-    if (newRadius < GEO_MIN_RADIUS_KM) newRadius = GEO_MIN_RADIUS_KM;
-    kept.push({ ...loc, radius: Number(newRadius.toFixed(2)) });
+  for (const loc of valid) {
+    const nameKey = String(loc.name || '').trim().toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const coordKey = `${Number(loc.lat).toFixed(4)},${Number(loc.lng).toFixed(4)}`;
+    const key = nameKey ? `n:${nameKey}` : `c:${coordKey}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const radius = Math.max(Number(loc.radius), GEO_MIN_RADIUS_KM);
+    kept.push({ ...loc, radius: Number(radius.toFixed(2)) });
   }
   return kept;
 }
