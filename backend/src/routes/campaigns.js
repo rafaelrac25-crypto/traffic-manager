@@ -1208,7 +1208,11 @@ router.get('/:id/audit', async (req, res) => {
       }).format(d); /* "2026-05-05" formato en-CA = YYYY-MM-DD */
       return parts;
     };
-    const localEndDate = c.end_date ? String(c.end_date).slice(0, 10) : null;
+    /* c.end_date pode vir como string ISO ("2026-05-05") em SQLite OU como
+       Date object no Postgres/Neon. Normaliza ambos pra YYYY-MM-DD em fuso BR. */
+    const localEndDate = c.end_date instanceof Date
+      ? toBRDate(c.end_date)
+      : (c.end_date ? String(c.end_date).slice(0, 10) : null);
     const metaEndDate = toBRDate(adset.end_time || campaignMeta.stop_time);
     checks.push({
       field: 'end_date',
