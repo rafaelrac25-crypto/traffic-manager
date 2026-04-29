@@ -239,7 +239,7 @@ export function toMetaPayload(ad) {
         genders,
         interests:                 (ad.interests || []).map(toInterestObject),
         publisher_platforms:       ['instagram'],
-        instagram_positions:       ['feed', 'story', 'reels'],
+        instagram_positions:       ['stream', 'story', 'reels'],
         targeting_automation:      targetingAutomation,
         targeting_relaxation_types: targetingRelaxation,
       }
@@ -252,7 +252,7 @@ export function toMetaPayload(ad) {
         interests:                 (ad.interests || []).map(toInterestObject),
         publisher_platforms:       ['facebook', 'instagram'],
         facebook_positions:        ['feed'],
-        instagram_positions:       ['feed', 'story', 'reels'],
+        instagram_positions:       ['stream', 'story', 'reels'],
         targeting_automation:      targetingAutomation,
         targeting_relaxation_types: targetingRelaxation,
       };
