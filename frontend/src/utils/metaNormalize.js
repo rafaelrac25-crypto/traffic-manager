@@ -346,6 +346,7 @@ export function toMetaPayload(ad) {
              geo_locations. Quando tem custom_locations, envia só elas. */
           geo_locations: {
             custom_locations: dedupedBuckets[key].map(toGeo),
+            location_types: ['home'],
           },
         },
         _ring_key:     key,          /* metadata local pra debug */
@@ -382,6 +383,7 @@ export function toMetaPayload(ad) {
         ...baseTargeting,
         geo_locations: {
           custom_locations: allGeo.length > 0 ? allGeo : fallbackJoinville,
+          location_types: ['home'],
         },
       },
     },
