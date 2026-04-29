@@ -106,9 +106,13 @@ export function toMetaPayload(ad) {
      campanha de TRÁFEGO apontando direto pro link wa.me/. Funciona em
      qualquer Page/conta — mesmo método de outras agências.
      Pessoa clica no anúncio → app abre conversa no WhatsApp da Cris. */
+  /* Detecta WhatsApp via QUALQUER variante de URL — sem isso, se Cris
+     colar URL de wa.me OU api.whatsapp.com OU whatsapp.com/, sistema cai
+     no fluxo CTWA formal (destination_type WHATSAPP) e Meta rejeita com
+     erro 100/2446885 quando Page não tem WhatsApp Business linkado. */
   const usingWaLink = ad.objective === 'messages'
     && typeof ad.destUrl === 'string'
-    && /wa\.me\//i.test(ad.destUrl);
+    && /(wa\.me\/|api\.whatsapp\.com|whatsapp\.com\/)/i.test(ad.destUrl);
 
   /* CBO = budget no nível da Campaign, Meta redistribui entre ad_sets.
      ABO (padrão) = budget no nível do ad_set, controle manual. */
@@ -160,7 +164,15 @@ export function toMetaPayload(ad) {
      Pessoa clica → abre o link wa.me/ → app WhatsApp abre na conversa. */
   const finalCtaType = usingWaLink
     ? 'LEARN_MORE'
-    : ((isMessagesObjective && !isMessagingCTA) ? 'MESSAGE_PAGE' : rawCtaMeta);
+    : ((isMessagesObjective && !isMessagingCTA) ? 'SEND_MESSAGE' : rawCtaMeta);
+
+  /* Trunca strings nos limites Meta v22+ pra evitar rejeição em IG Reels/
+     Stories (que cortam silenciosamente acima do limite). Se Meta corta,
+     anúncio é exibido com texto incompleto OU rejeitado por low quality.
+     Limites oficiais: link_data.message 125, link_data.name 40, video_data.title 40. */
+  const truncate = (s, max) => (typeof s === 'string' && s.length > max) ? s.slice(0, max).trimEnd() : (s || '');
+  const safeMessage  = truncate(ad.primaryText, 125);
+  const safeHeadline = truncate(ad.headline, 40);
 
   const storySpec = videoIdFromUpload
     ? {
@@ -168,8 +180,8 @@ export function toMetaPayload(ad) {
         video_data: {
           video_id:       videoIdFromUpload,
           image_hash:     videoCoverHash,  /* CAPA obrigatória pro Meta aceitar */
-          message:        ad.primaryText || '',
-          title:          ad.headline || '',
+          message:        safeMessage,
+          title:          safeHeadline,
           call_to_action: {
             type:  finalCtaType,
             value: safeLink ? { link: safeLink } : undefined,
@@ -179,8 +191,8 @@ export function toMetaPayload(ad) {
     : {
         page_id: ad.metaPageId || ad.metaAccountId || null,
         link_data: {
-          message:          ad.primaryText,
-          name:             ad.headline,
+          message:          safeMessage,
+          name:             safeHeadline,
           link:             safeLink,
           call_to_action:   { type: finalCtaType },
           image_hash:       imageHashFromUpload,
@@ -220,23 +232,27 @@ export function toMetaPayload(ad) {
 
   const baseTargeting = onlyInstagram
     ? {
-        age_min:                   ad.ageRange?.[0] || 18,
-        age_max:                   ad.ageRange?.[1] || 65,
+        /* Clamp 18-65: 18 é mínimo legal pra estética em BR (CONAR/Anvisa),
+           65 é máximo aceito pelo Meta (65+ vira 65). */
+        age_min:                   Math.max(18, Math.min(65, Number(ad.ageRange?.[0]) || 18)),
+        age_max:                   Math.max(18, Math.min(65, Number(ad.ageRange?.[1]) || 65)),
         genders,
         interests:                 (ad.interests || []).map(toInterestObject),
         publisher_platforms:       ['instagram'],
-        instagram_positions:       ['stream', 'story', 'reels'],
+        instagram_positions:       ['feed', 'story', 'reels'],
         targeting_automation:      targetingAutomation,
         targeting_relaxation_types: targetingRelaxation,
       }
     : {
-        age_min:                   ad.ageRange?.[0] || 18,
-        age_max:                   ad.ageRange?.[1] || 65,
+        /* Clamp 18-65: 18 é mínimo legal pra estética em BR (CONAR/Anvisa),
+           65 é máximo aceito pelo Meta (65+ vira 65). */
+        age_min:                   Math.max(18, Math.min(65, Number(ad.ageRange?.[0]) || 18)),
+        age_max:                   Math.max(18, Math.min(65, Number(ad.ageRange?.[1]) || 65)),
         genders,
         interests:                 (ad.interests || []).map(toInterestObject),
         publisher_platforms:       ['facebook', 'instagram'],
         facebook_positions:        ['feed'],
-        instagram_positions:       ['stream', 'story', 'reels'],
+        instagram_positions:       ['feed', 'story', 'reels'],
         targeting_automation:      targetingAutomation,
         targeting_relaxation_types: targetingRelaxation,
       };
