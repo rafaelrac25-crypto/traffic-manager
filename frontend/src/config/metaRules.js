@@ -108,10 +108,14 @@ export const MESSAGING_CTAS = [
 ];
 
 /* ── Gênero local ⇄ Meta targeting.genders ────────────────────────────── */
+/* Meta Marketing API targeting.genders: 1 = men, 2 = women, [] = all
+   Ref: https://developers.facebook.com/docs/marketing-api/audiences/reference/targeting-search/
+   ATENÇÃO: estava invertido até 2026-04-28 — todas as campanhas com
+   "feminino" no painel rodaram pra HOMENS. Bug crítico, perda de verba. */
 export const GENDER_TO_META = {
   all:    [],
-  female: [1],
-  male:   [2],
+  female: [2],
+  male:   [1],
 };
 
 /* ── Conversor: reais (float) → centavos (int) Meta ───────────────────── */

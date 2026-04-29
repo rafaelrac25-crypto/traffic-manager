@@ -157,10 +157,24 @@ describe('Mapas Meta v20 — estabilidade contratual', () => {
     expect(MESSAGING_CTAS).toContain('SEND_MESSAGE');
   });
 
-  it('GENDER_TO_META: female=[1], male=[2], all=[]', () => {
-    expect(GENDER_TO_META.female).toEqual([1]);
-    expect(GENDER_TO_META.male).toEqual([2]);
+  /* GUARD ANTI-REGRESSÃO CRÍTICA: doc oficial Meta diz 1=men, 2=women.
+     Bug detectado em 2026-04-28 (campanha 435 rodando pra homens) — o
+     mapping estava invertido E o teste antigo validava o valor errado
+     ("self-confirmation bias" — testou que o código faz o que faz, não
+     que faz o que DEVE fazer).
+     Ref: https://developers.facebook.com/docs/marketing-api/audiences/reference/basic-targeting */
+  it('GENDER_TO_META: female=[2] (women), male=[1] (men) — conforme Meta API', () => {
+    expect(GENDER_TO_META.female).toEqual([2]); /* 2 = women na Meta API */
+    expect(GENDER_TO_META.male).toEqual([1]);   /* 1 = men na Meta API */
     expect(GENDER_TO_META.all).toEqual([]);
+  });
+
+  it('GENDER_TO_META: NÃO pode estar invertido (proteção dupla)', () => {
+    /* Se algum dia female virar [1] de novo, este teste quebra antes
+       de chegar em produção. female E male precisam ser DIFERENTES. */
+    expect(GENDER_TO_META.female).not.toEqual(GENDER_TO_META.male);
+    expect(GENDER_TO_META.female).not.toEqual([1]); /* [1] = men, não pode ser female */
+    expect(GENDER_TO_META.male).not.toEqual([2]);   /* [2] = women, não pode ser male */
   });
 
   it('MIN_DAILY_PER_RING_BRL = 7 (regra Meta + folga 15%)', () => {
