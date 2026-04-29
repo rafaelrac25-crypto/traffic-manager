@@ -990,6 +990,133 @@ async function diagnoseCampaign(req, res) {
 }
 router.get('/:id/diagnose', diagnoseCampaign);
 
+/* AUDITORIA local↔Meta — compara campo a campo o que o usuário configurou
+   no painel com o que o Meta REALMENTE recebeu. Detecta bugs de mapeamento
+   (gênero invertido, bairros descartados, location_types divergente, etc).
+   Criada em 2026-04-28 após bug do gênero invertido (campanha 435 rodando
+   pra homens). Cada check retorna {field, local, meta, ok, severity}. */
+router.get('/:id/audit', async (req, res) => {
+  try {
+    const result = await db.query('SELECT * FROM campaigns WHERE id = ?', [req.params.id]);
+    const c = result.rows[0];
+    if (!c) return res.status(404).json({ error: 'Campanha não encontrada' });
+    if (!c.platform_campaign_id) {
+      return res.status(400).json({ error: 'Campanha não foi publicada no Meta ainda' });
+    }
+    let payload = {};
+    try { payload = c.payload ? JSON.parse(c.payload) : {}; } catch {}
+
+    const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+    const creds = credResult.rows[0];
+    if (!creds) return res.status(400).json({ error: 'Meta não conectado' });
+    const { refreshIfNeeded } = require('../services/metaToken');
+    const token = await refreshIfNeeded(creds);
+
+    const { metaGet } = require('../services/metaHttp');
+    const adsetId = (payload?.metaPublishResult?.ad_sets?.[0]?.ad_set_id)
+      || payload?.metaPublishResult?.ad_set_id
+      || payload?.metaAdSetId;
+    if (!adsetId) return res.status(400).json({ error: 'Ad set ID não encontrado no payload' });
+
+    const adset = await metaGet(`/${adsetId}`, {
+      fields: 'id,name,status,effective_status,targeting,daily_budget,lifetime_budget,end_time,start_time',
+    }, { token });
+
+    const t = adset.targeting || {};
+    const checks = [];
+
+    /* GÊNERO — bug crítico já corrigido, mas valida sempre */
+    const localGender = payload?.gender || c.gender;
+    const expectedGenders = localGender === 'female' ? [2] : (localGender === 'male' ? [1] : []);
+    const metaGenders = Array.isArray(t.genders) ? t.genders : [];
+    checks.push({
+      field: 'gender',
+      local: localGender,
+      meta: metaGenders,
+      expected: expectedGenders,
+      ok: JSON.stringify(metaGenders.sort()) === JSON.stringify(expectedGenders.sort()),
+      severity: 'critical',
+    });
+
+    /* IDADE */
+    checks.push({
+      field: 'age_min',
+      local: payload?.ageRange?.[0] || (Array.isArray(payload?.ageRange) ? payload.ageRange[0] : null),
+      meta: t.age_min,
+      ok: (payload?.ageRange?.[0] || null) === (t.age_min || null),
+      severity: 'high',
+    });
+    checks.push({
+      field: 'age_max',
+      local: payload?.ageRange?.[1] || (Array.isArray(payload?.ageRange) ? payload.ageRange[1] : null),
+      meta: t.age_max,
+      ok: (payload?.ageRange?.[1] || null) === (t.age_max || null),
+      severity: 'high',
+    });
+
+    /* BAIRROS — count + nomes */
+    const localBairros = (payload?.locations || []).map(l => l.name).filter(Boolean);
+    const metaBairrosCount = (t.geo_locations?.custom_locations || []).length;
+    checks.push({
+      field: 'bairros_count',
+      local: localBairros.length,
+      meta: metaBairrosCount,
+      missing: localBairros.length - metaBairrosCount,
+      ok: localBairros.length === metaBairrosCount,
+      severity: 'critical',
+    });
+
+    /* INTERESSES — count (Meta pode ter descartado nomes não encontrados) */
+    const localInterests = (payload?.interests || []);
+    const metaInterestsCount = (t.flexible_spec?.[0]?.interests?.length) || (t.interests?.length) || 0;
+    checks.push({
+      field: 'interests_count',
+      local: localInterests.length,
+      meta: metaInterestsCount,
+      dropped: localInterests.length - metaInterestsCount,
+      ok: localInterests.length === metaInterestsCount,
+      severity: 'high',
+    });
+
+    /* LOCATION_TYPES — home vs home+recent */
+    const metaLocTypes = t.geo_locations?.location_types || [];
+    checks.push({
+      field: 'location_types',
+      local: ['home'], /* sempre é o que enviamos depois do fix */
+      meta: metaLocTypes,
+      ok: JSON.stringify(metaLocTypes.sort()) === JSON.stringify(['home']),
+      severity: 'medium',
+      note: metaLocTypes.includes('recent') ? 'Meta aplicou default "recent" — refazer publicação ou editar manual' : null,
+    });
+
+    /* ORÇAMENTO DIÁRIO (em centavos no Meta, em reais local) */
+    const localBudgetCents = Math.round(Number(c.budget) * 100);
+    const metaBudgetCents = parseInt(adset.daily_budget || 0, 10);
+    checks.push({
+      field: 'daily_budget',
+      local: `R$ ${c.budget}`,
+      meta: `R$ ${(metaBudgetCents / 100).toFixed(2)}`,
+      ok: localBudgetCents === metaBudgetCents,
+      severity: 'high',
+    });
+
+    const failed = checks.filter(c => !c.ok);
+    return res.json({
+      campaign_id: c.id,
+      meta_campaign_id: c.platform_campaign_id,
+      ad_set_id: adsetId,
+      audited_at: new Date().toISOString(),
+      overall_ok: failed.length === 0,
+      issues_count: failed.length,
+      critical_issues: failed.filter(f => f.severity === 'critical').length,
+      checks,
+    });
+  } catch (err) {
+    console.error('[audit]', err);
+    return res.status(500).json({ error: err.message, meta: err.meta || null });
+  }
+});
+
 router.post('/sync/:platform', async (req, res) => {
   const { platform } = req.params;
   try {
