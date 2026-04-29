@@ -831,6 +831,11 @@ export function AppStateProvider({ children }) {
         /* Rede offline — mantém local, será reconciliado no próximo sync */
         return;
       }
+      /* Força refresh do effective_status sem esperar o tick de 90s do polling.
+         Sem isso, a UI mostra "Pausado no Meta" mesmo após dar play até o
+         próximo tick (até 90s grudado em estado obsoleto). 2,5s = tempo de
+         o Meta processar a mudança e devolver o novo effective_status. */
+      setTimeout(() => { runMetaSync().catch(() => {}); }, 2500);
     } catch (err) {
       console.warn('[toggleAdStatus] backend rejeitou, revertendo:', err?.message);
       setAds(prev => prev.map(a => a.id === id ? { ...a, status: current.status } : a));
@@ -840,7 +845,7 @@ export function AppStateProvider({ children }) {
         description: err?.message || 'Tente novamente em alguns instantes.',
       });
     }
-  }, [ads, logHistory, addNotification]);
+  }, [ads, logHistory, addNotification, runMetaSync]);
 
   const getAdById = useCallback((id) => ads.find(a => a.id === id) || null, [ads]);
 
