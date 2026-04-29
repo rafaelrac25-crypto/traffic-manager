@@ -662,6 +662,16 @@ function AdRow({ ad, isLast, highCpc, onPreview, onToggle, onDuplicate, onEdit, 
           )}
           {onEdit && <button title="Editar" onClick={stop(() => onEdit(ad))} style={btn}><EditIcon /></button>}
           {onDuplicate && <button title="Duplicar" onClick={stop(() => onDuplicate(ad))} style={btn}><CopyIcon /></button>}
+          {(ad.platform_campaign_id || ad.metaCampaignId) && /^\d{6,}$/.test(String(ad.platform_campaign_id || ad.metaCampaignId)) && (
+            <a
+              title="Abrir esta campanha no Meta Ads Manager"
+              href={`https://business.facebook.com/adsmanager/manage/campaigns/edit?selected_campaign_ids=${ad.platform_campaign_id || ad.metaCampaignId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              style={{ ...btn, textDecoration: 'none', color: '#1877F2', borderColor: '#BFDBFE', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '12px', lineHeight: 1 }}
+            >ⓜ</a>
+          )}
           {onRemove && (
             <button
               title="Remover"
@@ -1209,6 +1219,11 @@ export default function Campaigns() {
   const [sortDir, setSortDir] = useState('desc');
   const [previewAd, setPreviewAd] = useState(null);
   const [editingAudienceAd, setEditingAudienceAd] = useState(null);
+
+  /* Força refresh do effective_status (status real Meta) ao abrir a página.
+     Sem isso, tag "Pausado no Meta" pode ficar grudada em estado obsoleto até
+     o próximo tick de 90s do polling. */
+  useEffect(() => { runMetaSync().catch(() => {}); }, [runMetaSync]);
 
   const allAds = userAds;
   const TOTAL = allAds.length;

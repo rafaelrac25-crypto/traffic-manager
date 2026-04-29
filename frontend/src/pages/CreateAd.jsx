@@ -740,7 +740,7 @@ function DistrictInsightsBanner() {
   );
 }
 
-function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender, setGender, interests, setInterests, ringsMode, setRingsMode }) {
+function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender, setGender, interests, setInterests, ringsMode, setRingsMode, advantageAudience = false, setAdvantageAudience = () => {} }) {
   const [query, setQuery]           = useState('');
   const [results, setResults]       = useState([]);
   const [searching, setSearching]   = useState(false);
@@ -1170,6 +1170,31 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
           <div style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>Retargeting, lista de clientes e públicos semelhantes — disponível após integração Meta Ads.</div>
         </div>
         <span style={{ fontSize: '11px', color: 'var(--c-accent)', fontWeight: 700, whiteSpace: 'nowrap' }}>Em breve</span>
+      </div>
+
+      {/* Advantage+ Audience toggle (off por padrão pra Cris) */}
+      <div style={{ marginTop: '16px', padding: '12px 14px', border: '1px solid var(--c-border)', borderRadius: '10px', background: 'var(--c-bg-2)' }}>
+        <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={!!advantageAudience}
+            onChange={(e) => setAdvantageAudience(e.target.checked)}
+            style={{ marginTop: '3px', width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--c-accent)' }}
+          />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--c-text-1)' }}>
+              Permitir Meta expandir público (Advantage+ Audience)
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '4px', lineHeight: 1.4 }}>
+              {advantageAudience
+                ? '✅ ATIVADO — Meta vai mostrar o anúncio também pra perfis fora dos seus interesses/idade se achar que vão converter. Recomendado quando você quer alcance.'
+                : '⏸️ DESATIVADO — Meta respeita exatamente os interesses, idade e bairros que você definiu. Recomendado pra negócio hiperlocal como o da Cris.'}
+            </div>
+            <div style={{ fontSize: '10px', color: 'var(--c-text-5)', marginTop: '4px', fontStyle: 'italic' }}>
+              ⚠️ Em alguns objetivos Meta força ATIVO mesmo quando desligado — confirme via Audit após publicar.
+            </div>
+          </div>
+        </label>
       </div>
     </div>
   );
@@ -2458,16 +2483,25 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
   const [progress, setProgress] = useState('');
 
   /* CTAs filtrados pelo objetivo — só mostra os que Meta aceita pra aquele
-     objective, evita erro 1487891 ("Criativo inválido para o objetivo"). */
-  const allowedCTAs = CTA_BY_OBJECTIVE[objective] || CTA_BY_OBJECTIVE.traffic;
+     objective, evita erro 1487891 ("Criativo inválido para o objetivo").
+     EXCEÇÃO wa.me: quando link é wa.me/, o sistema usa fallback de tráfego
+     (LEARN_MORE = "Saiba mais"). Outros CTAs de mensageria (WhatsApp,
+     Enviar mensagem) são REJEITADOS pelo Meta nesse fluxo — restringir a
+     "Saiba mais" pra evitar confusão do usuário. */
+  const isWaMeLink = typeof destUrl === 'string'
+    && /(wa\.me\/|api\.whatsapp\.com|whatsapp\.com\/)/i.test(destUrl);
+  const allowedCTAs = (objective === 'messages' && isWaMeLink)
+    ? ['Saiba mais']
+    : (CTA_BY_OBJECTIVE[objective] || CTA_BY_OBJECTIVE.traffic);
 
   /* Auto-corrige ctaButton se o user voltou pro passo 1 e trocou de objetivo
-     (deixando um CTA incompatível). Roda só quando objective muda. */
+     (deixando um CTA incompatível). Também aplica quando troca destUrl
+     entre wa.me e outras URLs. */
   useEffect(() => {
     if (!allowedCTAs.includes(ctaButton)) {
-      setCtaButton(CTA_DEFAULT_BY_OBJECTIVE[objective] || allowedCTAs[0]);
+      setCtaButton(allowedCTAs[0] || CTA_DEFAULT_BY_OBJECTIVE[objective] || 'Saiba mais');
     }
-  }, [objective]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [objective, isWaMeLink]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* Mede dimensões reais da mídia pra validar contra o mínimo Meta (500×500).
      Usa elementos off-screen: <video> pra vídeo, <img> pra imagem. */
@@ -2583,8 +2617,15 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
                   : <img src={m.url} alt={m.name} style={{ width: '90px', height: '90px', objectFit: 'cover', borderRadius: '8px', display: 'block' }} />
                 }
                 <button
-                  onClick={() => setMediaFiles(prev => prev.filter(x => x.id !== m.id))}
-                  style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,.65)', color: '#fff', border: 'none', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+                  type="button"
+                  title="Remover esta mídia (clique pra trocar)"
+                  aria-label="Remover mídia"
+                  onClick={() => {
+                    if (confirm('Remover esta mídia do anúncio?')) {
+                      setMediaFiles(prev => prev.filter(x => x.id !== m.id));
+                    }
+                  }}
+                  style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(220,38,38,.92)', color: '#fff', border: '2px solid #fff', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', fontSize: '14px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, boxShadow: '0 2px 6px rgba(0,0,0,.3)' }}
                 >×</button>
                 {m.finalSize && (
                   <div style={{
@@ -3287,6 +3328,7 @@ export default function CreateAd() {
       : source?.ringsEnabled === false ? '1' : 'auto'
   );
   const [budgetOptimization, setBudgetOptimization] = useState(source?.budgetOptimization || 'adset');
+  const [advantageAudience,  setAdvantageAudience]  = useState(!!source?.advantageAudience); /* default OFF */
   const [startDate,          setStartDate]          = useState(initialStart);
   const [endDate,            setEndDate]            = useState(initialEnd);
   /* Horário comercial (adset_schedule no Meta v20).
@@ -3605,6 +3647,7 @@ export default function CreateAd() {
       ringsMode,
       budgetOptimization,
       businessHours,
+      advantageAudience,
 
       // Público (local)
       objective, locations, ageRange, gender, interests,
@@ -3669,7 +3712,7 @@ export default function CreateAd() {
 
   const stepComponents = [
     <Step1Objective objective={objective} setObjective={setObjective} errors={errors} />,
-    <Step2Audience  locations={locations} setLocations={setLocations} ageRange={ageRange} setAgeRange={setAgeRange} gender={gender} setGender={setGender} interests={interests} setInterests={setInterests} ringsMode={ringsMode} setRingsMode={setRingsMode} />,
+    <Step2Audience  locations={locations} setLocations={setLocations} ageRange={ageRange} setAgeRange={setAgeRange} gender={gender} setGender={setGender} interests={interests} setInterests={setInterests} ringsMode={ringsMode} setRingsMode={setRingsMode} advantageAudience={advantageAudience} setAdvantageAudience={setAdvantageAudience} />,
     <Step4Budget budgetType={budgetType} setBudgetType={setBudgetType} budgetValue={budgetValue} setBudgetValue={setBudgetValue} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} errors={errors} locations={locations} budgetRingSplit={budgetRingSplit} setBudgetRingSplit={setBudgetRingSplit} ringsMode={ringsMode} setRingsMode={setRingsMode} budgetOptimization={budgetOptimization} setBudgetOptimization={setBudgetOptimization} businessHours={businessHours} setBusinessHours={setBusinessHours} />,
     <Step5Creative objective={objective} adFormat={adFormat} setAdFormat={setAdFormat} mediaFiles={mediaFiles} setMediaFiles={setMediaFiles} videoThumbnail={videoThumbnail} setVideoThumbnail={setVideoThumbnail} primaryText={primaryText} setPrimaryText={setPrimaryText} headline={headline} setHeadline={setHeadline} destUrl={destUrl} setDestUrl={setDestUrl} ctaButton={ctaButton} setCtaButton={setCtaButton} errors={errors} />,
     <Step6Review data={reviewData} onGoTo={(s) => { setErrors({}); setStep(s); }} />,

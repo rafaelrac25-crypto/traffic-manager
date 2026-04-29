@@ -219,8 +219,11 @@ export function toMetaPayload(ad) {
   /* Meta v20 tornou obrigatório declarar se usa Advantage+ Audience.
      0 = respeita targeting manual (Cris quer só Joinville, não expandir).
      1 = IA expande público além do configurado — contraria regra Joinville.
-     Sem esse campo, Graph retorna erro 100/1870227. */
-  const targetingAutomation = { advantage_audience: 0 };
+     Sem esse campo, Graph retorna erro 100/1870227.
+     Default 0 (off). Usuário pode forçar 1 via ad.advantageAudience=true,
+     mas Meta v23+ pode ignorar e forçar 1 mesmo com 0 dependendo do
+     objetivo — verificar pós-publish via /audit. */
+  const targetingAutomation = { advantage_audience: ad.advantageAudience ? 1 : 0 };
 
   /* Bloqueia TODOS os outros "relaxamentos" automáticos do Meta:
      - lookalike: 0 → não pega pessoas parecidas com quem já clicou

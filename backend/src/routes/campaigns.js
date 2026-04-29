@@ -1160,18 +1160,22 @@ router.get('/:id/audit', async (req, res) => {
         'Enviar mensagem': 'MESSAGE_PAGE', 'Mande uma mensagem': 'MESSAGE_PAGE',
         'Chamar agora': 'CALL_NOW',
       };
-      const expectedCTA = ctaMap[localCTA] || 'LEARN_MORE';
+      /* Quando wa.me fallback ATIVO, sistema FORÇA LEARN_MORE intencionalmente
+         (Meta rejeita WHATSAPP_MESSAGE com link wa.me direto). Esperado e
+         documentado — não é bug. */
+      const expectedCTA = isWaMeFallback ? 'LEARN_MORE' : (ctaMap[localCTA] || 'LEARN_MORE');
       const metaCTA = adMeta.creative?.call_to_action_type
         || adMeta.creative?.object_story_spec?.link_data?.call_to_action?.type
         || adMeta.creative?.object_story_spec?.video_data?.call_to_action?.type
         || null;
       checks.push({
         field: 'cta',
-        local: localCTA,
+        local: localCTA + (isWaMeFallback ? ' (forçado LEARN_MORE pelo wa.me)' : ''),
         meta: metaCTA,
         expected: expectedCTA,
         ok: metaCTA === expectedCTA,
         severity: 'high',
+        note: isWaMeFallback ? 'Meta exige LEARN_MORE quando link é wa.me/ — não é bug, é fallback intencional' : null,
       });
 
       const localLink = payload?.destUrl;
@@ -1188,10 +1192,19 @@ router.get('/:id/audit', async (req, res) => {
       });
     }
 
-    /* DATA FIM */
-    const localEndDate = c.end_date ? new Date(c.end_date).toISOString().slice(0, 10) : null;
-    const metaEndDate = (adset.end_time || campaignMeta.stop_time)
-      ? new Date(adset.end_time || campaignMeta.stop_time).toISOString().slice(0, 10) : null;
+    /* DATA FIM — extrair YYYY-MM-DD em fuso BR (-03:00), não UTC.
+       Antes: Meta retorna 2026-05-06T02:59:59-0300 → toISOString → 2026-05-06.
+       Mas em horário BR, isso é dia 05/05 23:59 (correto). Conversão UTC
+       atrasava 1 dia falsamente. Fix: shift de -3h antes de fatiar. */
+    const toBRDate = (s) => {
+      if (!s) return null;
+      const d = new Date(s);
+      if (Number.isNaN(d.getTime())) return null;
+      const brShifted = new Date(d.getTime() - 3 * 60 * 60 * 1000);
+      return brShifted.toISOString().slice(0, 10);
+    };
+    const localEndDate = toBRDate(c.end_date);
+    const metaEndDate = toBRDate(adset.end_time || campaignMeta.stop_time);
     checks.push({
       field: 'end_date',
       local: localEndDate,
