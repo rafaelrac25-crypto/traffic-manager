@@ -98,3 +98,65 @@ export async function uploadVideoChunked(file, { onProgress } = {}) {
   emit(100, 'Pronto');
   return { video_id };
 }
+
+/**
+ * Upload de imagem em chunks pro Meta via backend.
+ *
+ * Diferente do vídeo: Meta /adimages NÃO suporta resumable nativo, então o
+ * backend acumula os chunks no DB e dispara upload inteiro pra Meta no
+ * /finish. Resultado: imagens de qualquer qualidade (até 30 MB, limite Meta)
+ * sem compressão client-side.
+ *
+ * @param {File} file
+ * @param {Object} opts
+ * @param {(percent: number, label: string) => void} [opts.onProgress]
+ * @returns {Promise<{ hash: string, url?: string }>}
+ */
+export async function uploadImageChunked(file, { onProgress } = {}) {
+  if (!file || !(file instanceof Blob)) throw new Error('uploadImageChunked: file inválido');
+  const fileSize = file.size;
+  if (fileSize <= 0) throw new Error('Arquivo vazio');
+  const mime = file.type || 'image/jpeg';
+
+  const emit = (pct, label) => { try { onProgress?.(pct, label); } catch {} };
+
+  emit(0, 'Iniciando envio…');
+  const startData = await postJson('/api/upload/image/start', {
+    file_size: fileSize,
+    mime,
+  });
+  const sessionId = startData.session_id;
+  if (!sessionId) throw new Error('Backend não retornou session_id');
+
+  let offset = 0;
+  const total = fileSize;
+
+  while (offset < total) {
+    const end = Math.min(offset + CHUNK_SIZE, total);
+    const chunkBlob = file.slice(offset, end);
+
+    const form = new FormData();
+    form.append('session_id', sessionId);
+    form.append('start_offset', String(offset));
+    form.append('chunk', chunkBlob, 'chunk.bin');
+
+    const pct = Math.round((offset / total) * 90); /* 0-90% durante transfer; finish vira 100% */
+    const sentMB = (offset / 1024 / 1024).toFixed(1);
+    const totalMB = (total / 1024 / 1024).toFixed(1);
+    emit(pct, `Enviando imagem (${sentMB}/${totalMB} MB)…`);
+
+    const out = await postChunk('/api/upload/image/chunk', form);
+    const next = Number(out.start_offset);
+    if (!Number.isFinite(next) || next <= offset) {
+      throw new Error(`Backend não avançou offset (atual ${offset}, retornado ${out.start_offset})`);
+    }
+    offset = next;
+  }
+
+  emit(95, 'Enviando pro Meta…');
+  const finishData = await postJson('/api/upload/image/finish', { session_id: sessionId });
+  if (!finishData?.hash) throw new Error('Meta não retornou image_hash no finish');
+
+  emit(100, 'Pronto');
+  return { hash: finishData.hash, url: finishData.url };
+}

@@ -383,14 +383,25 @@ export async function processMediaFile(file, onProgress) {
   if (file.type.startsWith('image/')) {
     try {
       const originalMB = file.size / (1024 * 1024);
+      /* Imagens > 3.5MB vão pelo upload chunked (sem compressão).
+         Aqui só passa adiante e o publish decide o caminho.
+         Limite 30MB porque é o que Meta /adimages aceita. */
+      if (originalMB > 3.5 && originalMB <= 30) {
+        return {
+          file,
+          name: file.name,
+          type: 'image',
+          wasCompressed: false,
+          originalSize: Number(originalMB.toFixed(2)),
+          finalSize: Number(originalMB.toFixed(2)),
+        };
+      }
+      if (originalMB > 30) {
+        return { error: `Imagem muito grande (${originalMB.toFixed(1)} MB) — Meta aceita até 30 MB.` };
+      }
       const blob = await compressImage(file);
       const compressedMB = blob.size / (1024 * 1024);
-      /* Se compressão não ajudou o suficiente, tenta reduzir mais */
-      let finalBlob = blob;
-      if (compressedMB > MAX_IMAGE_MB_AFTER) {
-        /* Aceita mesmo assim — Meta suporta até 30MB; só avisa. */
-      }
-      const compressedFile = new File([finalBlob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' });
+      const compressedFile = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' });
       return {
         file: compressedFile,
         name: compressedFile.name,

@@ -3545,14 +3545,36 @@ export default function CreateAd() {
           metaHash: thumbResult.hash || null,
         });
       } else {
-        const result = await uploadMedia(m.file);
-        out.push({
-          id: m.id,
-          type: result.type,
-          name: m.name,
-          metaHash: result.hash || null,
-          metaVideoId: null,
-        });
+        /* Imagem: se > 3.5MB usa chunked direto pro Meta (sem compressão);
+           senão pipeline antigo (que já comprime pra Meta-recomendado).
+           Limite 3.5MB porque acima disso não cabe num único request Vercel. */
+        const sizeMB = (m.file.size || 0) / (1024 * 1024);
+        let imageHash = null;
+        if (sizeMB > 3.5) {
+          const { uploadImageChunked } = await import('../utils/metaResumableUploader');
+          setUploadProgress?.({ pct: 0, label: 'Preparando imagem…' });
+          const r = await uploadImageChunked(m.file, {
+            onProgress: (pct, label) => setUploadProgress?.({ pct, label }),
+          });
+          setUploadProgress?.(null);
+          imageHash = r.hash || null;
+          out.push({
+            id: m.id,
+            type: 'image',
+            name: m.name,
+            metaHash: imageHash,
+            metaVideoId: null,
+          });
+        } else {
+          const result = await uploadMedia(m.file);
+          out.push({
+            id: m.id,
+            type: result.type,
+            name: m.name,
+            metaHash: result.hash || null,
+            metaVideoId: null,
+          });
+        }
       }
     }
     return out;
