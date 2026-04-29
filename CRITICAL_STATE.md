@@ -1,5 +1,36 @@
 # CRITICAL_STATE — traffic-manager
 
+## Sessão 2026-04-28 noite — AUDITORIA TOTAL Meta v22+ (8 commits)
+
+### Bugs críticos descobertos e corrigidos
+1. **GENDER invertido** (`94eabb7`): female=[1] e male=[2] estavam invertidos. TODA campanha "feminino" rodava pra HOMENS. Causa real do CTR alto + zero conversão da 424. Doc Meta: 1=men, 2=women.
+2. **Bairros sobrepostos descartados** (`e0555f1`): dedupeOverlappingGeos descartava bairros silenciosamente. 6 bairros viravam 3 antes de chegar no Meta.
+3. **6 interesses bloqueados pela política Meta de 15/jan/2026** (`ea97ad4`): "Design de sobrancelhas", "Maquiagem permanente PT-BR", "Estética facial" etc. NÃO existem mais. Validados ao vivo: TODOS retornam vazio.
+4. **5 fixes Meta v22+ via agente externo** (`fc2975f`): truncar strings 125/40, clamp idade 18-65, IG 'stream'→'feed', regex WhatsApp ampla, MESSAGE_PAGE→SEND_MESSAGE.
+
+### Sistemas criados pra prevenir regressão
+- **Endpoint `/api/campaigns/:id/audit`** (`6de3b51` + `fd14ddd`): valida 14 campos local↔Meta após publicar. Critical/high/medium severity.
+- **5 novos testes anti-regressão** em metaRules.test.js: GENDER guard duplo, OBJECTIVE OUTCOME_*, CTA WhatsApp imutável, CTA não-vazio, CTA_TO_DESTINATION pareamentos. Total: 29 testes.
+- **interestPresets.js validado ao vivo**: todos os 15 termos antigos substituídos por validados Meta /search com audience > 10M.
+- **Bug visual sync** corrigido (`f71032a`): após play/pause, força sync 2.5s pra UI não ficar 90s grudada em estado obsoleto.
+
+### Limites do Meta que NÃO conseguimos contornar (são da plataforma)
+- `location_types: ['home']` → Meta força `['home','recent']` desde jun/2025. Confirmado pela doc.
+- `advantage_audience: 0` → Meta v23+ força ATIVO em alguns objetivos. Não é bug nosso.
+- Endpoint `/search?type=adinterest` deprecated em v22 mas ainda funciona — migrar pra `/{accountId}/targetingsearch` em sprint futura.
+
+### Lição registrada na memória global (2026-04-28)
+**Regra ouro: testes precisam validar contra FONTE AUTORITATIVA EXTERNA (doc Meta), não contra "o que o código faz hoje".** O teste antigo de GENDER validava o valor errado — passou por meses sem alertar do bug.
+
+### Próxima publicação Cris (PACOTE PRONTO + AGORA VALIDADO)
+- Mesmo pacote de antes (nano sobrancelha, 6 bairros 3km, 28-45, feminino, 12x R$58, vídeo, fim 05/05)
+- **MAS:** trocar interesses pelo preset novo: Eyebrow + Microblading + Permanent makeup (3 validados, alta audiência)
+- Hard refresh (Ctrl+Shift+R) antes de criar pra pegar bundle novo
+- Rodar `curl /api/campaigns/{id}/audit` após publicar pra confirmar 14 campos OK
+
+---
+
+
 > **Atualizado:** 2026-04-28 14:50 GMT-3 (sessão diagnóstico campanha real + 2 fixes painel)
 >
 > **Pra Claude:** este arquivo é o **estado crítico atual** do sistema. Lê-lo no início de cada sessão evita afirmações erradas. Atualizar no fim de cada sessão se algo mudar.
