@@ -1192,18 +1192,23 @@ router.get('/:id/audit', async (req, res) => {
       });
     }
 
-    /* DATA FIM — extrair YYYY-MM-DD em fuso BR (-03:00), não UTC.
-       Antes: Meta retorna 2026-05-06T02:59:59-0300 → toISOString → 2026-05-06.
-       Mas em horário BR, isso é dia 05/05 23:59 (correto). Conversão UTC
-       atrasava 1 dia falsamente. Fix: shift de -3h antes de fatiar. */
+    /* DATA FIM — comparação correta entre local (date-only) vs Meta (ISO+TZ).
+       Local vem como "2026-05-05" do DB → extrair primeiros 10 chars sem shift.
+       Meta vem como "2026-05-06T02:59:59-0300" (= 23:59 BR do dia 05/05) →
+       precisa converter explicitamente pro fuso BR pra extrair "2026-05-05".
+       Bug anterior: aplicava shift -3h em ambos, atrasando local 1 dia falsamente. */
     const toBRDate = (s) => {
       if (!s) return null;
       const d = new Date(s);
       if (Number.isNaN(d.getTime())) return null;
-      const brShifted = new Date(d.getTime() - 3 * 60 * 60 * 1000);
-      return brShifted.toISOString().slice(0, 10);
+      /* GMT-3 fixo. Intl.DateTimeFormat retorna components no fuso especificado. */
+      const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Sao_Paulo',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+      }).format(d); /* "2026-05-05" formato en-CA = YYYY-MM-DD */
+      return parts;
     };
-    const localEndDate = toBRDate(c.end_date);
+    const localEndDate = c.end_date ? String(c.end_date).slice(0, 10) : null;
     const metaEndDate = toBRDate(adset.end_time || campaignMeta.stop_time);
     checks.push({
       field: 'end_date',
