@@ -402,6 +402,38 @@ router.get('/meta/campaign-status', async (req, res) => {
   }
 });
 
+/* Deleta uma campanha órfã direto no Meta pelo platform_campaign_id.
+   Usado quando: (a) "descartar" em /reprovados precisa propagar, (b) limpar
+   órfãos deixados por publish que falhou no meio (campaign criada, adset
+   rejeitado). Sem isso, lixo acumula no Ads Manager.
+   Body: { id: "120245720XXXXXXXXX" } */
+router.post('/meta/delete-by-meta-id', async (req, res) => {
+  const targetId = String(req.body?.id || '').trim();
+  if (!targetId || !/^\d{6,}$/.test(targetId)) {
+    return res.status(400).json({ error: 'Body.id obrigatório (Meta campaign ID, só dígitos)' });
+  }
+  try {
+    const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+    const creds = credResult.rows[0];
+    if (!creds) return res.status(400).json({ error: 'Meta não conectado' });
+
+    const { deleteCampaign } = require('../services/metaWrite');
+    try {
+      await deleteCampaign(creds, targetId);
+      return res.json({ deleted: true, meta_campaign_id: targetId });
+    } catch (e) {
+      /* Meta retorna 404 se já foi deletada — tratar como sucesso */
+      if (e.meta?.code === 100 || /does not exist|not found/i.test(e.message || '')) {
+        return res.json({ deleted: true, meta_campaign_id: targetId, note: 'Já não existia no Meta' });
+      }
+      return res.status(502).json({ error: `Meta recusou: ${e.message}`, meta: e.meta || null });
+    }
+  } catch (err) {
+    console.error('[delete-by-meta-id]', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/:platform/connect', async (req, res) => {
   const { platform } = req.params;
   if (platform === 'meta') {

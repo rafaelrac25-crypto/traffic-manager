@@ -584,9 +584,25 @@ export function AppStateProvider({ children }) {
     });
   }, [addNotification]);
 
-  const removeRejectedAd = useCallback((id) => {
+  const removeRejectedAd = useCallback(async (id) => {
+    /* Antes só removia do localStorage — campanha continuava órfã no Meta
+       (lixo no Ads Manager). Agora propaga DELETE pro Meta quando o anúncio
+       reprovado tem platform_campaign_id (foi publicado e Meta criou). */
+    const ad = rejectedAds.find(a => a.id === id);
+    const metaCampaignId = ad?.metaCampaignId || ad?.platform_campaign_id;
+    if (metaCampaignId && /^\d{6,}$/.test(String(metaCampaignId))) {
+      try {
+        await fetch('/api/platforms/meta/delete-by-meta-id', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: String(metaCampaignId) }),
+        });
+      } catch (e) {
+        console.warn('[removeRejectedAd] falha ao deletar no Meta — só removendo local:', e?.message);
+      }
+    }
     setRejectedAds(prev => prev.filter(a => a.id !== id));
-  }, []);
+  }, [rejectedAds]);
 
   const addFunds = useCallback((amount) => {
     setFunds(prev => {
