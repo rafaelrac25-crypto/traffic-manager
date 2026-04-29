@@ -36,6 +36,8 @@ const ADD_COLUMNS = [
   'ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS effective_status TEXT',
   'ALTER TABLE ad_sets ADD COLUMN IF NOT EXISTS effective_status TEXT',
   'ALTER TABLE ads ADD COLUMN IF NOT EXISTS effective_status TEXT',
+  /* link_clicks: Meta inline_link_clicks (cliques no CTA/link, exclui likes/follows) */
+  'ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS link_clicks INTEGER DEFAULT 0',
 ];
 
 async function runMigrations(pool) {

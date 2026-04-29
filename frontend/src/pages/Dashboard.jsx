@@ -30,6 +30,9 @@ function rankLiveCampaigns(ads) {
 function computeCampaignMetrics(ad) {
   const spent = Number(ad?.spent || 0);
   const clicks = Number(ad?.clicks || 0);
+  /* link_clicks: Meta inline_link_clicks — só cliques no CTA/link
+     (exclui likes, follows, comentários). Mais relevante pra tráfego. */
+  const linkClicks = Number(ad?.link_clicks || 0);
   const conversions = Number(ad?.conversions || ad?.results || 0);
   const impressions = Number(ad?.impressions || 0);
   const reach = Number(ad?.reach || 0);
@@ -44,7 +47,9 @@ function computeCampaignMetrics(ad) {
     { label: 'Investimento',        value: fmtBRL(spent),                       icon: <WalletIcon />, iconBg: '#FDF0F8', iconColor: '#d68d8f',
       hint: 'Quanto já foi gasto desta campanha.' },
     { label: 'Cliques',             value: clicks.toLocaleString('pt-BR'),      icon: <CursorIcon />, iconBg: '#EFF6FF', iconColor: '#3B82F6',
-      hint: 'Pessoas que clicaram no anúncio.' },
+      hint: 'Total de cliques no anúncio (qualquer área).' },
+    { label: 'Cliques no link',     value: linkClicks.toLocaleString('pt-BR'),  icon: <CursorIcon />, iconBg: '#ECFEFF', iconColor: '#0891B2',
+      hint: 'Só cliques no botão/link (CTA). Mais relevante pra tráfego: filtra likes e follows.' },
     { label: 'Resultados',          value: conversions.toLocaleString('pt-BR'), icon: <ResultIcon />, iconBg: '#F0FDF4', iconColor: '#22C55E',
       hint: 'Mensagens recebidas (objetivo da campanha).' },
     { label: 'Custo por resultado', value: conversions > 0 ? fmtBRL(cpr) : '—', icon: <DollarIcon />, iconBg: '#FFF7ED', iconColor: '#F97316',
@@ -1396,8 +1401,10 @@ function CpcAlertCard({ ads, benchmark, benchmarkLabel, onOpenAds }) {
 function CampaignMetricsBlock({ campaigns, selectedId, onSelect, onCreate, onOpenCampaigns }) {
   /* Campanha efetivamente exibida: a escolhida manualmente (se ainda no ar),
      ou a #1 do ranking (melhor performance / única no ar). */
+  /* Compara como String pra evitar bug de tipo: select retorna sempre string,
+     mas c.id pode ser number (do backend) ou string (rascunhos locais). */
   const selected =
-    (selectedId && campaigns.find(c => c.id === selectedId)) ||
+    (selectedId != null && campaigns.find(c => String(c.id) === String(selectedId))) ||
     campaigns[0] ||
     null;
 
@@ -1646,7 +1653,7 @@ export default function Dashboard() {
 
   /* Se a campanha escolhida sair do ar, volta pra melhor atual */
   useEffect(() => {
-    if (selectedCampaignId && !liveCampaigns.find(c => c.id === selectedCampaignId)) {
+    if (selectedCampaignId != null && !liveCampaigns.find(c => String(c.id) === String(selectedCampaignId))) {
       setSelectedCampaignId(null);
     }
   }, [liveCampaigns, selectedCampaignId]);

@@ -42,7 +42,7 @@ async function fetchCampaigns(creds) {
   const fields = [
     'id', 'name', 'status', 'effective_status', 'objective',
     'daily_budget', 'lifetime_budget', 'start_time', 'stop_time',
-    'insights.date_preset(maximum){spend,clicks,impressions,reach,ctr,cpc,cpm,actions,cost_per_action_type}',
+    'insights.date_preset(maximum){spend,clicks,inline_link_clicks,impressions,reach,ctr,cpc,cpm,actions,cost_per_action_type}',
   ].join(',');
 
   const json = await metaGet(`/${accountId}/campaigns`, { fields, limit: 100 }, { token });
@@ -68,6 +68,7 @@ async function fetchCampaigns(creds) {
       budget: safeFloat(c.daily_budget || c.lifetime_budget || 0) / 100,
       spent: safeFloat(insights.spend),
       clicks: safeInt(insights.clicks),
+      link_clicks: safeInt(insights.inline_link_clicks),
       impressions: safeInt(insights.impressions),
       reach: safeInt(insights.reach),
       ctr: safeFloat(insights.ctr),
