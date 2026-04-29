@@ -149,6 +149,26 @@ function newSessionId() {
   return 'img_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
 }
 
+/* Garante que a tabela existe — idempotente, roda 1x e fica em cache.
+   Útil pra deploys novos onde a migração inicial não criou a tabela. */
+let _imageSessionsTableEnsured = false;
+async function ensureImageSessionsTable() {
+  if (_imageSessionsTableEnsured) return;
+  try {
+    await db.query(`CREATE TABLE IF NOT EXISTS image_upload_sessions (
+      session_id TEXT PRIMARY KEY,
+      mime TEXT NOT NULL,
+      total_size INTEGER NOT NULL,
+      received_size INTEGER NOT NULL DEFAULT 0,
+      chunks BYTEA,
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    _imageSessionsTableEnsured = true;
+  } catch (e) {
+    console.warn('[upload] ensure image_upload_sessions falhou:', e.message);
+  }
+}
+
 router.post('/image/start', async (req, res) => {
   try {
     const fileSize = Number(req.body?.file_size);
@@ -162,6 +182,7 @@ router.post('/image/start', async (req, res) => {
     const creds = await getMetaCreds();
     if (!creds) return res.status(400).json({ error: 'Meta não conectado' });
 
+    await ensureImageSessionsTable();
     const sessionId = newSessionId();
     const emptyBuffer = Buffer.alloc(0);
     await db.query(
