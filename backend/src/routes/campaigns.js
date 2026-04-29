@@ -1019,8 +1019,23 @@ router.get('/:id/audit', async (req, res) => {
     if (!adsetId) return res.status(400).json({ error: 'Ad set ID não encontrado no payload' });
 
     const adset = await metaGet(`/${adsetId}`, {
-      fields: 'id,name,status,effective_status,targeting,daily_budget,lifetime_budget,end_time,start_time',
+      fields: 'id,name,status,effective_status,targeting,daily_budget,lifetime_budget,end_time,start_time,optimization_goal,billing_event,bid_strategy,destination_type',
     }, { token });
+
+    /* Pega também a campanha (objective, status) e o ad (CTA, destURL) */
+    const campaignMeta = await metaGet(`/${c.platform_campaign_id}`, {
+      fields: 'id,name,objective,status,effective_status,daily_budget,lifetime_budget,stop_time',
+    }, { token });
+
+    const adId = (payload?.metaPublishResult?.ads?.[0]?.ad_id) || payload?.metaPublishResult?.ad_id;
+    let adMeta = null;
+    if (adId) {
+      try {
+        adMeta = await metaGet(`/${adId}`, {
+          fields: 'id,name,status,effective_status,creative{call_to_action_type,object_story_spec}',
+        }, { token });
+      } catch {} /* ad pode não existir ainda se publish falhou parcial */
+    }
 
     const t = adset.targeting || {};
     const checks = [];
@@ -1091,13 +1106,137 @@ router.get('/:id/audit', async (req, res) => {
 
     /* ORÇAMENTO DIÁRIO (em centavos no Meta, em reais local) */
     const localBudgetCents = Math.round(Number(c.budget) * 100);
-    const metaBudgetCents = parseInt(adset.daily_budget || 0, 10);
+    /* Quando CBO, daily_budget está na campaign; quando ABO, no adset */
+    const metaBudgetCents = parseInt(adset.daily_budget || campaignMeta.daily_budget || 0, 10);
     checks.push({
       field: 'daily_budget',
       local: `R$ ${c.budget}`,
       meta: `R$ ${(metaBudgetCents / 100).toFixed(2)}`,
       ok: localBudgetCents === metaBudgetCents,
       severity: 'high',
+    });
+
+    /* OBJETIVO da campanha */
+    const localObjective = payload?.objective || c.objective;
+    const objectiveMap = {
+      messages: 'OUTCOME_ENGAGEMENT', traffic: 'OUTCOME_TRAFFIC',
+      engagement: 'OUTCOME_ENGAGEMENT', leads: 'OUTCOME_LEADS',
+      sales: 'OUTCOME_SALES', awareness: 'OUTCOME_AWARENESS',
+      brand_awareness: 'OUTCOME_AWARENESS', reach: 'OUTCOME_AWARENESS',
+    };
+    /* Para wa.me/ + messages há fallback automático pra OUTCOME_TRAFFIC */
+    const isWaMeFallback = localObjective === 'messages' && (payload?.destUrl || '').includes('wa.me/');
+    const expectedObjective = isWaMeFallback ? 'OUTCOME_TRAFFIC' : (objectiveMap[localObjective] || 'OUTCOME_TRAFFIC');
+    checks.push({
+      field: 'objective',
+      local: localObjective + (isWaMeFallback ? ' (wa.me fallback)' : ''),
+      meta: campaignMeta.objective,
+      expected: expectedObjective,
+      ok: campaignMeta.objective === expectedObjective,
+      severity: 'critical',
+    });
+
+    /* OPTIMIZATION GOAL do adset */
+    const expectedOptGoal = isWaMeFallback ? 'LINK_CLICKS' : (
+      localObjective === 'messages' ? 'CONVERSATIONS' :
+      localObjective === 'traffic' ? 'LINK_CLICKS' :
+      localObjective === 'leads' ? 'LEAD_GENERATION' : null
+    );
+    if (expectedOptGoal) {
+      checks.push({
+        field: 'optimization_goal',
+        local: expectedOptGoal,
+        meta: adset.optimization_goal,
+        ok: adset.optimization_goal === expectedOptGoal,
+        severity: 'high',
+      });
+    }
+
+    /* CTA e destination_type — só se ad foi puxado */
+    if (adMeta?.creative) {
+      const localCTA = (payload?.ctaButton || '').trim();
+      const ctaMap = {
+        'WhatsApp': 'WHATSAPP_MESSAGE', 'Saiba mais': 'LEARN_MORE',
+        'Enviar mensagem': 'MESSAGE_PAGE', 'Mande uma mensagem': 'MESSAGE_PAGE',
+        'Chamar agora': 'CALL_NOW',
+      };
+      const expectedCTA = ctaMap[localCTA] || 'LEARN_MORE';
+      const metaCTA = adMeta.creative?.call_to_action_type
+        || adMeta.creative?.object_story_spec?.link_data?.call_to_action?.type
+        || adMeta.creative?.object_story_spec?.video_data?.call_to_action?.type
+        || null;
+      checks.push({
+        field: 'cta',
+        local: localCTA,
+        meta: metaCTA,
+        expected: expectedCTA,
+        ok: metaCTA === expectedCTA,
+        severity: 'high',
+      });
+
+      const localLink = payload?.destUrl;
+      const metaLink = adMeta.creative?.object_story_spec?.link_data?.call_to_action?.value?.link
+        || adMeta.creative?.object_story_spec?.video_data?.call_to_action?.value?.link
+        || adMeta.creative?.object_story_spec?.link_data?.link
+        || null;
+      checks.push({
+        field: 'destination_url',
+        local: localLink,
+        meta: metaLink,
+        ok: !!metaLink && !!localLink && metaLink === localLink,
+        severity: 'critical',
+      });
+    }
+
+    /* DATA FIM */
+    const localEndDate = c.end_date ? new Date(c.end_date).toISOString().slice(0, 10) : null;
+    const metaEndDate = (adset.end_time || campaignMeta.stop_time)
+      ? new Date(adset.end_time || campaignMeta.stop_time).toISOString().slice(0, 10) : null;
+    checks.push({
+      field: 'end_date',
+      local: localEndDate,
+      meta: metaEndDate,
+      ok: localEndDate === metaEndDate,
+      severity: 'high',
+    });
+
+    /* ADVANTAGE+ AUDIENCE — Rafa relatou que aparece como ATIVO mesmo
+       enviando 0. Meta v22 usa targeting_as_signal (1=opted-in, 3=auto)
+       em vez de só targeting_automation.advantage_audience.
+       Se vier 1 ou 3, Meta forçou ativação independente do que enviamos. */
+    const advAudience = t.targeting_automation?.advantage_audience;
+    const targetingAsSignal = t.targeting_automation?.targeting_as_signal;
+    checks.push({
+      field: 'advantage_audience',
+      local: 0, /* sempre enviamos 0 = desativado */
+      meta: advAudience ?? 'undefined',
+      targeting_as_signal: targetingAsSignal,
+      ok: !advAudience && !targetingAsSignal,
+      severity: 'medium',
+      note: (advAudience || targetingAsSignal) ? 'Meta forçou Advantage+ — política nova v22, não há opt-out total. Avaliar impacto.' : null,
+    });
+
+    /* PUBLISHER PLATFORMS — Facebook e Instagram */
+    const expectedPubs = ['facebook', 'instagram'];
+    const metaPubs = (t.publisher_platforms || []).sort();
+    checks.push({
+      field: 'publisher_platforms',
+      local: expectedPubs,
+      meta: metaPubs,
+      ok: JSON.stringify(metaPubs) === JSON.stringify(expectedPubs.sort()),
+      severity: 'medium',
+    });
+
+    /* STATUS — campaign + adset + ad */
+    checks.push({
+      field: 'status_campaign',
+      local: c.status,
+      meta: campaignMeta.effective_status,
+      ok: (c.status === 'active' && campaignMeta.effective_status === 'ACTIVE')
+       || (c.status === 'paused' && /PAUSED/i.test(campaignMeta.effective_status))
+       || (c.status === 'review'),
+      severity: 'low',
+      note: 'Status divergente é OK se campanha está em revisão Meta (PENDING_REVIEW)',
     });
 
     const failed = checks.filter(c => !c.ok);

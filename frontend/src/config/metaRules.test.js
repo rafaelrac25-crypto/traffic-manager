@@ -177,6 +177,47 @@ describe('Mapas Meta v20 — estabilidade contratual', () => {
     expect(GENDER_TO_META.male).not.toEqual([2]);   /* [2] = women, não pode ser male */
   });
 
+  /* GUARD ANTI-REGRESSÃO: OBJECTIVE_TO_META.
+     Meta v22 ODAX framework usa OUTCOME_* prefix em todos os objetivos.
+     Se algum mapping deixar de começar com OUTCOME_, é bug crítico que
+     vai fazer Meta rejeitar a campanha no publish. */
+  it('OBJECTIVE_TO_META: TODOS os valores começam com OUTCOME_ (Meta v22 ODAX)', () => {
+    Object.entries(OBJECTIVE_TO_META).forEach(([key, value]) => {
+      expect(value, `${key} deve começar com OUTCOME_`).toMatch(/^OUTCOME_/);
+    });
+  });
+
+  it('OBJECTIVE_TO_META: messages mapeia pra OUTCOME_ENGAGEMENT', () => {
+    /* Único objetivo "messages" no painel → ODAX engloba mensagens em
+       Engagement. NUNCA mudar pra OUTCOME_LEADS (lead form é diferente
+       de mensageria) ou OUTCOME_TRAFFIC (rompe matching de optimization). */
+    expect(OBJECTIVE_TO_META.messages).toBe('OUTCOME_ENGAGEMENT');
+  });
+
+  /* GUARD ANTI-REGRESSÃO: CTA_TO_META.
+     Cada CTA tem um valor específico de enum no Meta. Se algum mudar
+     o ID errado vira erro 105/1815630 no publish (Invalid call to action). */
+  it('CTA_TO_META: WhatsApp NUNCA pode virar outro enum (sem WHATSAPP_MESSAGE = sem WhatsApp)', () => {
+    expect(CTA_TO_META['WhatsApp']).toBe('WHATSAPP_MESSAGE');
+  });
+
+  it('CTA_TO_META: nenhum CTA mapeia pra string vazia ou null (causa erro 105 Meta)', () => {
+    Object.entries(CTA_TO_META).forEach(([key, value]) => {
+      expect(value, `${key} mapeia pra valor inválido`).toBeTruthy();
+      expect(typeof value, `${key} valor não é string`).toBe('string');
+      expect(value.length, `${key} valor é string vazia`).toBeGreaterThan(0);
+    });
+  });
+
+  /* GUARD ANTI-REGRESSÃO: CTA_TO_DESTINATION pareamento crítico.
+     Cada CTA de mensageria EXIGE destination_type específico — sem o par
+     correto, Meta retorna erro 100/2490408 no adset publish. */
+  it('CTA_TO_DESTINATION: pareamentos críticos pra mensageria não podem mudar', () => {
+    expect(CTA_TO_DESTINATION['WHATSAPP_MESSAGE']).toBe('WHATSAPP');
+    expect(CTA_TO_DESTINATION['MESSAGE_PAGE']).toBe('INSTAGRAM_DIRECT');
+    expect(CTA_TO_DESTINATION['CALL_NOW']).toBe('PHONE_CALL');
+  });
+
   it('MIN_DAILY_PER_RING_BRL = 7 (regra Meta + folga 15%)', () => {
     expect(MIN_DAILY_PER_RING_BRL).toBe(7);
   });
