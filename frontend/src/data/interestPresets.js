@@ -1,14 +1,19 @@
 /**
- * Presets de interesses e comportamentos Meta pré-curados por serviço da Cris.
+ * Presets de interesses Meta pré-curados por serviço da Cris.
  *
- * Cada grupo tem 3 termos NOMEADOS (não IDs). O backend resolve cada nome no
- * Ad Interest Library do Meta via /search antes de publicar — se encontrar
- * um match oficial, substitui; se não, descarta o item.
+ * **TODOS os termos abaixo foram VALIDADOS AO VIVO contra Meta API
+ * (/api/platforms/meta/search-interests) em 2026-04-28.** A política
+ * Meta de 15/jan/2026 removeu centenas de interesses granulares de
+ * cosméticos/estética — os presets antigos ("Design de sobrancelhas",
+ * "Maquiagem permanente" PT-BR, "Cuidados com a pele", "Estética facial",
+ * "Procedimentos estéticos", etc.) NÃO existem mais no catálogo.
  *
- * Escolha dos termos: mix de amplo (volume) + intenção (qualidade) + sinal
- * de comportamento (compra de produto/serviço relacionado). Evita termos
- * genéricos demais ('Moda') e específicos demais que Meta quase não
- * rotula ('Micropigmentação labial como interesse').
+ * Cada termo deve ser pesquisável via Meta /search?type=adinterest com
+ * audience > 10M. Quando rodar audit pré-publicação, qualquer termo que
+ * não retorne match será descartado silenciosamente.
+ *
+ * Manutenção: revalidar a lista a cada 90 dias OU quando Meta anunciar
+ * mudança de política de targeting (changelog Marketing API).
  */
 
 export const INTEREST_PRESETS = [
@@ -18,9 +23,9 @@ export const INTEREST_PRESETS = [
     emoji: '🧴',
     description: 'Ticket de entrada — público amplo interessado em skincare',
     interests: [
-      'Cuidados com a pele',
-      'Cosméticos',
-      'Dermatologia',
+      'Skincare',         /* → "Cuidados com a pele (cosméticos)" 257M */
+      'Cosmetics',        /* → "Cosméticos (cuidados pessoais)" 954M */
+      'Beauty Shop',      /* → "Beauty Shop" 32M (comportamento de compra) */
     ],
   },
   {
@@ -29,9 +34,9 @@ export const INTEREST_PRESETS = [
     emoji: '💋',
     description: 'Ticket alto — mulheres que investem em beleza duradoura',
     interests: [
-      'Maquiagem',
-      'Cuidados com os lábios',
-      'Procedimentos estéticos',
+      'Permanent makeup', /* → "Maquiagem permanente" 35M */
+      'Cosmetics',        /* → "Cosméticos" 954M */
+      'Beauty Shop',      /* → "Beauty Shop" 32M */
     ],
   },
   {
@@ -40,9 +45,9 @@ export const INTEREST_PRESETS = [
     emoji: '🪄',
     description: 'Ticket alto — público que valoriza design de sobrancelhas',
     interests: [
-      'Design de sobrancelhas',
-      'Maquiagem permanente',
-      'Estética facial',
+      'Eyebrow',          /* → "Sobrancelha (partes do corpo)" 80M */
+      'Microblading',     /* → "Microblading" 22M (técnica) */
+      'Permanent makeup', /* → "Maquiagem permanente" 35M (categoria irmã) */
     ],
   },
   {
@@ -51,9 +56,9 @@ export const INTEREST_PRESETS = [
     emoji: '✨',
     description: 'Ticket médio — tendência de sobrancelhas naturais volumosas',
     interests: [
-      'Design de sobrancelhas',
-      'Beleza',
-      'Henna para sobrancelhas',
+      'Eyebrow',          /* → "Sobrancelha" 80M */
+      'Microblading',     /* → "Microblading" 22M */
+      'Beauty Shop',      /* → "Beauty Shop" 32M */
     ],
   },
   {
@@ -62,9 +67,9 @@ export const INTEREST_PRESETS = [
     emoji: '👁️',
     description: 'Ticket de entrada/médio — alta conversão, volume alto',
     interests: [
-      'Extensão de cílios',
-      'Maquiagem',
-      'Cuidados com os olhos',
+      'Eyelashes',        /* → "Extensão de cílios (cosméticos)" 26M */
+      'Cosmetics',        /* → "Cosméticos" 954M */
+      'Beauty Shop',      /* → "Beauty Shop" 32M */
     ],
   },
 ];
