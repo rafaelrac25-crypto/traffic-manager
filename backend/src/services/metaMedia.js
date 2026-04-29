@@ -167,4 +167,140 @@ async function waitForVideoReady(creds, videoId, { maxWaitMs = 60000, pollEveryM
   return { ready: false, status: 'processing_timeout' };
 }
 
-module.exports = { uploadImage, uploadVideo, uploadVideoBuffer, waitForVideoReady };
+/* ============================================================
+ * RESUMABLE UPLOAD (chunked) — pra vídeos > 4 MB que não cabem
+ * num único request via Vercel Function (limite 4.5 MB).
+ *
+ * Fluxo:
+ *  1. startVideoUpload(creds, fileSize)
+ *     → POST /advideos?upload_phase=start&file_size=N
+ *     → retorna { upload_session_id, video_id, start_offset, end_offset }
+ *  2. transferVideoChunk(creds, uploadSessionId, startOffset, chunk)  [LOOP]
+ *     → POST /advideos (multipart) phase=transfer + video_file_chunk
+ *     → retorna { start_offset, end_offset }  (próximo offset esperado)
+ *     → quando start_offset === fileSize, transfer terminou
+ *  3. finishVideoUpload(creds, uploadSessionId)
+ *     → POST /advideos?upload_phase=finish&upload_session_id=X
+ *     → retorna { success: true }, e o video_id já é o retornado no start
+ *
+ * Doc oficial:
+ *   https://developers.facebook.com/docs/graph-api/video-uploads
+ * ============================================================ */
+
+async function startVideoUpload(creds, fileSize) {
+  const token = getToken(creds);
+  const accountId = creds.account_id;
+  if (!accountId) throw new Error('account_id ausente');
+  if (!fileSize || fileSize <= 0) throw new Error('file_size inválido');
+  await rateLimit.take(token, 1);
+
+  const body = new URLSearchParams({
+    upload_phase: 'start',
+    file_size: String(fileSize),
+    access_token: token,
+  }).toString();
+
+  const url = `https://${GRAPH_HOST}/${API_VERSION}/${accountId}/advideos`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+    signal: AbortSignal.timeout(30000),
+  });
+  const json = await res.json();
+  if (json.error) {
+    const parsed = parseMetaError(json.error);
+    const e = new Error(parsed.pt);
+    e.meta = parsed;
+    await maybeMarkReconnect(e);
+    throw e;
+  }
+  if (!json.upload_session_id || !json.video_id) {
+    throw new Error('Meta não retornou upload_session_id / video_id no start');
+  }
+  return {
+    upload_session_id: json.upload_session_id,
+    video_id: json.video_id,
+    start_offset: Number(json.start_offset || 0),
+    end_offset: Number(json.end_offset || 0),
+  };
+}
+
+async function transferVideoChunk(creds, uploadSessionId, startOffset, chunkBuffer) {
+  const token = getToken(creds);
+  const accountId = creds.account_id;
+  if (!accountId) throw new Error('account_id ausente');
+  if (!uploadSessionId) throw new Error('upload_session_id ausente');
+  await rateLimit.take(token, 1);
+
+  const form = new FormData();
+  form.append('upload_phase', 'transfer');
+  form.append('upload_session_id', uploadSessionId);
+  form.append('start_offset', String(startOffset));
+  const blob = new Blob([chunkBuffer], { type: 'application/octet-stream' });
+  form.append('video_file_chunk', blob, 'chunk.bin');
+  form.append('access_token', token);
+
+  const url = `https://${GRAPH_HOST}/${API_VERSION}/${accountId}/advideos`;
+  const res = await fetch(url, {
+    method: 'POST',
+    body: form,
+    signal: AbortSignal.timeout(VIDEO_TIMEOUT_MS),
+  });
+  const json = await res.json();
+  if (json.error) {
+    const parsed = parseMetaError(json.error);
+    const e = new Error(parsed.pt);
+    e.meta = parsed;
+    await maybeMarkReconnect(e);
+    throw e;
+  }
+  return {
+    start_offset: Number(json.start_offset),
+    end_offset: Number(json.end_offset),
+  };
+}
+
+async function finishVideoUpload(creds, uploadSessionId, { title, description } = {}) {
+  const token = getToken(creds);
+  const accountId = creds.account_id;
+  if (!accountId) throw new Error('account_id ausente');
+  if (!uploadSessionId) throw new Error('upload_session_id ausente');
+  await rateLimit.take(token, 1);
+
+  const params = {
+    upload_phase: 'finish',
+    upload_session_id: uploadSessionId,
+    access_token: token,
+  };
+  if (title) params.title = title;
+  if (description) params.description = description;
+  const body = new URLSearchParams(params).toString();
+
+  const url = `https://${GRAPH_HOST}/${API_VERSION}/${accountId}/advideos`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+    signal: AbortSignal.timeout(60000),
+  });
+  const json = await res.json();
+  if (json.error) {
+    const parsed = parseMetaError(json.error);
+    const e = new Error(parsed.pt);
+    e.meta = parsed;
+    await maybeMarkReconnect(e);
+    throw e;
+  }
+  return { success: !!json.success };
+}
+
+module.exports = {
+  uploadImage,
+  uploadVideo,
+  uploadVideoBuffer,
+  waitForVideoReady,
+  startVideoUpload,
+  transferVideoChunk,
+  finishVideoUpload,
+};

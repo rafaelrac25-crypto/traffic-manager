@@ -115,24 +115,21 @@ async function readVideoDims(file) {
   });
 }
 
-/* Comprime vídeo automaticamente via FFmpeg.wasm se acima do threshold OU
-   se dimensão estiver abaixo do mínimo Meta (precisa upscale).
-   Retorna { ok: true, file, wasCompressed } ou { ok: false, reason }. */
+/* Validação de vídeo SEM compressão.
+   Upload pro Meta agora é via Resumable Upload (chunked), aceita até 4GB
+   sem comprimir nada. Aqui só verifica: codec compatível + dimensões mínimas
+   pra Meta (500px). Vídeos H.264 com dims OK passam direto, qualquer tamanho.
+   Vídeos com dim < 600 ainda recebem upscale (Meta exige >= 500). */
 export async function processVideoAuto(file, onProgress) {
   const originalMB = file.size / (1024 * 1024);
   const dims = await readVideoDims(file);
   const codec = await detectVideoCodec(file);
   console.log('[processVideo]', { sizeMB: originalMB.toFixed(2), dims, codec });
-  /* Vídeo com algum lado < 600px precisa upscale (folga sobre 500 do Meta).
-     Mesmo que size esteja OK, força passagem pelo FFmpeg pra ampliar. */
   const needsUpscale = dims.w > 0 && dims.h > 0 && (dims.w < 600 || dims.h < 600);
-  /* Abaixo do threshold E dimensões OK → passa direto (não vale a pena tocar) */
-  if (originalMB < VIDEO_COMPRESS_THRESHOLD_MB && !needsUpscale) {
-    return { ok: true, file, wasCompressed: false };
-  }
 
-  /* HEVC detectado direto no header → não tenta FFmpeg.wasm (sem decoder
-     HEVC no build single-threaded). Vai direto pra mensagem com botões. */
+  /* HEVC: navegador não consegue pré-visualizar nem ler frame pra thumbnail.
+     Mesmo que Meta aceite HEVC no upload, sem preview o user fica no escuro.
+     Continua redirecionando pra conversor. */
   if (codec === 'hevc') {
     return {
       ok: false,
@@ -140,6 +137,15 @@ export async function processVideoAuto(file, onProgress) {
       reason: `Esse vídeo está em formato HEVC/H.265 (comum em iPhones com config padrão), que o navegador não consegue processar. Você pode: (1) regravar com "Mais Compatível" nos Ajustes do iPhone, ou (2) converter o arquivo num site gratuito abaixo.`,
     };
   }
+
+  /* H.264 com dimensões OK → pass-through. Sem compressão, qualidade original.
+     Upload chunked envia qualquer tamanho. */
+  if (!needsUpscale) {
+    return { ok: true, file, wasCompressed: false };
+  }
+
+  /* Só passa daqui se precisa upscale (dim < 600). Mantém pipeline antigo
+     APENAS pra esse caso raro. */
 
   /* Tentativa 1: FFmpeg.wasm (decodifica H.264 nativamente) */
   let lastFfmpegError = null;

@@ -3283,6 +3283,8 @@ export default function CreateAd() {
   );
   const [errors, setErrors] = useState({});
   const [publishing, setPublishing] = useState(false);
+  /* { pct: 0-100, label: string } | null — progresso do upload chunked Meta */
+  const [uploadProgress, setUploadProgress] = useState(null);
 
   const initialStart = (() => {
     if (source && source.startDate !== undefined) return source.startDate || '';
@@ -3502,8 +3504,10 @@ export default function CreateAd() {
     } catch { return null; }
   }
 
-  /* Upload de mídia ANTES do publish — usa endpoint multipart dedicado
-     que bypassa o limite de 4.5MB de body JSON do Vercel.
+  /* Upload de mídia ANTES do publish.
+     - VÍDEO: usa Resumable Upload (chunks de 3.5MB) — qualquer tamanho, sem
+       compressão, qualidade 100%. Token Meta nunca sai do backend.
+     - IMAGEM: usa endpoint multipart dedicado (cabe em <4.5MB do Vercel).
      Para vídeos, também extrai frame como thumbnail (Meta video_data exige
      image_hash além do video_id). */
   async function uploadAllMedia(files) {
@@ -3524,15 +3528,20 @@ export default function CreateAd() {
           const { extractVideoThumbnail } = await import('../utils/videoCompressor');
           thumbFile = await extractVideoThumbnail(m.file);
         }
+        const { uploadVideoChunked } = await import('../utils/metaResumableUploader');
+        setUploadProgress?.({ pct: 0, label: 'Preparando vídeo…' });
         const [videoResult, thumbResult] = await Promise.all([
-          uploadMedia(m.file),
+          uploadVideoChunked(m.file, {
+            onProgress: (pct, label) => setUploadProgress?.({ pct, label }),
+          }),
           uploadMedia(thumbFile),
         ]);
+        setUploadProgress?.(null);
         out.push({
           id: m.id,
           type: 'video',
           name: m.name,
-          metaVideoId: videoResult.id || null,
+          metaVideoId: videoResult.video_id || null,
           metaHash: thumbResult.hash || null,
         });
       } else {
@@ -3895,13 +3904,30 @@ export default function CreateAd() {
                 }}
               >
                 {publishing
-                  ? '⏳ Publicando...'
+                  ? (uploadProgress
+                      ? `⏳ ${uploadProgress.label || 'Enviando…'} (${uploadProgress.pct || 0}%)`
+                      : '⏳ Publicando...')
                   : fixMode
                     ? '✅ Corrigir e publicar'
                     : (isScheduled ? '📅 Agendar campanha' : '🚀 Publicar campanha')}
               </button>
             )}
           </div>
+          {publishing && uploadProgress && (
+            <div style={{ marginTop: '10px', width: '100%' }}>
+              <div style={{ height: '6px', background: 'rgba(0,0,0,.08)', borderRadius: '3px', overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  width: `${uploadProgress.pct || 0}%`,
+                  background: 'linear-gradient(90deg,#E8A9AB,#d68d8f)',
+                  transition: 'width .3s ease',
+                }} />
+              </div>
+              <div style={{ marginTop: '4px', fontSize: '11px', color: 'var(--c-text-soft)', textAlign: 'right' }}>
+                {uploadProgress.label}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Painel lateral de resumo removido — resumo final no Step 6 (Revisão)
