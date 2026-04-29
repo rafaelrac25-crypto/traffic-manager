@@ -151,6 +151,21 @@ function fmtDate(iso) {
   if (isNaN(d)) return '—';
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
+
+/* URL do Meta Ads Manager — sempre presente, mesmo sem ID Meta válido.
+   Quando tem campanha publicada, foca direto nela (selected_campaign_ids).
+   Quando tem ad publicado, foca também nele (selected_ad_ids).
+   Fallback: link genérico pra lista de campanhas da conta. */
+function metaAdsManagerUrl(ad) {
+  const base = 'https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=1330468201431069&business_id=468086242175775&global_scope_id=468086242175775&columns=name%2Cdelivery%2Crecommendations_guidance%2Cresults%2Ccost_per_result%2Cbudget%2Cspend%2Cimpressions%2Creach%2Cactions%3Aonsite_conversion.total_messaging_connection%2Cactions%3Aonsite_conversion.messaging_first_reply%2Cactions%3Aomni_purchase%2Cschedule%2Cend_time%2Cattribution_setting%2Cbid%2Clast_significant_edit%2Cquality_score_organic%2Cquality_score_ectr%2Cquality_score_ecvr%2Ccampaign_name%2Ccost_per_action_type%3Aomni_purchase&attribution_windows=default';
+  const isValidMetaId = (v) => v && /^\d{6,}$/.test(String(v));
+  const cid = ad?.platform_campaign_id || ad?.metaCampaignId;
+  const aid = ad?.metaAdId || ad?.platform_ad_id;
+  let url = base;
+  if (isValidMetaId(cid)) url += `&selected_campaign_ids=${cid}`;
+  if (isValidMetaId(aid)) url += `&selected_ad_ids=${aid}`;
+  return url;
+}
 function genderPt(g) {
   if (g == null || g === 'all' || g === 0) return 'Todos';
   if (g === 1 || g === '1' || g === 'men'   || g === 'male')   return 'Homens';
@@ -391,18 +406,16 @@ function AdPreviewModal({ ad, onClose, onDuplicate, onEdit }) {
                 {ad.metaAdSetId && <div style={row}><span style={label}>Ad Set ID</span><span style={{ ...val, fontFamily: 'ui-monospace, monospace', fontSize: '11px' }}>{ad.metaAdSetId}</span></div>}
                 {ad.metaCreativeId && <div style={row}><span style={label}>Creative ID</span><span style={{ ...val, fontFamily: 'ui-monospace, monospace', fontSize: '11px' }}>{ad.metaCreativeId}</span></div>}
                 {ad.metaAdId && <div style={row}><span style={label}>Ad ID</span><span style={{ ...val, fontFamily: 'ui-monospace, monospace', fontSize: '11px' }}>{ad.metaAdId}</span></div>}
-                {(ad.platform_campaign_id || ad.metaCampaignId) && (
-                  <a
-                    href={`https://adsmanager.facebook.com/adsmanager/manage/ads?act=1330468201431069&business_id=468086242175775&global_scope_id=468086242175775&columns=name%2Cdelivery%2Crecommendations_guidance%2Cresults%2Ccost_per_result%2Cbudget%2Cspend%2Cimpressions%2Creach%2Cactions%3Aonsite_conversion.total_messaging_connection%2Cactions%3Aonsite_conversion.messaging_first_reply%2Cactions%3Aomni_purchase%2Cschedule%2Cend_time%2Cattribution_setting%2Cbid%2Clast_significant_edit%2Cquality_score_organic%2Cquality_score_ectr%2Cquality_score_ecvr%2Ccampaign_name%2Ccost_per_action_type%3Aomni_purchase&attribution_windows=default&selected_campaign_ids=${ad.platform_campaign_id || ad.metaCampaignId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: 'inline-block', marginTop: '8px',
-                      fontSize: '11px', color: 'var(--c-accent)', fontWeight: 600,
-                      textDecoration: 'none',
-                    }}
-                  >Abrir no Meta Ads Manager ↗</a>
-                )}
+                <a
+                  href={metaAdsManagerUrl(ad)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-block', marginTop: '8px',
+                    fontSize: '11px', color: 'var(--c-accent)', fontWeight: 600,
+                    textDecoration: 'none',
+                  }}
+                >Abrir no Meta Ads Manager ↗</a>
               </div>
             </>
           )}
@@ -662,16 +675,14 @@ function AdRow({ ad, isLast, highCpc, onPreview, onToggle, onDuplicate, onEdit, 
           )}
           {onEdit && <button title="Editar" onClick={stop(() => onEdit(ad))} style={btn}><EditIcon /></button>}
           {onDuplicate && <button title="Duplicar" onClick={stop(() => onDuplicate(ad))} style={btn}><CopyIcon /></button>}
-          {(ad.platform_campaign_id || ad.metaCampaignId) && /^\d{6,}$/.test(String(ad.platform_campaign_id || ad.metaCampaignId)) && (
-            <a
-              title="Abrir esta campanha no Meta Ads Manager"
-              href={`https://adsmanager.facebook.com/adsmanager/manage/ads?act=1330468201431069&business_id=468086242175775&global_scope_id=468086242175775&columns=name%2Cdelivery%2Crecommendations_guidance%2Cresults%2Ccost_per_result%2Cbudget%2Cspend%2Cimpressions%2Creach%2Cactions%3Aonsite_conversion.total_messaging_connection%2Cactions%3Aonsite_conversion.messaging_first_reply%2Cactions%3Aomni_purchase%2Cschedule%2Cend_time%2Cattribution_setting%2Cbid%2Clast_significant_edit%2Cquality_score_organic%2Cquality_score_ectr%2Cquality_score_ecvr%2Ccampaign_name%2Ccost_per_action_type%3Aomni_purchase&attribution_windows=default&selected_campaign_ids=${ad.platform_campaign_id || ad.metaCampaignId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              style={{ ...btn, textDecoration: 'none', color: '#1877F2', borderColor: '#BFDBFE', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '12px', lineHeight: 1 }}
-            >ⓜ</a>
-          )}
+          <a
+            title="Abrir no Meta Ads Manager"
+            href={metaAdsManagerUrl(ad)}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            style={{ ...btn, textDecoration: 'none', color: '#1877F2', borderColor: '#BFDBFE', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '12px', lineHeight: 1 }}
+          >ⓜ</a>
           {onRemove && (
             <button
               title="Remover"
