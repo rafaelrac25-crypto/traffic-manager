@@ -1,5 +1,37 @@
 # CRITICAL_STATE — traffic-manager
 
+## Sessão 2026-04-29 tarde — UPLOAD CHUNKED + DASHBOARD UX (8 commits)
+
+### Mudanças estruturais
+1. **Upload de vídeo chunked** (`fedd5f7`): chunks de 3.5MB pelo backend → Meta Resumable Upload Protocol (`/advideos` com phase=start/transfer/finish). Token Meta NUNCA sai do servidor. Vídeos até 4GB com qualidade original. Mediaprocessor agora pass-through pra H.264 (sem comprimir mais pra caber em 4MB).
+2. **Upload de imagem chunked** (`73bdcf9` + `5c9ce29`): mesma arquitetura, com buffer no DB (tabela `image_upload_sessions` BYTEA). Imagem até 30MB sem compressão. Tabela criada lazy no endpoint (`ensureImageSessionsTable`) porque migration inicial não rodou em deploy novo.
+3. **Botão "Abrir no Meta" sempre presente** (`b30fa73`): novo helper `metaAdsManagerUrl(ad)` em Campaigns.jsx — sempre retorna URL com colunas configuradas pelo Rafa. Inclui `selected_campaign_ids` e `selected_ad_ids` quando IDs Meta válidos.
+4. **Métrica "Cliques no link"** (`46a3eec`): puxa `inline_link_clicks` do Meta. Card no dashboard depois de "Cliques". `link_clicks` adicionado no schema, sync.js, metaAds.js.
+
+### Bugs corrigidos
+- **end_date no audit**: `c.end_date` no Postgres é Date object midnight UTC; `String(Date)` virava "Tue May 05" e `toBRDate` (-3h) atrasava 1 dia. Fix: `getUTCFullYear/Month/Date` pra extrair YYYY-MM-DD sem timezone shift. Commits `52351bc` + `99c7287`. **Audit campanha 436 agora 15/15 verde.**
+- **Filtro "VER:" no Dashboard**: select retorna string mas `c.id` é number; comparação `===` falhava. Fix: `String(c.id) === String(selectedId)`. Inclui useEffect que reseta quando campanha sai do ar. Commit `46a3eec`.
+
+### Incidente de deploy resolvido
+Tentei `vercel deploy --prod` localmente mas o CLI não puxa env vars de prod — site quebrou (~5 min). Recuperação: empty commit (`2b29200`) pra disparar GitHub auto-deploy. **Lição:** nunca usar `vercel deploy` local nesse projeto, só push pro GitHub.
+
+### Campanha 437 "Adeus cravos!!!" — limpeza de pele
+- **Status:** PAUSED no Meta (precisa play). ID Meta `120245773279470627`.
+- **Pacote:** R$ 60 × 3 (R$ 180 ticket), 8 bairros 3km (Anita, Atiradores, Saguaçu, Boa Vista, América, Glória, Centro, Costa e Silva), 28-50 anos, **gênero TODOS** (unisex), 3 interesses validados (Skincare, Cosmetics, Beauty Shop).
+- **Vídeo:** "Limpeza de pele Rafa_FINAL.mp4" subiu chunked em ~3min, qualidade 100% (1ª campanha sem compressão).
+- **CTA:** Saiba mais (forçado pelo fallback wa.me/, mantido).
+- **Audit:** 15/15 ✅ — overall_ok:true, zero issues.
+- **Decisão Rafa:** mudou copy do título da Opção 2 ("Adeus cravos · 3x R$ 60") pra "Adeus cravos!!!" (mais informal).
+
+### Regra permanente nova (memória global)
+- **Respostas curtas e diretas**: 2-5 linhas, veredicto + próximo passo, sem listas longas, sem 3 opções, sem Council exposto. Salva em `feedback_concise_responses.md` e adicionada no MEMORY.md global. Vale pra TODO projeto.
+
+### Pendência
+- 1ª campanha "Adeus cravos!!!" pausada — Rafa precisa apertar play (no sistema ou no Meta, ambos sincronizam).
+- Próximo sync (90s pós-deploy) vai popular `link_clicks` da campanha 436 e 437.
+
+---
+
 ## Sessão 2026-04-28 noite — AUDITORIA TOTAL Meta v22+ (8 commits)
 
 ### Bugs críticos descobertos e corrigidos
@@ -27,6 +59,10 @@
 - **MAS:** trocar interesses pelo preset novo: Eyebrow + Microblading + Permanent makeup (3 validados, alta audiência)
 - Hard refresh (Ctrl+Shift+R) antes de criar pra pegar bundle novo
 - Rodar `curl /api/campaigns/{id}/audit` após publicar pra confirmar 14 campos OK
+
+### Pendência pós-publicação (Rafa pediu 2026-04-28 noite)
+- **Remover input "adicionar interesse manual"** do CreateAd.jsx (Step 2 ou onde estiver) — agora que existe preset validado, digitar a mão = risco de termo fantasma. Manter apenas o seletor de preset por serviço (interestPresets.js).
+- **Não fazer agora** — Rafa está no fluxo de publicação. Executar SOMENTE depois que a próxima campanha estiver no ar.
 
 ---
 
