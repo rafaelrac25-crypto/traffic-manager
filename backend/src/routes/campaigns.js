@@ -1209,9 +1209,17 @@ router.get('/:id/audit', async (req, res) => {
       return parts;
     };
     /* c.end_date pode vir como string ISO ("2026-05-05") em SQLite OU como
-       Date object no Postgres/Neon. Normaliza ambos pra YYYY-MM-DD em fuso BR. */
+       Date object no Postgres (DATE column → driver Neon devolve midnight UTC).
+       Date objects de campo DATE precisam ser lidos em UTC, NÃO em fuso BR
+       (BR atrasa 3h e troca pro dia anterior). */
+    const toUTCDateOnly = (d) => {
+      const yyyy = d.getUTCFullYear();
+      const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const dd = String(d.getUTCDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    };
     const localEndDate = c.end_date instanceof Date
-      ? toBRDate(c.end_date)
+      ? toUTCDateOnly(c.end_date)
       : (c.end_date ? String(c.end_date).slice(0, 10) : null);
     const metaEndDate = toBRDate(adset.end_time || campaignMeta.stop_time);
     checks.push({
