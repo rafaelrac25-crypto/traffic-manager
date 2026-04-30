@@ -201,19 +201,41 @@ export function AppStateProvider({ children }) {
           const next = prev.map(a => {
             const diff = updates.find(u => u.id === a.id || u.id === a.serverId || u.platform_campaign_id === a.metaCampaignId);
             if (!diff) return a;
+            /* Worst-status do ad: se algum ad estiver DISAPPROVED/WITH_ISSUES,
+               consideramos isso o effective_status REAL pra notificação.
+               Sem isso, campanha podia ficar ACTIVE no Meta enquanto ad
+               estava reprovado e ninguém percebia (incidente camp 437). */
+            const worstAdStatus = Array.isArray(diff.ads) && diff.ads.length > 0
+              ? (diff.ads.find(x => x.effective_status === 'DISAPPROVED')?.effective_status
+                 || diff.ads.find(x => x.effective_status === 'WITH_ISSUES')?.effective_status
+                 || diff.ads.find(x => x.effective_status === 'PAUSED')?.effective_status
+                 || diff.ads.find(x => x.effective_status === 'PENDING_REVIEW')?.effective_status
+                 || diff.ads[0].effective_status)
+              : null;
             const merged = {
               ...a,
               status: diff.status || a.status,
               effective_status: diff.effective_status || a.effective_status,
+              ad_effective_status: worstAdStatus || a.ad_effective_status,
               spent: diff.spent ?? a.spent,
               clicks: diff.clicks ?? a.clicks,
+              link_clicks: diff.link_clicks ?? a.link_clicks,
               impressions: diff.impressions ?? a.impressions,
               conversions: diff.conversions ?? a.conversions,
+              reach: diff.reach ?? a.reach,
+              ctr: diff.ctr ?? a.ctr,
+              cpc: diff.cpc ?? a.cpc,
+              cpm: diff.cpm ?? a.cpm,
+              frequency: diff.frequency ?? a.frequency,
+              ads_meta: Array.isArray(diff.ads) ? diff.ads : a.ads_meta,
               meta_synced_at: new Date().toISOString(),
             };
             const old = byId.get(a.id);
-            const oldES = old?.effective_status;
-            const newES = merged.effective_status;
+            /* Transition checa AD-level worst status (que é o que define se
+               anúncio realmente roda). Antes só campaign-level escapava
+               casos onde campaign=ACTIVE mas ad=DISAPPROVED. */
+            const oldES = old?.ad_effective_status || old?.effective_status;
+            const newES = merged.ad_effective_status || merged.effective_status;
             if (oldES !== newES && newES) {
               transitions.push({ ad: merged, from: oldES, to: newES });
             }

@@ -418,7 +418,8 @@ router.post('/sync-meta-status', async (req, res) => {
     if (!creds) return res.json({ updated: [], skipped: 'meta-not-connected' });
 
     const localAds = await db.query(
-      `SELECT id, platform_campaign_id, status, spent, clicks, impressions, conversions
+      `SELECT id, platform_campaign_id, status, effective_status, spent, clicks, link_clicks,
+              impressions, conversions, payload
          FROM campaigns
         WHERE platform = 'meta' AND platform_campaign_id IS NOT NULL`,
       []
@@ -439,10 +440,17 @@ router.post('/sync-meta-status', async (req, res) => {
     for (const local of localAds.rows) {
       const r = byMetaId.get(local.platform_campaign_id);
       if (!r) continue;
-      /* Só grava se mudou algo relevante — reduz churn de updated_at */
+      /* Só grava se mudou algo relevante — reduz churn de updated_at.
+         Inclui link_clicks pra evitar bug histórico em que polling 90s
+         deixava esse campo congelado em 0 mesmo com Meta acumulando. */
       const statusChanged = r.status && r.status !== local.status;
-      const metricsChanged = (r.spent ?? 0) > 0 || (r.clicks ?? 0) > 0 || (r.impressions ?? 0) > 0;
-      if (!statusChanged && !metricsChanged) continue;
+      const effStatusChanged = r.effective_status && r.effective_status !== local.effective_status;
+      const adsHealthChanged = Array.isArray(r.ads) && r.ads.some(a =>
+        a.effective_status === 'DISAPPROVED' || a.effective_status === 'WITH_ISSUES'
+      );
+      const metricsChanged = (r.spent ?? 0) > 0 || (r.clicks ?? 0) > 0
+        || (r.link_clicks ?? 0) > 0 || (r.impressions ?? 0) > 0;
+      if (!statusChanged && !effStatusChanged && !adsHealthChanged && !metricsChanged) continue;
 
       /* Nunca regride métricas — se Meta retorna 0 por delay/erro temporário,
          preservamos o valor anterior bom (compat SQLite+Postgres via JS max). */
@@ -453,23 +461,109 @@ router.post('/sync-meta-status', async (req, res) => {
       };
       const nextSpent       = keepMax(r.spent,       local.spent);
       const nextClicks      = keepMax(r.clicks,      local.clicks);
+      const nextLinkClicks  = keepMax(r.link_clicks, local.link_clicks);
       const nextImpressions = keepMax(r.impressions, local.impressions);
       const nextConversions = keepMax(r.conversions, local.conversions);
+
+      /* Mescla métricas voláteis (reach/ctr/cpc/cpm/freq) e estado dos ads
+         no payload — frontend usa esses pra Dashboard sem ter que esperar
+         o sync completo manual. ads[] traz effective_status + issues_info
+         pra detectar rejeição/problema do anúncio sem chamada extra. */
+      let prevPayload = {};
+      try {
+        prevPayload = local.payload
+          ? (typeof local.payload === 'string' ? JSON.parse(local.payload) : local.payload)
+          : {};
+      } catch { prevPayload = {}; }
+      const nextPayload = {
+        ...prevPayload,
+        reach: r.reach ?? prevPayload.reach,
+        ctr: r.ctr ?? prevPayload.ctr,
+        cpc: r.cpc ?? prevPayload.cpc,
+        cpm: r.cpm ?? prevPayload.cpm,
+        frequency: r.frequency ?? prevPayload.frequency,
+        effective_status: r.effective_status ?? prevPayload.effective_status,
+        ads: Array.isArray(r.ads) ? r.ads : prevPayload.ads,
+        synced_at: new Date().toISOString(),
+      };
+      /* Atualiza status reais do adset/ad dentro de payload.meta pra
+         frontend exibir sem confiar no snapshot do publish (que mente
+         depois que user ativa via Meta Ads Manager direto). */
+      if (prevPayload.meta && Array.isArray(r.ads) && r.ads.length > 0) {
+        const worstAdStatus = r.ads.find(a => a.effective_status === 'DISAPPROVED')?.effective_status
+          || r.ads.find(a => a.effective_status === 'WITH_ISSUES')?.effective_status
+          || r.ads.find(a => a.effective_status === 'PENDING_REVIEW')?.effective_status
+          || r.ads[0].effective_status;
+        nextPayload.meta = {
+          ...prevPayload.meta,
+          campaign: prevPayload.meta.campaign ? {
+            ...prevPayload.meta.campaign,
+            status: r.raw?.status || prevPayload.meta.campaign.status,
+            effective_status: r.effective_status || prevPayload.meta.campaign.effective_status,
+          } : prevPayload.meta.campaign,
+          ad: prevPayload.meta.ad ? {
+            ...prevPayload.meta.ad,
+            status: r.ads[0].status || prevPayload.meta.ad.status,
+            effective_status: worstAdStatus,
+            issues_info: r.ads[0].issues_info || null,
+          } : prevPayload.meta.ad,
+        };
+      }
+
       await db.query(
         `UPDATE campaigns SET
            status = COALESCE(?, status),
            effective_status = COALESCE(?, effective_status),
-           spent = ?, clicks = ?, impressions = ?, conversions = ?,
+           spent = ?, clicks = ?, link_clicks = ?, impressions = ?, conversions = ?,
+           payload = ?,
            updated_at = datetime('now')
          WHERE id = ?`,
-        [r.status || null, r.effective_status || null, nextSpent, nextClicks, nextImpressions, nextConversions, local.id]
+        [r.status || null, r.effective_status || null,
+         nextSpent, nextClicks, nextLinkClicks, nextImpressions, nextConversions,
+         JSON.stringify(nextPayload), local.id]
       );
+
+      /* Detecta transição pra DISAPPROVED/WITH_ISSUES e registra no
+         activity_log — frontend lê isso e dispara sino + notificação.
+         Evita repetir incidente camp 437 em que ad ficou pausado/com
+         erro 8h sem ninguém saber. Best-effort, não bloqueia sync. */
+      try {
+        const prevAds = Array.isArray(prevPayload.ads) ? prevPayload.ads : [];
+        const newBadAds = (r.ads || []).filter(ad => {
+          const wasBad = prevAds.find(p => p.id === ad.id)?.effective_status;
+          const isBad = ad.effective_status === 'DISAPPROVED' || ad.effective_status === 'WITH_ISSUES';
+          const wasNotBad = wasBad !== 'DISAPPROVED' && wasBad !== 'WITH_ISSUES';
+          return isBad && wasNotBad;
+        });
+        for (const ad of newBadAds) {
+          const reason = (ad.issues_info && ad.issues_info[0]?.error_message)
+            || (ad.ad_review_feedback ? JSON.stringify(ad.ad_review_feedback) : null)
+            || `Ad ${ad.effective_status === 'DISAPPROVED' ? 'reprovado' : 'com problemas'} pelo Meta`;
+          await db.query(
+            `INSERT INTO activity_log (action, entity, entity_id, description, meta, created_at)
+             VALUES (?, ?, ?, ?, ?, datetime('now'))`,
+            [
+              ad.effective_status === 'DISAPPROVED' ? 'ad_disapproved' : 'ad_with_issues',
+              'campaign',
+              local.id,
+              `${r.name}: ${reason}`,
+              JSON.stringify({ ad_id: ad.id, status: ad.effective_status, issues: ad.issues_info, feedback: ad.ad_review_feedback }),
+            ]
+          );
+        }
+      } catch (logErr) {
+        console.warn('[sync-meta-status] activity_log falhou:', logErr.message);
+      }
+
       updated.push({
         id: local.id,
         platform_campaign_id: local.platform_campaign_id,
         status: r.status,
         effective_status: r.effective_status,
-        spent: r.spent, clicks: r.clicks, impressions: r.impressions, conversions: r.conversions,
+        spent: r.spent, clicks: r.clicks, link_clicks: r.link_clicks,
+        impressions: r.impressions, conversions: r.conversions,
+        reach: r.reach, ctr: r.ctr, cpc: r.cpc, cpm: r.cpm, frequency: r.frequency,
+        ads: r.ads || [],
       });
     }
     res.json({ updated });

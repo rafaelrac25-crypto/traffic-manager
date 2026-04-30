@@ -42,7 +42,12 @@ async function fetchCampaigns(creds) {
   const fields = [
     'id', 'name', 'status', 'effective_status', 'objective',
     'daily_budget', 'lifetime_budget', 'start_time', 'stop_time',
-    'insights.date_preset(maximum){spend,clicks,inline_link_clicks,impressions,reach,ctr,cpc,cpm,actions,cost_per_action_type}',
+    'insights.date_preset(maximum){spend,clicks,inline_link_clicks,impressions,reach,frequency,ctr,cpc,cpm,actions,cost_per_action_type}',
+    /* ads expandido — traz status real de cada ad sem chamada extra.
+       issues_info + ad_review_feedback explicam reprovação ao usuário.
+       Sem isso, painel ficava cego pra ad pausado/reprovado (incidente
+       camp 437 — ad PAUSED 8h, sistema mostrando "Ativo"). */
+    'ads.limit(25){id,status,effective_status,issues_info,ad_review_feedback,created_time}',
   ].join(',');
 
   const json = await metaGet(`/${accountId}/campaigns`, { fields, limit: 100 }, { token });
@@ -71,10 +76,22 @@ async function fetchCampaigns(creds) {
       link_clicks: safeInt(insights.inline_link_clicks),
       impressions: safeInt(insights.impressions),
       reach: safeInt(insights.reach),
+      frequency: safeFloat(insights.frequency),
       ctr: safeFloat(insights.ctr),
       cpc: safeFloat(insights.cpc),
       cpm: safeFloat(insights.cpm),
       conversions,
+      /* ads[] vem do expand `ads.limit(25){...}` no fields. Cada ad traz
+         effective_status (DISAPPROVED/WITH_ISSUES/ACTIVE/PAUSED/PENDING_REVIEW)
+         e issues_info — sync usa pra detectar reprovação proativa. */
+      ads: (c.ads?.data || []).map(a => ({
+        id: a.id,
+        status: a.status,
+        effective_status: a.effective_status,
+        issues_info: a.issues_info || null,
+        ad_review_feedback: a.ad_review_feedback || null,
+        created_time: a.created_time || null,
+      })),
       start_date: c.start_time ? c.start_time.slice(0, 10) : null,
       end_date: c.stop_time ? c.stop_time.slice(0, 10) : null,
       raw: c,

@@ -107,10 +107,15 @@ async function syncPlatform(platform) {
       ...prevPayload, /* preserva destUrl, locations, metaPublishResult, etc */
       objective: c.objective,
       reach: c.reach,
+      frequency: c.frequency,
       ctr: c.ctr,
       cpc: c.cpc,
       cpm: c.cpm,
       effective_status: c.effective_status,
+      /* ads[] vem do fetchCampaigns expandido — cada ad com effective_status
+         + issues_info pra detectar reprovação. /sync-meta-status (polling 90s)
+         e este sync completo persistem o mesmo payload pra Dashboard. */
+      ads: Array.isArray(c.ads) ? c.ads : prevPayload.ads,
       synced_at: new Date().toISOString(),
       conversions_mapped_from_clicks: wasMappedFromClicks || undefined,
     };
@@ -191,6 +196,44 @@ async function syncPlatform(platform) {
           console.warn('[sync] activity_log insert falhou:', logErr.message);
         }
       }
+    }
+
+    /* Detecção a nível de AD: campanha pode estar ACTIVE mas ad DISAPPROVED.
+       Antes só checávamos effective_status da campanha (cego pro ad).
+       Caso real: camp 437 ficou 8h "Ativa" enquanto ad estava PAUSED/com erro
+       location_types. Agora detecta transição de ad pra DISAPPROVED ou
+       WITH_ISSUES e registra activity_log → frontend dispara sino. */
+    try {
+      const prevAds = Array.isArray(prevPayload.ads) ? prevPayload.ads : [];
+      const newAds = Array.isArray(c.ads) ? c.ads : [];
+      for (const ad of newAds) {
+        const prev = prevAds.find(p => p.id === ad.id);
+        const wasBad = prev?.effective_status === 'DISAPPROVED' || prev?.effective_status === 'WITH_ISSUES';
+        const isBad  = ad.effective_status === 'DISAPPROVED' || ad.effective_status === 'WITH_ISSUES';
+        if (isBad && !wasBad) {
+          const reason = (ad.issues_info && ad.issues_info[0]?.error_message)
+            || (ad.ad_review_feedback ? JSON.stringify(ad.ad_review_feedback) : null)
+            || `Ad ${ad.effective_status === 'DISAPPROVED' ? 'reprovado' : 'com problemas'} pelo Meta`;
+          try {
+            await db.query(
+              `INSERT INTO activity_log (action, entity, entity_id, description, meta, created_at)
+               VALUES (?, ?, ?, ?, ?, datetime('now'))`,
+              [
+                ad.effective_status === 'DISAPPROVED' ? 'ad_disapproved' : 'ad_with_issues',
+                'campaign',
+                null,
+                `${c.name}: ${reason}`,
+                JSON.stringify({ ad_id: ad.id, status: ad.effective_status, issues: ad.issues_info, feedback: ad.ad_review_feedback, campaign_meta_id: c.id }),
+              ]
+            );
+            console.log(`[sync] ad ${ad.id} ${prev?.effective_status || 'null'} → ${ad.effective_status} (${c.name})`);
+          } catch (logErr) {
+            console.warn('[sync] activity_log ad insert falhou:', logErr.message);
+          }
+        }
+      }
+    } catch (adErr) {
+      console.warn('[sync] ad transition check falhou:', adErr.message);
     }
   }
 
