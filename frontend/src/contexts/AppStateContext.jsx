@@ -743,9 +743,23 @@ export function AppStateProvider({ children }) {
         return;
       }
 
-      /* Sucesso — adota o id real do banco, preservando o restante do estado local */
-      if (serverAd.id && serverAd.id !== newAd.id) {
-        setAds(prev => prev.map(a => a.id === newAd.id ? { ...a, id: serverAd.id, serverId: serverAd.id } : a));
+      /* Sucesso — adota id real do banco + reconcilia status com o que o
+         backend gravou. Antes só atualizava id, e status local 'active'
+         (otimismo) mascarava o real do Meta (PAUSED após publish). Caso da
+         camp 437: painel mostrava "Ativo" mas Meta tava pausado, user
+         esperou 8h por entrega que nunca veio. Agora status local = real. */
+      if (serverAd.id) {
+        setAds(prev => prev.map(a => a.id === newAd.id ? {
+          ...a,
+          id: serverAd.id,
+          serverId: serverAd.id,
+          status: serverAd.status || a.status,
+          metaCampaignId: serverAd.metaCampaignId || a.metaCampaignId,
+          metaAdSetId: serverAd.metaAdSetId || a.metaAdSetId,
+          metaAdId: serverAd.metaAdId || a.metaAdId,
+          metaCreativeId: serverAd.metaCreativeId || a.metaCreativeId,
+          platform_campaign_id: serverAd.platform_campaign_id || a.platform_campaign_id,
+        } : a));
       }
     });
     return newAd;

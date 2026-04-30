@@ -57,7 +57,12 @@ router.post('/', async (req, res) => {
 
   const mode = publish_mode || 'immediate';
   const isImmediate = mode === 'immediate';
-  let status = statusIn || (isImmediate ? 'review' : 'scheduled');
+  /* publishCampaign cria os 3 níveis (campaign+adset+ad) PAUSED no Meta por
+     segurança. Status local reflete isso: 'paused' até user clicar play (que
+     cascata pra ACTIVE nos 3 níveis via updateCampaignStatus). Antes era
+     'review' — passava impressão falsa de "rodando" e usuário esperava
+     entrega que nunca vinha (caso da camp 437 "Adeus cravos!!!"). */
+  let status = statusIn || (isImmediate ? 'paused' : 'scheduled');
   const submitted_at = isImmediate ? new Date().toISOString() : null;
   const sched = (!isImmediate && scheduled_for) ? scheduled_for : null;
 
@@ -75,7 +80,9 @@ router.post('/', async (req, res) => {
       const mediaItems = Array.isArray(payload.mediaFilesData) ? payload.mediaFilesData : [];
       metaResult = await publishCampaign(creds, payload.meta, mediaItems);
       platform_campaign_id = metaResult.platform_campaign_id;
-      status = 'review';
+      /* Recursos criados PAUSED no Meta — local reflete o real até o user
+         clicar play (cascata em metaWrite.updateCampaignStatus ativa os 3). */
+      status = 'paused';
     } catch (e) {
       /* Log detalhado pros logs do Vercel — payload completo + erro Meta */
       console.error('[meta.publish] FALHA — stage:', e.stage || 'unknown');
