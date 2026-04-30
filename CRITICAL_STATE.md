@@ -1,5 +1,47 @@
 # CRITICAL_STATE — traffic-manager
 
+## Sessão 2026-04-30 madrugada — COBERTURA SYNC META COMPLETA (3 commits)
+
+### Bug raiz descoberto via auditoria por agente
+- `inline_link_clicks` da camp 436 (nano) mostrava 4 no Meta, **0 no painel**.
+- Auditoria parallela do agente revelou problema sistêmico: polling `/sync-meta-status` (90s) **só atualizava** spent/clicks/impressions/conversions. **Faltavam:** link_clicks, reach, ctr, cpc, cpm, frequency, ads[] effective_status, issues_info.
+- Pior: nunca lia status do **AD** (só campaign). Por isso camp 437 ficou 8h "Ativo" com adset_paused invisível.
+
+### Fixes aplicados (commits 0c5bd65, f7bdae1, eba18d3)
+
+**Backend `metaAds.js`:**
+- `fetchCampaigns` expande `ads.limit(25){effective_status,issues_info,ad_review_feedback,created_time,status,id}` no fields. Sem chamada extra.
+- Retorna `frequency` direto do Meta (em vez de cálculo manual).
+
+**Backend `routes/campaigns.js` (/sync-meta-status):**
+- SELECT inclui `link_clicks`, `payload`, `effective_status`.
+- UPDATE atualiza coluna `link_clicks` + payload mescla reach/ctr/cpc/cpm/freq/ads.
+- Atualiza `payload.meta.{campaign,ad}.status/effective_status` com valor fresco.
+- Detecta transição de ad pra DISAPPROVED/WITH_ISSUES → registra activity_log.
+- Removido guard que pulava campanhas sem entrega (para 437 receber ads[]).
+
+**Backend `services/sync.js`:**
+- Mesma detecção ad-level.
+- Persiste `ads[]` e `frequency` no payload.
+
+**Frontend `AppStateContext.jsx`:**
+- Merge inclui link_clicks, reach, ctr, cpc, cpm, frequency, ads_meta.
+- `worstAdStatus` (DISAPPROVED > WITH_ISSUES > PAUSED > PENDING_REVIEW > ACTIVE).
+- Transitions usam worst ad-level (não só campaign).
+- Sino pra ADSET_PAUSED + CAMPAIGN_PAUSED (casos 437).
+
+### Validação end-to-end (2026-04-30 02:30 GMT-3)
+- Camp 436: link_clicks=44, reach=2927, ctr=2.20%, cpc=R$0.25, freq=1.33, ad ACTIVE — TODOS OK.
+- Camp 437: ad **ADSET_PAUSED** detectado (Rafa só ligou ad, não conjunto).
+- Audit `/api/campaigns/:id/audit` 14/14 OK pra 437; 13/14 pra 436 (CTA "WhatsApp"→"LEARN_MORE" é fallback wa.me intencional).
+- 29/29 testes Vitest passando. Build OK. require() limpo.
+
+### Pendência
+- Rafa precisa ligar o **conjunto** da 437 no Meta Ads Manager (ad já ligado, mas adset paused = ad não entrega). Em ~90s o sino vai notificar isso automaticamente.
+- Backlog: implementar play do conjunto/ad direto pelo painel (hoje toggle só campanha; cascata existe mas não tem botão pra adset/ad isolado).
+
+---
+
 ## Sessão 2026-04-29 noite — STATUS PÓS-PUBLISH "ATIVO ENGANOSO" (1 commit)
 
 ### Bug crítico descoberto após 8h da camp 437 sem entregar
