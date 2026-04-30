@@ -1,5 +1,40 @@
 # CRITICAL_STATE — traffic-manager
 
+## Sessão 2026-04-30 madrugada — CASCADE PLAY/PAUSE/DELETE GARANTIDA (1 commit)
+
+### Garantia end-to-end pra TODA campanha (atual e futura)
+
+**Commits:** `0b30b48` — feat(cascade)
+
+**`metaWrite.updateCampaignStatus`:**
+- Retorna `cascade_summary` com `{campaign, adsets:{total,changed,failures}, ads:{total,changed,failures}}`
+- Falhas individuais não bloqueiam — coletadas no summary
+
+**`/api/campaigns/:id/status` (PATCH):**
+- Resposta inclui `cascade_summary` pro frontend mostrar
+- activity_log persiste summary
+
+**`/api/campaigns/cascade-heal` (POST) — NOVO endpoint:**
+- Percorre TODAS campanhas Meta `active`/`paused` no banco
+- Força cascata pro estado declarado
+- Best-effort (1 falha não bloqueia outras)
+- Útil pra: auto-corrigir mismatches em massa, botão "verificar tudo", verificação pós-deploy
+
+**DELETE (já existia):**
+- Documentado: `DELETE /campaign_id` no Meta cascateia automaticamente (remove adsets + ads + creatives na mesma call)
+
+### Validação end-to-end (2026-04-30 02:50 GMT-3) — 2/2 verde
+- **Cascade-heal:** 2 campanhas verificadas, 0 mismatches
+- **PAUSE 437:** campaign+adset+ad → PAUSED (1+1 mudanças, 0 falhas)
+- **PLAY 437:** campaign+adset+ad → ACTIVE (1+1 mudanças, 0 falhas)
+- **Ad da 437 entrou em IN_PROCESS** (revisão Meta) — vai entregar em ~5-30min
+
+### Próximo
+- Aguardar Meta aprovar a 437 (IN_PROCESS → ACTIVE)
+- Sistema blindado contra mismatch de status entre níveis
+
+---
+
 ## Sessão 2026-04-30 madrugada — COBERTURA SYNC META COMPLETA (3 commits)
 
 ### Bug raiz descoberto via auditoria por agente
