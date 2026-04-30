@@ -440,17 +440,11 @@ router.post('/sync-meta-status', async (req, res) => {
     for (const local of localAds.rows) {
       const r = byMetaId.get(local.platform_campaign_id);
       if (!r) continue;
-      /* Só grava se mudou algo relevante — reduz churn de updated_at.
-         Inclui link_clicks pra evitar bug histórico em que polling 90s
-         deixava esse campo congelado em 0 mesmo com Meta acumulando. */
-      const statusChanged = r.status && r.status !== local.status;
-      const effStatusChanged = r.effective_status && r.effective_status !== local.effective_status;
-      const adsHealthChanged = Array.isArray(r.ads) && r.ads.some(a =>
-        a.effective_status === 'DISAPPROVED' || a.effective_status === 'WITH_ISSUES'
-      );
-      const metricsChanged = (r.spent ?? 0) > 0 || (r.clicks ?? 0) > 0
-        || (r.link_clicks ?? 0) > 0 || (r.impressions ?? 0) > 0;
-      if (!statusChanged && !effStatusChanged && !adsHealthChanged && !metricsChanged) continue;
+      /* Sempre persiste — campos voláteis (ads[] effective_status, freq, ctr,
+         issues_info) precisam estar atualizados mesmo em campanha zerada (caso
+         camp 437: zero entrega mas status do ad mudando entre PAUSED→PENDING_REVIEW
+         →ACTIVE conforme user mexe no Meta direto). 1 write a cada 90s por
+         campanha é trivial — ganho de observabilidade vale o churn. */
 
       /* Nunca regride métricas — se Meta retorna 0 por delay/erro temporário,
          preservamos o valor anterior bom (compat SQLite+Postgres via JS max). */
