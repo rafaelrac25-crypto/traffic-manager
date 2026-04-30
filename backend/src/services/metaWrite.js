@@ -22,33 +22,64 @@ async function updateCampaignStatus(creds, platformCampaignId, status) {
      Sem isso, ativar a campanha deixa ad_sets/ads em PAUSED (que era o status
      default quando foram criados) — campanha "ativa" mas anúncio sem rodar.
      Cris/Rafa não precisam mexer no Meta Ads Manager: 1 clique no painel
-     basta pra estado consistente. */
+     basta pra estado consistente.
+
+     Retorna summary com contagem de níveis afetados + falhas. Falha de
+     cascade NÃO bloqueia a chamada (campaign já mudou) mas eleva summary
+     pro chamador decidir avisar usuário. */
+  const summary = {
+    campaign: { id: platformCampaignId, status: metaStatus, ok: true },
+    adsets: { total: 0, changed: 0, failures: [] },
+    ads:    { total: 0, changed: 0, failures: [] },
+  };
+
   if (metaStatus === 'PAUSED' || metaStatus === 'ACTIVE') {
     try {
       const { metaGet } = require('./metaHttp');
       /* Ad_sets descendentes */
-      const adsetsResp = await metaGet(`/${platformCampaignId}/adsets`, { fields: 'id,status', limit: 100 }, { token });
-      for (const as of (adsetsResp?.data || [])) {
+      const adsetsResp = await metaGet(`/${platformCampaignId}/adsets`, { fields: 'id,status,effective_status', limit: 100 }, { token });
+      const adsets = adsetsResp?.data || [];
+      summary.adsets.total = adsets.length;
+      for (const as of adsets) {
         if (as?.id && as?.status !== metaStatus) {
-          try { await request('POST', `/${as.id}`, { status: metaStatus }, { token }); }
-          catch (e) { console.warn('[metaWrite] cascade adset', as.id, e.message); }
+          try {
+            await request('POST', `/${as.id}`, { status: metaStatus }, { token });
+            summary.adsets.changed++;
+          } catch (e) {
+            const msg = e?.meta?.pt || e?.meta?.message || e.message;
+            console.warn('[metaWrite] cascade adset', as.id, msg);
+            summary.adsets.failures.push({ id: as.id, error: msg });
+          }
         }
       }
       /* Ads descendentes — ad criado fica PAUSED por default (publishCampaign
          seta assim por segurança). Sem ativar aqui, anúncio nunca roda mesmo
          com campanha+adset ativos. */
       const adsResp = await metaGet(`/${platformCampaignId}/ads`, { fields: 'id,status,effective_status', limit: 100 }, { token });
-      for (const ad of (adsResp?.data || [])) {
+      const ads = adsResp?.data || [];
+      summary.ads.total = ads.length;
+      for (const ad of ads) {
         if (ad?.id && ad?.status !== metaStatus) {
-          try { await request('POST', `/${ad.id}`, { status: metaStatus }, { token }); }
-          catch (e) { console.warn('[metaWrite] cascade ad', ad.id, e.message); }
+          try {
+            await request('POST', `/${ad.id}`, { status: metaStatus }, { token });
+            summary.ads.changed++;
+          } catch (e) {
+            const msg = e?.meta?.pt || e?.meta?.message || e.message;
+            console.warn('[metaWrite] cascade ad', ad.id, msg);
+            summary.ads.failures.push({ id: ad.id, error: msg });
+          }
         }
       }
     } catch (e) {
       console.warn('[metaWrite] cascade falhou:', e.message);
+      summary.cascade_error = e.message;
     }
   }
 
+  /* Anexar summary ao result pro caller (PATCH /status) usar */
+  if (result && typeof result === 'object') {
+    result.cascade_summary = summary;
+  }
   return result;
 }
 
@@ -84,6 +115,11 @@ async function updateAdSetMeta(creds, platformAdSetId, fields) {
   return request('POST', `/${platformAdSetId}`, clean, { token });
 }
 
+/* Delete cascateia AUTOMATICAMENTE no Meta — DELETE /{campaign_id}
+   remove todos os adsets, ads e creatives filhos. Comportamento documentado
+   da Graph API (não precisamos iterar e deletar cada nível). Confirmado em
+   testes ao vivo: camp 433 deletada removeu 3 adsets + 3 ads + 1 creative
+   numa única chamada. */
 async function deleteCampaign(creds, platformCampaignId) {
   const token = getToken(creds);
   return request('DELETE', `/${platformCampaignId}`, {}, { token });

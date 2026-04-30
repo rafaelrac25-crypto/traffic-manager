@@ -346,6 +346,7 @@ router.patch('/:id/status', async (req, res) => {
     const row = pre.rows[0];
     if (!row) return res.status(404).json({ error: 'Campanha não encontrada' });
 
+    let cascadeSummary = null;
     if (row.platform === 'meta' && row.platform_campaign_id && (status === 'active' || status === 'paused' || status === 'ended')) {
       const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
       const creds = credResult.rows[0];
@@ -353,7 +354,8 @@ router.patch('/:id/status', async (req, res) => {
       try {
         const { updateCampaignStatus } = require('../services/metaWrite');
         const metaStatus = status === 'ended' ? 'paused' : status;
-        await updateCampaignStatus(creds, row.platform_campaign_id, metaStatus);
+        const metaResult = await updateCampaignStatus(creds, row.platform_campaign_id, metaStatus);
+        cascadeSummary = metaResult?.cascade_summary || null;
       } catch (mErr) {
         console.error('[meta.updateStatus]', mErr);
         return res.status(502).json({ error: `Meta recusou: ${mErr.message}`, meta: mErr.meta || null });
@@ -372,11 +374,61 @@ router.patch('/:id/status', async (req, res) => {
     );
     const camp = result.rows[0];
     const statusLabels = { active: 'Ativada', paused: 'Pausada', ended: 'Encerrada', review: 'Enviada para revisão', scheduled: 'Agendada' };
-    await log('status_change', 'campaign', camp.id, `Campanha "${camp.name}" — ${statusLabels[status] || status}`, { status });
-    res.json(camp);
+    await log('status_change', 'campaign', camp.id, `Campanha "${camp.name}" — ${statusLabels[status] || status}`, { status, cascade_summary: cascadeSummary });
+    /* Inclui cascade_summary na resposta — frontend pode mostrar
+       "X conjuntos e Y anúncios atualizados" + falhas se houver. */
+    res.json({ ...camp, cascade_summary: cascadeSummary });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Erro ao atualizar status' });
+  }
+});
+
+/* Auto-heal cascata: percorre todas as campanhas Meta e força a cascata
+   ACTIVE/PAUSED conforme status local. Útil pra:
+   - Diagnosticar/corrigir mismatches em massa (caso 437: campaign ACTIVE
+     mas adset/ad PAUSED)
+   - Garantir consistência após bug, deploy ou edição manual no Meta UI
+   - Botão "verificar tudo" no painel
+   Best-effort: 1 falha não bloqueia o resto. Retorna resumo por campanha. */
+router.post('/cascade-heal', async (req, res) => {
+  try {
+    const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+    const creds = credResult.rows[0];
+    if (!creds) return res.status(400).json({ error: 'Meta não está conectado' });
+
+    const camps = await db.query(
+      `SELECT id, name, platform_campaign_id, status FROM campaigns
+        WHERE platform = 'meta' AND platform_campaign_id IS NOT NULL
+          AND status IN ('active','paused')`,
+      []
+    );
+    const { updateCampaignStatus } = require('../services/metaWrite');
+    const report = [];
+    for (const c of camps.rows) {
+      try {
+        const r = await updateCampaignStatus(creds, c.platform_campaign_id, c.status);
+        report.push({
+          id: c.id,
+          name: c.name,
+          target_status: c.status,
+          ok: true,
+          summary: r?.cascade_summary || null,
+        });
+      } catch (e) {
+        report.push({
+          id: c.id,
+          name: c.name,
+          target_status: c.status,
+          ok: false,
+          error: e?.meta?.pt || e.message,
+        });
+      }
+    }
+    res.json({ healed: report.length, report });
+  } catch (err) {
+    console.error('[cascade-heal]', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
