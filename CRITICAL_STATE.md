@@ -1,5 +1,38 @@
 # CRITICAL_STATE — traffic-manager
 
+## Sessão 2026-04-29 noite — STATUS PÓS-PUBLISH "ATIVO ENGANOSO" (1 commit)
+
+### Bug crítico descoberto após 8h da camp 437 sem entregar
+- Camp 437 "Adeus cravos!!!" publicada 18:57 GMT-3 ficou 8h com **0 impressões / 0 cliques**.
+- Painel mostrava "Ativo". Mas no Meta os 3 níveis (campaign+adset+ad) estavam **PAUSED**.
+- Rafa não percebeu porque o painel mentia. Descobriu só ao abrir Meta Ads Manager.
+
+### Causa raiz (dupla)
+1. **Backend** (`routes/campaigns.js:60,78`): após publish, status local virava `'review'` ou `'active'`. Mas `publishCampaign` cria os 3 níveis PAUSED no Meta de propósito (segurança). Divergência local vs Meta.
+2. **Frontend** (`AppStateContext.jsx:addAd`): otimismo criava ad com `status:'active'` e na resposta do backend só atualizava `id`, ignorando o `status` retornado. Status real ficava mascarado pra sempre.
+
+### Fix aplicado (`6977ff8`)
+- Backend: status pós-publish agora é `'paused'` (alinhado com Meta)
+- Frontend: `addAd` reconcilia `status` + meta IDs com o `serverAd`
+- Resultado: próxima campanha publicada aparece como **Pausado** com botão ▶ visível. Click cascateia ACTIVE pros 3 níveis (`metaWrite.updateCampaignStatus` já cascateava — só ninguém clicava porque parecia já ativo).
+
+### Aviso #1870194 (cosmético, não bloqueia)
+- Meta removeu opções "pessoas que moram / visitaram / estiveram" no targeting de localização.
+- Mensagem: "Seu conjunto continuará a ser veiculado para sua seleção atual até que você o altere."
+- **Não é bloqueio.** Bairros configurados continuam válidos. Atualizar manualmente é cosmético.
+- Backlog: remover `location_types: ['home']` do `metaNormalize.js` (linhas 368, 405) — não urgente.
+
+### Estado atual da camp 437 (2026-04-30 02:00 GMT-3)
+- Rafa ligou conjunto + ad **manualmente no Meta Ads Manager** após diagnóstico.
+- Status: anúncio em revisão Meta (PENDING_REVIEW).
+- Aguardando aprovação. Quando aprovar, começa a entregar.
+
+### Pendência
+- Aguardar Meta aprovar a 437. Sync de 90s atualiza status no painel automaticamente.
+- (Não-urgente) limpar `location_types: ['home']` do publish.
+
+---
+
 ## Sessão 2026-04-29 tarde — UPLOAD CHUNKED + DASHBOARD UX (8 commits)
 
 ### Mudanças estruturais
