@@ -282,6 +282,23 @@ export function AppStateProvider({ children }) {
               message: `"${name}" está com problemas detectados pelo Meta. Verifique o painel de anúncios.`,
               link: '/anuncios',
             });
+          } else if (t.to === 'ADSET_PAUSED' && t.from !== 'ADSET_PAUSED') {
+            /* Ad ACTIVE mas conjunto PAUSED → não entrega.
+               Caso 437: user ligou só o ad e não percebeu que conjunto
+               continuava parado. Antes invisível, agora avisa. */
+            addNotification({
+              kind: 'warning',
+              title: 'Conjunto de anúncios está pausado',
+              message: `"${name}" não está entregando porque o CONJUNTO está pausado. Ligue o conjunto no Meta Ads Manager.`,
+              link: '/anuncios',
+            });
+          } else if (t.to === 'CAMPAIGN_PAUSED' && t.from !== 'CAMPAIGN_PAUSED') {
+            addNotification({
+              kind: 'warning',
+              title: 'Campanha está pausada',
+              message: `"${name}" não está entregando porque a CAMPANHA está pausada. Ative no painel.`,
+              link: '/anuncios',
+            });
           }
         }
       }
