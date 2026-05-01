@@ -164,8 +164,28 @@ async function replaceCreative(creds, { adAccountId, platformAdId, platformCreat
   }
 
   /* 2) Clona profundo (não muta o original) e aplica overrides.
-     Meta v20 aceita video_data OU link_data — preserva qual veio. */
+     Meta v20 aceita video_data OU link_data — preserva qual veio.
+
+     Sanitização: GET /<creative_id> retorna campos resolvidos pelo Meta
+     (image_url, picture, page_welcome_message, branded_content_sponsor_page_id,
+     etc.) que NÃO podem voltar num POST. Meta erro 1443051
+     "ObjectStorySpecRedundant" quando image_url+image_hash coexistem no
+     video_data. Limpa antes de criar novo. */
   const newSpec = JSON.parse(JSON.stringify(current.object_story_spec));
+
+  if (newSpec.video_data) {
+    delete newSpec.video_data.image_url;
+    delete newSpec.video_data.thumbnail_url;
+    delete newSpec.video_data.id;
+  }
+  if (newSpec.link_data) {
+    delete newSpec.link_data.image_url;
+    delete newSpec.link_data.picture;
+    delete newSpec.link_data.id;
+  }
+  delete newSpec.id;
+  delete newSpec.effective_object_story_id;
+  delete newSpec.branded_content_sponsor_page_id;
 
   if (newSpec.video_data) {
     if (overrides.message != null) newSpec.video_data.message = String(overrides.message);
@@ -260,6 +280,22 @@ async function duplicateAdInAdSet(creds, {
 
   /* 2) Clona story spec + aplica overrides (mesma lógica de replaceCreative) */
   const newSpec = JSON.parse(JSON.stringify(currentCreative.object_story_spec));
+  /* Sanitiza campos que GET retorna mas POST rejeita (erro 1443051
+     ObjectStorySpecRedundant quando image_url+image_hash coexistem) */
+  if (newSpec.video_data) {
+    delete newSpec.video_data.image_url;
+    delete newSpec.video_data.thumbnail_url;
+    delete newSpec.video_data.id;
+  }
+  if (newSpec.link_data) {
+    delete newSpec.link_data.image_url;
+    delete newSpec.link_data.picture;
+    delete newSpec.link_data.id;
+  }
+  delete newSpec.id;
+  delete newSpec.effective_object_story_id;
+  delete newSpec.branded_content_sponsor_page_id;
+
   if (newSpec.video_data) {
     if (overrides.message != null) newSpec.video_data.message = String(overrides.message);
     if (overrides.title != null) newSpec.video_data.title = String(overrides.title);
