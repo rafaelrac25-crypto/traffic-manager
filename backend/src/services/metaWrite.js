@@ -125,6 +125,198 @@ async function deleteCampaign(creds, platformCampaignId) {
   return request('DELETE', `/${platformCampaignId}`, {}, { token });
 }
 
+/* Substitui o creative de um Ad existente — cirúrgico:
+   - Lê creative atual no Meta (story spec completo: video_id, image_hash, message, title, cta)
+   - Constrói novo story spec aplicando overrides (link novo, message nova, title novo)
+   - Cria NOVO creative no Meta (POST /act_X/adcreatives) reusando video_id+image_hash
+   - Atualiza Ad pra apontar pro novo creative (POST /<ad_id>)
+   - Ad volta pra revisão Meta (PENDING_REVIEW) por causa do creative novo
+   - Preserva: campaign_id, adset_id, ad_id, métricas históricas, targeting, budget
+
+   Retorna { new_creative_id, old_creative_id, ad_id }.
+
+   Por que NÃO PATCH no creative existente: Meta v20 trata creative como
+   imutável após primeiro uso (erro 100/2655). Único caminho oficial é
+   criar novo + atualizar ad pra apontar.
+
+   overrides: { link?, message?, title?, ctaType? }
+     - link: novo destUrl (ex: wa.me/...?text=...) — vai pro call_to_action.value.link e link_data.link
+     - message: novo primary text (legenda) — vai pro video_data.message ou link_data.message
+     - title: novo headline — vai pro video_data.title ou link_data.name
+     - ctaType: força call_to_action.type (ex: 'LEARN_MORE'); default mantém o atual
+*/
+async function replaceCreative(creds, { adAccountId, platformAdId, platformCreativeId, overrides = {} }) {
+  const token = getToken(creds);
+  if (!adAccountId) throw new Error('replaceCreative: adAccountId obrigatório');
+  if (!platformAdId) throw new Error('replaceCreative: platformAdId obrigatório');
+  if (!platformCreativeId) throw new Error('replaceCreative: platformCreativeId obrigatório');
+
+  /* 1) Lê creative atual pra pegar story spec completo (video_id, image_hash, etc).
+     Sem isso teríamos que receber tudo do caller — frágil. Meta retorna a estrutura
+     completa em GET /<creative_id>?fields=object_story_spec,name. */
+  const { metaGet } = require('./metaHttp');
+  const current = await metaGet(`/${platformCreativeId}`, {
+    fields: 'name,object_story_spec,effective_object_story_id,thumbnail_url'
+  }, { token });
+
+  if (!current?.object_story_spec) {
+    throw new Error(`Creative ${platformCreativeId} não tem object_story_spec — não dá pra clonar`);
+  }
+
+  /* 2) Clona profundo (não muta o original) e aplica overrides.
+     Meta v20 aceita video_data OU link_data — preserva qual veio. */
+  const newSpec = JSON.parse(JSON.stringify(current.object_story_spec));
+
+  if (newSpec.video_data) {
+    if (overrides.message != null) newSpec.video_data.message = String(overrides.message);
+    if (overrides.title != null) newSpec.video_data.title = String(overrides.title);
+    if (!newSpec.video_data.call_to_action) newSpec.video_data.call_to_action = { type: 'LEARN_MORE' };
+    if (overrides.ctaType) newSpec.video_data.call_to_action.type = overrides.ctaType;
+    if (overrides.link != null) {
+      const t = newSpec.video_data.call_to_action.type || 'LEARN_MORE';
+      /* WHATSAPP_MESSAGE não aceita link no value (puxa da Page) */
+      if (t === 'WHATSAPP_MESSAGE') {
+        newSpec.video_data.call_to_action.value = { app_destination: 'WHATSAPP' };
+      } else if (t === 'MESSAGE_PAGE' || t === 'SEND_MESSAGE') {
+        newSpec.video_data.call_to_action.value = { app_destination: 'MESSENGER' };
+      } else {
+        newSpec.video_data.call_to_action.value = { link: String(overrides.link) };
+      }
+    }
+  } else if (newSpec.link_data) {
+    if (overrides.message != null) newSpec.link_data.message = String(overrides.message);
+    if (overrides.title != null) newSpec.link_data.name = String(overrides.title);
+    if (overrides.link != null) newSpec.link_data.link = String(overrides.link);
+    if (!newSpec.link_data.call_to_action) newSpec.link_data.call_to_action = { type: 'LEARN_MORE' };
+    if (overrides.ctaType) newSpec.link_data.call_to_action.type = overrides.ctaType;
+  } else {
+    throw new Error(`Creative ${platformCreativeId} não tem video_data nem link_data — formato desconhecido`);
+  }
+
+  /* 3) Cria novo creative reusando os assets já uploadados (video_id+image_hash).
+     Não há reupload — bytes ficam no servidor Meta atrelados à conta. */
+  const accountId = adAccountId.startsWith('act_') ? adAccountId : `act_${adAccountId}`;
+  const newCreativeResp = await request('POST', `/${accountId}/adcreatives`, {
+    name: (current.name || 'Creative') + ' — v2',
+    object_story_spec: newSpec,
+  }, { token });
+
+  const newCreativeId = newCreativeResp?.id;
+  if (!newCreativeId) throw new Error('Meta não retornou ID do novo creative');
+
+  /* 4) Reaponta o Ad existente pro novo creative.
+     POST /<ad_id> com creative={creative_id: ...} — Meta aceita troca em ad
+     que está PAUSED. Status do ad fica PAUSED, effective_status volta pra
+     PENDING_REVIEW por causa do creative novo. Caller decide quando ativar. */
+  await request('POST', `/${platformAdId}`, {
+    creative: { creative_id: newCreativeId },
+  }, { token });
+
+  return {
+    new_creative_id: newCreativeId,
+    old_creative_id: platformCreativeId,
+    ad_id: platformAdId,
+    new_object_story_spec: newSpec,
+  };
+}
+
+/* Duplica um Ad DENTRO do mesmo AdSet com creative atualizado.
+   Diferença pra replaceCreative: aqui o ad ANTIGO permanece (preservando
+   métricas históricas raw no Meta Ads Manager) e um NOVO ad é criado irmão
+   dele no mesmo adset. Caller pausa o antigo e ativa o novo quando aprovar.
+
+   - Lê creative atual (story spec) + nome do ad atual
+   - Constrói novo story spec com overrides (link wa.me?text=, message, title, ctaType)
+   - Cria NOVO creative reusando video_id+image_hash (sem reupload)
+   - Cria NOVO ad no MESMO adset apontando pro novo creative (PAUSED por segurança)
+   - Preserva: campaign+adset+ad antigo (histórico) e adiciona ad novo
+
+   Por que NÃO mexer no ad antigo: regra de marketing — quando um anúncio
+   tem aprendizado, não destruir; criar variante e A/B mental (ad antigo
+   pausa, ad novo entra). Métricas históricas ficam visíveis no Meta.
+
+   Retorna { new_ad_id, new_creative_id, old_ad_id, old_creative_id }. */
+async function duplicateAdInAdSet(creds, {
+  adAccountId, platformAdSetId, platformAdId, platformCreativeId,
+  overrides = {}, newAdName = null
+}) {
+  const token = getToken(creds);
+  if (!adAccountId) throw new Error('duplicateAdInAdSet: adAccountId obrigatório');
+  if (!platformAdSetId) throw new Error('duplicateAdInAdSet: platformAdSetId obrigatório');
+  if (!platformAdId) throw new Error('duplicateAdInAdSet: platformAdId obrigatório (ad de origem pra herdar nome)');
+  if (!platformCreativeId) throw new Error('duplicateAdInAdSet: platformCreativeId obrigatório');
+
+  const { metaGet } = require('./metaHttp');
+
+  /* 1) Lê creative + ad atuais em paralelo */
+  const [currentCreative, currentAd] = await Promise.all([
+    metaGet(`/${platformCreativeId}`, { fields: 'name,object_story_spec' }, { token }),
+    metaGet(`/${platformAdId}`, { fields: 'name' }, { token }),
+  ]);
+
+  if (!currentCreative?.object_story_spec) {
+    throw new Error(`Creative ${platformCreativeId} não tem object_story_spec — não dá pra clonar`);
+  }
+
+  /* 2) Clona story spec + aplica overrides (mesma lógica de replaceCreative) */
+  const newSpec = JSON.parse(JSON.stringify(currentCreative.object_story_spec));
+  if (newSpec.video_data) {
+    if (overrides.message != null) newSpec.video_data.message = String(overrides.message);
+    if (overrides.title != null) newSpec.video_data.title = String(overrides.title);
+    if (!newSpec.video_data.call_to_action) newSpec.video_data.call_to_action = { type: 'LEARN_MORE' };
+    if (overrides.ctaType) newSpec.video_data.call_to_action.type = overrides.ctaType;
+    if (overrides.link != null) {
+      const t = newSpec.video_data.call_to_action.type || 'LEARN_MORE';
+      if (t === 'WHATSAPP_MESSAGE') {
+        newSpec.video_data.call_to_action.value = { app_destination: 'WHATSAPP' };
+      } else if (t === 'MESSAGE_PAGE' || t === 'SEND_MESSAGE') {
+        newSpec.video_data.call_to_action.value = { app_destination: 'MESSENGER' };
+      } else {
+        newSpec.video_data.call_to_action.value = { link: String(overrides.link) };
+      }
+    }
+  } else if (newSpec.link_data) {
+    if (overrides.message != null) newSpec.link_data.message = String(overrides.message);
+    if (overrides.title != null) newSpec.link_data.name = String(overrides.title);
+    if (overrides.link != null) newSpec.link_data.link = String(overrides.link);
+    if (!newSpec.link_data.call_to_action) newSpec.link_data.call_to_action = { type: 'LEARN_MORE' };
+    if (overrides.ctaType) newSpec.link_data.call_to_action.type = overrides.ctaType;
+  } else {
+    throw new Error(`Creative ${platformCreativeId} não tem video_data nem link_data — formato desconhecido`);
+  }
+
+  /* 3) Cria novo creative reusando assets uploadados */
+  const accountId = adAccountId.startsWith('act_') ? adAccountId : `act_${adAccountId}`;
+  const newCreativeResp = await request('POST', `/${accountId}/adcreatives`, {
+    name: (currentCreative.name || 'Creative') + ' — v2',
+    object_story_spec: newSpec,
+  }, { token });
+  const newCreativeId = newCreativeResp?.id;
+  if (!newCreativeId) throw new Error('Meta não retornou ID do novo creative');
+
+  /* 4) Cria NOVO ad no MESMO adset (sufixo " — v2" no nome).
+     PAUSED por segurança: caller decide quando ativar (cascade dispara revisão). */
+  const baseName = currentAd?.name || 'Anúncio';
+  const finalName = newAdName || (baseName.includes('— v2') ? baseName : `${baseName} — v2`);
+  const newAdResp = await request('POST', `/${accountId}/ads`, {
+    name: finalName,
+    adset_id: platformAdSetId,
+    creative: { creative_id: newCreativeId },
+    status: 'PAUSED',
+  }, { token });
+  const newAdId = newAdResp?.id;
+  if (!newAdId) throw new Error('Meta não retornou ID do novo ad');
+
+  return {
+    new_ad_id: newAdId,
+    new_ad_name: finalName,
+    new_creative_id: newCreativeId,
+    old_ad_id: platformAdId,
+    old_creative_id: platformCreativeId,
+    new_object_story_spec: newSpec,
+  };
+}
+
 /**
  * Publica uma campanha completa no Meta:
  * 1. Upload de mídia (se houver base64)
@@ -540,4 +732,4 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
   }
 }
 
-module.exports = { updateCampaignStatus, updateCampaignMeta, updateAdSetMeta, deleteCampaign, publishCampaign, request, getToken };
+module.exports = { updateCampaignStatus, updateCampaignMeta, updateAdSetMeta, deleteCampaign, replaceCreative, duplicateAdInAdSet, publishCampaign, request, getToken };

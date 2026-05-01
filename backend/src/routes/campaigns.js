@@ -432,6 +432,175 @@ router.post('/cascade-heal', async (req, res) => {
   }
 });
 
+/* Duplica o anúncio dentro do adset existente, com mensagem WhatsApp pré-preenchida
+   no destUrl. Cria novo creative+ad PAUSED, mantém antigo intacto (preserva
+   métricas históricas). Caller pausa antigo e ativa novo após Meta aprovar.
+
+   Body: { whatsappMessage: 'Oi Cris, vim pelo Instagram, quero saber sobre X',
+           ctaLabel?: 'Saiba mais' | 'WhatsApp' (default: mantém o atual) }
+
+   Retorna: { new_ad_id, new_creative_id, new_destUrl, requires_review }
+
+   Pré-condições verificadas:
+   - Campanha tem platform_campaign_id, ad_id, ad_set_id, creative_id no payload
+   - destUrl base é wa.me/ (sistema só monta ?text= pra wa.me)
+   - Se ctaLabel='WhatsApp' E Page não tem WA Business linkado, força LEARN_MORE
+     (sistema protege contra erro 1487891 do Meta) */
+router.post('/:id/duplicate-ad', async (req, res) => {
+  const { whatsappMessage, ctaLabel } = req.body || {};
+  try {
+    const result = await db.query('SELECT * FROM campaigns WHERE id = ?', [req.params.id]);
+    const camp = result.rows[0];
+    if (!camp) return res.status(404).json({ error: 'Campanha não encontrada' });
+    if (camp.platform !== 'meta' || !camp.platform_campaign_id) {
+      return res.status(400).json({ error: 'Apenas campanhas Meta publicadas podem ser duplicadas' });
+    }
+
+    let payload = camp.payload;
+    if (typeof payload === 'string') {
+      try { payload = JSON.parse(payload); } catch { payload = null; }
+    }
+    if (!payload) return res.status(400).json({ error: 'Payload da campanha ausente' });
+
+    const adAccountId = payload?.metaAccountId
+      || (camp.platform_campaign_id ? null : null);
+    const adSetId = payload?.metaPublishResult?.ad_set_id
+      || payload?.metaPublishResult?.ad_sets?.[0]?.ad_set_id;
+    const adId = payload?.metaPublishResult?.ad_id
+      || payload?.metaPublishResult?.ad_sets?.[0]?.ad_id;
+    const creativeId = payload?.metaPublishResult?.creative_id;
+
+    /* metaAccountId no payload guarda o ID da Page (legado) — pra Meta API
+       o adAccountId real vem das credenciais (act_X). Usar creds. */
+    const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+    const creds = credResult.rows[0];
+    if (!creds) return res.status(400).json({ error: 'Meta não conectado' });
+    const realAdAccountId = creds.account_id || creds.ad_account_id || adAccountId;
+
+    if (!realAdAccountId) return res.status(400).json({ error: 'ad_account_id ausente nas credenciais' });
+    if (!adSetId)   return res.status(400).json({ error: 'ad_set_id ausente no payload (campanha não foi publicada?)' });
+    if (!adId)      return res.status(400).json({ error: 'ad_id ausente no payload' });
+    if (!creativeId) return res.status(400).json({ error: 'creative_id ausente no payload' });
+
+    /* Monta novo destUrl com ?text= se for wa.me/ */
+    const baseLink = payload?.destUrl || '';
+    const isWaMe = /(wa\.me\/|api\.whatsapp\.com|whatsapp\.com\/)/i.test(baseLink);
+    let newLink = baseLink;
+    if (isWaMe && whatsappMessage) {
+      /* Limpa querystring antiga e adiciona text= encoded */
+      const u = new URL(baseLink);
+      u.searchParams.set('text', String(whatsappMessage));
+      newLink = u.toString();
+    }
+
+    /* Decide ctaType:
+       - Se ctaLabel='WhatsApp', tenta WHATSAPP_MESSAGE; mas Meta REJEITA se Page
+         não tem WhatsApp Business linkado. Pra evitar falha em runtime, verifica
+         antes via diagnose-page (já existe no projeto) E só envia WHATSAPP_MESSAGE
+         se can_run_click_to_whatsapp=true. Caso contrário força LEARN_MORE.
+       - Default: mantém LEARN_MORE (universal, aceita link). */
+    let ctaType = 'LEARN_MORE';
+    if (ctaLabel === 'WhatsApp' || ctaLabel === 'WHATSAPP_MESSAGE') {
+      try {
+        const { metaGet } = require('../services/metaHttp');
+        const { safeDecrypt } = require('../services/crypto');
+        const token = safeDecrypt(creds.access_token, 'duplicate-ad');
+        const pageId = creds.page_id;
+        if (pageId) {
+          const pageInfo = await metaGet(`/${pageId}`, { fields: 'whatsapp_number' }, { token });
+          if (pageInfo?.whatsapp_number) {
+            ctaType = 'WHATSAPP_MESSAGE';
+            newLink = null; /* WA Business puxa da Page */
+          } else {
+            console.warn('[duplicate-ad] Page sem WhatsApp Business — forçando LEARN_MORE em vez de WHATSAPP_MESSAGE');
+          }
+        }
+      } catch (e) {
+        console.warn('[duplicate-ad] erro ao verificar WA Business:', e.message);
+      }
+    }
+
+    const overrides = { ctaType };
+    if (newLink !== null) overrides.link = newLink;
+
+    const { duplicateAdInAdSet } = require('../services/metaWrite');
+    let dupResult;
+    try {
+      dupResult = await duplicateAdInAdSet(creds, {
+        adAccountId:        realAdAccountId,
+        platformAdSetId:    adSetId,
+        platformAdId:       adId,
+        platformCreativeId: creativeId,
+        overrides,
+      });
+    } catch (e) {
+      console.error('[duplicate-ad] Meta erro:', e.message, e.meta);
+      return res.status(502).json({
+        error: `Meta recusou: ${e.message}`,
+        meta_error: e.meta || null,
+      });
+    }
+
+    /* Atualiza payload local: registra novo ad_id e new destUrl pra UI refletir.
+       Mantém o ad antigo no histórico (não sobrescreve metaPublishResult.ad_id;
+       acrescenta um campo `duplicated_ads` com cronologia). */
+    const updatedPayload = { ...payload };
+    updatedPayload.destUrl = newLink || baseLink;
+    if (whatsappMessage) updatedPayload.whatsappMessage = whatsappMessage;
+    if (ctaLabel) updatedPayload.ctaButton = ctaLabel;
+    updatedPayload.duplicated_ads = [
+      ...(payload.duplicated_ads || []),
+      {
+        old_ad_id:        adId,
+        old_creative_id:  creativeId,
+        new_ad_id:        dupResult.new_ad_id,
+        new_creative_id:  dupResult.new_creative_id,
+        new_destUrl:      newLink,
+        cta_type:         ctaType,
+        duplicated_at:    new Date().toISOString(),
+      },
+    ];
+    /* Aponta metaPublishResult pro ad NOVO (será o ativo após review) */
+    updatedPayload.metaPublishResult = {
+      ...(payload.metaPublishResult || {}),
+      ad_id:        dupResult.new_ad_id,
+      creative_id:  dupResult.new_creative_id,
+      ad_sets: (payload.metaPublishResult?.ad_sets || []).map(as =>
+        as.ad_set_id === adSetId
+          ? { ...as, ad_id: dupResult.new_ad_id }
+          : as
+      ),
+    };
+
+    await db.query(
+      'UPDATE campaigns SET payload = ?, updated_at = datetime(\'now\') WHERE id = ?',
+      [JSON.stringify(updatedPayload), req.params.id]
+    );
+
+    await log('duplicate_ad', 'campaign', parseInt(req.params.id),
+      `Anúncio duplicado com mensagem WhatsApp pré-preenchida`, {
+        old_ad_id:       dupResult.old_ad_id,
+        new_ad_id:       dupResult.new_ad_id,
+        new_creative_id: dupResult.new_creative_id,
+        cta_type:        ctaType,
+        message:         whatsappMessage || null,
+      });
+
+    res.json({
+      ok: true,
+      new_ad_id:        dupResult.new_ad_id,
+      new_creative_id:  dupResult.new_creative_id,
+      new_destUrl:      newLink,
+      cta_type:         ctaType,
+      requires_review:  true,
+      note: 'Ad novo criado PAUSED. Após Meta aprovar (effective_status sair de PENDING_REVIEW), pode ativar via PATCH /status. Ad antigo continua intacto pra histórico.',
+    });
+  } catch (err) {
+    console.error('[duplicate-ad]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.delete('/:id', async (req, res) => {
   try {
     const before = await db.query('SELECT name, platform, platform_campaign_id FROM campaigns WHERE id = ?', [req.params.id]);
