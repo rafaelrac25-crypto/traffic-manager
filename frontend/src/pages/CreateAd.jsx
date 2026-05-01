@@ -2472,7 +2472,7 @@ function VideoCoverPicker({ videoFile, thumbnail, setThumbnail }) {
   );
 }
 
-function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaFiles, videoThumbnail, setVideoThumbnail, primaryText, setPrimaryText, headline, setHeadline, destUrl, setDestUrl, ctaButton, setCtaButton, errors = {} }) {
+function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaFiles, videoThumbnail, setVideoThumbnail, primaryText, setPrimaryText, headline, setHeadline, destUrl, setDestUrl, ctaButton, setCtaButton, whatsappMessage, setWhatsappMessage, errors = {} }) {
   const fileRef  = useRef(null);
   const [drag, setDrag] = useState(false);
   const [uploadError, setUploadError] = useState('');
@@ -2795,6 +2795,45 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
           <p style={{ fontSize: '12px', color: '#EF4444', fontWeight: 600, marginTop: '4px' }}>⚠ {errors.destUrl || 'URL deve começar com https://'}</p>
         )}
       </div>
+
+      {/* Mensagem WhatsApp — só aparece quando o destino é wa.me/api.whatsapp.
+          Backend usa este texto pra montar o param ?text= no link final do anúncio,
+          fazendo a conversa abrir já com a mensagem digitada pela lead. */}
+      {isWaMeLink && (() => {
+        const defaultMessage = headline.trim()
+          ? `Oi Cris, vim pelo Instagram, quero saber sobre ${headline.trim().toLowerCase()}`
+          : 'Oi Cris, vim pelo Instagram, quero saber mais.';
+        const effectiveMessage = whatsappMessage.trim() || defaultMessage;
+        const baseUrl = destUrl.split('?')[0];
+        const previewUrl = `${baseUrl}?text=${encodeURIComponent(effectiveMessage)}`;
+        const isCustom = whatsappMessage.trim() && whatsappMessage.trim() !== defaultMessage;
+        return (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <SectionLabel sub="Texto que já aparece digitado quando a lead abrir o WhatsApp.">Mensagem WhatsApp</SectionLabel>
+              {isCustom && (
+                <button
+                  type="button"
+                  onClick={() => setWhatsappMessage('')}
+                  style={{ fontSize: '11px', fontWeight: 600, color: 'var(--c-accent)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px' }}
+                >↺ Restaurar padrão</button>
+              )}
+            </div>
+            <input
+              type="text"
+              placeholder={defaultMessage}
+              value={whatsappMessage}
+              onChange={e => setWhatsappMessage(e.target.value)}
+              maxLength={200}
+              style={{ width: '100%', padding: '10px 14px', border: '1.5px solid var(--c-border)', borderRadius: '10px', background: 'var(--c-surface)', color: 'var(--c-text-1)', fontSize: '13px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
+            />
+            <div style={{ marginTop: '8px', padding: '8px 12px', background: '#25D36612', border: '1px solid #25D36633', borderRadius: '8px' }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: '#0F8A49', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: '4px' }}>Link final que vai pro Meta</div>
+              <div style={{ fontSize: '11px', color: 'var(--c-text-2)', wordBreak: 'break-all', fontFamily: 'ui-monospace, SFMono-Regular, monospace', lineHeight: 1.5 }}>{previewUrl}</div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* CTA — apenas os aceitos pelo Meta pra este objetivo */}
       <div>
@@ -3350,6 +3389,7 @@ export default function CreateAd() {
   const [headline,           setHeadline]           = useState(source?.headline ?? (quickFillCreative?.headline || commercialDate?.preFill?.headline || ''));
   const [destUrl,            setDestUrl]            = useState(source?.destUrl || 'https://wa.me/5547997071161');
   const [ctaButton,          setCtaButton]          = useState(source?.ctaButton || quickFillCreative?.cta || 'WhatsApp');
+  const [whatsappMessage,    setWhatsappMessage]    = useState(source?.whatsappMessage || '');
 
   /* Contexto da abertura do CreateAd (fixMode, data comercial, reuso) já é
      visível no próprio Wizard — notificações no sino são apenas para alertas. */
@@ -3376,7 +3416,7 @@ export default function CreateAd() {
       saveDraft?.({
         objective, locations, ageRange, gender, interests,
         budgetType, budgetValue, startDate, endDate,
-        adFormat, mediaFiles, primaryText, headline, destUrl, ctaButton,
+        adFormat, mediaFiles, primaryText, headline, destUrl, ctaButton, whatsappMessage,
         budgetRingSplit, ringsMode, businessHours,
       });
     } catch { /* salvar é best-effort, não bloqueia saída */ }
@@ -3685,6 +3725,7 @@ export default function CreateAd() {
 
       // Criativo (local)
       adFormat, primaryText, headline, destUrl, ctaButton,
+      whatsappMessage,
       mediaFiles: serializedMedia,
       mediaFilesData,
 
@@ -3745,7 +3786,7 @@ export default function CreateAd() {
     <Step1Objective objective={objective} setObjective={setObjective} errors={errors} />,
     <Step2Audience  locations={locations} setLocations={setLocations} ageRange={ageRange} setAgeRange={setAgeRange} gender={gender} setGender={setGender} interests={interests} setInterests={setInterests} ringsMode={ringsMode} setRingsMode={setRingsMode} advantageAudience={advantageAudience} setAdvantageAudience={setAdvantageAudience} />,
     <Step4Budget budgetType={budgetType} setBudgetType={setBudgetType} budgetValue={budgetValue} setBudgetValue={setBudgetValue} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} errors={errors} locations={locations} budgetRingSplit={budgetRingSplit} setBudgetRingSplit={setBudgetRingSplit} ringsMode={ringsMode} setRingsMode={setRingsMode} budgetOptimization={budgetOptimization} setBudgetOptimization={setBudgetOptimization} businessHours={businessHours} setBusinessHours={setBusinessHours} />,
-    <Step5Creative objective={objective} adFormat={adFormat} setAdFormat={setAdFormat} mediaFiles={mediaFiles} setMediaFiles={setMediaFiles} videoThumbnail={videoThumbnail} setVideoThumbnail={setVideoThumbnail} primaryText={primaryText} setPrimaryText={setPrimaryText} headline={headline} setHeadline={setHeadline} destUrl={destUrl} setDestUrl={setDestUrl} ctaButton={ctaButton} setCtaButton={setCtaButton} errors={errors} />,
+    <Step5Creative objective={objective} adFormat={adFormat} setAdFormat={setAdFormat} mediaFiles={mediaFiles} setMediaFiles={setMediaFiles} videoThumbnail={videoThumbnail} setVideoThumbnail={setVideoThumbnail} primaryText={primaryText} setPrimaryText={setPrimaryText} headline={headline} setHeadline={setHeadline} destUrl={destUrl} setDestUrl={setDestUrl} ctaButton={ctaButton} setCtaButton={setCtaButton} whatsappMessage={whatsappMessage} setWhatsappMessage={setWhatsappMessage} errors={errors} />,
     <Step6Review data={reviewData} onGoTo={(s) => { setErrors({}); setStep(s); }} />,
   ];
 

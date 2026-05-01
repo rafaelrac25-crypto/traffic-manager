@@ -352,10 +352,45 @@ router.patch('/:id/status', async (req, res) => {
       const creds = credResult.rows[0];
       if (!creds) return res.status(400).json({ error: 'Meta não está conectado' });
       try {
-        const { updateCampaignStatus } = require('../services/metaWrite');
+        const { updateCampaignStatus, request: metaRequestRaw, getToken } = require('../services/metaWrite');
         const metaStatus = status === 'ended' ? 'paused' : status;
         const metaResult = await updateCampaignStatus(creds, row.platform_campaign_id, metaStatus);
         cascadeSummary = metaResult?.cascade_summary || null;
+
+        /* Se ATIVOU e a campanha tem ads duplicados (history em payload.duplicated_ads),
+           re-pausa os old_ad_ids — cascade ativou TODOS os ads do adset, mas só o
+           ad_id atual (em metaPublishResult.ad_id) deve rodar. Os antigos ficam
+           preservados (pra histórico) mas PAUSED. Sem isso, ads antigos com wa.me
+           vazio voltariam a entregar junto com o novo, anulando a melhoria. */
+        if (metaStatus === 'active') {
+          const fullCamp = await db.query('SELECT payload FROM campaigns WHERE id = ?', [req.params.id]);
+          let camPayload = fullCamp.rows[0]?.payload;
+          if (typeof camPayload === 'string') {
+            try { camPayload = JSON.parse(camPayload); } catch { camPayload = null; }
+          }
+          const duplicatedAds = camPayload?.duplicated_ads || [];
+          const currentAdId = camPayload?.metaPublishResult?.ad_id;
+          if (duplicatedAds.length > 0 && currentAdId) {
+            const oldAdIds = new Set();
+            duplicatedAds.forEach(d => {
+              if (d.old_ad_id && d.old_ad_id !== currentAdId) oldAdIds.add(d.old_ad_id);
+              if (d.new_ad_id && d.new_ad_id !== currentAdId) oldAdIds.add(d.new_ad_id);
+            });
+            if (oldAdIds.size > 0) {
+              const token = getToken(creds);
+              const repaused = [];
+              for (const oldId of oldAdIds) {
+                try {
+                  await metaRequestRaw('POST', `/${oldId}`, { status: 'PAUSED' }, { token });
+                  repaused.push(oldId);
+                } catch (e) {
+                  console.warn('[status] re-pause old_ad', oldId, e.message);
+                }
+              }
+              if (cascadeSummary) cascadeSummary.old_ads_repaused = repaused;
+            }
+          }
+        }
       } catch (mErr) {
         console.error('[meta.updateStatus]', mErr);
         return res.status(502).json({ error: `Meta recusou: ${mErr.message}`, meta: mErr.meta || null });
