@@ -1,5 +1,45 @@
 # CRITICAL_STATE — traffic-manager
 
+## Sessão 2026-04-30 noite — MENSAGEM WHATSAPP PRÉ-PREENCHIDA (3 commits)
+
+### Diagnóstico
+- 437 (Cravos) e 436 (Nano): 22h+47h ao ar, **202 cliques somados, 0 mensagens recebidas**.
+- Causa raiz: `destUrl` = `wa.me/55479971...` SEM `?text=` → WhatsApp abre vazio, dropoff 50-80%.
+- Page Cris (`criscosta_sobrancelhas`) sem WhatsApp Business linkado: `can_run_click_to_whatsapp: false`. Click-to-WhatsApp formal indisponível **hoje** — Cris vai cadastrar manualmente no Facebook Page → Sobre → Informações.
+
+### Decisão (Council exposto pro Rafa)
+Pausar AS 2 (sangria zero), duplicar ad dentro do mesmo adset com mensagem pré-preenchida (preserva campaign+adset históricos), reativar quando Meta aprovar.
+
+### Implementação
+- **`metaWrite.replaceCreative`**: cria novo creative reusando video_id+image_hash + atualiza ad existente (mesmo ad_id). Sanitiza `image_url`/`thumbnail_url` que GET retorna mas POST rejeita (erro 1443051 ObjectStorySpecRedundant).
+- **`metaWrite.duplicateAdInAdSet`** (escolha do Rafa pra preservar métricas raw): cria NOVO ad irmão dentro do MESMO adset com creative novo. Ad antigo permanece intacto.
+- **`POST /api/campaigns/:id/duplicate-ad`**: orquestra. Aceita `{whatsappMessage, ctaLabel?}`. Monta `wa.me/...?text=encoded` via URLSearchParams. Detecta WA Business linkado — força `LEARN_MORE` se Page sem WA (proteção contra erro 1487891). Registra cronologia em `payload.duplicated_ads`.
+- **`PATCH /:id/status` skip-old-ads**: após cascade ativar, re-pausa todos `old_ad_id` do `duplicated_ads`. Garante que **só `metaPublishResult.ad_id` atual entrega** quando Rafa der play.
+- **Frontend `CreateAd.jsx` Step5Creative**: campo "Mensagem WhatsApp" entre destUrl e CTA, visível só quando `isWaMeLink`. Default dinâmico baseado no headline + botão "Restaurar padrão" + preview ao vivo do link Meta.
+
+### Estado final ao vivo (2026-05-01 ~01:35 GMT-3) — ambas paused
+- **437 Cravos**: pointer ad `120245845516620627` · `wa.me/...?text=...limpeza+de+pele` · cta_type=LEARN_MORE · 4 ads no adset (3 antigos serão re-pausados na ativação)
+- **436 Nano**: pointer ad `120245845456690627` · `wa.me/...?text=...nanopigmenta%C3%A7%C3%A3o` · cta_type=LEARN_MORE · 3 ads no adset (2 antigos serão re-pausados)
+
+### Verificação ctaLabel="WhatsApp" sem WA Business
+Testado ao vivo (criou ad 3 na 437): sistema retornou `cta_type: "LEARN_MORE"` silenciosamente (não quebrou). Botão visível pro user final = "Saiba mais" (LEARN_MORE).
+
+### Bug visível no painel
+- 436 tem 1 ad com encoding ruim (`nanopigmenta\xEF\xBF\xBDo`) por causa de UTF-8 quebrado no bash do Windows na 1ª tentativa. Marcado pra re-pause automático na ativação. Não rodará. **Fix aplicado:** posts subsequentes via `--data-binary @/tmp/file.json` com UTF-8 limpo.
+
+### Próximo (Rafa)
+1. Cadastrar WhatsApp na Page Facebook (Sobre → Informações) — destrava Click-to-WhatsApp formal (botão "Enviar mensagem" + WA verde + métrica = mensagens iniciadas)
+2. Quando Cris confirmar, rodar `/api/platforms/meta/diagnose-page` pra confirmar `can_run_click_to_whatsapp: true`
+3. Aguardar Meta aprovar os ads novos (effective_status PENDING_REVIEW → ACTIVE) — costuma <2h
+4. Rafa clica play no painel → cascade ativa só os ads atuais (skip-old-ads garante)
+
+### Commits
+- `271842f` feat(meta): duplicateAdInAdSet + endpoint /:id/duplicate-ad
+- `b0f866a` fix(meta): sanitiza object_story_spec ao clonar creative
+- `6870bfb` feat: campo Mensagem WhatsApp no CreateAd + skip-old-ads no cascade
+
+---
+
 ## Sessão 2026-04-30 madrugada — CASCADE PLAY/PAUSE/DELETE GARANTIDA (1 commit)
 
 ### Garantia end-to-end pra TODA campanha (atual e futura)
