@@ -396,6 +396,21 @@ function Layout() {
   const [bellOpen, setBellOpen]       = useState(false);
   const { unreadCount } = useAppState();
 
+  /* Saudação dinâmica conforme hora do dia + data formatada (PT-BR).
+     Usadas no greeting da topbar quando dark mode. */
+  function greeting() {
+    const h = new Date().getHours();
+    if (h < 12) return 'Bom dia';
+    if (h < 18) return 'Boa tarde';
+    return 'Boa noite';
+  }
+  function dateLabel() {
+    const dias = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+    const meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+    const d = new Date();
+    return `${dias[d.getDay()]}, ${String(d.getDate()).padStart(2, '0')} ${meses[d.getMonth()]} ${d.getFullYear()}`;
+  }
+
   useEffect(() => {
     const handler = () => setIsMobile(window.innerWidth <= 1024);
     window.addEventListener('resize', handler);
@@ -421,73 +436,87 @@ function Layout() {
         style={(isDark && !isMobile) ? { marginLeft: '252px' } : undefined}
       >
 
-        <div style={{
-          // Dark: topbar 100% transparente (a ilha-sidebar e o background tech do
-          // body ficam visíveis através dela). Light: mantém fundo sólido + borda
-          // que é o visual atual aprovado.
+        <div className={isDark ? 'topbar-grid' : ''} style={{
           background: isDark ? 'transparent' : 'var(--c-topbar-bg)',
-          borderBottom: isDark ? '1px solid transparent' : '1px solid var(--c-border)',
-          padding: '0 24px',
-          height: '60px',
-          display: 'flex',
+          borderBottom: isDark ? 'none' : '1px solid var(--c-border)',
+          padding: isDark ? undefined : '0 24px',
+          height: isDark ? undefined : '60px',
+          display: isDark ? undefined : 'flex',
           alignItems: 'center',
           gap: '16px',
           position: 'sticky',
           top: 0,
           zIndex: 50,
-          transition: 'background .25s ease, border-color .25s ease',
+          transition: 'background .25s ease, border-color .25s ease, height .25s ease',
           backdropFilter: 'none',
           WebkitBackdropFilter: 'none',
         }}>
 
-          {isMobile && (
-            <button
-              className="hamburger-btn"
-              onClick={() => setSidebarOpen(o => !o)}
-              style={{ border: '1.5px solid var(--c-border)', background: 'var(--c-surface)' }}
-            >
-              <HamburgerIcon />
-            </button>
-          )}
+          {/* Bloco esquerda: hamburger (mobile) + greeting (dark) */}
+          <div className={isDark ? 'topbar-left' : undefined} style={!isDark ? { display: 'flex', alignItems: 'center', gap: '12px' } : undefined}>
+            {isMobile && (
+              <button
+                className="hamburger-btn"
+                onClick={() => setSidebarOpen(o => !o)}
+                style={{ border: '1.5px solid var(--c-border)', background: 'var(--c-surface)' }}
+              >
+                <HamburgerIcon />
+              </button>
+            )}
+            {isDark && (
+              <div className="topbar-greeting">
+                <span className="hi">
+                  {greeting()}, Cris
+                  <span className="tag">PRO</span>
+                </span>
+                <span className="sub">
+                  Resumo das suas campanhas Meta · {dateLabel()}
+                </span>
+              </div>
+            )}
+          </div>
 
           <SearchBar />
 
-          <ThemeToggleButton />
+          {/* Bloco direita: theme + sino */}
+          <div className={isDark ? 'topbar-actions' : undefined} style={!isDark ? { display: 'flex', alignItems: 'center', gap: '10px' } : undefined}>
+            <ThemeToggleButton />
 
-          {/* Sino de notificações (aumentado) */}
-          <div style={{ position: 'relative', flexShrink: 0 }}>
-            <button
-              onClick={() => setBellOpen(o => !o)}
-              title="Notificações"
-              style={{
-                position: 'relative', cursor: 'pointer', color: 'var(--c-text-2)',
-                background: bellOpen ? 'var(--c-active-bg)' : 'var(--c-surface)',
-                border: '1.5px solid var(--c-border)',
-                width: '40px', height: '40px', borderRadius: '12px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'all .15s',
-              }}
-            >
-              <span className={unreadCount > 0 && !bellOpen ? 'bell-shake' : ''} style={{ display: 'flex' }}>
-                <BellIcon />
-              </span>
-              {unreadCount > 0 && (
-                <span style={{
-                  position: 'absolute', top: '-4px', right: '-4px',
-                  minWidth: '18px', height: '18px',
-                  background: '#EF4444', color: '#fff',
-                  borderRadius: '9px', padding: '0 5px',
-                  fontSize: '10px', fontWeight: 700,
+            {/* Sino de notificações */}
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <button
+                onClick={() => setBellOpen(o => !o)}
+                title="Notificações"
+                style={{
+                  position: 'relative', cursor: 'pointer', color: 'var(--c-text-2)',
+                  background: bellOpen ? 'var(--c-active-bg)' : 'var(--c-surface)',
+                  border: '1.5px solid var(--c-border)',
+                  width: '40px', height: '40px', borderRadius: '12px',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  border: '2px solid var(--c-topbar-bg)',
-                  lineHeight: 1,
-                }}>
-                  {unreadCount > 9 ? '9+' : unreadCount}
+                  transition: 'all .15s',
+                }}
+              >
+                <span className={unreadCount > 0 && !bellOpen ? 'bell-shake' : ''} style={{ display: 'flex' }}>
+                  <BellIcon />
                 </span>
-              )}
-            </button>
+                {unreadCount > 0 && (
+                  <span style={{
+                    position: 'absolute', top: '-4px', right: '-4px',
+                    minWidth: '18px', height: '18px',
+                    background: '#EF4444', color: '#fff',
+                    borderRadius: '9px', padding: '0 5px',
+                    fontSize: '10px', fontWeight: 700,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    border: '2px solid var(--c-topbar-bg)',
+                    lineHeight: 1,
+                  }}>
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
 
-            <NotificationDropdown open={bellOpen} onClose={() => setBellOpen(false)} />
+              <NotificationDropdown open={bellOpen} onClose={() => setBellOpen(false)} />
+            </div>
           </div>
         </div>
 
