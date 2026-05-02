@@ -96,17 +96,16 @@ async function syncPlatform(platform) {
        quando ele está em 0 e o padrão wa.me/ está presente. */
     /* Proxy correto pra "abriu wa.me" é inline_link_clicks (link_clicks),
        não clicks total (que inclui profile click, like, save). Fallback
-       pra c.clicks só se Meta não retornar link_clicks. */
+       pra c.clicks só se Meta não retornar link_clicks.
+
+       Importante: pra wa.me/ SEM WA Business, sempre preferimos linkClicksProxy
+       mesmo se Meta retornar c.conversions > 0 (ruído de outro action_type
+       agregado, não mensagem real). Quando Cris cadastrar WA Business, este
+       branch precisa rever — aí c.conversions vira mensagem real. */
     const linkClicksProxy = c.link_clicks || c.clicks;
-    let mappedConversions = c.conversions;
-    const wasMappedFromClicks = (
-      (!c.conversions || c.conversions === 0)
-      && linkClicksProxy > 0
-      && isMessagesViaWaLink(c.objective, prevPayload)
-    );
-    if (wasMappedFromClicks) {
-      mappedConversions = linkClicksProxy;
-    }
+    const isWaMeMapping = isMessagesViaWaLink(c.objective, prevPayload);
+    const wasMappedFromClicks = (isWaMeMapping && linkClicksProxy > 0);
+    let mappedConversions = wasMappedFromClicks ? linkClicksProxy : c.conversions;
 
     const payload = {
       ...prevPayload, /* preserva destUrl, locations, metaPublishResult, etc */
@@ -350,18 +349,17 @@ async function syncPlatform(platform) {
         const safeFloat = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
         const safeInt   = (v) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : 0; };
 
-        /* Mesma regra do loop de campaigns acima: para campanhas messages
-           via wa.me/, conversions = link_clicks (inline_link_clicks no Meta
-           = abriu wa.me na prática). Prefere link_clicks; fallback pra clicks
-           total se insight não vier com link_clicks. Mantém raw original —
-           só sobrescreve o valor agregado que o Dashboard consome. */
+        /* Mesma regra do loop de campaigns acima: para wa.me/ SEM WA Business,
+           conversions = link_clicks (inline_link_clicks no Meta = abriu wa.me
+           na prática). Prefere link_clicks; fallback pra clicks total se
+           insight não vier com link_clicks. Sempre sobrescreve quando wa.me/
+           — qualquer conversion vinda do Meta sem WA Business é ruído. */
         const rowClicks = safeInt(row.clicks);
         const rowLinkClicks = safeInt(row.inline_link_clicks);
         const linkClicksProxy = rowLinkClicks || rowClicks;
         const objectiveForInsight = campPayload?.objective || row.objective;
         if (
-          conversions === 0
-          && linkClicksProxy > 0
+          linkClicksProxy > 0
           && isMessagesViaWaLink(objectiveForInsight, campPayload)
         ) {
           conversions = linkClicksProxy;

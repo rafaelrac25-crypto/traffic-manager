@@ -776,16 +776,24 @@ router.post('/sync-meta-status', async (req, res) => {
       /* Mesma lógica de mapping do syncPlatform completo — sem isso, o polling
          90s sobrescreve o valor mapeado com 0 (Meta não retorna conversions
          pra OUTCOME_TRAFFIC + wa.me sem WhatsApp Business linkado).
-         Proxy correto = link_clicks (inline), não clicks total. */
+         Proxy correto = link_clicks (inline), não clicks total.
+
+         Importante: pra campanha wa.me/ SEM WA Business, sempre preferimos
+         linkClicksProxy mesmo se Meta retornar rConversions > 0. Sem o
+         tracking formal, qualquer conversion > 0 vinda do Meta é ruído de
+         outro action_type (lead/registration aleatório), não mensagem real.
+         Quando Cris cadastrar WA Business, este branch precisa rever — aí
+         rConversions vira mensagens reais e deveria ser preferido. */
       const rConversions = Number(r.conversions) || 0;
       const linkClicksProxy = Number(r.link_clicks) || Number(r.clicks) || 0;
+      const isWaMeMapping = isMessagesViaWaLink(r.objective, prevPayload);
       let nextConversions;
-      if (rConversions === 0 && linkClicksProxy > 0 && isMessagesViaWaLink(r.objective, prevPayload)) {
+      if (isWaMeMapping && linkClicksProxy > 0) {
         nextConversions = keepMax(linkClicksProxy, local.conversions);
       } else {
         nextConversions = keepMax(rConversions, local.conversions);
       }
-      const wasMappedFromClicks = (rConversions === 0 && linkClicksProxy > 0 && isMessagesViaWaLink(r.objective, prevPayload));
+      const wasMappedFromClicks = (isWaMeMapping && linkClicksProxy > 0);
       const nextPayload = {
         ...prevPayload,
         reach: r.reach ?? prevPayload.reach,
@@ -872,10 +880,11 @@ router.post('/sync-meta-status', async (req, res) => {
         platform_campaign_id: local.platform_campaign_id,
         status: r.status,
         effective_status: r.effective_status,
-        spent: r.spent, clicks: r.clicks, link_clicks: r.link_clicks,
-        impressions: r.impressions, conversions: r.conversions,
+        spent: nextSpent, clicks: nextClicks, link_clicks: nextLinkClicks,
+        impressions: nextImpressions, conversions: nextConversions,
         reach: r.reach, ctr: r.ctr, cpc: r.cpc, cpm: r.cpm, frequency: r.frequency,
         ads: r.ads || [],
+        conversions_mapped_from_clicks: wasMappedFromClicks || undefined,
       });
     }
     res.json({ updated });
