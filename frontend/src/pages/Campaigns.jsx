@@ -200,14 +200,18 @@ function AdPreviewModal({ ad, onClose, onDuplicate, onEdit }) {
   };
 
   const metrics = [
-    { k: 'Impressões',      v: fmtInt(ad.impressions) },
-    { k: 'Alcance',         v: fmtInt(ad.reach) },
-    { k: 'Cliques',         v: fmtInt(ad.clicks) },
-    { k: 'CTR',             v: fmtPct(ad.ctr) },
-    { k: 'Conversões',      v: fmtInt(ad.conversions ?? ad.results) },
-    { k: 'CPC',             v: fmtBRL(ad.cpc) },
-    { k: 'CPM',             v: fmtBRL(ad.cpm) },
-    { k: 'Custo/Resultado', v: fmtBRL(ad.costPerResult) },
+    { k: 'Impressões',         v: fmtInt(ad.impressions) },
+    { k: 'Alcance',            v: fmtInt(ad.reach) },
+    { k: 'Cliques',            v: fmtInt(ad.clicks) },
+    { k: 'CTR',                v: fmtPct(ad.ctr) },
+    { k: 'Conversões',         v: fmtInt(ad.conversions ?? ad.results) },
+    { k: 'CPC',                v: fmtBRL(ad.cpc) },
+    { k: 'CPM',                v: fmtBRL(ad.cpm) },
+    { k: 'Custo/Resultado',    v: fmtBRL(ad.costPerResult) },
+    ...(ad.messagesStarted != null ? [
+      { k: 'Mensagens iniciadas', v: fmtInt(ad.messagesStarted) },
+      { k: 'Custo/Mensagem',      v: fmtBRL(ad.costPerMessage) },
+    ] : []),
   ];
 
   return (

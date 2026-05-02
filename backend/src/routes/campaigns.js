@@ -58,6 +58,28 @@ function rowToAd(row) {
       out.costPerResult = Number((spent / resultsValue).toFixed(2));
     }
   }
+
+  /* Métrica adicional pra campanhas de Mensagens (link wa.me, IG Direct):
+     mostra mensagens iniciadas mesmo quando o objective é OUTCOME_TRAFFIC
+     mas a Cris está usando link de WhatsApp/messaging.
+
+     Heurística: se há `conversions > 0` E destUrl aponta pra wa.me/whatsapp,
+     considera "mensagens iniciadas". Isso permite ver os 2 lados (cliques
+     + mensagens) na mesma campanha de tráfego com link WA. */
+  const conv = Number(out.conversions);
+  if (Number.isFinite(conv) && conv > 0) {
+    const link = String(out.destUrl || out?.creative?.object_story_spec?.link_data?.link || out?.creative?.object_story_spec?.video_data?.call_to_action?.value?.link || '');
+    const isMessagingLink = /wa\.me\/|api\.whatsapp\.com|whatsapp\.com\/|m\.me\/|instagram\.com\/direct/i.test(link);
+    /* Se link é messaging OU objective é Mensagens, exibe a métrica */
+    const isMessagingObjective = objective === 'OUTCOME_LEADS' || objective === 'OUTCOME_ENGAGEMENT';
+    if (isMessagingLink || isMessagingObjective) {
+      out.messagesStarted = conv;
+      if (Number.isFinite(spent) && spent > 0) {
+        out.costPerMessage = Number((spent / conv).toFixed(2));
+      }
+    }
+  }
+
   return out;
 }
 
