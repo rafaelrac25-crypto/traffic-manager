@@ -1,3 +1,7 @@
+/* DEPRECATED — auth removida do projeto (sistema é uso interno, sem login).
+   Tabela mantida pra evitar erro em DBs já criados, mas NÃO é populada/lida.
+   TODO: dropar em migration futura após confirmar que rota auth.js não vai voltar.
+   Se reativar auth, REVISAR password_hash (bcrypt cost atual pode estar desatualizado). */
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   username VARCHAR(100) UNIQUE NOT NULL,
