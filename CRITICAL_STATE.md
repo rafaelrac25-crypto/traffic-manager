@@ -639,3 +639,73 @@ mostra qual pass venceu (720p/480p/360p).
 ### Pendência
 - Rafa testar /campanhas-v2 no painel ao vivo
 - Validar fluxo completo de duplicar conjunto + criar ad novo no Meta (precisa autorização do Rafa pra rodar live)
+
+---
+
+## Sessão 2026-05-01 noite — STATUS INDIVIDUAL + ADVANTAGE+ + A/B TEST (1 commit)
+
+**Commit:** `c220ebe` feat(v2): play/pause individual + Advantage+ + Teste A/B
+
+### Implementação completa em 3 frentes
+
+**1. Status individual de conjunto e anúncio**
+- `metaWrite.updateAdSetStatus(creds, adsetId, status)`
+- `metaWrite.updateAdStatus(creds, adId, status)`
+- `PATCH /api/campaigns/adsets/:adsetId/status` (avisa se ancestral PAUSED)
+- `PATCH /api/campaigns/ads/:adId/status` (avisa CAMPAIGN/ADSET PAUSED)
+- UI: botão verde ▶ / cinza ⏸ em cada AdSetCard e AdCard
+- Confirmação antes de PAUSAR (window.confirm). Ativar é direto.
+- Optimistic update + rollback se Meta recusar (busyIds previne double-click)
+
+**2. Toggle Advantage+ Público**
+- `metaWrite.setAdvantageAudience(creds, adsetId, enabled)` — merge correto do targeting
+- `PATCH /api/campaigns/:id/adsets/:adsetId/advantage-audience` body {enabled}
+- UI: switch dourado no card do conjunto. Default OFF (regra Joinville mantida).
+- Confirmação destacada ao LIGAR: "Pode entregar fora dos bairros + reseta aprendizado"
+- Quando OFF, força `targeting_relaxation_types: { lookalike: 0, custom_audience: 0 }`
+
+**3. Teste A/B oficial Meta (Split Test)**
+- `metaWrite.createABTest` via POST /act_X/ad_studies (type=SPLIT_TEST)
+- Cells com `treatment_percentage` somando 100 e adsets array
+- Validação: duração 4-30 dias (Meta exige mínimo 4)
+- Cria cell B duplicando o adset base via duplicateAdSet (+ overrides conforme variável)
+- `metaWrite.getABTestResults`, `listABTests`, `stopABTest`
+- Endpoints:
+  - `POST /api/campaigns/:id/ab-test` — pré-condição: campanha ACTIVE
+  - `GET /api/campaigns/:id/ab-tests` — lista com status ao vivo do Meta
+  - `GET /api/campaigns/ab-tests/:studyId` — detalhes
+  - `POST /api/campaigns/ab-tests/:studyId/stop` — encerra (POST end_time=agora)
+- UI: botão "🧪 Criar teste A/B" no header da campanha
+- Modal CreateABTestModal:
+  - Variável: público / posicionamento / criativo
+  - Conjunto base (dropdown adsets da campanha)
+  - Override conforme variável (idade / placement / creative-later)
+  - Slider duração 4-30 dias
+  - Slider divisão 10-90% (default 50/50)
+  - Bloqueia se campanha não está ACTIVE
+- Card ABTestCard com progress bar dia X de Y + botão "Encerrar antes"
+
+### UX leigo (cuidados)
+- Confirmações em pt-BR explicando consequência antes de pausar/ligar Advantage+
+- Tooltip em todos os botões
+- Toast verde sucesso, vermelho erro (6s)
+- busy state em todos os botões durante request
+- Aviso quando ativar ad mas campanha/adset estão pausados ("não vai entregar até...")
+
+### Validação backend (sintaxe + endpoint contracts)
+- `node --check` em metaWrite.js + routes/campaigns.js → OK
+- Build frontend OK (1.15s)
+- Endpoints novos respondem 400 com erro detalhado quando body incompleto
+- 437/436 NÃO foram tocadas — apenas leitura
+
+### Riscos antecipados e tratados
+- **Cascade play campanha** vai ativar adsets/ads novos junto: documentado, default PAUSED minimiza
+- **A/B test em campanha pausada**: bloqueado no backend (retorna 400)
+- **Mudança targeting reseta aprendizado**: Advantage+ avisa explicitamente
+- **Double-click**: busyIds previne
+- **Rollback**: optimistic update reverte se Meta recusar
+
+### Pendência (manual com autorização)
+- Rafa testar play/pause em adset/ad pelo painel
+- Rafa criar 1 teste A/B real em campanha futura (não recomendado em 437/436 ativas)
+- Backlog: editor direto de criativo (decisão atual: duplicar conjunto é o caminho)
