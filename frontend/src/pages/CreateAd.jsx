@@ -3796,7 +3796,7 @@ export default function CreateAd() {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
-            {fixMode ? 'Corrigir anúncio reprovado' : 'Criar anúncio'}
+            {fixMode ? 'Corrigir anúncio reprovado' : 'Nova campanha'}
           </h1>
           <p style={{ fontSize: '13px', color: 'var(--c-text-3)' }}>
             {fixMode

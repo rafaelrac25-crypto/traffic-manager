@@ -28,7 +28,7 @@ const SEARCH_MAP = [
   { terms: ['investimento','saldo','fundos','cartão','cartao','pix','pagamento','recarga','orçamento','orcamento','pixel','rastreamento','conversão','conversao'], to: '/investimento', label: 'Investimento' },
   { terms: ['público','publico','públicos','publicos','audiência','audiencia','segmentação','segmentacao'], to: '/publicos', label: 'Públicos' },
   { terms: ['criativo','criativos','biblioteca','texto','título','titulo','copy'], to: '/criativos', label: 'Criativos' },
-  { terms: ['criar','novo','nova campanha','meta','instagram','google'], to: '/criar-anuncio', label: 'Criar anúncio' },
+  { terms: ['criar','novo','nova campanha','meta','instagram','google','nova','campanha nova'], to: '/criar-anuncio', label: 'Nova campanha' },
   { terms: ['histórico','historico','desfazer','restaurar','log','ações'], to: '/historico', label: 'Histórico' },
 ];
 

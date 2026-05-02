@@ -2431,6 +2431,144 @@ router.get('/ab-tests/:studyId', async (req, res) => {
   }
 });
 
+/* DELETE conjunto isolado — Meta cascateia ads filhos junto. */
+router.delete('/adsets/:adsetId', async (req, res) => {
+  const { adsetId } = req.params;
+  try {
+    const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+    const creds = credResult.rows[0];
+    if (!creds) return res.status(400).json({ error: 'Meta não conectado' });
+
+    const { deleteAdSet } = require('../services/metaWrite');
+    try {
+      await deleteAdSet(creds, adsetId);
+    } catch (e) {
+      console.error('[delete-adset] Meta erro:', e.message, e.meta);
+      return res.status(502).json({ error: `Meta recusou: ${e.message}`, meta_error: e.meta || null });
+    }
+
+    await log('delete_adset', 'adset', null, `Conjunto ${adsetId} excluído (cascata em ads filhos)`, { adset_id: adsetId });
+    res.json({ ok: true, adset_id: adsetId, note: 'Conjunto e seus anúncios filhos foram excluídos do Meta sem deixar lixo.' });
+  } catch (err) {
+    console.error('[delete-adset]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* DELETE anúncio isolado — não cascateia (creative pode ser reusado). */
+router.delete('/ads/:adId', async (req, res) => {
+  const { adId } = req.params;
+  try {
+    const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+    const creds = credResult.rows[0];
+    if (!creds) return res.status(400).json({ error: 'Meta não conectado' });
+
+    const { deleteAd } = require('../services/metaWrite');
+    try {
+      await deleteAd(creds, adId);
+    } catch (e) {
+      console.error('[delete-ad] Meta erro:', e.message, e.meta);
+      return res.status(502).json({ error: `Meta recusou: ${e.message}`, meta_error: e.meta || null });
+    }
+
+    await log('delete_ad', 'ad', null, `Anúncio ${adId} excluído`, { ad_id: adId });
+    res.json({ ok: true, ad_id: adId, note: 'Anúncio excluído do Meta.' });
+  } catch (err) {
+    console.error('[delete-ad]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* Finaliza A/B test: decide vencedor + auto-pausa perdedor (se autoPauseLoser).
+   Idempotente: se já foi finalizado uma vez (payload.ab_tests[i].finalized=true),
+   retorna o resultado salvo sem rodar de novo. */
+router.post('/:id/ab-tests/:studyId/finalize', async (req, res) => {
+  const { id, studyId } = req.params;
+  const { autoPauseLoser = true } = req.body || {};
+
+  try {
+    const result = await db.query('SELECT * FROM campaigns WHERE id = ?', [id]);
+    const camp = result.rows[0];
+    if (!camp) return res.status(404).json({ error: 'Campanha não encontrada' });
+
+    let payload = camp.payload;
+    if (typeof payload === 'string') {
+      try { payload = JSON.parse(payload); } catch { payload = null; }
+    }
+    const tests = payload?.ab_tests || [];
+    const idx = tests.findIndex(t => t.study_id === studyId);
+    if (idx < 0) return res.status(404).json({ error: 'Teste não encontrado nesta campanha' });
+    const test = tests[idx];
+
+    /* Idempotente */
+    if (test.finalized) {
+      return res.json({ ok: true, already_finalized: true, result: test.finalize_result || null });
+    }
+
+    /* Só finaliza se end_time já passou */
+    const nowSec = Math.floor(Date.now() / 1000);
+    if (test.end_time > nowSec) {
+      return res.status(400).json({
+        error: 'Teste ainda em andamento — finalize só roda depois do end_time',
+        end_time: test.end_time,
+        now: nowSec,
+      });
+    }
+
+    const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+    const creds = credResult.rows[0];
+    if (!creds) return res.status(400).json({ error: 'Meta não conectado' });
+
+    const { finalizeABTest } = require('../services/metaWrite');
+    let finalizeResult;
+    try {
+      finalizeResult = await finalizeABTest(creds, { studyId, autoPauseLoser });
+    } catch (e) {
+      console.error('[ab-test-finalize] erro:', e.message, e.meta);
+      return res.status(502).json({ error: `Falha: ${e.message}`, meta_error: e.meta || null });
+    }
+
+    /* Persiste resultado + finalized=true */
+    const updatedTests = [...tests];
+    updatedTests[idx] = {
+      ...test,
+      finalized: true,
+      finalized_at: new Date().toISOString(),
+      finalize_result: finalizeResult,
+    };
+    const updatedPayload = { ...(payload || {}), ab_tests: updatedTests };
+    await db.query('UPDATE campaigns SET payload = ?, updated_at = datetime(\'now\') WHERE id = ?',
+      [JSON.stringify(updatedPayload), id]);
+
+    /* Cria notificação no banco pra próximo sync do frontend exibir no sino */
+    let notifTitle, notifMsg;
+    if (finalizeResult.draw) {
+      notifTitle = `Teste A/B "${test.name}" terminou em empate`;
+      notifMsg = `Diferença entre os 2 conjuntos foi menor que 5%. Nenhum foi pausado.`;
+    } else if (finalizeResult.paused_loser) {
+      notifTitle = `Teste A/B "${test.name}" terminou — vencedor escolhido`;
+      notifMsg = `Vencedor: "${finalizeResult.winner_cell}". Perdedor pausado automaticamente (${finalizeResult.diff_pct}% melhor).`;
+    } else {
+      notifTitle = `Teste A/B "${test.name}" terminou`;
+      notifMsg = `Vencedor: "${finalizeResult.winner_cell}". Diferença: ${finalizeResult.diff_pct}%.`;
+    }
+
+    await log('ab_test_finalized', 'campaign', parseInt(id), notifTitle, {
+      study_id: studyId, finalize_result: finalizeResult,
+    });
+
+    res.json({
+      ok: true,
+      already_finalized: false,
+      result: finalizeResult,
+      notification: { title: notifTitle, message: notifMsg },
+    });
+  } catch (err) {
+    console.error('[ab-test-finalize]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 /* Encerra A/B test antes do tempo. */
 router.post('/ab-tests/:studyId/stop', async (req, res) => {
   try {

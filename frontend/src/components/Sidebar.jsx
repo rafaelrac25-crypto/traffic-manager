@@ -101,7 +101,7 @@ function Logo({ isDark, onClick }) {
 
 const PRIMARY_NAV = [
   { to: '/',              label: 'Dashboard',     Icon: IconDashboard },
-  { to: '/criar-anuncio', label: 'Criar anúncio', Icon: IconCreate },
+  { to: '/criar-anuncio', label: 'Nova campanha', Icon: IconCreate },
 ];
 
 const NAV = [

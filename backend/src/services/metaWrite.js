@@ -1141,11 +1141,132 @@ async function stopABTest(creds, studyId) {
   return request('POST', `/${studyId}`, { end_time: nowSec }, { token });
 }
 
+/* DELETE adset isolado — Meta cascateia ads filhos do adset junto.
+   Creative associado fica órfão (não deleta — pode estar reusado por outros). */
+async function deleteAdSet(creds, platformAdSetId) {
+  const token = getToken(creds);
+  if (!platformAdSetId) throw new Error('deleteAdSet: platformAdSetId obrigatório');
+  return request('DELETE', `/${platformAdSetId}`, {}, { token });
+}
+
+/* DELETE ad isolado — não cascateia (creative pode ser reusado). */
+async function deleteAd(creds, platformAdId) {
+  const token = getToken(creds);
+  if (!platformAdId) throw new Error('deleteAd: platformAdId obrigatório');
+  return request('DELETE', `/${platformAdId}`, {}, { token });
+}
+
+/* Finaliza A/B test:
+   - Lê insights de cada cell (adset)
+   - Determina vencedor por menor CPC (ou menor cost_per_messaging_conversation_started se messaging)
+   - Se diferença < 5%, declara empate (não pausa ninguém)
+   - Senão, pausa o adset perdedor (se autoPauseLoser=true)
+
+   Retorna { winner_adset_id, loser_adset_id, metrics, draw, paused_loser }. */
+async function finalizeABTest(creds, { studyId, autoPauseLoser = true }) {
+  const token = getToken(creds);
+  if (!studyId) throw new Error('finalizeABTest: studyId obrigatório');
+  const { metaGet } = require('./metaHttp');
+
+  const study = await metaGet(`/${studyId}`, {
+    fields: 'id,name,start_time,end_time,cells'
+  }, { token });
+
+  const cells = Array.isArray(study?.cells?.data) ? study.cells.data
+              : Array.isArray(study?.cells) ? study.cells : [];
+  if (cells.length < 2) {
+    throw new Error('finalizeABTest: estudo sem cells válidos');
+  }
+
+  /* Pega adset_ids das cells */
+  const cellsAdSets = cells.map(c => ({
+    name: c.name || 'Cell',
+    adset_ids: Array.isArray(c.adsets) ? c.adsets : (c.adsets?.data?.map(a => a.id) || []),
+  }));
+
+  /* Busca insights de cada adset (1ª da cell — assumindo 1 adset por cell na nossa criação) */
+  const insightFields = 'spend,impressions,reach,clicks,inline_link_clicks,actions,cost_per_action_type,ctr,cpc';
+  async function getMetricsForCell(cellEntry) {
+    const adsetId = cellEntry.adset_ids[0];
+    if (!adsetId) return null;
+    try {
+      const r = await metaGet(`/${adsetId}/insights`, {
+        fields: insightFields,
+        date_preset: 'maximum',
+      }, { token });
+      const d = r?.data?.[0] || {};
+      const spend = Number(d.spend || 0);
+      const linkClicks = Number(d.inline_link_clicks || 0);
+      const cpc = Number(d.cpc || 0);
+      const ctr = Number(d.ctr || 0);
+      /* Custo por mensagem iniciada (objetivo da Cris) */
+      const msgAction = (d.cost_per_action_type || []).find(a =>
+        a.action_type === 'onsite_conversion.messaging_conversation_started_7d'
+        || a.action_type === 'onsite_conversion.total_messaging_connection'
+      );
+      const costPerMessage = msgAction ? Number(msgAction.value) : null;
+      /* Score: prioridade cost_per_message (se houver) → CPC → fallback infinity */
+      const score = costPerMessage != null ? costPerMessage : (cpc > 0 ? cpc : Infinity);
+      return { adset_id: adsetId, cell_name: cellEntry.name, spend, link_clicks: linkClicks, cpc, ctr, cost_per_message: costPerMessage, score };
+    } catch (e) {
+      console.warn('[finalizeABTest] insights falhou pro adset', adsetId, e.message);
+      return { adset_id: adsetId, cell_name: cellEntry.name, error: e.message, score: Infinity };
+    }
+  }
+
+  const metrics = await Promise.all(cellsAdSets.map(getMetricsForCell));
+  const valid = metrics.filter(m => m && Number.isFinite(m.score));
+  if (valid.length < 2) {
+    return { study_id: studyId, draw: true, paused_loser: false, metrics, reason: 'sem dados suficientes pros 2 cells' };
+  }
+  valid.sort((a, b) => a.score - b.score); /* menor score = melhor (CPC ou custo/msg menor) */
+  const winner = valid[0];
+  const loser = valid[1];
+
+  /* Empate: diferença < 5% */
+  const diffPct = ((loser.score - winner.score) / winner.score) * 100;
+  if (diffPct < 5) {
+    return {
+      study_id: studyId,
+      winner_adset_id: winner.adset_id,
+      loser_adset_id: loser.adset_id,
+      metrics,
+      draw: true,
+      paused_loser: false,
+      diff_pct: Number(diffPct.toFixed(2)),
+      reason: 'empate (diferença < 5%)',
+    };
+  }
+
+  let pausedLoser = false;
+  if (autoPauseLoser) {
+    try {
+      await updateAdSetStatus(creds, loser.adset_id, 'paused');
+      pausedLoser = true;
+    } catch (e) {
+      console.warn('[finalizeABTest] falha ao pausar loser', loser.adset_id, e.message);
+    }
+  }
+
+  return {
+    study_id: studyId,
+    winner_adset_id: winner.adset_id,
+    winner_cell: winner.cell_name,
+    loser_adset_id: loser.adset_id,
+    loser_cell: loser.cell_name,
+    metrics,
+    draw: false,
+    paused_loser: pausedLoser,
+    diff_pct: Number(diffPct.toFixed(2)),
+  };
+}
+
 module.exports = {
   updateCampaignStatus, updateCampaignMeta, updateAdSetMeta,
   updateAdSetStatus, updateAdStatus, setAdvantageAudience,
-  deleteCampaign, replaceCreative, duplicateAdInAdSet, duplicateAdSet,
+  deleteCampaign, deleteAdSet, deleteAd,
+  replaceCreative, duplicateAdInAdSet, duplicateAdSet,
   createAdInExistingAdSet, publishCampaign,
-  createABTest, getABTestResults, listABTests, stopABTest,
+  createABTest, getABTestResults, listABTests, stopABTest, finalizeABTest,
   request, getToken,
 };

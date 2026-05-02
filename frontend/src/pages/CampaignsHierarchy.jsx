@@ -721,13 +721,25 @@ function AdSetCard({ adset, campaignLocalId, onAction, onSelect, selected, onSta
           + Anúncio novo
         </button>
         <MetaLinkButton adsetId={adset.id} label="Abrir no Meta" />
+        <button
+          onClick={e => { e.stopPropagation(); onAction('delete', adset); }}
+          style={{
+            background: 'transparent', border: '1px solid #FCA5A5',
+            color: '#B91C1C', borderRadius: '7px',
+            padding: '6px 10px', fontSize: '11.5px', fontWeight: 600,
+            cursor: 'pointer',
+          }}
+          title="Excluir este conjunto e seus anúncios"
+        >
+          🗑️ Excluir
+        </button>
       </div>
     </div>
   );
 }
 
 /* ─── Card de Anúncio (Ad) ─── */
-function AdCard({ ad, onStatusChange, busy }) {
+function AdCard({ ad, onStatusChange, onDelete, busy }) {
   const status = statusLabel(ad.effective_status || ad.status);
   return (
     <div style={{
@@ -750,6 +762,17 @@ function AdCard({ ad, onStatusChange, busy }) {
           <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)' }}>ID: {ad.id}</div>
         </div>
         <MetaLinkButton adId={ad.id} label="Meta" />
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete?.(ad); }}
+          disabled={busy}
+          title="Excluir este anúncio"
+          style={{
+            background: 'transparent', border: '1px solid #FCA5A5',
+            color: '#B91C1C', borderRadius: '6px',
+            padding: '4px 8px', fontSize: '11px', fontWeight: 600,
+            cursor: 'pointer', opacity: busy ? 0.5 : 1,
+          }}
+        >🗑️</button>
         <span style={{
           fontSize: '10px', fontWeight: 700, color: '#fff',
           background: status.color,
@@ -769,6 +792,7 @@ function CreateABTestModal({ open, onClose, campaign, hierarchy, onSaved }) {
   const [variantAgeMin, setVariantAgeMin] = useState('');
   const [variantAgeMax, setVariantAgeMax] = useState('');
   const [variantPlacements, setVariantPlacements] = useState('reels-only');
+  const [autoPauseLoser, setAutoPauseLoser] = useState(true);
   const [loading, setLoading]         = useState(false);
   const [errMsg, setErrMsg]           = useState(null);
 
@@ -779,6 +803,7 @@ function CreateABTestModal({ open, onClose, campaign, hierarchy, onSaved }) {
     setVariable('audience');
     setDuration(7);
     setSplitA(50);
+    setAutoPauseLoser(true);
   }, [open, hierarchy]);
 
   const campaignActive = hierarchy?.campaign?.status === 'ACTIVE';
@@ -814,6 +839,7 @@ function CreateABTestModal({ open, onClose, campaign, hierarchy, onSaved }) {
           durationDays: Number(duration),
           splitPercent: Number(splitA),
           variantOverrides,
+          autoPauseLoser,
         }),
       });
       const data = await r.json().catch(() => ({}));
@@ -954,6 +980,32 @@ function CreateABTestModal({ open, onClose, campaign, hierarchy, onSaved }) {
           />
         </Field>
 
+        <label
+          style={{
+            display: 'flex', alignItems: 'flex-start', gap: '10px',
+            padding: '10px 12px',
+            background: autoPauseLoser ? '#F0FDF4' : 'var(--c-surface)',
+            border: `1px solid ${autoPauseLoser ? '#86EFAC' : 'var(--c-border-lt)'}`,
+            borderRadius: '10px', cursor: 'pointer',
+            marginBottom: '12px',
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={autoPauseLoser}
+            onChange={(e) => setAutoPauseLoser(e.target.checked)}
+            style={{ marginTop: '2px', flexShrink: 0, accentColor: '#15803D' }}
+          />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '12.5px', fontWeight: 700, color: autoPauseLoser ? '#15803D' : 'var(--c-text-2)' }}>
+              Pausar o perdedor automaticamente quando o teste terminar
+            </div>
+            <div style={{ fontSize: '11px', color: autoPauseLoser ? '#166534' : 'var(--c-text-4)', marginTop: '3px', lineHeight: 1.5 }}>
+              No fim do teste, o sistema compara as métricas (custo por mensagem ou CPC), pausa o conjunto pior e te avisa no sino. Se diferença for menor que 5%, considera empate e não pausa nenhum.
+            </div>
+          </div>
+        </label>
+
         {errMsg && <Banner kind="reset" title="Erro">{errMsg}</Banner>}
       </div>
     </Modal>
@@ -1071,7 +1123,7 @@ function CampaignTile({ camp, selected, onSelect }) {
    Página principal
    ============================================================ */
 export default function CampaignsHierarchy() {
-  const { ads } = useAppState();
+  const { ads, addNotification } = useAppState();
   const [selectedCamp, setSelectedCamp] = useState(null);
   const [hierarchy, setHierarchy]       = useState(null);
   const [loadingHier, setLoadingHier]   = useState(false);
@@ -1134,6 +1186,40 @@ export default function CampaignsHierarchy() {
     if (kind === 'duplicate') setDuplicateModal({ open: true, adset });
     else if (kind === 'newAd') setNewAdModal({ open: true, adset });
     else if (kind === 'budget') setBudgetModal({ open: true, level: 'adset', target: adset, adsetId: adset.id });
+    else if (kind === 'delete') handleDeleteAdSet(adset);
+  }
+
+  async function handleDeleteAdSet(adset) {
+    const adsCount = adset.ads?.length || 0;
+    const msg = `EXCLUIR conjunto "${adset.name}"?\n\nIsso vai apagar TAMBÉM ${adsCount} anúncio(s) dentro dele, sem volta.\n\nDigite "EXCLUIR" pra confirmar.`;
+    const confirm1 = window.prompt(msg);
+    if (confirm1 !== 'EXCLUIR') return;
+    markBusy(adset.id, true);
+    try {
+      const r = await fetch(`/api/campaigns/adsets/${adset.id}`, { method: 'DELETE' });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+      handleSaved({ note: data.note || 'Conjunto excluído' });
+    } catch (e) {
+      showError(`Falha ao excluir conjunto: ${e.message}`);
+    } finally {
+      markBusy(adset.id, false);
+    }
+  }
+  async function handleDeleteAd(ad) {
+    const ok = window.confirm(`Excluir o anúncio "${ad.name}"?\n\nVai apagar do Meta sem volta.`);
+    if (!ok) return;
+    markBusy(ad.id, true);
+    try {
+      const r = await fetch(`/api/campaigns/ads/${ad.id}`, { method: 'DELETE' });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+      handleSaved({ note: data.note || 'Anúncio excluído' });
+    } catch (e) {
+      showError(`Falha ao excluir anúncio: ${e.message}`);
+    } finally {
+      markBusy(ad.id, false);
+    }
   }
   function handleSaved(msg) {
     setToast(msg);
@@ -1223,12 +1309,43 @@ export default function CampaignsHierarchy() {
     try {
       const r = await fetch(`/api/campaigns/${campLocalId}/ab-tests`);
       const data = await r.json().catch(() => ({}));
-      if (r.ok) setABTests(data?.tests || []);
+      if (r.ok) {
+        const tests = data?.tests || [];
+        setABTests(tests);
+        /* Auto-finalize: pra cada teste com end_time vencido e ainda não finalizado, dispara finalize */
+        const nowSec = Math.floor(Date.now() / 1000);
+        const expired = tests.filter(t => !t.finalized && t.end_time <= nowSec);
+        for (const t of expired) {
+          try {
+            const fr = await fetch(`/api/campaigns/${campLocalId}/ab-tests/${t.study_id}/finalize`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ autoPauseLoser: true }),
+            });
+            const fd = await fr.json().catch(() => ({}));
+            if (fr.ok && fd.notification && !fd.already_finalized) {
+              addNotification?.({
+                kind: 'info',
+                title: fd.notification.title,
+                message: fd.notification.message,
+                link: '/campanhas-v2',
+              });
+            }
+          } catch (e) {
+            console.warn('[ab-test auto-finalize] erro:', e.message);
+          }
+        }
+        if (expired.length > 0) {
+          /* Refresh outra vez pra refletir resultado finalizado nos cards */
+          setTimeout(() => refreshABTests(campLocalId), 500);
+        }
+      }
     } catch {}
   }
   useEffect(() => {
     if (selectedCamp?.id) refreshABTests(selectedCamp.id);
     else setABTests([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCamp?.id]);
 
   async function handleStopABTest(test) {
@@ -1452,6 +1569,7 @@ export default function CampaignsHierarchy() {
                       selectedAdSet.ads.map(ad => (
                         <AdCard key={ad.id} ad={ad}
                           onStatusChange={handleAdStatus}
+                          onDelete={handleDeleteAd}
                           busy={busyIds.has(ad.id)} />
                       ))
                     )}
