@@ -459,15 +459,12 @@ function NewAdInAdSetModal({ open, onClose, adset, campaignLocalId, onSaved }) {
       footer={
         <>
           <GhostButton onClick={onClose} disabled={loading}>Cancelar</GhostButton>
-          <PrimaryButton onClick={handleSave} disabled={loading} danger>
-            {loading ? 'Criando...' : 'Criar anúncio (vai resetar aprendizado)'}
+          <PrimaryButton onClick={handleSave} disabled={loading}>
+            {loading ? 'Criando...' : 'Criar anúncio'}
           </PrimaryButton>
         </>
       }
     >
-      <Banner kind="reset" title="Atenção: vai resetar o aprendizado deste conjunto">
-        Adicionar anúncio novo num conjunto que já está rodando reseta a fase de aprendizado (regra do Meta). Se o conjunto está performando bem, considere <strong>duplicar o conjunto</strong> em vez disso e testar lá.
-      </Banner>
 
       <div style={{ marginTop: '16px' }}>
         <Field label="Nome do anúncio" hint="Pra você identificar depois.">
@@ -582,14 +579,14 @@ function AdSetCard({ adset, campaignLocalId, onAction, onSelect, selected }) {
         <button
           onClick={e => { e.stopPropagation(); onAction('newAd', adset); }}
           style={{
-            background: 'transparent', border: '1px dashed #FCA5A5',
-            color: '#B91C1C', borderRadius: '7px',
+            background: 'var(--c-surface)', border: '1px solid var(--c-border)',
+            color: 'var(--c-text-2)', borderRadius: '7px',
             padding: '6px 10px', fontSize: '11.5px', fontWeight: 600,
             cursor: 'pointer',
           }}
-          title="Cria anúncio novo neste conjunto (atenção: reseta aprendizado)"
+          title="Cria anúncio novo neste conjunto"
         >
-          + Anúncio novo ⚠
+          + Anúncio novo
         </button>
       </div>
     </div>
@@ -736,8 +733,8 @@ export default function CampaignsHierarchy() {
 
       {/* Aviso geral */}
       <div style={{ marginBottom: '20px' }}>
-        <Banner kind="info" title="Como funciona o aprendizado">
-          O Meta precisa de cerca de <strong>50 conversões em 7 dias por conjunto</strong> pra calibrar a entrega. Edições "pesadas" (público, criativo, evento de otimização) zeram esse contador. Aqui o sistema te avisa <span style={{ color: '#15803D', fontWeight: 700 }}>verde ✓</span> ou <span style={{ color: '#B91C1C', fontWeight: 700 }}>vermelho ⚠</span> antes de cada ação.
+        <Banner kind="info" title="Dica rápida">
+          Mexer no orçamento até <strong>20%</strong> é a única edição que não zera o aprendizado do conjunto. Pra testar outro público ou criativo, prefira <strong>duplicar</strong> em vez de editar.
         </Banner>
       </div>
 
