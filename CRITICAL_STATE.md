@@ -1,5 +1,46 @@
 # CRITICAL_STATE — traffic-manager
 
+## Sessão 2026-05-02 tarde — REDESIGN VISUAL Glassmorphism dark + accent rosa #C13584
+
+### Resumo
+Redesign visual aprovado por Rafa após 7 iterações em mockups standalone (`.design/mockups/`). Aplicado APENAS no dark mode — light mode 100% preservado (paleta rosé pastel original intacta). Inspirado na ref AgentOS (`.design/refs/ref geral GLASS.webp` + `Sidebar ref.png`).
+
+### Decisões fechadas (Q&A com Rafa)
+| Q | Decisão |
+|---|---|
+| Hex do rosa principal | **`#C13584`** (Instagram pink) |
+| Rosa secundário | **`#7D4A5E`** (vinho — detalhes) |
+| Light mode | **Intocado** — só dark vira glass |
+| Glow ambient | **Sim, com movimento** (skip mobile + reduced-motion) |
+| Cores semânticas | **Mantidas** (verde aprovado, vermelho rejeitado, etc) |
+
+### Mudanças aplicadas (commit `6ed794a`)
+- **`frontend/src/index.css`**: bloco `[data-theme="dark"]` reescrito com tokens glass dark fumê (`rgba(18,24,30,.45)`), accent `#C13584`, `--c-accent-glow` `rgba(193,53,132,.55)`. Adicionados `body::before` (SVG bg-tech com linhas+nodes), `body::after` (spotlight central + 2 glows nos cantos), `body bg-image` (noise feTurbulence). `.ccb-card` no dark ganhou `backdrop-filter: blur(28px)` + reflexo top + shimmer diagonal. Fallbacks: `prefers-reduced-motion` + `max-width: 768px` (blur reduzido).
+- **`Sidebar.jsx`**: sidebar vira **ilha flutuante** no dark (top/left/bottom: 16px, height: calc(100vh - 32px), border-radius: 18px, border completa, box-shadow profunda). Light mantém sólida.
+- **`App.jsx`**: topbar transparente no dark (background: transparent, backdrop-filter: none) — bg do app passa atrás. Main-content ajusta margin-left no dark pra caber sidebar flutuante.
+- **`SplashScreen.jsx`**: reescrita do zero — fundo `#06080B`, 3 blobs animados (rosa/vinho/azul), 2 deco-rings dashed contra-rotacionando, grid sutil mascarado, logo trocada `marca-colorida` → `marca-branca`, "Gestor de Tráfego" em rosa accent. Mantido HOLD_MS/EXIT_MS/onDone/playWelcome.
+- **Hardcodes `#d68d8f` → `var(--c-accent)`**: Sidebar (avatar gradient + sombra), App (toast + dropdown), Dashboard (9 trocas no SVG do gráfico, ícones, dots, tooltip), Campaigns (PLAT.instagram.color), index.css (input[type="range"] accent-color).
+
+### Trade-off documentado
+Logo Cris **continua dentro da sidebar** (não foi separada como `.brand-area` no grid como no mockup). Razão: sistema usa `position: fixed` na sidebar + flex no `.app-wrapper`. Mover logo pro grid exigiria refactor de fundação que poderia quebrar layout das 12 rotas. Visualmente fica OK porque a ilha flutuante "abraça" o logo no topo. Pode ser tratado em onda separada se Rafa quiser.
+
+### Validação ao vivo (após deploy)
+- `/api/health/full` → **4/4 OK** (DB, Meta 49d, Groq, Webhook)
+- 12 rotas testadas → **todas 200**
+- Build prod → **1.03s**, CSS 32.41 → 35.95 kB (+3.5), JS 815 → 819 kB (+4)
+- Light mode preservado (`:root` em index.css linhas 18-53 intacto)
+- Sem regressões funcionais (varredura confirmou: nenhum useState/useEffect/handler removido)
+
+### Pendente — próxima onda
+Hardcodes `#d68d8f` ainda em: `AIAssistant.jsx`, `Calendar.jsx`, `CreateAd.jsx`. Trocar por `var(--c-accent)` quando Rafa quiser.
+
+### Ref e mockups
+- Refs: `.design/refs/ref geral GLASS.webp`, `.design/refs/Sidebar ref.png`
+- Mockups standalone (3): `.design/mockups/{dashboard,splash,criativos-spy}.html` + `index.html`
+- Plano completo: `C:\Users\Rafa\.claude\plans\coloquei-na-pasta-refs-snazzy-unicorn.md`
+
+---
+
 ## Sessão 2026-05-02 tarde — FEATURE Espionar Concorrente (CreativeLibrary)
 
 ### Implementação inspirada na skill bravo `espionar-concorrente-pro`
