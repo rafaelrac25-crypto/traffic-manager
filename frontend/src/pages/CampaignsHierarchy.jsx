@@ -23,6 +23,50 @@ function fmtBRL(n) {
   if (n == null) return '—';
   return `R$ ${Number(n).toFixed(2).replace('.', ',')}`;
 }
+/* Link pro Meta Ads Manager focando direto no recurso clicado.
+   Mesmo padrão usado em /anuncios — colunas customizadas pra Cris. */
+function metaAdsManagerUrl({ campaignId, adsetId, adId } = {}) {
+  const base = 'https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=1330468201431069&business_id=468086242175775&global_scope_id=468086242175775&columns=name%2Cdelivery%2Crecommendations_guidance%2Cresults%2Ccost_per_result%2Cbudget%2Cspend%2Cimpressions%2Creach%2Cactions%3Aonsite_conversion.total_messaging_connection%2Cactions%3Aonsite_conversion.messaging_first_reply%2Cschedule%2Cend_time%2Cattribution_setting&attribution_windows=default';
+  const isValid = (v) => v && /^\d{6,}$/.test(String(v));
+  let url = base;
+  if (isValid(campaignId)) url += `&selected_campaign_ids=${campaignId}`;
+  if (isValid(adsetId))    url += `&selected_adset_ids=${adsetId}`;
+  if (isValid(adId))       url += `&selected_ad_ids=${adId}`;
+  return url;
+}
+function MetaLinkButton({ campaignId, adsetId, adId, label = 'Abrir no Meta', size = 'sm', variant = 'outline' }) {
+  const url = metaAdsManagerUrl({ campaignId, adsetId, adId });
+  const FS = size === 'lg' ? '12px' : '11px';
+  const PAD = size === 'lg' ? '7px 12px' : '5px 9px';
+  const styles = variant === 'solid' ? {
+    background: '#1877F2', color: '#fff', border: 'none',
+  } : {
+    background: 'transparent', color: '#1877F2', border: '1px solid #1877F2',
+  };
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={(e) => e.stopPropagation()}
+      title="Abrir este recurso direto no Meta Ads Manager"
+      style={{
+        ...styles,
+        borderRadius: '7px',
+        padding: PAD,
+        fontSize: FS,
+        fontWeight: 600,
+        textDecoration: 'none',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '4px',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      ↗ {label}
+    </a>
+  );
+}
 function statusLabel(s) {
   const map = {
     ACTIVE: { txt: 'Rodando', color: '#22C55E' },
@@ -676,6 +720,7 @@ function AdSetCard({ adset, campaignLocalId, onAction, onSelect, selected, onSta
         >
           + Anúncio novo
         </button>
+        <MetaLinkButton adsetId={adset.id} label="Abrir no Meta" />
       </div>
     </div>
   );
@@ -704,6 +749,7 @@ function AdCard({ ad, onStatusChange, busy }) {
           </div>
           <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)' }}>ID: {ad.id}</div>
         </div>
+        <MetaLinkButton adId={ad.id} label="Meta" />
         <span style={{
           fontSize: '10px', fontWeight: 700, color: '#fff',
           background: status.color,
@@ -1309,7 +1355,11 @@ export default function CampaignsHierarchy() {
                         Objetivo: {hierarchy.campaign?.objective || '—'} · {fmtBRL(hierarchy.campaign?.daily_budget)} /dia
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', gap: '8px', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                      <MetaLinkButton
+                        campaignId={hierarchy.campaign?.platform_id}
+                        size="lg"
+                      />
                       {hierarchy.campaign?.daily_budget != null && (
                         <button
                           onClick={() => setBudgetModal({
