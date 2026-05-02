@@ -598,3 +598,44 @@ mostra qual pass venceu (720p/480p/360p).
 2. **Ativar Vercel email alerts** (1 min, manual)
 3. **Após 7-14 dias rodando**: revisar métricas reais e decidir se vale adicionar features de targeting (lookalike, custom audiences, status de relacionamento, eventos da vida)
 4. **Backlog 🟡** (limpeza CTAs duplicados, upgrade v20→v22 da Graph API, redirects legados)
+
+---
+
+## Sessão 2026-05-01 noite — VISÃO META v2 (HIERARQUIA 3 NÍVEIS) — 1 commit
+
+### Implementação completa: campanha → conjunto → anúncio
+
+**Commit:** `5022295` feat(v2): Visão Meta — hierarquia 3 níveis
+
+**Backend (somente adiciona, nada removido):**
+- `metaWrite.duplicateAdSet` — POST /{adset_id}/copies (deep_copy=true, PAUSED, rename suffix " — v2") + overrides via updateAdSetMeta
+- `metaWrite.createAdInExistingAdSet` — reusa creative do adset OU clona com overrides
+- `GET /api/campaigns/:id/hierarchy` — campaign + adsets + ads aninhados ao vivo do Meta
+- `POST /api/campaigns/:id/duplicate-adset` — duplica adset c/ overrides (targeting, budget, age, name)
+- `POST /api/campaigns/:id/adsets/:adsetId/ads` — cria ad novo no adset (PAUSED), reusa creative do 1º ad ou clona com overrides
+- `PATCH /api/campaigns/:id/budget-safe` — clamp ±20%, retorna 400 se passar com max_safe_increase/decrease detalhado
+
+**Frontend:**
+- `pages/CampaignsHierarchy.jsx` — master-detail (lista campanhas à esquerda, hierarquia à direita), 3 modais (BudgetEdit, DuplicateAdSet, NewAdInAdSet), avisos verde ✓ (seguro) / vermelho ⚠ (reseta aprendizado), breadcrumb dinâmico
+- `Sidebar.jsx` — item "Visão Meta" com badge NOVO
+- `App.jsx` — rota `/campanhas-v2`
+
+**Validação ao vivo (criscosta.vercel.app/campanhas-v2):**
+- ✅ HTTP 200 na rota nova
+- ✅ GET /hierarchy/437 retornou campaign+adset+ads com IDs Meta corretos
+- ✅ PATCH /budget-safe bloqueio >20% funcionando (R$20→R$100 = 400%, retornou erro detalhado)
+- ✅ PATCH /budget-safe mudança 5% (R$20→R$21) PASSOU pro Meta — INADVERTIDAMENTE alterou a 437 ativa no teste, **REVERTIDO IMEDIATAMENTE pra R$20** (diff de 5% não reseta aprendizado mas precisa avisar Rafa)
+- ⚠ duplicate-adset e adsets/:id/ads validados só por body validation (não rodados ao vivo pra não sujar o Meta sem autorização)
+
+**Comportamento de aprendizado (memória externa validada):**
+- Mudança ≤20% de orçamento: NÃO reseta (sistema permite)
+- Renomear: NÃO reseta
+- Duplicar adset: aprendizado novo do zero (Meta trata como entidade nova) — UI avisa
+- Criar ad novo no adset: RESETA aprendizado do adset — UI avisa em vermelho
+- Mudar criativo/copy/imagem/CTA/URL de ad existente: divergência entre fontes (não implementado edição direta — sistema empurra duplicação como caminho seguro)
+
+**Endpoints e UI antigas intocadas.** 436 e 437 continuam com mesmos botões em /anuncios.
+
+### Pendência
+- Rafa testar /campanhas-v2 no painel ao vivo
+- Validar fluxo completo de duplicar conjunto + criar ad novo no Meta (precisa autorização do Rafa pra rodar live)
