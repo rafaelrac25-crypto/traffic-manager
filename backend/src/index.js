@@ -8,12 +8,38 @@ initSentry();
 
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const path = require('path');
 const fs = require('fs');
 
 const app = express();
 
-app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
+/* CORS whitelist — sem fallback `*` em prod.
+   Aceita FRONTEND_URL (Vercel), localhost (dev) e previews *.vercel.app.
+   Falta de FRONTEND_URL gera warn (não derruba o app, mas frontend bloqueia em prod). */
+const ALLOWED_ORIGINS = [];
+if (process.env.FRONTEND_URL) ALLOWED_ORIGINS.push(process.env.FRONTEND_URL);
+ALLOWED_ORIGINS.push('http://localhost:5173', 'http://localhost:3001');
+if (!process.env.FRONTEND_URL) {
+  console.warn('[cors] FRONTEND_URL não setada — em produção isso bloqueia o frontend');
+}
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true); /* same-origin / curl / server-to-server */
+    if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+    if (/^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin)) return cb(null, true);
+    cb(new Error(`CORS bloqueado: ${origin}`));
+  },
+}));
+
+/* Security headers via Helmet.
+   CSP desabilitado: frontend Vite tem inline scripts no HTML buildado.
+   crossOriginEmbedderPolicy off pra não bloquear thumbs/imagens Meta. */
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+}));
+
 app.use(express.json({
   limit: '30mb',
   verify: (req, _res, buf) => { req.rawBody = buf.toString('utf8'); },
