@@ -15,13 +15,20 @@
 - **`services/metaAds.js`**: `fetchAccountInsights` e `fetchAdSetInsights` passam a pedir `inline_link_clicks` ao Meta (antes só pedia `clicks`).
 - **`routes/campaigns.js`**: `/sync-meta-status` importa `isMessagesViaWaLink` e aplica mesma lógica de mapping antes do `keepMax`. Persiste flag `conversions_mapped_from_clicks` no payload.
 
-### Backfill esperado no próximo sync
-- 437 Cravos: 0 → ~276 (link_clicks atual)
-- 436 Nano: 86 stale → ~161 (link_clicks atual real)
+### Backfill validado em prod (após commit `9b1ff2b`)
+- **437 Cravos: 0 → 277** mensagens · R$ 0,20/msg ⬆️
+- **436 Nano: 86 stale → 163** mensagens · R$ 0,42/msg ⬆️
 
-### Validação
-- Sintaxe: `node -c` passou nos 3 arquivos
-- Sem circular require (campaigns.js → sync.js, sync.js não importa campaigns.js)
+### Iteração do fix (2 commits)
+- `b8adf08` primeiro fix — descobriu na validação que 2 issues residuais quebravam:
+  - Mapping skipava quando `rConversions > 0` (Meta retornou 1 espúrio na 436 → keepMax preservava 86 stale)
+  - Response do `/sync-meta-status` retornava `r.conversions` cru em vez de `nextConversions`
+- `9b1ff2b` correção — pra wa.me/ SEM WA Business, sempre prefere link_clicks (Meta sempre é ruído nesse cenário). Response devolve next* values.
+
+### Inversão da hierarquia de campanhas
+- Antes do fix: 436 Nano parecia única convertendo (86 msgs vs 0 da 437)
+- Depois do fix: **437 Cravos é a vencedora** (277 msgs · R$ 0,20) — quase 2x as mensagens da 436 (163 · R$ 0,42) com gasto 20% menor
+- Limpeza de pele tem demanda mais ampla (todos gêneros, idade 28-50) vs nano (só feminino, 28-45)
 
 ### Não bloqueado — mas próximo
 - Quando Cris cadastrar WhatsApp na Page (via suporte Meta), `messaging_conversation_started_7d` vai disparar de verdade → contagem REAL de mensagens (não proxy via cliques). Mapping continua como fallback automático nas que já rodaram sem WA Business.
