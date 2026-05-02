@@ -8,16 +8,18 @@ const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
    o backend acumula até completar pra disparar upload pro Meta /adimages
    numa única chamada). Chunks são deletados após /finish ou via cleanup
    de sessões antigas (24h). */
-const CREATE_TABLES = [
-  `CREATE TABLE IF NOT EXISTS image_upload_sessions (
+/* DDL exportado pra reuso em routes/upload.js (ensureImageSessionsTable).
+   Single source — qualquer mudança aqui propaga automaticamente. */
+const IMAGE_UPLOAD_SESSIONS_DDL = `CREATE TABLE IF NOT EXISTS image_upload_sessions (
     session_id TEXT PRIMARY KEY,
     mime TEXT NOT NULL,
     total_size INTEGER NOT NULL,
     received_size INTEGER NOT NULL DEFAULT 0,
     chunks BYTEA,
     created_at TIMESTAMP DEFAULT NOW()
-  )`,
-];
+  )`;
+
+const CREATE_TABLES = [IMAGE_UPLOAD_SESSIONS_DDL];
 
 const ADD_COLUMNS = [
   'ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS publish_mode VARCHAR(20) DEFAULT \'immediate\'',
@@ -68,4 +70,4 @@ async function runMigrations(pool) {
   }
 }
 
-module.exports = { runMigrations };
+module.exports = { runMigrations, IMAGE_UPLOAD_SESSIONS_DDL };

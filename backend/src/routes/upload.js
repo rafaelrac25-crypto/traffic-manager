@@ -150,19 +150,14 @@ function newSessionId() {
 }
 
 /* Garante que a tabela existe — idempotente, roda 1x e fica em cache.
-   Útil pra deploys novos onde a migração inicial não criou a tabela. */
+   Útil pra deploys novos onde a migração inicial não criou a tabela.
+   DDL importado de migrate.js — single source, sem divergência. */
+const { IMAGE_UPLOAD_SESSIONS_DDL } = require('../db/migrate');
 let _imageSessionsTableEnsured = false;
 async function ensureImageSessionsTable() {
   if (_imageSessionsTableEnsured) return;
   try {
-    await db.query(`CREATE TABLE IF NOT EXISTS image_upload_sessions (
-      session_id TEXT PRIMARY KEY,
-      mime TEXT NOT NULL,
-      total_size INTEGER NOT NULL,
-      received_size INTEGER NOT NULL DEFAULT 0,
-      chunks BYTEA,
-      created_at TIMESTAMP DEFAULT NOW()
-    )`);
+    await db.query(IMAGE_UPLOAD_SESSIONS_DDL);
     _imageSessionsTableEnsured = true;
   } catch (e) {
     console.warn('[upload] ensure image_upload_sessions falhou:', e.message);
@@ -183,6 +178,15 @@ router.post('/image/start', async (req, res) => {
     if (!creds) return res.status(400).json({ error: 'Meta não conectado' });
 
     await ensureImageSessionsTable();
+
+    /* Cleanup orgânico: deleta sessões >24h abandonadas a cada novo /start.
+       Em Vercel serverless o processo pode não reiniciar por dias —
+       sem essa janela, BLOBs de até 30MB acumulariam no Neon.
+       Best-effort: falha aqui não bloqueia o upload. */
+    try {
+      await db.query("DELETE FROM image_upload_sessions WHERE created_at < NOW() - INTERVAL '24 hours'");
+    } catch { /* SQLite dev usa sintaxe diferente — ignora */ }
+
     const sessionId = newSessionId();
     const emptyBuffer = Buffer.alloc(0);
     await db.query(
