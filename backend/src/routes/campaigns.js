@@ -2239,6 +2239,7 @@ router.post('/:id/ab-test', async (req, res) => {
   const {
     variable, sourceAdSetId, durationDays = 7,
     variantOverrides = {}, splitPercent = 50, name: customName,
+    autoPauseLoser = true,
   } = req.body || {};
 
   if (!['creative', 'audience', 'placement'].includes(variable)) {
@@ -2375,6 +2376,7 @@ router.post('/:id/ab-test', async (req, res) => {
         start_time: startTime,
         end_time: endTime,
         split_percent_a: splitA,
+        auto_pause_loser: !!autoPauseLoser,
         created_at: new Date().toISOString(),
       },
     ];

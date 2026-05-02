@@ -1123,7 +1123,7 @@ function CampaignTile({ camp, selected, onSelect }) {
    Página principal
    ============================================================ */
 export default function CampaignsHierarchy() {
-  const { ads, addNotification } = useAppState();
+  const { ads, addNotification, runMetaSync } = useAppState();
   const [selectedCamp, setSelectedCamp] = useState(null);
   const [hierarchy, setHierarchy]       = useState(null);
   const [loadingHier, setLoadingHier]   = useState(false);
@@ -1156,26 +1156,34 @@ export default function CampaignsHierarchy() {
     (a.platform === 'meta' || a.platform === 'instagram') && a.platform_campaign_id
   );
 
+  /* AbortController previne race entre cliques rápidos em campanhas diferentes —
+     resposta lenta de request anterior não sobrescreve hierarchy nova. */
+  const hierAbortRef = React.useRef(null);
   const refreshHierarchy = useCallback(async (campLocalId) => {
     if (!campLocalId) return;
+    if (hierAbortRef.current) hierAbortRef.current.abort();
+    const ctrl = new AbortController();
+    hierAbortRef.current = ctrl;
     setLoadingHier(true); setErrHier(null);
     try {
-      const r = await fetch(`/api/campaigns/${campLocalId}/hierarchy`);
+      const r = await fetch(`/api/campaigns/${campLocalId}/hierarchy`, { signal: ctrl.signal });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
       setHierarchy(data);
-      /* Mantém o adset selecionado se ele ainda existir */
-      if (selectedAdSet) {
-        const stillExists = data.adsets?.find(a => a.id === selectedAdSet.id);
-        setSelectedAdSet(stillExists || null);
-      }
+      /* Functional update — não cria dep em selectedAdSet, evita re-render loop */
+      setSelectedAdSet(prev => prev ? (data.adsets?.find(a => a.id === prev.id) || null) : null);
     } catch (e) {
-      setErrHier(e.message);
-      setHierarchy(null);
+      if (e.name !== 'AbortError') {
+        setErrHier(e.message);
+        setHierarchy(null);
+      }
     } finally {
-      setLoadingHier(false);
+      if (hierAbortRef.current === ctrl) {
+        hierAbortRef.current = null;
+        setLoadingHier(false);
+      }
     }
-  }, [selectedAdSet]);
+  }, []);
 
   useEffect(() => {
     if (selectedCamp?.id) refreshHierarchy(selectedCamp.id);
@@ -1228,6 +1236,9 @@ export default function CampaignsHierarchy() {
       refreshHierarchy(selectedCamp.id);
       refreshABTests(selectedCamp.id);
     }
+    /* Força sync global pra /anuncios e Dashboard refletirem mudança imediata
+       em vez de esperar o tick de 90s do polling. */
+    setTimeout(() => { runMetaSync?.().catch(() => {}); }, 1500);
   }
   function showError(msg) {
     setErrToast(msg);
@@ -1312,31 +1323,46 @@ export default function CampaignsHierarchy() {
       if (r.ok) {
         const tests = data?.tests || [];
         setABTests(tests);
-        /* Auto-finalize: pra cada teste com end_time vencido e ainda não finalizado, dispara finalize */
+        /* Auto-finalize: pra cada teste com end_time vencido e não finalizado.
+           Respeita escolha original do usuário (auto_pause_loser salvo no payload). */
         const nowSec = Math.floor(Date.now() / 1000);
         const expired = tests.filter(t => !t.finalized && t.end_time <= nowSec);
+        let anyFinalized = false;
         for (const t of expired) {
           try {
             const fr = await fetch(`/api/campaigns/${campLocalId}/ab-tests/${t.study_id}/finalize`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ autoPauseLoser: true }),
+              body: JSON.stringify({ autoPauseLoser: t.auto_pause_loser !== false }),
             });
             const fd = await fr.json().catch(() => ({}));
             if (fr.ok && fd.notification && !fd.already_finalized) {
+              anyFinalized = true;
               addNotification?.({
                 kind: 'info',
                 title: fd.notification.title,
                 message: fd.notification.message,
                 link: '/campanhas-v2',
               });
+            } else if (!fr.ok) {
+              /* Falhou — avisa o Rafa em vez de silenciar */
+              addNotification?.({
+                kind: 'meta-sync-error',
+                title: `Não consegui finalizar o teste A/B "${t.name}"`,
+                message: fd.error || `HTTP ${fr.status}. Pode encerrar manualmente no Meta.`,
+                link: '/campanhas-v2',
+              });
             }
           } catch (e) {
-            console.warn('[ab-test auto-finalize] erro:', e.message);
+            addNotification?.({
+              kind: 'meta-sync-error',
+              title: `Erro ao finalizar teste A/B "${t.name}"`,
+              message: e.message,
+              link: '/campanhas-v2',
+            });
           }
         }
-        if (expired.length > 0) {
-          /* Refresh outra vez pra refletir resultado finalizado nos cards */
+        if (anyFinalized) {
           setTimeout(() => refreshABTests(campLocalId), 500);
         }
       }
