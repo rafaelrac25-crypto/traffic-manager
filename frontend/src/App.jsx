@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import Campaigns from './pages/Campaigns';
+import CampaignsHierarchy from './pages/CampaignsHierarchy';
 import Calendar from './pages/Calendar';
 import CreateAd from './pages/CreateAd';
 import Rejected from './pages/Rejected';
@@ -481,6 +482,7 @@ function Layout() {
           <Routes>
             <Route path="/"              element={<Dashboard />} />
             <Route path="/anuncios"      element={<Campaigns />} />
+            <Route path="/campanhas-v2"  element={<CampaignsHierarchy />} />
             <Route path="/relatorios"    element={<Relatorios />} />
             <Route path="/campanhas"     element={<Navigate to="/anuncios" replace />} />
             <Route path="/reprovados"    element={<Rejected />} />

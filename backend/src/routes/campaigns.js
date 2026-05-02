@@ -1652,4 +1652,410 @@ router.post('/sync/:platform', async (req, res) => {
   }
 });
 
+/* ============================================================
+   ENDPOINTS V2 — Hierarquia 3-níveis (Campanha → Conjunto → Anúncio)
+   Separados dos endpoints originais por segurança. Tudo somente
+   adiciona — endpoints existentes permanecem intactos.
+   ============================================================ */
+
+/* Lê adsets + ads de uma campanha direto do Meta (não usa cache local).
+   Pra UI hierárquica desenhar a árvore Campanha→Conjunto→Anúncio sem
+   depender do payload local (que pode estar desatualizado).
+
+   Retorna {
+     campaign: {id, name, status, effective_status, daily_budget, lifetime_budget},
+     adsets: [{id, name, status, effective_status, daily_budget, targeting, ads:[...]}],
+   } */
+router.get('/:id/hierarchy', async (req, res) => {
+  try {
+    const result = await db.query('SELECT * FROM campaigns WHERE id = ?', [req.params.id]);
+    const camp = result.rows[0];
+    if (!camp) return res.status(404).json({ error: 'Campanha não encontrada' });
+    if (camp.platform !== 'meta' || !camp.platform_campaign_id) {
+      return res.status(400).json({ error: 'Apenas campanhas Meta publicadas têm hierarquia' });
+    }
+
+    const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+    const creds = credResult.rows[0];
+    if (!creds) return res.status(400).json({ error: 'Meta não conectado' });
+
+    const { metaGet } = require('../services/metaHttp');
+    const { safeDecrypt } = require('../services/crypto');
+    const token = safeDecrypt(creds.access_token, 'hierarchy');
+
+    /* Campaign */
+    const campResp = await metaGet(`/${camp.platform_campaign_id}`, {
+      fields: 'id,name,status,effective_status,daily_budget,lifetime_budget,objective,buying_type'
+    }, { token });
+
+    /* AdSets + ads aninhados — 1 chamada via expansion */
+    const adsetsResp = await metaGet(`/${camp.platform_campaign_id}/adsets`, {
+      fields: 'id,name,status,effective_status,daily_budget,lifetime_budget,targeting,optimization_goal,billing_event,destination_type,start_time,end_time,ads.limit(25){id,name,status,effective_status,creative{id,name},created_time}',
+      limit: 50,
+    }, { token });
+
+    const adsets = (adsetsResp?.data || []).map(as => ({
+      id: as.id,
+      name: as.name,
+      status: as.status,
+      effective_status: as.effective_status,
+      daily_budget: as.daily_budget ? Number(as.daily_budget) / 100 : null,
+      lifetime_budget: as.lifetime_budget ? Number(as.lifetime_budget) / 100 : null,
+      optimization_goal: as.optimization_goal,
+      billing_event: as.billing_event,
+      destination_type: as.destination_type,
+      start_time: as.start_time,
+      end_time: as.end_time,
+      targeting: as.targeting || null,
+      ads: (as.ads?.data || []).map(ad => ({
+        id: ad.id,
+        name: ad.name,
+        status: ad.status,
+        effective_status: ad.effective_status,
+        creative_id: ad.creative?.id || null,
+        creative_name: ad.creative?.name || null,
+        created_time: ad.created_time,
+      })),
+    }));
+
+    res.json({
+      campaign: {
+        local_id: camp.id,
+        platform_id: campResp.id,
+        name: campResp.name,
+        status: campResp.status,
+        effective_status: campResp.effective_status,
+        daily_budget: campResp.daily_budget ? Number(campResp.daily_budget) / 100 : null,
+        lifetime_budget: campResp.lifetime_budget ? Number(campResp.lifetime_budget) / 100 : null,
+        objective: campResp.objective,
+        buying_type: campResp.buying_type,
+      },
+      adsets,
+      fetched_at: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error('[hierarchy]', err);
+    res.status(500).json({ error: err.message, meta: err.meta || null });
+  }
+});
+
+/* Duplica um conjunto inteiro (testar outro público mantendo a campanha).
+   Conjunto duplicado entra em learning phase do zero — Meta sempre trata
+   adset novo como entidade nova. UI deve avisar.
+
+   Body: {
+     sourceAdSetId: string (obrigatório),
+     overrides?: {
+       name?, daily_budget?(BRL), targeting? (objeto Meta v20 inteiro),
+       age_min?, age_max?, genders?[], interests?[{id,name}], geo_locations?
+     }
+   }
+
+   Se overrides.targeting NÃO veio mas vieram campos atômicos (age_min etc),
+   reconstrói targeting a partir do payload local + atomic patches. */
+router.post('/:id/duplicate-adset', async (req, res) => {
+  const { sourceAdSetId, overrides = {} } = req.body || {};
+  if (!sourceAdSetId) return res.status(400).json({ error: 'sourceAdSetId obrigatório' });
+
+  try {
+    const result = await db.query('SELECT * FROM campaigns WHERE id = ?', [req.params.id]);
+    const camp = result.rows[0];
+    if (!camp) return res.status(404).json({ error: 'Campanha não encontrada' });
+    if (camp.platform !== 'meta' || !camp.platform_campaign_id) {
+      return res.status(400).json({ error: 'Apenas campanhas Meta podem duplicar conjuntos' });
+    }
+
+    const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+    const creds = credResult.rows[0];
+    if (!creds) return res.status(400).json({ error: 'Meta não conectado' });
+
+    let payload = camp.payload;
+    if (typeof payload === 'string') {
+      try { payload = JSON.parse(payload); } catch { payload = null; }
+    }
+
+    /* Reconstrói targeting se vier patches atômicos.
+       Lê targeting existente do payload (ou direto do Meta se não tiver). */
+    const finalOverrides = { ...overrides };
+    const atomicTargetingFields = ['age_min', 'age_max', 'genders', 'interests', 'geo_locations'];
+    const hasAtomicTargeting = atomicTargetingFields.some(k => overrides[k] !== undefined);
+
+    if (hasAtomicTargeting && !overrides.targeting) {
+      const adSetsList = payload?.meta?.ad_sets || (payload?.meta?.ad_set ? [payload.meta.ad_set] : []);
+      const sourceAdSetIdx = (payload?.metaPublishResult?.ad_sets || []).findIndex(as => as.ad_set_id === sourceAdSetId);
+      const baseTargeting = adSetsList[sourceAdSetIdx >= 0 ? sourceAdSetIdx : 0]?.targeting || {};
+      const merged = JSON.parse(JSON.stringify(baseTargeting));
+      if (overrides.age_min != null) merged.age_min = Number(overrides.age_min);
+      if (overrides.age_max != null) merged.age_max = Number(overrides.age_max);
+      if (Array.isArray(overrides.genders)) merged.genders = overrides.genders;
+      if (Array.isArray(overrides.interests)) {
+        merged.interests = overrides.interests
+          .filter(it => it?.id && !String(it.id).startsWith('interest_'))
+          .map(it => ({ id: it.id, name: it.name || '' }));
+      }
+      if (overrides.geo_locations) merged.geo_locations = overrides.geo_locations;
+      finalOverrides.targeting = merged;
+    }
+
+    /* Converte BRL → centavos (Meta usa cents) */
+    if (overrides.daily_budget != null && overrides.daily_budget < 1000) {
+      /* < 1000 = veio em BRL, converte. > 1000 = já em centavos. */
+      finalOverrides.daily_budget = Math.round(Number(overrides.daily_budget) * 100);
+    }
+
+    const { duplicateAdSet } = require('../services/metaWrite');
+    let dupResult;
+    try {
+      dupResult = await duplicateAdSet(creds, {
+        sourceAdSetId,
+        deepCopy: true,
+        statusOption: 'PAUSED',
+        renameSuffix: overrides.name ? '' : ' — v2',
+        overrides: finalOverrides,
+      });
+      /* Se overrides.name veio, aplica explicitamente (sem suffix) */
+      if (overrides.name) {
+        const { updateAdSetMeta } = require('../services/metaWrite');
+        await updateAdSetMeta(creds, dupResult.new_adset_id, { name: String(overrides.name) });
+      }
+    } catch (e) {
+      console.error('[duplicate-adset] Meta erro:', e.message, e.meta);
+      return res.status(502).json({
+        error: `Meta recusou: ${e.message}`,
+        partial: e.partial || null,
+        meta_error: e.meta || null,
+      });
+    }
+
+    /* Persiste no payload — registra cronologia em duplicated_adsets */
+    const updatedPayload = { ...(payload || {}) };
+    updatedPayload.duplicated_adsets = [
+      ...(payload?.duplicated_adsets || []),
+      {
+        source_adset_id: sourceAdSetId,
+        new_adset_id: dupResult.new_adset_id,
+        copied_ad_ids: dupResult.copied_ad_ids,
+        applied_overrides: dupResult.applied_overrides,
+        duplicated_at: new Date().toISOString(),
+      },
+    ];
+    await db.query(
+      'UPDATE campaigns SET payload = ?, updated_at = datetime(\'now\') WHERE id = ?',
+      [JSON.stringify(updatedPayload), req.params.id]
+    );
+
+    await log('duplicate_adset', 'campaign', parseInt(req.params.id),
+      `Conjunto duplicado pra testar variação`, {
+        source_adset_id: sourceAdSetId,
+        new_adset_id: dupResult.new_adset_id,
+        copied_ad_ids: dupResult.copied_ad_ids,
+      });
+
+    res.json({
+      ok: true,
+      new_adset_id: dupResult.new_adset_id,
+      copied_ad_ids: dupResult.copied_ad_ids,
+      applied_overrides: dupResult.applied_overrides,
+      learning_reset: true,
+      note: 'Conjunto duplicado em PAUSED. Aprendizado começa do zero (Meta trata adset novo como entidade nova). Ative quando estiver pronto pra rodar.',
+    });
+  } catch (err) {
+    console.error('[duplicate-adset]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* Cria um anúncio NOVO num adset existente. Reusa creative do primeiro ad
+   do adset OU constrói creative novo via overrides.
+
+   IMPORTANTE: criar ad novo num adset É significant edit pelo Meta —
+   reseta aprendizado do adset. UI deve avisar antes de chamar.
+
+   Body: {
+     adsetId: string (obrigatório),
+     overrides?: { message?, title?, link?, ctaType? },
+     newAdName?: string (default "Anúncio novo")
+   } */
+router.post('/:id/adsets/:adsetId/ads', async (req, res) => {
+  const { overrides = null, newAdName } = req.body || {};
+  const { id, adsetId } = req.params;
+
+  try {
+    const result = await db.query('SELECT * FROM campaigns WHERE id = ?', [id]);
+    const camp = result.rows[0];
+    if (!camp) return res.status(404).json({ error: 'Campanha não encontrada' });
+    if (camp.platform !== 'meta' || !camp.platform_campaign_id) {
+      return res.status(400).json({ error: 'Apenas campanhas Meta podem receber anúncios novos' });
+    }
+
+    const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+    const creds = credResult.rows[0];
+    if (!creds) return res.status(400).json({ error: 'Meta não conectado' });
+    if (!creds.account_id) return res.status(400).json({ error: 'ad_account_id ausente nas credenciais' });
+
+    /* Busca o creative do primeiro ad do adset pra reusar como base */
+    const { metaGet } = require('../services/metaHttp');
+    const { safeDecrypt } = require('../services/crypto');
+    const token = safeDecrypt(creds.access_token, 'create-ad-in-adset');
+
+    const adsResp = await metaGet(`/${adsetId}/ads`, {
+      fields: 'id,creative{id}',
+      limit: 1,
+    }, { token });
+    const baseAd = adsResp?.data?.[0];
+    const baseCreativeId = baseAd?.creative?.id;
+    if (!baseCreativeId) {
+      return res.status(400).json({ error: 'Conjunto não tem ad de referência pra herdar criativo. Crie pelo fluxo normal de campanha primeiro.' });
+    }
+
+    const { createAdInExistingAdSet } = require('../services/metaWrite');
+    let createResult;
+    try {
+      createResult = await createAdInExistingAdSet(creds, {
+        adAccountId: creds.account_id,
+        platformAdSetId: adsetId,
+        baseCreativeId,
+        overrides,
+        newAdName: newAdName || 'Anúncio novo',
+      });
+    } catch (e) {
+      console.error('[create-ad-in-adset] Meta erro:', e.message, e.meta);
+      return res.status(502).json({
+        error: `Meta recusou: ${e.message}`,
+        meta_error: e.meta || null,
+      });
+    }
+
+    await log('create_ad_in_adset', 'campaign', parseInt(id),
+      `Anúncio novo no conjunto ${adsetId}`, {
+        adset_id: adsetId,
+        new_ad_id: createResult.new_ad_id,
+        creative_id: createResult.creative_id,
+        reused_creative: createResult.reused_creative,
+      });
+
+    res.json({
+      ok: true,
+      new_ad_id: createResult.new_ad_id,
+      new_ad_name: createResult.new_ad_name,
+      creative_id: createResult.creative_id,
+      reused_creative: createResult.reused_creative,
+      learning_reset: true,
+      note: 'Anúncio novo em PAUSED. Aprendizado do conjunto vai resetar quando o ad ativar (significant edit). Ative quando estiver pronto.',
+    });
+  } catch (err) {
+    console.error('[create-ad-in-adset]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* Editor seguro de orçamento — só permite mudança ATÉ ±20% (não reseta
+   aprendizado segundo Meta). Acima disso retorna 400 com aviso.
+
+   Body: {
+     newBudget: number (BRL),
+     level: 'campaign' | 'adset',
+     adsetId?: string (obrigatório se level='adset')
+   } */
+router.patch('/:id/budget-safe', async (req, res) => {
+  const { newBudget, level, adsetId } = req.body || {};
+  if (!Number.isFinite(Number(newBudget)) || Number(newBudget) <= 0) {
+    return res.status(400).json({ error: 'newBudget inválido (em BRL, > 0)' });
+  }
+  if (level !== 'campaign' && level !== 'adset') {
+    return res.status(400).json({ error: 'level deve ser "campaign" ou "adset"' });
+  }
+  if (level === 'adset' && !adsetId) {
+    return res.status(400).json({ error: 'adsetId obrigatório quando level=adset' });
+  }
+
+  try {
+    const result = await db.query('SELECT * FROM campaigns WHERE id = ?', [req.params.id]);
+    const camp = result.rows[0];
+    if (!camp) return res.status(404).json({ error: 'Campanha não encontrada' });
+
+    const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+    const creds = credResult.rows[0];
+    if (!creds) return res.status(400).json({ error: 'Meta não conectado' });
+
+    const { metaGet } = require('../services/metaHttp');
+    const { safeDecrypt } = require('../services/crypto');
+    const token = safeDecrypt(creds.access_token, 'budget-safe');
+
+    /* Lê orçamento atual direto do Meta (fonte da verdade) */
+    const targetId = level === 'campaign' ? camp.platform_campaign_id : adsetId;
+    if (!targetId) return res.status(400).json({ error: 'platform_id alvo ausente' });
+
+    const current = await metaGet(`/${targetId}`, {
+      fields: 'daily_budget,lifetime_budget,name'
+    }, { token });
+
+    const currentDailyBRL = current?.daily_budget ? Number(current.daily_budget) / 100 : null;
+    const currentLifetimeBRL = current?.lifetime_budget ? Number(current.lifetime_budget) / 100 : null;
+    const currentBRL = currentDailyBRL ?? currentLifetimeBRL;
+    if (currentBRL == null) {
+      return res.status(400).json({
+        error: `Não foi possível ler o orçamento atual do ${level} ${targetId}. Pode ser CBO/ABO incompatível com a edição.`,
+      });
+    }
+
+    const newBRL = Number(newBudget);
+    const diffPct = Math.abs((newBRL - currentBRL) / currentBRL) * 100;
+    const isLifetime = currentLifetimeBRL != null && currentDailyBRL == null;
+    const budgetField = isLifetime ? 'lifetime_budget' : 'daily_budget';
+
+    if (diffPct > 20) {
+      return res.status(400).json({
+        error: 'Mudança maior que 20% — vai resetar a fase de aprendizado',
+        current_budget: currentBRL,
+        new_budget: newBRL,
+        diff_pct: Number(diffPct.toFixed(2)),
+        max_safe_increase: Number((currentBRL * 1.2).toFixed(2)),
+        max_safe_decrease: Number((currentBRL * 0.8).toFixed(2)),
+        will_reset_learning: true,
+      });
+    }
+
+    /* OK — aplica via metaWrite */
+    const { updateCampaignMeta, updateAdSetMeta } = require('../services/metaWrite');
+    const newCents = Math.round(newBRL * 100);
+    try {
+      if (level === 'campaign') {
+        await updateCampaignMeta(creds, targetId, { [budgetField]: newCents });
+      } else {
+        await updateAdSetMeta(creds, targetId, { [budgetField]: newCents });
+      }
+    } catch (e) {
+      return res.status(502).json({ error: `Meta recusou: ${e.message}`, meta_error: e.meta || null });
+    }
+
+    /* Atualiza budget local na tabela campaigns se for campaign-level */
+    if (level === 'campaign') {
+      try {
+        await db.query('UPDATE campaigns SET budget = ?, updated_at = datetime(\'now\') WHERE id = ?',
+          [newBRL, req.params.id]);
+      } catch {}
+    }
+
+    await log('budget_safe', 'campaign', parseInt(req.params.id),
+      `Orçamento ${level} alterado de R$${currentBRL.toFixed(2)} pra R$${newBRL.toFixed(2)} (${diffPct.toFixed(1)}%)`, {
+        level, target_id: targetId, current: currentBRL, new: newBRL, diff_pct: diffPct,
+      });
+
+    res.json({
+      ok: true,
+      level,
+      target_id: targetId,
+      previous_budget: currentBRL,
+      new_budget: newBRL,
+      diff_pct: Number(diffPct.toFixed(2)),
+      will_reset_learning: false,
+      note: 'Orçamento alterado dentro da margem segura (≤20%). Aprendizado preservado.',
+    });
+  } catch (err) {
+    console.error('[budget-safe]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

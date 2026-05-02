@@ -768,4 +768,193 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
   }
 }
 
-module.exports = { updateCampaignStatus, updateCampaignMeta, updateAdSetMeta, deleteCampaign, replaceCreative, duplicateAdInAdSet, publishCampaign, request, getToken };
+/* Duplica um AdSet INTEIRO dentro da MESMA campanha via Meta /copies.
+   Usado pra testar OUTRO público sem destruir o adset original (que pode
+   ter aprendizado acumulado). O adset NOVO entra em learning phase do zero
+   — Meta sempre trata adset novo como entidade nova.
+
+   Etapas:
+   1) POST /{source_adset_id}/copies com deep_copy=true (copia ads filhos)
+      e status_option=PAUSED (segurança — caller decide quando ativar)
+   2) Se overrides foram passados (targeting/budget/name), aplica via
+      POST /{new_adset_id} usando updateAdSetMeta
+
+   Por que NÃO criar adset do zero: copies herda automaticamente todos os
+   campos válidos (campaign_id, optimization_goal, billing_event,
+   destination_type, promoted_object, etc.). Recriar manualmente é frágil
+   — qualquer campo esquecido vira erro 100/Invalid parameter.
+
+   Retorna { new_adset_id, copied_ad_ids, applied_overrides }. */
+async function duplicateAdSet(creds, {
+  sourceAdSetId,
+  deepCopy = true,
+  statusOption = 'PAUSED',
+  renameSuffix = ' — v2',
+  overrides = {},
+}) {
+  const token = getToken(creds);
+  if (!sourceAdSetId) throw new Error('duplicateAdSet: sourceAdSetId obrigatório');
+
+  /* 1) Chama /copies — Meta retorna { copied_adset_id, ad_object_ids } */
+  const copyResp = await request('POST', `/${sourceAdSetId}/copies`, {
+    deep_copy: deepCopy,
+    status_option: statusOption,
+    rename_strategy: 'DEEP_RENAME',
+    rename_suffix: renameSuffix,
+  }, { token });
+
+  const newAdSetId = copyResp?.copied_adset_id || copyResp?.ad_object_ids?.[0]?.copied_id || null;
+  const copiedAdIds = Array.isArray(copyResp?.ad_object_ids)
+    ? copyResp.ad_object_ids
+        .filter(o => o?.ad_object_type === 'ad' || o?.copied_id)
+        .map(o => o.copied_id || o.id)
+        .filter(Boolean)
+    : [];
+
+  if (!newAdSetId) {
+    throw new Error('Meta não retornou ID do conjunto duplicado (verifique permissions ads_management)');
+  }
+
+  /* 2) Aplica overrides (se houver) — só campos que updateAdSetMeta aceita.
+     Targeting precisa vir reconciliado pelo caller (Meta substitui o objeto
+     inteiro, não faz merge). */
+  const appliedOverrides = {};
+  const hasOverrides = overrides && Object.keys(overrides).length > 0;
+  if (hasOverrides) {
+    const patch = {};
+    if (overrides.name != null) patch.name = String(overrides.name);
+    if (overrides.daily_budget != null) patch.daily_budget = Math.round(Number(overrides.daily_budget));
+    if (overrides.lifetime_budget != null) patch.lifetime_budget = Math.round(Number(overrides.lifetime_budget));
+    if (overrides.targeting != null) patch.targeting = overrides.targeting;
+    if (overrides.start_time != null) patch.start_time = overrides.start_time;
+    if (overrides.end_time != null) patch.end_time = overrides.end_time;
+    if (overrides.bid_amount != null) patch.bid_amount = Math.round(Number(overrides.bid_amount));
+    if (Object.keys(patch).length > 0) {
+      try {
+        await updateAdSetMeta(creds, newAdSetId, patch);
+        Object.assign(appliedOverrides, patch);
+      } catch (e) {
+        /* Override falhou mas adset duplicado JÁ existe — não dá pra rollback
+           (Meta cobraria o cleanup). Propaga erro com contexto pro caller
+           decidir (pode tentar de novo via PATCH separado, ou aceitar adset
+           duplicado com config original). */
+        const err = new Error(`Conjunto duplicado mas overrides falharam: ${e.message}`);
+        err.partial = { new_adset_id: newAdSetId, copied_ad_ids: copiedAdIds };
+        err.meta = e.meta;
+        throw err;
+      }
+    }
+  }
+
+  return {
+    new_adset_id: newAdSetId,
+    copied_ad_ids: copiedAdIds,
+    applied_overrides: appliedOverrides,
+  };
+}
+
+/* Cria um Ad NOVO num adset EXISTENTE, reusando o creative do ad atual ou
+   construindo creative novo a partir de overrides. Diferente de
+   duplicateAdInAdSet (que sempre clona o creative do ad de origem), aqui
+   o caller pode escolher:
+   - Reusar creative_id existente direto (mais barato, sem clonar)
+   - Construir creative novo via overrides (igual replaceCreative)
+
+   IMPORTANTE: criar ad novo no adset É considerado significant edit pelo
+   Meta — reseta o aprendizado do adset. Caller deve avisar usuário.
+
+   Retorna { new_ad_id, creative_id, reused_creative }. */
+async function createAdInExistingAdSet(creds, {
+  adAccountId,
+  platformAdSetId,
+  baseCreativeId,
+  overrides = null,
+  newAdName = 'Anúncio novo',
+}) {
+  const token = getToken(creds);
+  if (!adAccountId) throw new Error('createAdInExistingAdSet: adAccountId obrigatório');
+  if (!platformAdSetId) throw new Error('createAdInExistingAdSet: platformAdSetId obrigatório');
+  if (!baseCreativeId) throw new Error('createAdInExistingAdSet: baseCreativeId obrigatório (ad atual ou novo)');
+
+  const accountId = adAccountId.startsWith('act_') ? adAccountId : `act_${adAccountId}`;
+  let creativeIdToUse = baseCreativeId;
+  let reusedCreative = true;
+
+  /* Se overrides existem e não estão vazios, clona creative aplicando overrides
+     (mesmo padrão de replaceCreative). Senão reusa creative_id existente direto. */
+  const hasOverrides = overrides && (overrides.message != null || overrides.title != null || overrides.link != null || overrides.ctaType != null);
+  if (hasOverrides) {
+    const { metaGet } = require('./metaHttp');
+    const current = await metaGet(`/${baseCreativeId}`, {
+      fields: 'name,object_story_spec'
+    }, { token });
+    if (!current?.object_story_spec) {
+      throw new Error(`Creative ${baseCreativeId} não tem object_story_spec — não dá pra clonar`);
+    }
+    const newSpec = JSON.parse(JSON.stringify(current.object_story_spec));
+    if (newSpec.video_data) {
+      delete newSpec.video_data.image_url;
+      delete newSpec.video_data.thumbnail_url;
+      delete newSpec.video_data.id;
+    }
+    if (newSpec.link_data) {
+      delete newSpec.link_data.image_url;
+      delete newSpec.link_data.picture;
+      delete newSpec.link_data.id;
+    }
+    delete newSpec.id;
+    delete newSpec.effective_object_story_id;
+    delete newSpec.branded_content_sponsor_page_id;
+
+    if (newSpec.video_data) {
+      if (overrides.message != null) newSpec.video_data.message = String(overrides.message);
+      if (overrides.title != null) newSpec.video_data.title = String(overrides.title);
+      if (!newSpec.video_data.call_to_action) newSpec.video_data.call_to_action = { type: 'LEARN_MORE' };
+      if (overrides.ctaType) newSpec.video_data.call_to_action.type = overrides.ctaType;
+      if (overrides.link != null) {
+        const t = newSpec.video_data.call_to_action.type || 'LEARN_MORE';
+        if (t === 'WHATSAPP_MESSAGE') {
+          newSpec.video_data.call_to_action.value = { app_destination: 'WHATSAPP' };
+        } else if (t === 'MESSAGE_PAGE' || t === 'SEND_MESSAGE') {
+          newSpec.video_data.call_to_action.value = { app_destination: 'MESSENGER' };
+        } else {
+          newSpec.video_data.call_to_action.value = { link: String(overrides.link) };
+        }
+      }
+    } else if (newSpec.link_data) {
+      if (overrides.message != null) newSpec.link_data.message = String(overrides.message);
+      if (overrides.title != null) newSpec.link_data.name = String(overrides.title);
+      if (overrides.link != null) newSpec.link_data.link = String(overrides.link);
+      if (!newSpec.link_data.call_to_action) newSpec.link_data.call_to_action = { type: 'LEARN_MORE' };
+      if (overrides.ctaType) newSpec.link_data.call_to_action.type = overrides.ctaType;
+    } else {
+      throw new Error(`Creative ${baseCreativeId} não tem video_data nem link_data`);
+    }
+
+    const newCreativeResp = await request('POST', `/${accountId}/adcreatives`, {
+      name: (current.name || 'Creative') + ' — novo',
+      object_story_spec: newSpec,
+    }, { token });
+    if (!newCreativeResp?.id) throw new Error('Meta não retornou ID do creative novo');
+    creativeIdToUse = newCreativeResp.id;
+    reusedCreative = false;
+  }
+
+  /* Cria ad novo no adset existente — sempre PAUSED */
+  const newAdResp = await request('POST', `/${accountId}/ads`, {
+    name: newAdName,
+    adset_id: platformAdSetId,
+    creative: { creative_id: creativeIdToUse },
+    status: 'PAUSED',
+  }, { token });
+  if (!newAdResp?.id) throw new Error('Meta não retornou ID do ad novo');
+
+  return {
+    new_ad_id: newAdResp.id,
+    new_ad_name: newAdName,
+    creative_id: creativeIdToUse,
+    reused_creative: reusedCreative,
+  };
+}
+
+module.exports = { updateCampaignStatus, updateCampaignMeta, updateAdSetMeta, deleteCampaign, replaceCreative, duplicateAdInAdSet, duplicateAdSet, createAdInExistingAdSet, publishCampaign, request, getToken };
