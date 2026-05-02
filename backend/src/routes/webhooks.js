@@ -21,6 +21,12 @@ router.post('/meta', async (req, res) => {
     console.warn('[webhook/meta] rejeitado: ', !sig ? 'header x-hub-signature-256 ausente' : 'FB_APP_SECRET ausente no ambiente');
     return res.status(401).send('unauthorized');
   }
+  if (!req.rawBody) {
+    /* rawBody fica undefined quando express.json não parseia (content-type
+       diferente de application/json). Signature vai divergir e cair em 401 —
+       comportamento correto, mas silencioso. Log explícito ajuda debug. */
+    console.warn('[webhook/meta] rawBody undefined — content-type:', req.header('content-type') || '(ausente)');
+  }
   const raw = req.rawBody || JSON.stringify(req.body || {});
   const expected = 'sha256=' + crypto.createHmac('sha256', appSecret).update(raw).digest('hex');
   try {
