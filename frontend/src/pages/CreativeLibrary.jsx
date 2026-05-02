@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../contexts/AppStateContext';
+import SpyCompetitor from '../components/SpyCompetitor';
 
 /**
  * CreativeLibrary — biblioteca de criativos (texto, título, imagem/vídeo).
@@ -264,6 +265,7 @@ export default function CreativeLibrary() {
   const navigate = useNavigate();
   const { creatives, addCreative, removeCreative, markCreativeUsed, addNotification } = useAppState();
   const [mode, setMode] = useState('list');
+  const [tab, setTab] = useState('mine'); // 'mine' | 'spy'
 
   function handleSave(data) {
     addCreative(data);
@@ -288,25 +290,38 @@ export default function CreativeLibrary() {
     navigate('/criar-anuncio', { state: { reuseCreative: creative, reviewMode: false } });
   }
 
+  const headerCopy = tab === 'spy'
+    ? 'Cole prints e textos da Facebook Ads Library de um concorrente — a IA lê tudo e devolve padrões, ganchos e recomendações.'
+    : 'Textos, títulos e descrições que você pode reutilizar em novos anúncios. Criativos de anúncios publicados são salvos aqui automaticamente.';
+
   return (
     <div className="page-container">
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', gap: '16px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '18px', gap: '16px', flexWrap: 'wrap' }}>
         <div>
           <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
             Biblioteca de criativos
           </h1>
-          <p style={{ fontSize: '13px', color: 'var(--c-text-3)', margin: 0 }}>
-            Textos, títulos e descrições que você pode reutilizar em novos anúncios. Criativos de anúncios publicados são salvos aqui automaticamente.
+          <p style={{ fontSize: '13px', color: 'var(--c-text-3)', margin: 0, maxWidth: '640px' }}>
+            {headerCopy}
           </p>
         </div>
-        {mode === 'list' && (
+        {tab === 'mine' && mode === 'list' && (
           <button onClick={() => setMode('edit')} style={btnPrimaryInline}>
             <IconPlus /> Novo criativo
           </button>
         )}
       </div>
 
-      {mode === 'edit' ? (
+      <div style={{
+        display: 'flex', gap: '6px',
+        borderBottom: '1px solid var(--c-border)',
+        marginBottom: '20px',
+      }}>
+        <TabBtn active={tab === 'mine'} onClick={() => setTab('mine')}>🎨 Meus criativos</TabBtn>
+        <TabBtn active={tab === 'spy'} onClick={() => setTab('spy')}>🔍 Espionar concorrente</TabBtn>
+      </div>
+
+      {tab === 'spy' ? <SpyCompetitor /> : mode === 'edit' ? (
         <CreativeForm
           onSave={handleSave}
           onCancel={() => setMode('list')}
@@ -389,3 +404,25 @@ const emptyState = {
   borderRadius: '18px', padding: '56px 24px', textAlign: 'center',
   color: 'var(--c-text-3)',
 };
+
+function TabBtn({ active, onClick, children }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: '10px 16px',
+        fontSize: '13px',
+        fontWeight: active ? 700 : 600,
+        background: 'transparent',
+        color: active ? 'var(--c-accent)' : 'var(--c-text-3)',
+        border: 'none',
+        borderBottom: active ? '2px solid var(--c-accent)' : '2px solid transparent',
+        marginBottom: '-1px',
+        cursor: 'pointer',
+        display: 'inline-flex', alignItems: 'center', gap: '6px',
+      }}
+    >
+      {children}
+    </button>
+  );
+}

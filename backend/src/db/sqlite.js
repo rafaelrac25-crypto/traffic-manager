@@ -179,6 +179,18 @@ db.exec(`
     expires_at TEXT NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_oauth_states_expires ON oauth_states(expires_at);
+
+  /* Análises de concorrente — feature "Espionar Concorrente". JSON em TEXT. */
+  CREATE TABLE IF NOT EXISTS competitor_analyses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    source_url TEXT,
+    items TEXT,
+    descriptions TEXT,
+    insights TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_competitor_analyses_created ON competitor_analyses(created_at DESC);
 `);
 
 const migrations = [

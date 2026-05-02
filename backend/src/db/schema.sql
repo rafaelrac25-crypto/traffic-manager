@@ -209,3 +209,18 @@ CREATE UNIQUE INDEX IF NOT EXISTS uniq_insights_period_camp
 CREATE UNIQUE INDEX IF NOT EXISTS uniq_insights_period_ad
   ON insights (campaign_id, ad_id, date_start, date_stop)
   WHERE ad_id IS NOT NULL;
+
+/* Análises de concorrente — feature "Espionar Concorrente" da CreativeLibrary.
+   items, descriptions, insights são JSON serializado em TEXT pra manter
+   compatibilidade SQLite (dev) e PG (prod). source_url é o link público
+   da Facebook Ads Library do anunciante. */
+CREATE TABLE IF NOT EXISTS competitor_analyses (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  source_url TEXT,
+  items TEXT,
+  descriptions TEXT,
+  insights TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_competitor_analyses_created ON competitor_analyses(created_at DESC);
