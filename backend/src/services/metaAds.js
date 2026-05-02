@@ -105,7 +105,7 @@ async function fetchAccountInsights(creds, { since, until, level = 'campaign', b
   if (!accountId) throw new Error('account_id não configurado');
 
   const params = {
-    fields: 'campaign_id,campaign_name,spend,clicks,impressions,reach,ctr,cpc,cpm,actions,cost_per_action_type,date_start,date_stop',
+    fields: 'campaign_id,campaign_name,spend,clicks,inline_link_clicks,impressions,reach,ctr,cpc,cpm,actions,cost_per_action_type,date_start,date_stop',
     level,
     limit: 500,
     /* Janela de atribuição unificada pra conversations_started em OUTCOME_ENGAGEMENT */
@@ -134,7 +134,7 @@ async function fetchAdSetInsights(creds, adSetId, { since, until, breakdowns = '
   if (!adSetId) throw new Error('ad_set_id ausente');
 
   const params = {
-    fields: 'adset_id,adset_name,spend,clicks,impressions,reach,ctr,cpc,cpm,actions,cost_per_action_type,date_start,date_stop',
+    fields: 'adset_id,adset_name,spend,clicks,inline_link_clicks,impressions,reach,ctr,cpc,cpm,actions,cost_per_action_type,date_start,date_stop',
     level: 'adset',
     limit: 500,
     action_attribution_windows: ['7d_click', '1d_view'],

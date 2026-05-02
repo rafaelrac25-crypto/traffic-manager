@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const db = require('../db');
+const { isMessagesViaWaLink } = require('../services/sync');
 
 async function log(action, entity, entity_id, description, meta) {
   try {
@@ -761,18 +762,30 @@ router.post('/sync-meta-status', async (req, res) => {
       const nextClicks      = keepMax(r.clicks,      local.clicks);
       const nextLinkClicks  = keepMax(r.link_clicks, local.link_clicks);
       const nextImpressions = keepMax(r.impressions, local.impressions);
-      const nextConversions = keepMax(r.conversions, local.conversions);
 
-      /* Mescla métricas voláteis (reach/ctr/cpc/cpm/freq) e estado dos ads
-         no payload — frontend usa esses pra Dashboard sem ter que esperar
-         o sync completo manual. ads[] traz effective_status + issues_info
-         pra detectar rejeição/problema do anúncio sem chamada extra. */
+      /* prevPayload precisa estar disponível antes do mapping de conversions
+         (isMessagesViaWaLink lê destUrl do payload). Parse aqui em vez de
+         no merge volátil mais abaixo. */
       let prevPayload = {};
       try {
         prevPayload = local.payload
           ? (typeof local.payload === 'string' ? JSON.parse(local.payload) : local.payload)
           : {};
       } catch { prevPayload = {}; }
+
+      /* Mesma lógica de mapping do syncPlatform completo — sem isso, o polling
+         90s sobrescreve o valor mapeado com 0 (Meta não retorna conversions
+         pra OUTCOME_TRAFFIC + wa.me sem WhatsApp Business linkado).
+         Proxy correto = link_clicks (inline), não clicks total. */
+      const rConversions = Number(r.conversions) || 0;
+      const linkClicksProxy = Number(r.link_clicks) || Number(r.clicks) || 0;
+      let nextConversions;
+      if (rConversions === 0 && linkClicksProxy > 0 && isMessagesViaWaLink(r.objective, prevPayload)) {
+        nextConversions = keepMax(linkClicksProxy, local.conversions);
+      } else {
+        nextConversions = keepMax(rConversions, local.conversions);
+      }
+      const wasMappedFromClicks = (rConversions === 0 && linkClicksProxy > 0 && isMessagesViaWaLink(r.objective, prevPayload));
       const nextPayload = {
         ...prevPayload,
         reach: r.reach ?? prevPayload.reach,
@@ -783,6 +796,7 @@ router.post('/sync-meta-status', async (req, res) => {
         effective_status: r.effective_status ?? prevPayload.effective_status,
         ads: Array.isArray(r.ads) ? r.ads : prevPayload.ads,
         synced_at: new Date().toISOString(),
+        conversions_mapped_from_clicks: wasMappedFromClicks || undefined,
       };
       /* Atualiza status reais do adset/ad dentro de payload.meta pra
          frontend exibir sem confiar no snapshot do publish (que mente

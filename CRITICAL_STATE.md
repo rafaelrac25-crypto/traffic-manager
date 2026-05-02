@@ -1,5 +1,89 @@
 # CRITICAL_STATE — traffic-manager
 
+## Sessão 2026-05-02 tarde — FIX mapping de mensagens iniciadas (2 bugs)
+
+### Sintoma observado ao vivo (2026-05-02 ~13:04 GMT-3)
+- 437 Cravos: ACTIVE, 276 link_clicks, 4,5% CTR, R$ 0,12 CPC, **0 mensagens registradas no painel** ❌
+- 436 Nano: ACTIVE, 161 link_clicks, **86 mensagens (stale, valor de quando clicks era 86)** ⚠️
+
+### Causa raiz — 2 bugs encontrados
+1. **`/sync-meta-status` (polling 90s) não tinha mapping `wa.me/`** — só `keepMax(r.conversions, local.conversions)`. Sem WhatsApp Business linkado à Page, Meta nunca dispara `messaging_conversation_started_7d`, então `r.conversions` é sempre 0. `keepMax` preserva valor antigo eternamente (86 stale na 436) ou mantém 0 se nunca foi mapeado (caso 437).
+2. **Sync completo (`syncPlatform`) usava `c.clicks` em vez de `c.link_clicks`** — `clicks` total inclui profile click/like/save (overcontagem). Proxy correto é `inline_link_clicks` (= abriu wa.me).
+
+### Fix aplicado (4 arquivos)
+- **`services/sync.js`**: `isMessagesViaWaLink` movido pra escopo do módulo + exportado. Mapping passa a usar `c.link_clicks || c.clicks` (proxy correto). Loop de insights-by-district idem (`row.inline_link_clicks` com fallback).
+- **`services/metaAds.js`**: `fetchAccountInsights` e `fetchAdSetInsights` passam a pedir `inline_link_clicks` ao Meta (antes só pedia `clicks`).
+- **`routes/campaigns.js`**: `/sync-meta-status` importa `isMessagesViaWaLink` e aplica mesma lógica de mapping antes do `keepMax`. Persiste flag `conversions_mapped_from_clicks` no payload.
+
+### Backfill esperado no próximo sync
+- 437 Cravos: 0 → ~276 (link_clicks atual)
+- 436 Nano: 86 stale → ~161 (link_clicks atual real)
+
+### Validação
+- Sintaxe: `node -c` passou nos 3 arquivos
+- Sem circular require (campaigns.js → sync.js, sync.js não importa campaigns.js)
+
+### Não bloqueado — mas próximo
+- Quando Cris cadastrar WhatsApp na Page (via suporte Meta), `messaging_conversation_started_7d` vai disparar de verdade → contagem REAL de mensagens (não proxy via cliques). Mapping continua como fallback automático nas que já rodaram sem WA Business.
+
+---
+
+## Sessão 2026-05-02 tarde — MCP Meta desativado temporariamente
+
+`.mcp.json` renomeado para `.mcp.json.disabled`. O servidor MCP `https://mcp.facebook.com/ads` rejeita o registro dinâmico (DCR/RFC 7591) do client OAuth do Claude Code com erro `The provided redirect_uris are not registered for this client.` — falha na etapa de registro, antes de gerar URL de autorização. Confirmado que erro persiste tanto via `/mcp` quanto via tool direto `mcp__meta-ads__authenticate`. Não é problema do FB_APP_ID/conta da Cris — é política do servidor MCP do Meta (provável: rollout fechado, sem suporte a `http://localhost:*` redirect_uri ainda).
+
+**Não-impacto:** integração Meta principal (OAuth próprio + token criptografado + refresh automático em `services/metaToken.js`) segue 100% funcional. MCP era conveniência adicional.
+
+**Para reativar (futuro):** `mv .mcp.json.disabled .mcp.json` e tentar `/mcp` novamente. Vale checar se Anthropic/Meta destravaram DCR antes.
+
+---
+
+## Sessão 2026-05-02 manhã — VARREDURA 2 APLICADA (4 commits)
+
+### Findings da Varredura 2 (recuperada do JSONL da sessão anterior)
+0 CRITICAL · 3 HIGH · 4 MEDIUM · 2 LOW. Lista completa OK confirmados (webhook signature, OAuth CSRF, AES-256-GCM, refresh lock, chunked upload, SQL injection, CASCADE, metaNormalize, mediaProcessor, double-submit).
+
+### Aplicado (4 commits atômicos)
+- **`36e53d2`** chore(security): CORS whitelist + Helmet headers
+  - CORS sem fallback `*`. Aceita FRONTEND_URL + localhost + `*.vercel.app` previews. Warn se var ausente.
+  - Helmet ativo (CSP/COEP off pra não bloquear Vite inline + thumbs Meta). 6 headers verificados em prod: Referrer-Policy, HSTS, X-Content-Type-Options, X-Dns-Prefetch-Control, X-Frame-Options=SAMEORIGIN, X-Permitted-Cross-Domain-Policies.
+- **`3adfcfa`** refactor(upload): DDL único + cleanup orgânico
+  - `IMAGE_UPLOAD_SESSIONS_DDL` exportado de `migrate.js`, importado em `upload.js` (single source).
+  - Cleanup inline em `POST /image/start`: DELETE >24h antes do INSERT. Em Vercel serverless o boot pode não rodar por dias — antes BLOBs até 30MB acumulariam no Neon.
+- **`576e623`** chore(webhook): log content-type quando rawBody undefined (debug 401 silencioso quando Meta manda content-type fora de application/json).
+- **`08dd86b`** docs(schema): tabela `users` marcada DEPRECATED (auth removida; TODO de drop futuro + checklist se reativar).
+
+### Pulei (com motivo)
+- **OAuth POST body** (HIGH risco baixo): query string com `client_secret` em `platforms.js:264`. Risco de quebrar reconnect ativo da Cris (token longo válido 49 dias). Mantém TODO pra próxima janela de manutenção.
+- **DROP TABLE users** (destrutivo): só comentário/TODO. Drop precisa autorização explícita.
+- **`refreshLocks` multi-instância** (LOW): impacto real baixo (Meta invalida token anterior).
+- **`upload_session_id` validação local** (LOW): Meta rejeita formato inválido.
+
+### Validação ao vivo (2026-05-02 13:01 GMT-3)
+- `/api/health/full` — 4/4 OK (DB, Meta act_1330468201431069 token 49d, Groq, Webhook).
+- Helmet headers presentes na resposta de prod.
+- CORS funcionando (curl server-to-server passa, navegador cross-origin não permitido cai no callback).
+- Sem regressão nas 4 integrações.
+
+### Próximo (Rafa)
+1. Cadastrar WhatsApp na Page Facebook (Sobre → Informações) — desbloqueia Click-to-WhatsApp formal das 437/436.
+2. Confirmar via `/api/platforms/meta/diagnose-page` (`can_run_click_to_whatsapp: true`).
+3. Aguardar Meta aprovar duplicates pendentes (PENDING_REVIEW → ACTIVE).
+
+### Pendente de autorização do Rafa
+- **`/schedule diagnose-page`** — Rafa autorizou em concept ("sim") mas pediu explicação leiga antes; sessão fechou sem criar a routine. Próxima sessão: criar routine recorrente (sugestão original: 30min, 7-22h GMT-3) que monitora `can_run_click_to_whatsapp` e dispara sino quando virar `true`.
+- **DROP TABLE users** — só com OK explícito.
+
+### Estado consolidado do sistema (2026-05-02 ~10:15 GMT-3)
+**Código:** zero pendência crítica. 4 integrações ok. Helmet em prod com 6 headers. CORS whitelist. Uploads com cleanup orgânico.
+**Operacional:** depende só de Cris (cadastro WhatsApp) + Meta (aprovação duplicates).
+**Backlog conhecido (não-bloqueante):** OAuth POST body (esperar reauth ~49d), refreshLocks multi-instância, validação local de upload_session_id, sync Meta por bairro pular duplicados, editor orçamento adset não atualiza payload local, cron sync automático, code-splitting 670kB.
+
+### Documento didático gerado
+Explicação leiga de cada item (5 categorias × N itens cada) entregue ao Rafa em chat — não persistida em arquivo. Se quiser referenciar no futuro, basta pedir "explica de novo aquele item X".
+
+---
+
 ## Sessão 2026-04-30 noite — MENSAGEM WHATSAPP PRÉ-PREENCHIDA (3 commits)
 
 ### Diagnóstico

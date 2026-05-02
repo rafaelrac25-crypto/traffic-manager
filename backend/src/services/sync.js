@@ -5,6 +5,31 @@ const metaAds = require('./metaAds');
 const { CONVERSION_ACTION_TYPES } = metaAds;
 const handlers = { google: googleAds, meta: metaAds };
 
+/* ─── Detector "campanha de mensagens via wa.me/" ───────────────────
+   Decisão registrada no CRITICAL_STATE.md: quando objetivo do usuário
+   é "messages" E destURL é wa.me/, a campanha é montada como TRÁFEGO
+   (OUTCOME_TRAFFIC + LINK_CLICKS), não Click-to-WhatsApp formal.
+   Nesses casos, "link click no anúncio" = "abriu WhatsApp na prática",
+   mas Meta só contabiliza como link_click — conversions fica em 0 e
+   o card "Custo por resultado" do Dashboard mostra "—" passando
+   impressão de campanha falhando ao usuário leigo.
+
+   Quando detectamos esse padrão, mapeamos conversions = link_clicks
+   (mantendo clicks/impressions originais — só preenchemos o que
+   está zerado quando faz sentido). Reutilizado em /sync-meta-status
+   pra manter consistência entre os 2 caminhos de sync. */
+function isMessagesViaWaLink(platformObjective, payload) {
+  const obj = String(platformObjective || '').toUpperCase();
+  /* OUTCOME_ENGAGEMENT / MESSAGES = objetivo formal "Mensagens" do Meta */
+  if (obj === 'MESSAGES' || obj === 'OUTCOME_ENGAGEMENT') return true;
+  /* OUTCOME_TRAFFIC + destUrl wa.me/ = fallback wa.me/ (caso da Cris) */
+  if (obj.includes('TRAFFIC')) {
+    const destUrl = payload?.destUrl || payload?.meta?.ad?.destUrl || null;
+    if (typeof destUrl === 'string' && /wa\.me\//i.test(destUrl)) return true;
+  }
+  return false;
+}
+
 async function syncPlatform(platform) {
   const handler = handlers[platform];
   if (!handler) throw new Error(`Plataforma '${platform}' não suportada`);
@@ -26,30 +51,6 @@ async function syncPlatform(platform) {
 
   const campaigns = await handler.fetchCampaigns(creds);
   let upserted = 0;
-
-  /* ─── Detector "campanha de mensagens via wa.me/" ───────────────────
-     Decisão registrada no CRITICAL_STATE.md: quando objetivo do usuário
-     é "messages" E destURL é wa.me/, a campanha é montada como TRÁFEGO
-     (OUTCOME_TRAFFIC + LINK_CLICKS), não Click-to-WhatsApp formal.
-     Nesses casos, "click no anúncio" = "mensagem iniciada no WhatsApp",
-     mas Meta só contabiliza como link_click — conversions fica em 0 e
-     o card "Custo por resultado" do Dashboard mostra "—" passando
-     impressão de campanha falhando ao usuário leigo.
-
-     Quando detectamos esse padrão, mapeamos conversions = clicks
-     (mantendo clicks/impressions originais — só preenchemos o que
-     está zerado quando faz sentido). */
-  function isMessagesViaWaLink(platformObjective, payload) {
-    const obj = String(platformObjective || '').toUpperCase();
-    /* OUTCOME_ENGAGEMENT / MESSAGES = objetivo formal "Mensagens" do Meta */
-    if (obj === 'MESSAGES' || obj === 'OUTCOME_ENGAGEMENT') return true;
-    /* OUTCOME_TRAFFIC + destUrl wa.me/ = fallback wa.me/ (caso da Cris) */
-    if (obj.includes('TRAFFIC')) {
-      const destUrl = payload?.destUrl || payload?.meta?.ad?.destUrl || null;
-      if (typeof destUrl === 'string' && /wa\.me\//i.test(destUrl)) return true;
-    }
-    return false;
-  }
 
   /* Mapa de transições de effective_status que merecem log em activity_log.
      "DE→PARA" tem prioridade sobre "*→PARA" (wildcard).
@@ -93,14 +94,18 @@ async function syncPlatform(platform) {
        "Custo por resultado", passando impressão de campanha falhando.
        Mantém clicks/impressions/spent originais — só preenche conversions
        quando ele está em 0 e o padrão wa.me/ está presente. */
+    /* Proxy correto pra "abriu wa.me" é inline_link_clicks (link_clicks),
+       não clicks total (que inclui profile click, like, save). Fallback
+       pra c.clicks só se Meta não retornar link_clicks. */
+    const linkClicksProxy = c.link_clicks || c.clicks;
     let mappedConversions = c.conversions;
     const wasMappedFromClicks = (
       (!c.conversions || c.conversions === 0)
-      && c.clicks > 0
+      && linkClicksProxy > 0
       && isMessagesViaWaLink(c.objective, prevPayload)
     );
     if (wasMappedFromClicks) {
-      mappedConversions = c.clicks;
+      mappedConversions = linkClicksProxy;
     }
 
     const payload = {
@@ -346,17 +351,20 @@ async function syncPlatform(platform) {
         const safeInt   = (v) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : 0; };
 
         /* Mesma regra do loop de campaigns acima: para campanhas messages
-           via wa.me/, conversions = clicks (link click no Meta = mensagem
-           iniciada na prática). Mantém raw original — só sobrescreve o
-           valor agregado que o Dashboard consome. */
+           via wa.me/, conversions = link_clicks (inline_link_clicks no Meta
+           = abriu wa.me na prática). Prefere link_clicks; fallback pra clicks
+           total se insight não vier com link_clicks. Mantém raw original —
+           só sobrescreve o valor agregado que o Dashboard consome. */
         const rowClicks = safeInt(row.clicks);
+        const rowLinkClicks = safeInt(row.inline_link_clicks);
+        const linkClicksProxy = rowLinkClicks || rowClicks;
         const objectiveForInsight = campPayload?.objective || row.objective;
         if (
           conversions === 0
-          && rowClicks > 0
+          && linkClicksProxy > 0
           && isMessagesViaWaLink(objectiveForInsight, campPayload)
         ) {
-          conversions = rowClicks;
+          conversions = linkClicksProxy;
         }
 
         /* ON CONFLICT casa com o índice parcial uniq_insights_period_camp
@@ -395,4 +403,4 @@ async function syncPlatform(platform) {
   return { upserted, total: campaigns.length };
 }
 
-module.exports = { syncPlatform };
+module.exports = { syncPlatform, isMessagesViaWaLink };
