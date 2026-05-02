@@ -957,4 +957,195 @@ async function createAdInExistingAdSet(creds, {
   };
 }
 
-module.exports = { updateCampaignStatus, updateCampaignMeta, updateAdSetMeta, deleteCampaign, replaceCreative, duplicateAdInAdSet, duplicateAdSet, createAdInExistingAdSet, publishCampaign, request, getToken };
+/* Atualiza status (ACTIVE/PAUSED) de um AdSet ISOLADO no Meta.
+   Usado pra ligar/desligar conjuntos individualmente sem mexer
+   na campanha-mãe nem nos outros conjuntos. */
+async function updateAdSetStatus(creds, platformAdSetId, status) {
+  const token = getToken(creds);
+  if (!platformAdSetId) throw new Error('updateAdSetStatus: platformAdSetId obrigatório');
+  const metaStatus = String(status).toUpperCase() === 'ACTIVE' ? 'ACTIVE' : 'PAUSED';
+  return request('POST', `/${platformAdSetId}`, { status: metaStatus }, { token });
+}
+
+/* Atualiza status (ACTIVE/PAUSED) de um Ad ISOLADO no Meta.
+   Importante: ativar ad enquanto campaign ou adset estão PAUSED não
+   faz o ad entregar (effective_status fica CAMPAIGN_PAUSED ou ADSET_PAUSED).
+   Caller deve avisar usuário se ancestrais estão pausados. */
+async function updateAdStatus(creds, platformAdId, status) {
+  const token = getToken(creds);
+  if (!platformAdId) throw new Error('updateAdStatus: platformAdId obrigatório');
+  const metaStatus = String(status).toUpperCase() === 'ACTIVE' ? 'ACTIVE' : 'PAUSED';
+  return request('POST', `/${platformAdId}`, { status: metaStatus }, { token });
+}
+
+/* Liga/desliga Advantage+ Público num AdSet.
+   Lê targeting atual no Meta (não confia em payload local) + merge +
+   POST atualizando targeting INTEIRO (Meta v20 substitui o objeto).
+
+   IMPORTANTE: ligar Advantage+ permite Meta expandir o público além
+   do targeting manual. PODE entregar fora dos bairros configurados —
+   conflita com regra Joinville. UI deve avisar antes do toggle.
+
+   Mudança em targeting RESETA o aprendizado do adset. */
+async function setAdvantageAudience(creds, platformAdSetId, enabled) {
+  const token = getToken(creds);
+  if (!platformAdSetId) throw new Error('setAdvantageAudience: platformAdSetId obrigatório');
+
+  const { metaGet } = require('./metaHttp');
+  const current = await metaGet(`/${platformAdSetId}`, { fields: 'targeting' }, { token });
+  const targeting = current?.targeting ? JSON.parse(JSON.stringify(current.targeting)) : {};
+  targeting.targeting_automation = {
+    ...(targeting.targeting_automation || {}),
+    advantage_audience: enabled ? 1 : 0,
+  };
+  /* Se ligando Advantage+, também relaxa custom_audience e lookalike pra
+     Meta poder expandir. Se desligando, força os 2 pra 0 (regra Joinville). */
+  if (enabled) {
+    targeting.targeting_relaxation_types = {
+      ...(targeting.targeting_relaxation_types || {}),
+    };
+  } else {
+    targeting.targeting_relaxation_types = { lookalike: 0, custom_audience: 0 };
+  }
+
+  return request('POST', `/${platformAdSetId}`, { targeting }, { token });
+}
+
+/* Cria um teste A/B (split test) em campanha existente via /ad_studies.
+   Meta divide o público entre as cells SEM SOBREPOSIÇÃO — cada usuário
+   só é exposto a UMA cell.
+
+   params: {
+     accountId,
+     name,                  // "Teste A/B — Cravos — Criativo"
+     description,           // texto opcional
+     startTime,             // ISO string ou epoch ms (Meta aceita ambos como timestamp)
+     endTime,               // idem
+     cells: [               // mínimo 2, soma de treatment_percentage = 100
+       { name: 'Controle',  treatment_percentage: 50, adsets: ['<adset_id>'] },
+       { name: 'Variante',  treatment_percentage: 50, adsets: ['<adset_id_2>'] },
+     ],
+     viewers: [user_id]?,    // opcional, default user atual
+   }
+
+   Pré-condições verificadas:
+   - Campaign(s) das cells está(ão) ACTIVE
+   - Mínimo 4 dias de duração (Meta exige)
+   - cells.length >= 2 e soma de treatment_percentage = 100
+   - cada cell tem pelo menos 1 adset_id
+
+   Retorna { study_id, status, raw }. */
+async function createABTest(creds, {
+  accountId, name, description, startTime, endTime, cells, viewers,
+}) {
+  const token = getToken(creds);
+  if (!accountId) throw new Error('createABTest: accountId obrigatório');
+  if (!name) throw new Error('createABTest: name obrigatório');
+  if (!Array.isArray(cells) || cells.length < 2) {
+    throw new Error('createABTest: precisa de pelo menos 2 cells');
+  }
+  const sumPct = cells.reduce((s, c) => s + Number(c.treatment_percentage || 0), 0);
+  if (Math.abs(sumPct - 100) > 0.01) {
+    throw new Error(`createABTest: soma de treatment_percentage deve ser 100 (atual: ${sumPct})`);
+  }
+  for (const c of cells) {
+    if (!Array.isArray(c.adsets) || c.adsets.length === 0) {
+      throw new Error(`createABTest: cell "${c.name}" sem adsets`);
+    }
+  }
+
+  /* Convert ISO/Date pra epoch seconds (Meta aceita timestamp Unix em segundos
+     mais consistentemente que ISO em ad_studies). */
+  function toEpochSec(t) {
+    if (typeof t === 'number') return t > 1e12 ? Math.floor(t / 1000) : Math.floor(t);
+    return Math.floor(new Date(t).getTime() / 1000);
+  }
+  const start = toEpochSec(startTime);
+  const end = toEpochSec(endTime);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) {
+    throw new Error('createABTest: startTime/endTime inválidos');
+  }
+  const durationDays = (end - start) / 86400;
+  if (durationDays < 4) {
+    throw new Error(`createABTest: duração mínima Meta é 4 dias (você passou ${durationDays.toFixed(1)})`);
+  }
+  if (durationDays > 30) {
+    throw new Error(`createABTest: duração máxima recomendada é 30 dias (você passou ${durationDays.toFixed(1)})`);
+  }
+
+  const acct = accountId.startsWith('act_') ? accountId : `act_${accountId}`;
+  const payload = {
+    name,
+    description: description || `Teste A/B criado em ${new Date().toISOString().slice(0, 10)}`,
+    start_time: start,
+    end_time: end,
+    type: 'SPLIT_TEST',
+    cells: JSON.stringify(cells.map(c => ({
+      name: c.name,
+      treatment_percentage: c.treatment_percentage,
+      adsets: c.adsets,
+    }))),
+  };
+  if (Array.isArray(viewers) && viewers.length > 0) payload.viewers = JSON.stringify(viewers);
+
+  const resp = await request('POST', `/${acct}/ad_studies`, payload, { token });
+  if (!resp?.id) throw new Error('Meta não retornou ID do estudo A/B');
+  return {
+    study_id: resp.id,
+    status: 'CREATED',
+    raw: resp,
+  };
+}
+
+/* Lê dados/resultado de um A/B test. Status, células, métricas comparativas. */
+async function getABTestResults(creds, studyId) {
+  const token = getToken(creds);
+  if (!studyId) throw new Error('getABTestResults: studyId obrigatório');
+  const { metaGet } = require('./metaHttp');
+  const study = await metaGet(`/${studyId}`, {
+    fields: 'id,name,description,status,start_time,end_time,type,cells,results,objectives,confidence_lift_window_days,p_value,observation_end_time'
+  }, { token });
+  return study;
+}
+
+/* Lista A/B tests de uma conta de anúncios. Filtra por campaign_id se informado. */
+async function listABTests(creds, accountId, { campaignId } = {}) {
+  const token = getToken(creds);
+  if (!accountId) throw new Error('listABTests: accountId obrigatório');
+  const acct = accountId.startsWith('act_') ? accountId : `act_${accountId}`;
+  const { metaGet } = require('./metaHttp');
+  const params = {
+    fields: 'id,name,status,start_time,end_time,type,cells,results',
+    limit: 50,
+  };
+  const resp = await metaGet(`/${acct}/ad_studies`, params, { token });
+  let data = resp?.data || [];
+  if (campaignId) {
+    /* Meta API não tem filtro server-side por campaign — filtramos client-side
+       checando os adsets das cells. Performance: studies por conta normalmente
+       são poucos (<50), filtro local OK. */
+    data = data.filter(s => {
+      const cells = Array.isArray(s.cells) ? s.cells : (s.cells?.data || []);
+      return cells.some(c => Array.isArray(c.adsets) && c.adsets.length > 0);
+    });
+  }
+  return data;
+}
+
+/* Encerra A/B test antes do tempo. Meta aceita PATCH no end_time pra
+   "agora" — não há DELETE oficial pra estudos em andamento. */
+async function stopABTest(creds, studyId) {
+  const token = getToken(creds);
+  if (!studyId) throw new Error('stopABTest: studyId obrigatório');
+  const nowSec = Math.floor(Date.now() / 1000);
+  return request('POST', `/${studyId}`, { end_time: nowSec }, { token });
+}
+
+module.exports = {
+  updateCampaignStatus, updateCampaignMeta, updateAdSetMeta,
+  updateAdSetStatus, updateAdStatus, setAdvantageAudience,
+  deleteCampaign, replaceCreative, duplicateAdInAdSet, duplicateAdSet,
+  createAdInExistingAdSet, publishCampaign,
+  createABTest, getABTestResults, listABTests, stopABTest,
+  request, getToken,
+};

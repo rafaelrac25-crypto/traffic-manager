@@ -2058,4 +2058,394 @@ router.patch('/:id/budget-safe', async (req, res) => {
   }
 });
 
+/* ============================================================
+   ENDPOINTS V2 ADIÇÕES — Status individual + Advantage+ + A/B test
+   ============================================================ */
+
+/* Status individual de AdSet — ativa/pausa SOMENTE este conjunto.
+   Não cascateia (Meta lida sozinho — adset isolado).
+   Se ancestral (campaign) está PAUSED, o ad ativo do adset NÃO entrega
+   (effective_status fica CAMPAIGN_PAUSED). Backend valida e avisa. */
+router.patch('/adsets/:adsetId/status', async (req, res) => {
+  const { status } = req.body || {};
+  const { adsetId } = req.params;
+  if (!['active', 'paused'].includes(status)) {
+    return res.status(400).json({ error: 'status deve ser "active" ou "paused"' });
+  }
+  try {
+    const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+    const creds = credResult.rows[0];
+    if (!creds) return res.status(400).json({ error: 'Meta não conectado' });
+
+    const { metaGet } = require('../services/metaHttp');
+    const { safeDecrypt } = require('../services/crypto');
+    const token = safeDecrypt(creds.access_token, 'adset-status');
+
+    /* Lê estado atual do adset + campanha pra validar */
+    const adset = await metaGet(`/${adsetId}`, {
+      fields: 'id,name,status,effective_status,campaign{id,status,effective_status}'
+    }, { token });
+
+    /* Aviso quando ativando ad mas campanha está pausada */
+    let warning = null;
+    if (status === 'active' && adset.campaign?.status === 'PAUSED') {
+      warning = 'Conjunto ativado, mas a campanha está pausada — anúncios não vão entregar até a campanha ser ativada.';
+    }
+
+    const { updateAdSetStatus } = require('../services/metaWrite');
+    try {
+      await updateAdSetStatus(creds, adsetId, status);
+    } catch (e) {
+      console.error('[adset-status] Meta erro:', e.message, e.meta);
+      return res.status(502).json({ error: `Meta recusou: ${e.message}`, meta_error: e.meta || null });
+    }
+
+    await log('adset_status', 'adset', null,
+      `Conjunto ${adsetId} → ${status === 'active' ? 'Ativado' : 'Pausado'}`,
+      { adset_id: adsetId, status, warning });
+
+    res.json({ ok: true, adset_id: adsetId, status, warning });
+  } catch (err) {
+    console.error('[adset-status]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* Status individual de Ad. */
+router.patch('/ads/:adId/status', async (req, res) => {
+  const { status } = req.body || {};
+  const { adId } = req.params;
+  if (!['active', 'paused'].includes(status)) {
+    return res.status(400).json({ error: 'status deve ser "active" ou "paused"' });
+  }
+  try {
+    const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+    const creds = credResult.rows[0];
+    if (!creds) return res.status(400).json({ error: 'Meta não conectado' });
+
+    const { metaGet } = require('../services/metaHttp');
+    const { safeDecrypt } = require('../services/crypto');
+    const token = safeDecrypt(creds.access_token, 'ad-status');
+
+    /* Lê estado do ad + adset + campanha pra validar entrega */
+    const ad = await metaGet(`/${adId}`, {
+      fields: 'id,name,status,effective_status,adset{id,status},campaign{id,status}'
+    }, { token });
+
+    let warning = null;
+    if (status === 'active') {
+      if (ad.campaign?.status === 'PAUSED') {
+        warning = 'Anúncio ativado, mas a campanha está pausada — não vai entregar até a campanha ser ativada.';
+      } else if (ad.adset?.status === 'PAUSED') {
+        warning = 'Anúncio ativado, mas o conjunto está pausado — não vai entregar até o conjunto ser ativado.';
+      }
+    }
+
+    const { updateAdStatus } = require('../services/metaWrite');
+    try {
+      await updateAdStatus(creds, adId, status);
+    } catch (e) {
+      console.error('[ad-status] Meta erro:', e.message, e.meta);
+      return res.status(502).json({ error: `Meta recusou: ${e.message}`, meta_error: e.meta || null });
+    }
+
+    await log('ad_status', 'ad', null,
+      `Anúncio ${adId} → ${status === 'active' ? 'Ativado' : 'Pausado'}`,
+      { ad_id: adId, status, warning });
+
+    res.json({ ok: true, ad_id: adId, status, warning });
+  } catch (err) {
+    console.error('[ad-status]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* Toggle Advantage+ Público num adset.
+   ATENÇÃO: muda targeting → reseta aprendizado. UI deve avisar antes. */
+router.patch('/:id/adsets/:adsetId/advantage-audience', async (req, res) => {
+  const { enabled } = req.body || {};
+  const { adsetId } = req.params;
+  if (typeof enabled !== 'boolean') {
+    return res.status(400).json({ error: 'enabled (boolean) obrigatório' });
+  }
+  try {
+    const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+    const creds = credResult.rows[0];
+    if (!creds) return res.status(400).json({ error: 'Meta não conectado' });
+
+    const { setAdvantageAudience } = require('../services/metaWrite');
+    try {
+      await setAdvantageAudience(creds, adsetId, enabled);
+    } catch (e) {
+      console.error('[advantage-audience] Meta erro:', e.message, e.meta);
+      return res.status(502).json({ error: `Meta recusou: ${e.message}`, meta_error: e.meta || null });
+    }
+
+    await log('advantage_audience', 'adset', null,
+      `Advantage+ Público ${enabled ? 'ATIVADO' : 'DESATIVADO'} no conjunto ${adsetId}`,
+      { adset_id: adsetId, enabled });
+
+    res.json({
+      ok: true,
+      adset_id: adsetId,
+      enabled,
+      learning_reset: true,
+      note: enabled
+        ? 'Advantage+ Público ligado. Meta vai expandir o público pra encontrar conversões — pode entregar fora dos bairros configurados. Aprendizado resetou.'
+        : 'Advantage+ Público desligado. Targeting voltou pros bairros configurados estritamente. Aprendizado resetou.',
+    });
+  } catch (err) {
+    console.error('[advantage-audience]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* Cria A/B test (split test) numa campanha existente.
+   Body: {
+     variable: 'creative' | 'audience' | 'placement',
+     sourceAdSetId: string,    // adset que vira a "Cell A" (controle)
+     durationDays: number,     // 4-30 (default 7)
+     variantOverrides?: object,// override pra cell B (depende da variable)
+     splitPercent?: number,    // default 50 (cell A %, B = 100 - splitPercent)
+     name?: string,            // default "Teste A/B — {camp.name} — {variable}"
+   } */
+router.post('/:id/ab-test', async (req, res) => {
+  const {
+    variable, sourceAdSetId, durationDays = 7,
+    variantOverrides = {}, splitPercent = 50, name: customName,
+  } = req.body || {};
+
+  if (!['creative', 'audience', 'placement'].includes(variable)) {
+    return res.status(400).json({ error: 'variable deve ser "creative", "audience" ou "placement"' });
+  }
+  if (!sourceAdSetId) return res.status(400).json({ error: 'sourceAdSetId obrigatório' });
+  const dur = Number(durationDays);
+  if (!Number.isFinite(dur) || dur < 4 || dur > 30) {
+    return res.status(400).json({ error: 'durationDays entre 4 e 30 (Meta exige mínimo 4)' });
+  }
+  const splitA = Number(splitPercent);
+  if (!Number.isFinite(splitA) || splitA < 10 || splitA > 90) {
+    return res.status(400).json({ error: 'splitPercent entre 10 e 90' });
+  }
+
+  try {
+    const result = await db.query('SELECT * FROM campaigns WHERE id = ?', [req.params.id]);
+    const camp = result.rows[0];
+    if (!camp) return res.status(404).json({ error: 'Campanha não encontrada' });
+    if (camp.platform !== 'meta' || !camp.platform_campaign_id) {
+      return res.status(400).json({ error: 'Apenas campanhas Meta podem rodar teste A/B' });
+    }
+
+    const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+    const creds = credResult.rows[0];
+    if (!creds) return res.status(400).json({ error: 'Meta não conectado' });
+    if (!creds.account_id) return res.status(400).json({ error: 'account_id ausente nas credenciais' });
+
+    const { metaGet } = require('../services/metaHttp');
+    const { safeDecrypt } = require('../services/crypto');
+    const token = safeDecrypt(creds.access_token, 'ab-test');
+
+    /* Pré-condição: campaign tem que estar ACTIVE pra rodar teste */
+    const campaignMeta = await metaGet(`/${camp.platform_campaign_id}`, {
+      fields: 'id,name,status,effective_status'
+    }, { token });
+    if (campaignMeta.status !== 'ACTIVE') {
+      return res.status(400).json({
+        error: `Campanha precisa estar ATIVA pra rodar teste A/B (atual: ${campaignMeta.status})`,
+      });
+    }
+
+    /* Cell B: cria duplicação do adset com override conforme variable */
+    const { duplicateAdSet, updateAdSetMeta } = require('../services/metaWrite');
+    const overrides = {};
+
+    if (variable === 'audience') {
+      /* Variant pública: aplicar overrides de targeting (age/genders/interests) */
+      Object.assign(overrides, variantOverrides);
+    } else if (variable === 'placement') {
+      /* Variant placement: substitui publisher_platforms no targeting.
+         Cell A mantém placements automáticos (todos), Cell B força específico
+         (ex: só Reels) ou vice-versa. */
+      const sourceAdSet = await metaGet(`/${sourceAdSetId}`, { fields: 'targeting' }, { token });
+      const baseTargeting = sourceAdSet?.targeting ? JSON.parse(JSON.stringify(sourceAdSet.targeting)) : {};
+      if (Array.isArray(variantOverrides.publisher_platforms)) {
+        baseTargeting.publisher_platforms = variantOverrides.publisher_platforms;
+      }
+      if (variantOverrides.facebook_positions) baseTargeting.facebook_positions = variantOverrides.facebook_positions;
+      if (variantOverrides.instagram_positions) baseTargeting.instagram_positions = variantOverrides.instagram_positions;
+      overrides.targeting = baseTargeting;
+    }
+    /* Pra variable=creative, NÃO mexemos no targeting do duplicado.
+       O caller depois chamará createAdInExistingAdSet pra trocar o creative
+       no adset duplicado (cell B). Por enquanto, duplicate-adset cria adset
+       igualzinho, e na sequência caller troca creative do ad da cell B. */
+
+    let dupResult;
+    try {
+      dupResult = await duplicateAdSet(creds, {
+        sourceAdSetId,
+        deepCopy: true,           /* copia ad pro novo adset */
+        statusOption: 'ACTIVE',   /* A/B test exige adsets ativos */
+        renameSuffix: ` — A/B ${variable}`,
+        overrides,
+      });
+    } catch (e) {
+      return res.status(502).json({ error: `Falha ao duplicar conjunto pra cell B: ${e.message}`, meta_error: e.meta || null });
+    }
+
+    const variantAdSetId = dupResult.new_adset_id;
+
+    /* Garante que adset original (cell A) também está ACTIVE */
+    try {
+      await updateAdSetMeta(creds, sourceAdSetId, { status: 'ACTIVE' });
+    } catch (e) {
+      console.warn('[ab-test] não conseguiu ativar adset cell A:', e.message);
+    }
+
+    /* Cria estudo A/B */
+    const startTime = Math.floor(Date.now() / 1000) + 60;        /* +1min buffer */
+    const endTime = startTime + Math.round(dur * 86400);
+    const studyName = customName || `Teste A/B — ${camp.name} — ${variable}`;
+
+    const { createABTest } = require('../services/metaWrite');
+    let study;
+    try {
+      study = await createABTest(creds, {
+        accountId: creds.account_id,
+        name: studyName,
+        description: `Teste A/B em "${camp.name}" — variável: ${variable} — duração: ${dur} dias`,
+        startTime, endTime,
+        cells: [
+          { name: 'Controle (A)', treatment_percentage: splitA, adsets: [sourceAdSetId] },
+          { name: 'Variante (B)', treatment_percentage: 100 - splitA, adsets: [variantAdSetId] },
+        ],
+      });
+    } catch (e) {
+      console.error('[ab-test] Meta erro ao criar estudo:', e.message, e.meta);
+      /* Cleanup: pausa o adset variant pra não rodar fora do estudo */
+      try { await updateAdSetMeta(creds, variantAdSetId, { status: 'PAUSED' }); } catch {}
+      return res.status(502).json({
+        error: `Meta recusou estudo A/B: ${e.message}`,
+        meta_error: e.meta || null,
+        partial: { variant_adset_id: variantAdSetId },
+        note: 'Conjunto da variante foi pausado pra não rodar isolado. Você pode deletar manualmente se não quiser.',
+      });
+    }
+
+    /* Persiste no payload local */
+    let payload = camp.payload;
+    if (typeof payload === 'string') {
+      try { payload = JSON.parse(payload); } catch { payload = null; }
+    }
+    const updatedPayload = { ...(payload || {}) };
+    updatedPayload.ab_tests = [
+      ...(payload?.ab_tests || []),
+      {
+        study_id: study.study_id,
+        name: studyName,
+        variable,
+        source_adset_id: sourceAdSetId,
+        variant_adset_id: variantAdSetId,
+        start_time: startTime,
+        end_time: endTime,
+        split_percent_a: splitA,
+        created_at: new Date().toISOString(),
+      },
+    ];
+    await db.query('UPDATE campaigns SET payload = ?, updated_at = datetime(\'now\') WHERE id = ?',
+      [JSON.stringify(updatedPayload), req.params.id]);
+
+    await log('ab_test_created', 'campaign', parseInt(req.params.id),
+      `Teste A/B criado em "${camp.name}" — ${variable}`, {
+        study_id: study.study_id, variable, source_adset_id: sourceAdSetId,
+        variant_adset_id: variantAdSetId, duration_days: dur,
+      });
+
+    res.json({
+      ok: true,
+      study_id: study.study_id,
+      study_name: studyName,
+      variable,
+      source_adset_id: sourceAdSetId,
+      variant_adset_id: variantAdSetId,
+      start_time: startTime,
+      end_time: endTime,
+      duration_days: dur,
+      split: { A: splitA, B: 100 - splitA },
+      note: 'Teste A/B criado. Meta vai dividir o público entre os 2 conjuntos sem sobreposição. Resultado fica disponível conforme o teste roda.',
+    });
+  } catch (err) {
+    console.error('[ab-test]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* Lista A/B tests de uma campanha (lê payload local + valida ao vivo no Meta). */
+router.get('/:id/ab-tests', async (req, res) => {
+  try {
+    const result = await db.query('SELECT * FROM campaigns WHERE id = ?', [req.params.id]);
+    const camp = result.rows[0];
+    if (!camp) return res.status(404).json({ error: 'Campanha não encontrada' });
+
+    let payload = camp.payload;
+    if (typeof payload === 'string') {
+      try { payload = JSON.parse(payload); } catch { payload = null; }
+    }
+    const localTests = payload?.ab_tests || [];
+
+    /* Enriquece cada teste com status ao vivo do Meta */
+    const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+    const creds = credResult.rows[0];
+    if (!creds) return res.json({ tests: localTests });
+
+    const { getABTestResults } = require('../services/metaWrite');
+    const enriched = await Promise.all(localTests.map(async (t) => {
+      try {
+        const study = await getABTestResults(creds, t.study_id);
+        return { ...t, live: study };
+      } catch (e) {
+        return { ...t, live_error: e.message };
+      }
+    }));
+
+    res.json({ tests: enriched });
+  } catch (err) {
+    console.error('[ab-tests-list]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* Lê resultado de um A/B test específico (status, métricas, vencedor). */
+router.get('/ab-tests/:studyId', async (req, res) => {
+  try {
+    const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+    const creds = credResult.rows[0];
+    if (!creds) return res.status(400).json({ error: 'Meta não conectado' });
+
+    const { getABTestResults } = require('../services/metaWrite');
+    const study = await getABTestResults(creds, req.params.studyId);
+    res.json(study);
+  } catch (err) {
+    console.error('[ab-test-results]', err);
+    res.status(err.statusCode || 500).json({ error: err.message, meta: err.meta || null });
+  }
+});
+
+/* Encerra A/B test antes do tempo. */
+router.post('/ab-tests/:studyId/stop', async (req, res) => {
+  try {
+    const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+    const creds = credResult.rows[0];
+    if (!creds) return res.status(400).json({ error: 'Meta não conectado' });
+
+    const { stopABTest } = require('../services/metaWrite');
+    await stopABTest(creds, req.params.studyId);
+    await log('ab_test_stopped', 'study', null, `Teste A/B ${req.params.studyId} encerrado manualmente`, {});
+    res.json({ ok: true, study_id: req.params.studyId, note: 'Teste encerrado. Resultados parciais ficam disponíveis no Meta.' });
+  } catch (err) {
+    console.error('[ab-test-stop]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

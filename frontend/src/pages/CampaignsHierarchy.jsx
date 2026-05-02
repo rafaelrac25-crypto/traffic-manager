@@ -495,10 +495,43 @@ function NewAdInAdSetModal({ open, onClose, adset, campaignLocalId, onSaved }) {
   );
 }
 
+/* ─── Toggle/Play visual reutilizável ─── */
+function PlayPauseButton({ status, onToggle, disabled, size = 'sm' }) {
+  const isActive = status === 'ACTIVE';
+  const W = size === 'lg' ? 32 : 26;
+  const FS = size === 'lg' ? '14px' : '11.5px';
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); onToggle?.(!isActive); }}
+      disabled={disabled}
+      title={isActive ? 'Pausar' : 'Ativar'}
+      style={{
+        width: W, height: W,
+        borderRadius: '50%',
+        border: 'none',
+        background: isActive ? '#22C55E' : '#9CA3AF',
+        color: '#fff',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        fontSize: FS,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0,
+        opacity: disabled ? 0.6 : 1,
+        transition: 'transform .12s, box-shadow .12s, background .15s',
+        boxShadow: isActive ? '0 2px 6px rgba(34,197,94,.35)' : 'none',
+      }}
+      onMouseEnter={e => { if (!disabled) e.currentTarget.style.transform = 'scale(1.08)'; }}
+      onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+    >
+      {isActive ? '⏸' : '▶'}
+    </button>
+  );
+}
+
 /* ─── Card de Conjunto (AdSet) ─── */
-function AdSetCard({ adset, campaignLocalId, onAction, onSelect, selected }) {
+function AdSetCard({ adset, campaignLocalId, onAction, onSelect, selected, onStatusChange, onAdvantageToggle, busy }) {
   const status = statusLabel(adset.effective_status || adset.status);
   const adsCount = adset.ads?.length || 0;
+  const advantageOn = adset.targeting?.targeting_automation?.advantage_audience === 1;
 
   return (
     <div
@@ -516,12 +549,19 @@ function AdSetCard({ adset, campaignLocalId, onAction, onSelect, selected }) {
       onMouseLeave={e => { if (!selected) e.currentTarget.style.borderColor = 'var(--c-border-lt)'; }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '8px' }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {adset.name}
-          </div>
-          <div style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '2px' }}>
-            ID Meta: {adset.id}
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flex: 1, minWidth: 0 }}>
+          <PlayPauseButton
+            status={adset.status === 'ACTIVE' ? 'ACTIVE' : 'PAUSED'}
+            onToggle={(toActive) => onStatusChange?.(adset, toActive ? 'active' : 'paused')}
+            disabled={busy}
+          />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {adset.name}
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '2px' }}>
+              ID: {adset.id}
+            </div>
           </div>
         </div>
         <span style={{
@@ -550,6 +590,54 @@ function AdSetCard({ adset, campaignLocalId, onAction, onSelect, selected }) {
           )}
         </div>
       )}
+
+      {/* Toggle Advantage+ Público */}
+      <div
+        onClick={(e) => { e.stopPropagation(); onAdvantageToggle?.(adset, !advantageOn); }}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '10px',
+          padding: '8px 10px',
+          background: advantageOn ? '#FFFBEB' : 'var(--c-surface)',
+          border: `1px solid ${advantageOn ? '#FCD34D' : 'var(--c-border-lt)'}`,
+          borderRadius: '8px',
+          cursor: 'pointer',
+          marginBottom: '10px',
+          transition: 'all .15s',
+        }}
+        title={advantageOn
+          ? 'Advantage+ ligado: Meta pode expandir o público fora dos bairros configurados'
+          : 'Clique pra deixar o Meta otimizar o público automaticamente'}
+      >
+        <div style={{
+          width: '32px', height: '18px',
+          borderRadius: '20px',
+          background: advantageOn ? '#F59E0B' : 'var(--c-border)',
+          position: 'relative',
+          flexShrink: 0,
+          transition: 'background .2s',
+        }}>
+          <div style={{
+            position: 'absolute',
+            width: '14px', height: '14px',
+            background: '#fff',
+            borderRadius: '50%',
+            top: '2px',
+            left: advantageOn ? '16px' : '2px',
+            transition: 'left .2s',
+            boxShadow: '0 1px 3px rgba(0,0,0,.2)',
+          }} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: '11.5px', fontWeight: 700, color: advantageOn ? '#92400E' : 'var(--c-text-2)' }}>
+            Advantage+ Público {advantageOn ? '· LIGADO' : ''}
+          </div>
+          <div style={{ fontSize: '10px', color: advantageOn ? '#B45309' : 'var(--c-text-4)', marginTop: '1px' }}>
+            {advantageOn
+              ? 'Meta pode expandir além de Joinville pra achar conversões'
+              : 'Meta otimiza o público sozinho (pode entregar fora de Joinville)'}
+          </div>
+        </div>
+      </div>
 
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
         <button
@@ -594,7 +682,7 @@ function AdSetCard({ adset, campaignLocalId, onAction, onSelect, selected }) {
 }
 
 /* ─── Card de Anúncio (Ad) ─── */
-function AdCard({ ad }) {
+function AdCard({ ad, onStatusChange, busy }) {
   const status = statusLabel(ad.effective_status || ad.status);
   return (
     <div style={{
@@ -605,6 +693,11 @@ function AdCard({ ad }) {
       marginBottom: '8px',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+        <PlayPauseButton
+          status={ad.status === 'ACTIVE' ? 'ACTIVE' : 'PAUSED'}
+          onToggle={(toActive) => onStatusChange?.(ad, toActive ? 'active' : 'paused')}
+          disabled={busy}
+        />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--c-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {ad.name}
@@ -617,6 +710,280 @@ function AdCard({ ad }) {
           padding: '2px 7px', borderRadius: '999px',
         }}>{status.txt}</span>
       </div>
+    </div>
+  );
+}
+
+/* ─── Modal: Criar Teste A/B ─── */
+function CreateABTestModal({ open, onClose, campaign, hierarchy, onSaved }) {
+  const [variable, setVariable]       = useState('audience');
+  const [sourceAdSetId, setSourceAdSet] = useState('');
+  const [duration, setDuration]       = useState(7);
+  const [splitA, setSplitA]           = useState(50);
+  const [variantAgeMin, setVariantAgeMin] = useState('');
+  const [variantAgeMax, setVariantAgeMax] = useState('');
+  const [variantPlacements, setVariantPlacements] = useState('reels-only');
+  const [loading, setLoading]         = useState(false);
+  const [errMsg, setErrMsg]           = useState(null);
+
+  useEffect(() => {
+    if (!open) return;
+    if (hierarchy?.adsets?.[0]) setSourceAdSet(hierarchy.adsets[0].id);
+    setErrMsg(null);
+    setVariable('audience');
+    setDuration(7);
+    setSplitA(50);
+  }, [open, hierarchy]);
+
+  const campaignActive = hierarchy?.campaign?.status === 'ACTIVE';
+
+  async function handleSave() {
+    setLoading(true); setErrMsg(null);
+    try {
+      const variantOverrides = {};
+      if (variable === 'audience') {
+        if (variantAgeMin) variantOverrides.age_min = Number(variantAgeMin);
+        if (variantAgeMax) variantOverrides.age_max = Number(variantAgeMax);
+      } else if (variable === 'placement') {
+        if (variantPlacements === 'reels-only') {
+          variantOverrides.publisher_platforms = ['instagram'];
+          variantOverrides.instagram_positions = ['reels'];
+        } else if (variantPlacements === 'feed-only') {
+          variantOverrides.publisher_platforms = ['instagram', 'facebook'];
+          variantOverrides.instagram_positions = ['stream'];
+          variantOverrides.facebook_positions = ['feed'];
+        } else if (variantPlacements === 'stories-only') {
+          variantOverrides.publisher_platforms = ['instagram', 'facebook'];
+          variantOverrides.instagram_positions = ['story'];
+          variantOverrides.facebook_positions = ['story'];
+        }
+      }
+
+      const r = await fetch(`/api/campaigns/${campaign.id}/ab-test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          variable,
+          sourceAdSetId,
+          durationDays: Number(duration),
+          splitPercent: Number(splitA),
+          variantOverrides,
+        }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+      onSaved?.(data);
+      onClose();
+    } catch (e) {
+      setErrMsg(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="🧪 Criar teste A/B"
+      footer={
+        <>
+          <GhostButton onClick={onClose} disabled={loading}>Cancelar</GhostButton>
+          <PrimaryButton onClick={handleSave} disabled={loading || !sourceAdSetId || !campaignActive}>
+            {loading ? 'Criando teste...' : 'Criar teste A/B'}
+          </PrimaryButton>
+        </>
+      }
+    >
+      {!campaignActive && (
+        <Banner kind="reset" title="Campanha precisa estar ativa">
+          O Meta só aceita criar teste A/B em campanhas que estão rodando. Ative a campanha primeiro.
+        </Banner>
+      )}
+
+      <div style={{ marginTop: '14px' }}>
+        <Banner kind="info" title="Como funciona">
+          O Meta divide o público em 2 grupos sem sobreposição (cada pessoa só vê 1 dos 2 conjuntos). Mais limpo que duplicar manual. Duração mínima é 4 dias por exigência do Meta.
+        </Banner>
+      </div>
+
+      <div style={{ marginTop: '16px' }}>
+        <Field label="O que você quer testar?">
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {[
+              { v: 'audience', label: '👤 Público', desc: 'Idade ou interesses diferentes' },
+              { v: 'placement', label: '📱 Posicionamento', desc: 'Reels, Feed, Stories' },
+              { v: 'creative', label: '🎬 Criativo', desc: 'Mesmo público, vídeos diferentes' },
+            ].map(opt => (
+              <button
+                key={opt.v}
+                onClick={() => setVariable(opt.v)}
+                style={{
+                  flex: '1 1 30%',
+                  padding: '10px 12px',
+                  border: `1.5px solid ${variable === opt.v ? 'var(--c-accent)' : 'var(--c-border)'}`,
+                  background: variable === opt.v ? 'var(--c-active-bg)' : 'var(--c-surface)',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                }}
+              >
+                <div style={{ fontSize: '12.5px', fontWeight: 700, color: variable === opt.v ? 'var(--c-accent)' : 'var(--c-text-1)' }}>
+                  {opt.label}
+                </div>
+                <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', marginTop: '3px' }}>{opt.desc}</div>
+              </button>
+            ))}
+          </div>
+        </Field>
+
+        <Field label="Conjunto base (controle)" hint="O conjunto que serve de referência. Sistema duplica e cria a variante.">
+          <select
+            value={sourceAdSetId}
+            onChange={(e) => setSourceAdSet(e.target.value)}
+            style={{
+              width: '100%', padding: '9px 12px',
+              border: '1.5px solid var(--c-border)',
+              borderRadius: '9px', fontSize: '13px',
+              background: 'var(--c-surface)', color: 'var(--c-text-1)',
+            }}
+          >
+            {(hierarchy?.adsets || []).map(as => (
+              <option key={as.id} value={as.id}>
+                {as.name} — {as.status}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        {variable === 'audience' && (
+          <Field label="Variante: nova faixa de idade" hint="Será aplicada na cópia do conjunto. Deixe vazio pra herdar.">
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <TextInput type="number" min="13" max="65" value={variantAgeMin}
+                onChange={e => setVariantAgeMin(e.target.value)} placeholder="Mín" />
+              <TextInput type="number" min="13" max="65" value={variantAgeMax}
+                onChange={e => setVariantAgeMax(e.target.value)} placeholder="Máx" />
+            </div>
+          </Field>
+        )}
+
+        {variable === 'placement' && (
+          <Field label="Variante: posicionamento" hint="O conjunto base mantém o atual. A variante usa esse novo.">
+            <select
+              value={variantPlacements}
+              onChange={(e) => setVariantPlacements(e.target.value)}
+              style={{
+                width: '100%', padding: '9px 12px',
+                border: '1.5px solid var(--c-border)',
+                borderRadius: '9px', fontSize: '13px',
+                background: 'var(--c-surface)', color: 'var(--c-text-1)',
+              }}
+            >
+              <option value="reels-only">Só Reels (Instagram)</option>
+              <option value="feed-only">Só Feed (Instagram + Facebook)</option>
+              <option value="stories-only">Só Stories (Instagram + Facebook)</option>
+            </select>
+          </Field>
+        )}
+
+        {variable === 'creative' && (
+          <Banner kind="info">
+            Sistema vai duplicar o conjunto. Depois de criar o teste, edite o anúncio do conjunto variante pra colocar o criativo novo.
+          </Banner>
+        )}
+
+        <Field label={`Duração: ${duration} dias`} hint="Mínimo 4, máximo 30. Recomendado 7-14 pra dar significância estatística.">
+          <input
+            type="range" min="4" max="30" value={duration}
+            onChange={(e) => setDuration(Number(e.target.value))}
+            style={{ width: '100%' }}
+          />
+        </Field>
+
+        <Field label={`Divisão: ${splitA}% controle / ${100 - splitA}% variante`} hint="Recomendado 50/50.">
+          <input
+            type="range" min="10" max="90" step="10" value={splitA}
+            onChange={(e) => setSplitA(Number(e.target.value))}
+            style={{ width: '100%' }}
+          />
+        </Field>
+
+        {errMsg && <Banner kind="reset" title="Erro">{errMsg}</Banner>}
+      </div>
+    </Modal>
+  );
+}
+
+/* ─── Card de Teste A/B em andamento ─── */
+function ABTestCard({ test, onStop }) {
+  const now = Math.floor(Date.now() / 1000);
+  const totalDur = test.end_time - test.start_time;
+  const elapsed = Math.max(0, Math.min(totalDur, now - test.start_time));
+  const pct = totalDur > 0 ? Math.round((elapsed / totalDur) * 100) : 0;
+  const isFinished = now >= test.end_time;
+  const liveStatus = test.live?.status || (isFinished ? 'COMPLETED' : 'RUNNING');
+
+  return (
+    <div style={{
+      background: 'var(--c-card-bg)',
+      border: '1.5px solid var(--c-border-lt)',
+      borderRadius: '12px',
+      padding: '14px 16px',
+      marginBottom: '10px',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '8px' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--c-accent)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: '2px' }}>
+            🧪 Teste A/B · {test.variable}
+          </div>
+          <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {test.name}
+          </div>
+        </div>
+        <span style={{
+          fontSize: '10px', fontWeight: 700, color: '#fff',
+          background: isFinished ? '#22C55E' : '#F59E0B',
+          padding: '3px 8px', borderRadius: '999px',
+        }}>{isFinished ? 'Finalizado' : liveStatus}</span>
+      </div>
+
+      <div style={{ marginBottom: '10px' }}>
+        <div style={{
+          height: '8px', background: 'var(--c-surface)', borderRadius: '4px', overflow: 'hidden',
+        }}>
+          <div style={{
+            height: '100%', width: `${pct}%`,
+            background: isFinished ? '#22C55E' : 'var(--c-accent)',
+            transition: 'width .3s',
+          }} />
+        </div>
+        <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', marginTop: '4px' }}>
+          {Math.floor(elapsed / 86400)} de {Math.floor(totalDur / 86400)} dias · {pct}%
+        </div>
+      </div>
+
+      <div style={{ fontSize: '11.5px', color: 'var(--c-text-3)', marginBottom: '8px' }}>
+        Controle (A): {test.split_percent_a}% · Variante (B): {100 - test.split_percent_a}%
+      </div>
+
+      {!isFinished && (
+        <button
+          onClick={() => onStop?.(test)}
+          style={{
+            background: 'transparent', border: '1px solid var(--c-border)',
+            color: 'var(--c-text-3)', borderRadius: '7px',
+            padding: '5px 10px', fontSize: '11px', fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          Encerrar antes
+        </button>
+      )}
+      {test.live_error && (
+        <div style={{ fontSize: '10.5px', color: '#B91C1C', marginTop: '6px' }}>
+          Erro ao ler do Meta: {test.live_error}
+        </div>
+      )}
     </div>
   );
 }
@@ -669,7 +1036,22 @@ export default function CampaignsHierarchy() {
   const [budgetModal, setBudgetModal]       = useState({ open: false, level: null, target: null, adsetId: null });
   const [duplicateModal, setDuplicateModal] = useState({ open: false, adset: null });
   const [newAdModal, setNewAdModal]         = useState({ open: false, adset: null });
+  const [abTestModal, setABTestModal]       = useState(false);
   const [toast, setToast]                   = useState(null);
+  const [errToast, setErrToast]             = useState(null);
+
+  /* IDs em ação (play/pause/advantage) — desativa botão durante request */
+  const [busyIds, setBusyIds] = useState(() => new Set());
+  function markBusy(id, on) {
+    setBusyIds(prev => {
+      const next = new Set(prev);
+      if (on) next.add(id); else next.delete(id);
+      return next;
+    });
+  }
+
+  /* A/B tests da campanha selecionada */
+  const [abTests, setABTests] = useState([]);
 
   /* Lista de campanhas Meta publicadas */
   const metaCamps = (ads || []).filter(a =>
@@ -710,7 +1092,110 @@ export default function CampaignsHierarchy() {
   function handleSaved(msg) {
     setToast(msg);
     setTimeout(() => setToast(null), 4000);
-    if (selectedCamp?.id) refreshHierarchy(selectedCamp.id);
+    if (selectedCamp?.id) {
+      refreshHierarchy(selectedCamp.id);
+      refreshABTests(selectedCamp.id);
+    }
+  }
+  function showError(msg) {
+    setErrToast(msg);
+    setTimeout(() => setErrToast(null), 6000);
+  }
+
+  async function handleAdSetStatus(adset, newStatus) {
+    if (busyIds.has(adset.id)) return;
+    if (newStatus === 'paused') {
+      const ok = window.confirm(`Pausar o conjunto "${adset.name}"?\n\nO conjunto vai parar de entregar até você reativar.`);
+      if (!ok) return;
+    }
+    markBusy(adset.id, true);
+    try {
+      const r = await fetch(`/api/campaigns/adsets/${adset.id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+      handleSaved({ note: data.warning || `Conjunto ${newStatus === 'active' ? 'ativado' : 'pausado'}` });
+    } catch (e) {
+      showError(`Falha ao mudar status do conjunto: ${e.message}`);
+    } finally {
+      markBusy(adset.id, false);
+    }
+  }
+
+  async function handleAdStatus(ad, newStatus) {
+    if (busyIds.has(ad.id)) return;
+    if (newStatus === 'paused') {
+      const ok = window.confirm(`Pausar o anúncio "${ad.name}"?`);
+      if (!ok) return;
+    }
+    markBusy(ad.id, true);
+    try {
+      const r = await fetch(`/api/campaigns/ads/${ad.id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+      handleSaved({ note: data.warning || `Anúncio ${newStatus === 'active' ? 'ativado' : 'pausado'}` });
+    } catch (e) {
+      showError(`Falha ao mudar status do anúncio: ${e.message}`);
+    } finally {
+      markBusy(ad.id, false);
+    }
+  }
+
+  async function handleAdvantageToggle(adset, enabled) {
+    if (busyIds.has(adset.id)) return;
+    const msg = enabled
+      ? `Ligar Advantage+ Público no conjunto "${adset.name}"?\n\n⚠ Atenção:\n- Pode entregar fora dos bairros que você configurou\n- Vai resetar o aprendizado do conjunto\n\nContinuar?`
+      : `Desligar Advantage+ Público no conjunto "${adset.name}"?\n\nVai voltar ao targeting estrito (só seus bairros). O aprendizado também reseta.\n\nContinuar?`;
+    const ok = window.confirm(msg);
+    if (!ok) return;
+    markBusy(adset.id, true);
+    try {
+      const r = await fetch(`/api/campaigns/${selectedCamp.id}/adsets/${adset.id}/advantage-audience`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+      handleSaved({ note: data.note || (enabled ? 'Advantage+ ligado' : 'Advantage+ desligado') });
+    } catch (e) {
+      showError(`Falha ao alterar Advantage+: ${e.message}`);
+    } finally {
+      markBusy(adset.id, false);
+    }
+  }
+
+  async function refreshABTests(campLocalId) {
+    if (!campLocalId) { setABTests([]); return; }
+    try {
+      const r = await fetch(`/api/campaigns/${campLocalId}/ab-tests`);
+      const data = await r.json().catch(() => ({}));
+      if (r.ok) setABTests(data?.tests || []);
+    } catch {}
+  }
+  useEffect(() => {
+    if (selectedCamp?.id) refreshABTests(selectedCamp.id);
+    else setABTests([]);
+  }, [selectedCamp?.id]);
+
+  async function handleStopABTest(test) {
+    const ok = window.confirm(`Encerrar o teste A/B "${test.name}" agora?\n\nResultados parciais ficam disponíveis no Meta.`);
+    if (!ok) return;
+    try {
+      const r = await fetch(`/api/campaigns/ab-tests/${test.study_id}/stop`, { method: 'POST' });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+      handleSaved({ note: 'Teste A/B encerrado' });
+    } catch (e) {
+      showError(`Falha ao encerrar teste: ${e.message}`);
+    }
   }
 
   return (
@@ -824,23 +1309,38 @@ export default function CampaignsHierarchy() {
                         Objetivo: {hierarchy.campaign?.objective || '—'} · {fmtBRL(hierarchy.campaign?.daily_budget)} /dia
                       </div>
                     </div>
-                    {hierarchy.campaign?.daily_budget != null && (
+                    <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                      {hierarchy.campaign?.daily_budget != null && (
+                        <button
+                          onClick={() => setBudgetModal({
+                            open: true, level: 'campaign',
+                            target: { daily_budget: hierarchy.campaign.daily_budget },
+                            adsetId: null,
+                          })}
+                          style={{
+                            background: 'var(--c-surface)', border: '1px solid var(--c-border)',
+                            color: 'var(--c-text-2)', borderRadius: '8px',
+                            padding: '7px 12px', fontSize: '12px', fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          💰 Editar orçamento
+                        </button>
+                      )}
                       <button
-                        onClick={() => setBudgetModal({
-                          open: true, level: 'campaign',
-                          target: { daily_budget: hierarchy.campaign.daily_budget },
-                          adsetId: null,
-                        })}
+                        onClick={() => setABTestModal(true)}
                         style={{
-                          background: 'var(--c-surface)', border: '1px solid var(--c-border)',
-                          color: 'var(--c-text-2)', borderRadius: '8px',
-                          padding: '7px 12px', fontSize: '12px', fontWeight: 600,
+                          background: 'var(--c-accent)', border: 'none',
+                          color: '#fff', borderRadius: '8px',
+                          padding: '7px 12px', fontSize: '12px', fontWeight: 700,
                           cursor: 'pointer',
+                          boxShadow: '0 2px 6px rgba(214,141,143,.25)',
                         }}
+                        title="Cria teste A/B oficial Meta com divisão automática de público"
                       >
-                        💰 Editar orçamento
+                        🧪 Criar teste A/B
                       </button>
-                    )}
+                    </div>
                   </div>
                 </div>
 
@@ -861,9 +1361,28 @@ export default function CampaignsHierarchy() {
                       onAction={handleAdSetAction}
                       onSelect={setSelectedAdSet}
                       selected={selectedAdSet?.id === as.id}
+                      onStatusChange={handleAdSetStatus}
+                      onAdvantageToggle={handleAdvantageToggle}
+                      busy={busyIds.has(as.id)}
                     />
                   ))}
                 </div>
+
+                {/* A/B tests dessa campanha */}
+                {abTests.length > 0 && (
+                  <div style={{ marginTop: '20px' }}>
+                    <div style={{
+                      fontSize: '11px', fontWeight: 700, letterSpacing: '.6px',
+                      color: 'var(--c-text-4)', textTransform: 'uppercase', marginBottom: '8px',
+                      padding: '0 4px',
+                    }}>
+                      Testes A/B ({abTests.length})
+                    </div>
+                    {abTests.map(t => (
+                      <ABTestCard key={t.study_id} test={t} onStop={handleStopABTest} />
+                    ))}
+                  </div>
+                )}
 
                 {/* Anúncios do conjunto selecionado */}
                 {selectedAdSet && (
@@ -880,7 +1399,11 @@ export default function CampaignsHierarchy() {
                         Nenhum anúncio neste conjunto.
                       </div>
                     ) : (
-                      selectedAdSet.ads.map(ad => <AdCard key={ad.id} ad={ad} />)
+                      selectedAdSet.ads.map(ad => (
+                        <AdCard key={ad.id} ad={ad}
+                          onStatusChange={handleAdStatus}
+                          busy={busyIds.has(ad.id)} />
+                      ))
                     )}
                   </div>
                 )}
@@ -932,6 +1455,26 @@ export default function CampaignsHierarchy() {
         campaignLocalId={selectedCamp?.id}
         onSaved={handleSaved}
       />
+      <CreateABTestModal
+        open={abTestModal}
+        onClose={() => setABTestModal(false)}
+        campaign={selectedCamp}
+        hierarchy={hierarchy}
+        onSaved={(d) => { handleSaved({ note: 'Teste A/B criado com sucesso' }); }}
+      />
+
+      {errToast && (
+        <div style={{
+          position: 'fixed', bottom: '20px', right: '20px',
+          background: '#B91C1C', color: '#fff',
+          padding: '12px 18px', borderRadius: '10px',
+          fontSize: '13px', fontWeight: 600,
+          boxShadow: '0 8px 24px rgba(0,0,0,.2)',
+          zIndex: 1100, maxWidth: '420px',
+        }}>
+          ⚠ {errToast}
+        </div>
+      )}
     </div>
   );
 }
