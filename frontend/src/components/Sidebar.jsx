@@ -143,19 +143,39 @@ export default function Sidebar({ open = false, isMobile = false }) {
     return location.pathname.startsWith(to);
   }
 
+  // Dark mode: sidebar vira "ilha flutuante" com cantos arredondados, border completa,
+  // box-shadow e margens internas. Light mode: mantém visual sólido tradicional.
+  const islandStyle = isDark
+    ? {
+        // Ilha flutuante (margens dão respiro nas bordas da viewport)
+        top: '16px', left: '16px', bottom: '16px',
+        minHeight: 'calc(100vh - 32px)',
+        height: 'calc(100vh - 32px)',
+        borderRadius: '18px',
+        border: '1px solid var(--c-border)',
+        borderRight: '1px solid var(--c-border)',
+        boxShadow: '0 12px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04)',
+      }
+    : {
+        // Sólido tradicional (cola no topo/esquerda/baixo)
+        top: 0, left: 0,
+        minHeight: '100vh',
+        borderRight: '1px solid var(--c-border)',
+        borderRadius: 0,
+      };
+
   return (
     <aside
       className={`sidebar-fixed${isMobile && open ? ' sidebar-open' : ''}`}
       style={{
         width: '220px',
-        minHeight: '100vh',
         background: 'var(--c-sidebar-bg)',
-        borderRight: '1px solid var(--c-border)',
         display: 'flex',
         flexDirection: 'column',
         position: 'fixed',
-        top: 0, left: 0, zIndex: 100,
-        transition: 'background .25s ease, border-color .25s ease, transform .25s ease',
+        zIndex: 100,
+        transition: 'background .25s ease, border-color .25s ease, transform .25s ease, border-radius .25s ease, box-shadow .25s ease',
+        ...islandStyle,
       }}
     >
       {/* ── Logo (clicável → home) ── */}
@@ -197,7 +217,7 @@ export default function Sidebar({ open = false, isMobile = false }) {
                 }}
                 onMouseEnter={e => {
                   e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(214,141,143,.22)';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(193,53,132,.22)';
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.transform = 'translateY(0)';
@@ -407,7 +427,7 @@ export default function Sidebar({ open = false, isMobile = false }) {
           ) : (
             <div style={{
               width: '34px', height: '34px',
-              background: 'linear-gradient(135deg, #E8A4C8, #d68d8f)',
+              background: 'linear-gradient(135deg, #E8A4C8, var(--c-accent))',
               borderRadius: '50%', display: 'flex', alignItems: 'center',
               justifyContent: 'center', color: '#fff', fontSize: '12px',
               fontWeight: 700, flexShrink: 0,

@@ -1,5 +1,36 @@
 # CRITICAL_STATE — traffic-manager
 
+## Sessão 2026-05-02 tarde — FEATURE Espionar Concorrente (CreativeLibrary)
+
+### Implementação inspirada na skill bravo `espionar-concorrente-pro`
+Decisão arquitetural: **NÃO portar Playwright pro backend Vercel.** Serverless tem timeout 10–60s e bundle limit 250MB; Chromium não cabe. Em vez disso, fluxo "Lite assistido": usuário cola screenshots e textos da Facebook Ads Library, IA Groq lê e devolve análise. Estrutura preparada pra trocar coletor manual por worker externo (Railway/Apify) no futuro sem refatorar relatório/DB.
+
+### Stack
+- **Vision:** `meta-llama/llama-4-scout-17b-16e-instruct` (Groq) — descreve cada print de ad
+- **Agregador:** `llama-3.3-70b-versatile` em JSON mode — devolve `{summary, patterns, hooks, ctas, creative_formats, recommendations}`
+- **Persistência:** tabela `competitor_analyses` (PG + SQLite, JSON em TEXT pra portabilidade)
+
+### Endpoints novos (`backend/src/routes/competitors.js`)
+- `POST /api/competitors/describe-item` — 1 item por call (cabe em timeout serverless)
+- `POST /api/competitors/analyze` — agrega + persiste
+- `GET /api/competitors` — lista (50 mais recentes)
+- `GET /api/competitors/:id` — detalhe completo
+- `DELETE /api/competitors/:id`
+
+### UI
+- Tab "Espionar concorrente" dentro da página `Biblioteca de criativos` (CreativeLibrary)
+- Drop zone de imagens + textarea pra colar copy + lista de itens com preview
+- Progresso por item (Promise.all chamando describe-item) + relatório renderizado em cards
+- Histórico de análises com Abrir/Apagar
+
+### Commit
+`1728361 feat(spy): tab "Espionar concorrente" na CreativeLibrary com analise IA`
+
+### Não-bloqueado — próximo passo possível
+Se virar uso pesado (>10 análises/semana): plugar worker Node+Playwright em Railway pra automatizar o "coletor", mantendo a mesma rota `/analyze` no Vercel.
+
+---
+
 ## Sessão 2026-05-02 tarde — FIX mapping de mensagens iniciadas (2 bugs)
 
 ### Sintoma observado ao vivo (2026-05-02 ~13:04 GMT-3)

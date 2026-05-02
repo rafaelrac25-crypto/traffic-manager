@@ -144,7 +144,7 @@ function NotificationDropdown({ open, onClose }) {
         position: 'absolute', top: 'calc(100% + 8px)', right: 0,
         width: '360px', maxHeight: '480px',
         background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',
-        borderRadius: '14px', boxShadow: '0 16px 48px rgba(214,141,143,.22)',
+        borderRadius: '14px', boxShadow: '0 16px 48px rgba(193,53,132,.22)',
         zIndex: 1000, overflow: 'hidden',
         display: 'flex', flexDirection: 'column',
         transformOrigin: 'top right',
@@ -214,7 +214,7 @@ function NotificationDropdown({ open, onClose }) {
               onMouseEnter={e => {
                 e.currentTarget.style.background = isRead ? '#F3F4F6' : 'var(--c-hover)';
                 e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 8px 20px rgba(214,141,143,.14)';
+                e.currentTarget.style.boxShadow = '0 8px 20px rgba(193,53,132,.14)';
                 e.currentTarget.style.position = 'relative';
                 e.currentTarget.style.zIndex = '1';
               }}
@@ -376,9 +376,9 @@ function SearchBar() {
       {noMatch && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 6px)',
-          background: '#d68d8f', color: '#fff',
+          background: 'var(--c-accent)', color: '#fff',
           padding: '8px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: 600,
-          boxShadow: '0 4px 12px rgba(214,141,143,.3)',
+          boxShadow: '0 4px 12px rgba(193,53,132,.3)',
         }}>
           Enviado ao assistente IA →
         </div>
@@ -390,6 +390,7 @@ function SearchBar() {
 function Layout() {
   const navigate  = useNavigate();
   const location  = useLocation();
+  const { isDark } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile]       = useState(window.innerWidth <= 1024);
   const [bellOpen, setBellOpen]       = useState(false);
@@ -411,11 +412,21 @@ function Layout() {
 
       <Sidebar open={sidebarOpen} isMobile={isMobile} />
 
-      <div className="main-content">
+      {/* Dark + desktop: a sidebar virou ilha flutuante (margin 16px nas bordas).
+          Compensamos o offset extra (16px da margem esq da sidebar + 16px de
+          column-gap) só nesses casos pra o conteúdo não colar na ilha.
+          Mobile/light: mantém o margin-left:220px do CSS base (sem override). */}
+      <div
+        className="main-content"
+        style={(isDark && !isMobile) ? { marginLeft: '252px' } : undefined}
+      >
 
         <div style={{
-          background: 'var(--c-topbar-bg)',
-          borderBottom: '1px solid var(--c-border)',
+          // Dark: topbar 100% transparente (a ilha-sidebar e o background tech do
+          // body ficam visíveis através dela). Light: mantém fundo sólido + borda
+          // que é o visual atual aprovado.
+          background: isDark ? 'transparent' : 'var(--c-topbar-bg)',
+          borderBottom: isDark ? '1px solid transparent' : '1px solid var(--c-border)',
           padding: '0 24px',
           height: '60px',
           display: 'flex',
@@ -425,6 +436,8 @@ function Layout() {
           top: 0,
           zIndex: 50,
           transition: 'background .25s ease, border-color .25s ease',
+          backdropFilter: 'none',
+          WebkitBackdropFilter: 'none',
         }}>
 
           {isMobile && (

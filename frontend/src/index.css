@@ -53,28 +53,84 @@
   --c-shadow-md:  rgba(214,141,143,.12);
 }
 
-/* ── Tema escuro ── */
+/* ── Tema escuro — Glassmorphism dark com accent rosa Cris (#C13584) ── */
 [data-theme="dark"] {
-  --c-page-bg:    #0C0C0C;
-  --c-sidebar-bg: #111111;
-  --c-card-bg:    #1A1A1A;
-  --c-topbar-bg:  #111111;
-  --c-border:     #2A2A2A;
-  --c-border-lt:  #202020;
-  --c-active-bg:  rgba(214,141,143,.14);
-  --c-surface:    #161616;
-  --c-hover:      #1E1E1E;
-  --c-text-1:     #F0F0F0;
-  --c-text-2:     #BBBBBB;
-  --c-text-3:     #888888;
-  --c-text-4:     #555555;
-  --c-accent:     #E8A9AB;
-  --c-accent-dk:  #d68d8f;
-  --c-shadow:     rgba(0,0,0,.4);
-  --c-shadow-md:  rgba(0,0,0,.55);
-  --shadow-sm:    0 1px 4px rgba(0,0,0,.5);
-  --shadow:       0 4px 16px rgba(0,0,0,.55);
-  --shadow-lg:    0 12px 36px rgba(0,0,0,.65);
+  /* Fundo quase preto com leve azul-petrol (estilo AgentOS) */
+  --c-page-bg:       #06080B;
+  /* Sidebar como ilha glass + topbar transparente */
+  --c-sidebar-bg:    rgba(14,18,24,.78);
+  --c-topbar-bg:     transparent;
+  /* Cards: glass dark fumê (escurece em vez de clarear) */
+  --c-card-bg:       rgba(18,24,30,.45);
+  --c-surface:       rgba(28,34,42,.55);
+  --c-hover:         rgba(255,255,255,.04);
+  --c-active-bg:     rgba(193,53,132,.18);
+  /* Bordas glass — sutis brancas translúcidas */
+  --c-border:        rgba(255,255,255,.09);
+  --c-border-lt:     rgba(255,255,255,.05);
+  /* Texto */
+  --c-text-1:        #F2F2F2;
+  --c-text-2:        #C2C2C2;
+  --c-text-3:        #8A8A8A;
+  --c-text-4:        #595959;
+  /* Accent: rosa forte da marca (#C13584) + vinho como secundário */
+  --c-accent:        #C13584;
+  --c-accent-dk:     #7D4A5E;
+  --c-accent-soft:   rgba(193,53,132,.18);
+  --c-accent-glow:   rgba(193,53,132,.55);
+  /* Glass tokens */
+  --c-glass-shine:   rgba(255,255,255,.07);
+  --c-glass-border-2:rgba(255,255,255,.16);
+  /* Sombras */
+  --c-shadow:        rgba(0,0,0,.4);
+  --c-shadow-md:     rgba(0,0,0,.55);
+  --shadow-sm:       0 1px 4px rgba(0,0,0,.5);
+  --shadow:          0 4px 16px rgba(0,0,0,.55);
+  --shadow-lg:       0 12px 36px rgba(0,0,0,.65);
+  /* Blur amount (mobile reduz pra performance) */
+  --c-blur-strong:   blur(28px);
+  --c-blur-soft:     blur(14px);
+}
+
+/* ── Background tech (linhas + nodes + curvas de fluxo) — só no dark ── */
+[data-theme="dark"] body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: -2; pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='800' viewBox='0 0 800 800'><defs><radialGradient id='node' cx='50%25' cy='50%25' r='50%25'><stop offset='0%25' stop-color='%23C13584' stop-opacity='1'/><stop offset='60%25' stop-color='%23C13584' stop-opacity='.4'/><stop offset='100%25' stop-color='%23C13584' stop-opacity='0'/></radialGradient></defs><g stroke='%23ffffff' stroke-opacity='0.16' stroke-width='1' fill='none'><path d='M0,180 L220,180 L260,140 L460,140 L500,200 L800,200'/><path d='M0,520 L160,520 L200,560 L380,560 L420,500 L640,500 L680,560 L800,560'/><path d='M120,0 L120,80 L80,120 L80,260'/><path d='M620,0 L620,40 L660,80 L660,200 L620,240 L620,420'/><path d='M0,360 Q200,300 400,360 T800,360' stroke-opacity='0.11'/><path d='M0,640 Q200,700 400,640 T800,640' stroke-opacity='0.11'/><path d='M280,800 L280,720 L320,680 L520,680 L560,640' stroke-opacity='0.13'/></g><g fill='url(%23node)'><circle cx='220' cy='180' r='3.5'/><circle cx='460' cy='140' r='3.5'/><circle cx='500' cy='200' r='3.5'/><circle cx='160' cy='520' r='3.5'/><circle cx='420' cy='500' r='3.5'/><circle cx='680' cy='560' r='3.5'/><circle cx='80' cy='260' r='3.5'/><circle cx='620' cy='420' r='3.5'/><circle cx='320' cy='680' r='3.5'/></g></svg>");
+  background-size: 800px 800px;
+  background-repeat: repeat;
+  mask-image: radial-gradient(ellipse 90% 80% at center, rgba(0,0,0,.85), transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 90% 80% at center, rgba(0,0,0,.85), transparent 75%);
+  opacity: .9;
+}
+
+/* ── Spotlight central + glows nos cantos (só no dark) ── */
+[data-theme="dark"] body::after {
+  content: '';
+  position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(ellipse 90% 60% at 50% -10%, rgba(193,53,132,.22), transparent 70%),
+    radial-gradient(720px 720px at -8% -10%, var(--c-accent-glow), transparent 60%),
+    radial-gradient(640px 640px at 108% 108%, rgba(125,74,94,.5), transparent 60%);
+}
+
+/* ── Noise sutil — só no dark ── */
+[data-theme="dark"] body {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.6 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  background-size: 240px 240px;
+  background-color: var(--c-page-bg);
+}
+
+/* Reduz blur em mobile (performance) */
+@media (max-width: 768px) {
+  [data-theme="dark"] {
+    --c-blur-strong: blur(12px);
+    --c-blur-soft:   blur(8px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Glows estáticos */
+  [data-theme="dark"] body::after { background-attachment: fixed; }
 }
 
 body {
@@ -349,6 +405,38 @@ input[type="range"] { accent-color: #d68d8f; }
 .ccb-card:active {
   transform: translateY(-1px) scale(.997);
   transition-duration: .08s;
+}
+
+/* ── Glass dark fumê nos cards (só no dark) ── */
+[data-theme="dark"] .ccb-card,
+[data-theme="dark"] .page-container .ccb-card {
+  background: var(--c-card-bg);
+  backdrop-filter: var(--c-blur-strong);
+  -webkit-backdrop-filter: var(--c-blur-strong);
+  border: 1px solid var(--c-border);
+  box-shadow:
+    0 8px 24px rgba(0,0,0,.35),
+    inset 0 1px 0 var(--c-glass-shine);
+  position: relative;
+  overflow: hidden;
+}
+[data-theme="dark"] .ccb-card::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,.08) 0%, transparent 30%);
+  pointer-events: none; border-radius: inherit;
+}
+[data-theme="dark"] .ccb-card::after {
+  content: ''; position: absolute; inset: -1px;
+  background: linear-gradient(135deg, rgba(255,255,255,.10), transparent 45%);
+  pointer-events: none; border-radius: inherit;
+  mix-blend-mode: overlay; opacity: .9;
+}
+[data-theme="dark"] .ccb-card:hover {
+  border-color: var(--c-glass-border-2);
+  box-shadow:
+    0 14px 34px rgba(0,0,0,.45),
+    inset 0 1px 0 var(--c-glass-shine);
 }
 
 /* Botões/chips pressionáveis — scale sutil */

@@ -44,7 +44,7 @@ function computeCampaignMetrics(ad) {
   const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
 
   const metrics = [
-    { label: 'Investimento',        value: fmtBRL(spent),                       icon: <WalletIcon />, iconBg: '#FDF0F8', iconColor: '#d68d8f',
+    { label: 'Investimento',        value: fmtBRL(spent),                       icon: <WalletIcon />, iconBg: '#FDF0F8', iconColor: 'var(--c-accent)',
       hint: 'Quanto já foi gasto desta campanha.' },
     { label: 'Cliques',             value: clicks.toLocaleString('pt-BR'),      icon: <CursorIcon />, iconBg: '#EFF6FF', iconColor: '#3B82F6',
       hint: 'Total de cliques no anúncio (qualquer área).' },
@@ -215,7 +215,7 @@ function DualLineChart({ series }) {
 
   /* Cores de degradê por série */
   const gradients = {
-    '#d68d8f': { from: '#E879A8', to: '#d68d8f' },
+    '#C13584': { from: '#E879A8', to: '#C13584' },
     '#3B82F6': { from: '#60A5FA', to: '#2563EB' },
   };
 
@@ -468,12 +468,12 @@ function LineChart({ data, unit = 'resultados' }) {
     >
       <defs>
         <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stopColor="#d68d8f" stopOpacity="0.22"/>
-          <stop offset="100%" stopColor="#d68d8f" stopOpacity="0.01"/>
+          <stop offset="0%"   stopColor="#C13584" stopOpacity="0.22"/>
+          <stop offset="100%" stopColor="#C13584" stopOpacity="0.01"/>
         </linearGradient>
         <linearGradient id="chartLine" x1="0" y1="0" x2="1" y2="0">
           <stop offset="0%"   stopColor="#E879A8"/>
-          <stop offset="100%" stopColor="#d68d8f"/>
+          <stop offset="100%" stopColor="#C13584"/>
         </linearGradient>
         <filter id="chartGlow" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="3" result="blur"/>
@@ -503,7 +503,7 @@ function LineChart({ data, unit = 'resultados' }) {
             x={pt.x}
             y={H - 4}
             fontSize="9"
-            fill={isNear ? '#d68d8f' : 'var(--c-text-4)'}
+            fill={isNear ? '#C13584' : 'var(--c-text-4)'}
             fontWeight={isNear ? 700 : 400}
             textAnchor="middle"
             style={{ transition: 'fill .18s ease' }}
@@ -523,7 +523,7 @@ function LineChart({ data, unit = 'resultados' }) {
             cy={pt.y}
             r={2.5 + weight * 1.5}
             fill="#fff"
-            stroke="#d68d8f"
+            stroke="#C13584"
             strokeWidth={1.5 + weight * 0.6}
           />
         );
@@ -533,7 +533,7 @@ function LineChart({ data, unit = 'resultados' }) {
       <line
         x1={activeX} y1={padT}
         x2={activeX} y2={padT + plotH}
-        stroke="#d68d8f"
+        stroke="#C13584"
         strokeWidth="1"
         strokeDasharray="3,3"
         opacity={isHovering ? 0.75 : 0.4}
@@ -545,10 +545,10 @@ function LineChart({ data, unit = 'resultados' }) {
         cx={activeX}
         cy={activeY}
         r={showInterpolated ? 5 : 6}
-        fill="#d68d8f"
+        fill="#C13584"
         stroke="#fff"
         strokeWidth="2.5"
-        style={{ filter: 'drop-shadow(0 2px 6px rgba(214,141,143,.45))' }}
+        style={{ filter: 'drop-shadow(0 2px 6px rgba(193,53,132,.45))' }}
       />
 
       {/* Tooltip refinado — compacto, tipografia leve, sombra suave */}
@@ -559,13 +559,13 @@ function LineChart({ data, unit = 'resultados' }) {
           width={TOOLTIP_W}
           height={TOOLTIP_H}
           rx="8"
-          fill="#d68d8f"
-          style={{ filter: 'drop-shadow(0 3px 8px rgba(214,141,143,.28))' }}
+          fill="#C13584"
+          style={{ filter: 'drop-shadow(0 3px 8px rgba(193,53,132,.28))' }}
         />
         {/* Flecha discreta abaixo do retângulo */}
         <path
           d={`M ${activeX - 3.5} ${tooltipY + TOOLTIP_H - 0.5} L ${activeX} ${tooltipY + TOOLTIP_H + 4} L ${activeX + 3.5} ${tooltipY + TOOLTIP_H - 0.5} Z`}
-          fill="#d68d8f"
+          fill="#C13584"
         />
         <text
           x={tooltipCenterX}
