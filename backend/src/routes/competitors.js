@@ -6,6 +6,26 @@ const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const VISION_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';
 const TEXT_MODEL = 'llama-3.3-70b-versatile';
 
+/* Em Vercel serverless, runMigrations roda fire-and-forget no boot do
+   módulo db/index.js — primeira request pode chegar antes do CREATE TABLE
+   completar. Garantia de existência por demanda, idempotente. */
+let _tableEnsured = false;
+async function ensureTable() {
+  if (_tableEnsured) return;
+  await pool.query(`CREATE TABLE IF NOT EXISTS competitor_analyses (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    source_url TEXT,
+    items TEXT,
+    descriptions TEXT,
+    insights TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+  )`);
+  try { await pool.query(`CREATE INDEX IF NOT EXISTS idx_competitor_analyses_created ON competitor_analyses(created_at DESC)`); }
+  catch (e) { /* índice é nice-to-have, falha silenciosa */ }
+  _tableEnsured = true;
+}
+
 const VISION_PROMPT = `Você é analista de tráfego pago. Descreva o anúncio (imagem ou print) de forma estruturada, em português do Brasil.
 
 Retorne APENAS texto corrido (sem markdown), cobrindo:
@@ -109,6 +129,7 @@ router.post('/describe-item', async (req, res) => {
    Roda agregação Groq → JSON estruturado → salva no DB. */
 router.post('/analyze', async (req, res) => {
   try {
+    await ensureTable();
     const { name, source_url, items, descriptions } = req.body || {};
     if (!name || !Array.isArray(descriptions) || descriptions.length === 0) {
       return res.status(400).json({ error: 'name e descriptions[] obrigatórios' });
@@ -168,6 +189,7 @@ Gere o JSON conforme estrutura.`;
 /* GET /api/competitors — lista análises (sem payload pesado) */
 router.get('/', async (_req, res) => {
   try {
+    await ensureTable();
     const r = await pool.query(
       `SELECT id, name, source_url, insights, created_at
        FROM competitor_analyses ORDER BY created_at DESC LIMIT 50`
@@ -192,6 +214,7 @@ router.get('/', async (_req, res) => {
 /* GET /api/competitors/:id — detalhe completo */
 router.get('/:id', async (req, res) => {
   try {
+    await ensureTable();
     const r = await pool.query(
       `SELECT * FROM competitor_analyses WHERE id = $1`,
       [req.params.id]
@@ -222,6 +245,7 @@ router.get('/:id', async (req, res) => {
 /* DELETE /api/competitors/:id */
 router.delete('/:id', async (req, res) => {
   try {
+    await ensureTable();
     const r = await pool.query(`DELETE FROM competitor_analyses WHERE id = $1`, [req.params.id]);
     if (r.rowCount === 0) return res.status(404).json({ error: 'não encontrado' });
     res.json({ ok: true });
