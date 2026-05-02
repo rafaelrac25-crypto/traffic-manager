@@ -21,15 +21,41 @@ function rowToAd(row) {
   if (out.payload && typeof out.payload === 'object') {
     out = { ...out.payload, ...out, payload: undefined };
   }
-  /* Bug B fix: derivar results/costPerResult de conversions/spent vindos do sync.
-     Sem isso, esses campos ficam grudados nos defaults do payload (results: 0,
-     costPerResult: null) mesmo quando o sync já mapeou conversions corretamente. */
-  const conv = Number(out.conversions);
-  if (Number.isFinite(conv) && conv > 0) {
-    out.results = conv;
-    const spent = Number(out.spent);
+  /* Deriva results/costPerResult conforme o OBJETIVO da campanha — Meta usa
+     métrica de "resultado" diferente por objective:
+     - OUTCOME_TRAFFIC      → link_clicks (cliques no link)
+     - OUTCOME_AWARENESS    → reach (alcance)
+     - OUTCOME_ENGAGEMENT   → conversions (mensagens iniciadas, se goal=CONVERSATIONS)
+     - OUTCOME_LEADS / SALES / APP_PROMOTION → conversions
+     - default              → conversions
+
+     Antes só usava conversions — campanhas de Tráfego ficavam com costPerResult=null
+     mesmo tendo cliques (caso da 437 "Adeus cravos"). */
+  const objective = out.objective || out?.meta?.campaign?.objective || null;
+  const spent = Number(out.spent);
+  let resultsValue = null;
+
+  if (objective === 'OUTCOME_TRAFFIC') {
+    const lc = Number(out.link_clicks);
+    if (Number.isFinite(lc) && lc > 0) resultsValue = lc;
+  } else if (objective === 'OUTCOME_AWARENESS') {
+    const r = Number(out.reach);
+    if (Number.isFinite(r) && r > 0) resultsValue = r;
+  } else {
+    const conv = Number(out.conversions);
+    if (Number.isFinite(conv) && conv > 0) resultsValue = conv;
+  }
+
+  /* Fallback: se objetivo não bateu mas tem conversions > 0, usa */
+  if (resultsValue == null) {
+    const conv = Number(out.conversions);
+    if (Number.isFinite(conv) && conv > 0) resultsValue = conv;
+  }
+
+  if (resultsValue != null && resultsValue > 0) {
+    out.results = resultsValue;
     if (Number.isFinite(spent) && spent > 0) {
-      out.costPerResult = Number((spent / conv).toFixed(2));
+      out.costPerResult = Number((spent / resultsValue).toFixed(2));
     }
   }
   return out;
