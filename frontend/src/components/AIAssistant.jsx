@@ -162,11 +162,11 @@ export default function AIAssistant() {
       {/* Animações do botão flutuante (flutuar + piscar olhos + balão de fala) */}
       <style>{`
         @keyframes aiBubbleFloat {
-          0%   { transform: translateY(0)     rotate(0deg); }
-          25%  { transform: translateY(-9px)  rotate(-3deg); }
-          50%  { transform: translateY(-12px) rotate(0deg); }
-          75%  { transform: translateY(-9px)  rotate(3deg); }
-          100% { transform: translateY(0)     rotate(0deg); }
+          0%   { transform: translateY(0)    rotate(0deg); }
+          25%  { transform: translateY(-4px) rotate(-2deg); }
+          50%  { transform: translateY(-6px) rotate(0deg); }
+          75%  { transform: translateY(-4px) rotate(2deg); }
+          100% { transform: translateY(0)    rotate(0deg); }
         }
         @keyframes aiGlowPulse {
           0%, 100% { box-shadow: 0 4px 16px rgba(193,53,132,.4); }
