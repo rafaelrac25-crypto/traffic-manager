@@ -146,26 +146,19 @@ export default function Sidebar({ open = false, isMobile = false }) {
     return location.pathname.startsWith(to);
   }
 
-  // Dark mode: sidebar vira "ilha flutuante" com cantos arredondados, border completa,
-  // box-shadow e margens internas. Light mode: mantém visual sólido tradicional.
-  const islandStyle = isDark
-    ? {
-        // Ilha flutuante (margens dão respiro nas bordas da viewport)
-        top: '16px', left: '16px', bottom: '16px',
-        minHeight: 'calc(100vh - 32px)',
-        height: 'calc(100vh - 32px)',
-        borderRadius: '18px',
-        border: '1px solid var(--c-border)',
-        borderRight: '1px solid var(--c-border)',
-        boxShadow: '0 12px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04)',
-      }
-    : {
-        // Sólido tradicional (cola no topo/esquerda/baixo)
-        top: 0, left: 0,
-        minHeight: '100vh',
-        borderRight: '1px solid var(--c-border)',
-        borderRadius: 0,
-      };
+  // Sidebar: "ilha flutuante" em ambos os temas — estrutura igual,
+  // só as cores (border, sombra) mudam via tokens CSS por tema.
+  const islandStyle = {
+    top: '16px', left: '16px', bottom: '16px',
+    minHeight: 'calc(100vh - 32px)',
+    height: 'calc(100vh - 32px)',
+    borderRadius: '18px',
+    border: '1px solid var(--c-border)',
+    borderRight: '1px solid var(--c-border)',
+    boxShadow: isDark
+      ? '0 12px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04)'
+      : '0 12px 30px rgba(193,53,132,.10), inset 0 1px 0 rgba(255,255,255,.55)',
+  };
 
   return (
     <aside
@@ -196,10 +189,10 @@ export default function Sidebar({ open = false, isMobile = false }) {
           {PRIMARY_NAV.map(({ to, label }) => {
             const active   = isActive(to);
             const isCreate = to === '/criar-anuncio';
-            /* Dark + Criar campanha: botão glass rosa com glow forte (paridade com mockup).
-               Light: visual original (borda accent simples). */
-            const darkCreate = isDark && isCreate;
-            const darkDashboard = isDark && !isCreate;
+            /* Criar anúncio: botão glass rosa com glow forte em ambos os temas
+               (paridade com mockup) — só as cores via vars/rgba mudam.
+               `darkCreate` mantido como nome legado mas aplica nos dois modos. */
+            const darkCreate = isCreate;
             return (
               <div
                 key={to}
