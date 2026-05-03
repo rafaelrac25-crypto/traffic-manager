@@ -89,10 +89,12 @@ export function AppStateProvider({ children }) {
             if (!r.ok) return;
             const ig = await r.json();
             if (cancelled) return;
+            /* Só atualiza avatarUrl + username. O `name` do IG da Cris é uma
+               descrição de servicos ("SOBRANCELHAS / MICROPIGMENTACAO …") —
+               nao serve como display name na sidebar. Mantem "Cris Costa". */
             setMetaAccount(prev => ({
               ...prev,
               avatarUrl: ig.profile_picture_url || prev.avatarUrl,
-              name:      ig.name || ig.username || prev.name,
               username:  ig.username || prev.username,
             }));
           } catch (_) { /* fallback CC */ }
