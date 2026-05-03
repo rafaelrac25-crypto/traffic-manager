@@ -385,7 +385,7 @@ body {
   position: absolute;
   left: 32px;
   right: 32px;
-  bottom: 0;
+  bottom: 14px;
   height: 1px;
   background: linear-gradient(90deg,
     transparent 0%,
