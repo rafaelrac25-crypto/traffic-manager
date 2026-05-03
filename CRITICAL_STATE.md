@@ -1117,3 +1117,35 @@ mostra qual pass venceu (720p/480p/360p).
 ### Próximo
 - Rafa testar chat IA in-app pra validar tom novo
 - Se algum item escapar (emoji/#/1ª pessoa), reforçar regra ou baixar temperature mais
+
+---
+
+## Sessão 2026-05-03 — Padrão visual: ícones stroke + bordas finas + pop-ups opacos
+
+**Commit:** `f3be313` feat(ui): icones stroke + tokens semanticos + bordas finas + popups opacos
+
+### Decisões durables (regras pra todo novo componente)
+1. **Ícones SVG = sempre STROKE.** Padrão canônico:
+   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">`
+2. **Cor padrão de ícone = `currentColor`** (herda contexto = rosa do --c-accent)
+3. **Cores semânticas em CSS vars** (use SEMPRE estas, não hex hardcoded):
+   - `var(--c-success)` verde — ok/ativo/conectado/check
+   - `var(--c-warning)` amarelo — atenção/pendente/loading/clock
+   - `var(--c-info)` azul — informativo/dica/help
+   - `var(--c-attention)` laranja — alerta/destaque/urgente
+4. **Borda lateral de alerta** (border-left) **= 2px** (não 3, não 4). Aplica em TODO card de alerta no sistema.
+5. **Pop-ups/modais** = `className="ccb-card ccb-modal"`.
+   `.ccb-modal` força bg `var(--c-modal-bg)` (.96 light · .94 dark) + blur(28px) + saturate(140%) pra contraste de leitura.
+
+### Aplicações nesta sessão
+- **Ícones convertidos:** Campaigns (Pause/Play/Dots) + SystemStatus (StatusIcon)
+- **Tokens novos** no `:root`, `[data-theme="light"]` e `[data-theme="dark"]`
+- **6 bordas afinadas:** Dashboard 1693, Audiences 441, Rejected 33, CreateAd 1929/3848/3884
+- **8 modais opacificados:** Calendar (2x), Campaigns (2x), CampaignsHierarchy (1x), CreateAd (3x), References (1x)
+
+### Build
+- 838 kB (índice), zero impacto vs commit anterior.
+
+### Próximo
+- Rafa validar in-app pop-up de anúncio em /anuncios e bordas em /
+- Se algum modal novo for criado, lembrar `className="ccb-card ccb-modal"`
