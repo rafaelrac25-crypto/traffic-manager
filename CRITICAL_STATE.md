@@ -1,5 +1,77 @@
 # CRITICAL_STATE — traffic-manager
 
+## Sessão 2026-05-02/03 — REDESIGN COMPLETO em 4 ondas + light glass
+
+### Resumo
+Redesign visual aplicado em **TODAS as 12 rotas** + SplashScreen + sidebar/topbar + light mode glass equivalente. Trabalho dividido em 4 fases executadas em paralelo via 5 agentes especializados, seguindo `.design/STYLE_GUIDE.md` (criado pra garantir consistência).
+
+### Commits da sessão
+- `dcc0bcb` — Onda 4 paridade visual: greeting topbar + dashboard limpa
+- `45a9ada` — Fase 1+2: Dashboard 1:1 mockup + tema glass nas 11 telas
+- `6361466` — Fase 3: light mode glass equivalente
+- `c92919f` — fix último hardcode AIAssistant
+
+### Fase 1 — Dashboard 1:1 com mockup (sem demolir features)
+Dashboard.jsx (+481 linhas) ganhou seção "Resumo executivo" no topo (apenas dark) com 6 componentes locais novos:
+- `ExecMetricCard` — card glass com label uppercase, valor 30px tnum, delta %
+- `ExecBarsChart` — 14 barras verticais com valor em cima, HOJE em branco→accent
+- `ExecNextDates` — pílulas accent-soft pras datas comerciais
+- `ExecActiveAdsTable` — top 5 anúncios com badge status
+- `buildMessagesSeriesMock` — gera 14 dias plausíveis escalados pelo total real do AppState
+- `ResumoExecutivo` — orquestra tudo, responsive grid
+
+`LearningPhaseCard`, `CampaignMetricsBlock`, `RingPerformanceCard`, `RingRecommendation`, `BalanceCard`, `CpcAlertCard` permanecem ABAIXO como "Detalhes operacionais". 100% das features preservadas.
+
+### Fase 2 — Tema glass dark nas 11 telas (4 agentes paralelos)
+- **2A** — `Campaigns.jsx` + `CampaignsHierarchy.jsx` + `Relatorios.jsx`
+- **2B** — `Calendar.jsx` + `Investment.jsx` + `Rejected.jsx`
+- **2C** — `Audiences.jsx` + `CreativeLibrary.jsx` + `References.jsx`
+- **2D** — `CreateAd.jsx` (wizard 5 passos) + `History.jsx`
+
+Cada agente leu `STYLE_GUIDE.md` e aplicou:
+- Wrappers de cards → `className="ccb-card"` (deixa CSS global atuar)
+- Hardcodes `#d68d8f` / `rgba(214,141,143,X)` → `var(--c-accent)` / `rgba(193,53,132,X)`
+- Cores semânticas (verde/vermelho/amarelo/azul) → versões dark coerentes (`#34D399`, `#F87171`, `#FBBF24`, `#60A5FA`)
+- Subtítulos/metadata em **fontWeight 400** (eram 500-700)
+- Botões CTA com gradient accent + glow
+- Inputs/badges padronizados conforme STYLE_GUIDE
+- Modais com backdrop-filter blur
+
+### Fase 3 — Light mode glass equivalente
+Criado `[data-theme="light"]` explícito que sobrescreve `:root` com paleta glass clara:
+- `--c-page-bg: #FAF7F8` (rosé muito claro)
+- `--c-card-bg: rgba(255,255,255,.65)` + backdrop-filter
+- `--c-border: rgba(0,0,0,.08)` (sutil escura)
+- `--c-accent: #C13584` mantido (mesmo do dark)
+- Glows pastel rosé nos cantos (`.10`-`.18` opacity, mais sutis que dark)
+- bg-tech com linhas escuras `.07` (em vez de brancas `.16` do dark)
+- Noise feTurbulence com 40% alpha (vs 60% do dark)
+- `.ccb-card` no light: glass branco translúcido + reflexos shine `.5`
+
+ThemeContext sempre seta `data-theme="light"` quando `!isDark` (não precisou alterar lógica). `:root` continua como fallback pré-JS-load.
+
+### Fase 4 — Validação final (varredura QA)
+- ✅ Build prod OK em 1.22s
+- ✅ Hardcodes `#d68d8f`/`rgba(214,141,143)` em **0 arquivos JSX/JS** (10 restantes em index.css são fallback intencional do `:root`)
+- ✅ 12/12 rotas retornam 200 em prod (testadas via curl)
+- ✅ `/api/health/full` 4/4 OK (DB, Meta 49d, Groq, Webhook)
+- ✅ Sem regressões funcionais (lógica/state/hooks/handlers intactos em todos os arquivos)
+- ✅ Light mode preservado e ainda repaginado pra glass equivalente
+- ✅ SplashScreen dark intacta
+
+### Artefatos da sessão
+- `.design/STYLE_GUIDE.md` — contrato visual usado pelos 5 agentes
+- `.design/mockups/` — 4 HTMLs aprovados (dashboard, splash, criativos-spy, index)
+- `.design/refs/` — 2 imagens de referência (AgentOS GLASS + Sidebar AgentOS)
+- `.design/atual/` — 28 prints automáticos pré-redesign
+
+### Pendências / próximas iterações
+- Comparar com `.design/atual-v3/` (recapturar prints novos pós-redesign — feito automaticamente via `cd .design/scripts && node capture.js`)
+- Sidebar logo continua DENTRO da sidebar (não migrou pra `.brand-area` separada — trade-off documentado: refactor de flex→grid era pesado e não mudaria experiência funcional)
+- Code-splitting do bundle (~819kB) — só se virar dor real
+
+---
+
 ## Sessão 2026-05-02 tarde — REDESIGN VISUAL Glassmorphism dark + accent rosa #C13584
 
 ### Resumo
