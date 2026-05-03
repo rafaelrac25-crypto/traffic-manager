@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import marcaBranca from '../assets/marca-branca.png';
 import { playWelcome } from '../utils/sounds';
 
-/* Duração total: HOLD_MS + EXIT_MS ≈ 3 s */
-const HOLD_MS = 2400;
+/* Duração total: HOLD_MS + EXIT_MS ≈ 4 s (Rafa pediu 4s "como se estivesse lendo o sistema"). */
+const HOLD_MS = 3400;
 const EXIT_MS = 600;
 
 /* Splash dark glassmorphism — fundo profundo + blobs animados + deco-rings + logo branca.
@@ -216,6 +216,52 @@ export default function SplashScreen({ onDone }) {
             lineHeight:    1,
           }}>Tráfego</span>
         </div>
+      </div>
+
+      {/* ── Barra de progresso "leitura tech" ── */}
+      <style>{`
+        @keyframes splashProgressPercent {
+          0%   { content: '0%';   --p: 0; }
+          25%  { content: '24%';  --p: 24; }
+          50%  { content: '47%';  --p: 47; }
+          75%  { content: '78%';  --p: 78; }
+          100% { content: '100%'; --p: 100; }
+        }
+        @keyframes splashCounterTick {
+          0%   { content: 'Conectando ao sistema'; }
+          30%  { content: 'Verificando integrações Meta'; }
+          55%  { content: 'Sincronizando campanhas'; }
+          80%  { content: 'Carregando IA'; }
+          100% { content: 'Pronto'; }
+        }
+        .splash-counter::before {
+          content: '0%';
+          font-feature-settings: 'tnum';
+          animation: splashProgressPercent ${HOLD_MS}ms steps(100, end) forwards;
+        }
+        .splash-counter-label::before {
+          content: 'Conectando ao sistema';
+          animation: splashCounterTick ${HOLD_MS}ms steps(5, end) forwards;
+        }
+      `}</style>
+      <div style={{
+        position: 'absolute', bottom: '60px', left: '50%', transform: 'translateX(-50%)',
+        display: 'flex', alignItems: 'center', gap: '12px',
+        zIndex: 3,
+        opacity: 0,
+        animation: 'splashTagIn .4s .6s ease forwards',
+      }}>
+        <span className="splash-counter-label" style={{
+          fontSize: '10.5px', color: 'rgba(255,255,255,.55)', fontWeight: 500,
+          letterSpacing: '1.2px', textTransform: 'uppercase',
+          minWidth: '210px', textAlign: 'right',
+        }} />
+        <span className="splash-counter" style={{
+          fontSize: '11px', color: '#C13584', fontWeight: 800,
+          letterSpacing: '1.4px',
+          textShadow: '0 0 12px rgba(193,53,132,.6)',
+          minWidth: '38px',
+        }} />
       </div>
 
       {/* ── Barra de progresso (gradient accent + brilho central) ── */}

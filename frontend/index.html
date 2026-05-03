@@ -36,10 +36,18 @@
       }, 10000);
     </script>
   </head>
-  <body style="margin:0;background:#F5E0E0;font-family:sans-serif">
-    <div id="loading" style="display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:12px">
-      <div style="width:36px;height:36px;border:3px solid #EDCECE;border-top:3px solid #C98B83;border-radius:50%;animation:spin 1s linear infinite"></div>
-      <span style="color:#C98B83;font-size:13px;font-weight:600">Iniciando...</span>
+  <body style="margin:0;background:#06080B;font-family:sans-serif">
+    <script>
+      /* Aplica data-theme antes do React montar pra evitar flash de tema
+         errado (light rosé piscando antes do dark glass entrar). */
+      try {
+        var saved = localStorage.getItem('ccb_theme') || localStorage.getItem('theme');
+        document.documentElement.setAttribute('data-theme', saved === 'dark' ? 'dark' : 'light');
+      } catch(_) {}
+    </script>
+    <div id="loading" style="display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:12px;background:#06080B">
+      <div style="width:36px;height:36px;border:3px solid rgba(193,53,132,.18);border-top:3px solid #C13584;border-radius:50%;animation:spin 1s linear infinite"></div>
+      <span style="color:#C13584;font-size:13px;font-weight:600;letter-spacing:1px">Iniciando…</span>
     </div>
     <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
     <div id="root"></div>
