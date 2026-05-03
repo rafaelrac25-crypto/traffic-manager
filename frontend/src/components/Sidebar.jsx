@@ -474,27 +474,10 @@ export default function Sidebar({ open = false, isMobile = false }) {
             }}>CC</div>
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div
-              title={syncTitle}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}
-            >
-              <span
-                style={{
-                  width: '8px', height: '8px', borderRadius: '50%',
-                  background: syncInfo.color, flexShrink: 0,
-                  boxShadow: `0 0 0 2px ${syncInfo.color}22`,
-                  animation: syncInfo.pulse ? 'syncPulse 1.8s ease-in-out infinite' : 'none',
-                }}
-              />
-              <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {metaAccount?.name || 'Cris Costa'}
-              </div>
-            </div>
-            <div
-              title={syncTitle}
-              style={{ fontSize: '10px', color: syncInfo.color, fontWeight: 500, marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-            >
-              {syncInfo.label}
+            {/* Status sync removido daqui (redundante com SystemStatus acima).
+               Ficou só foto + nome — visual limpo. */}
+            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--c-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {metaAccount?.name || 'Cris Costa'}
             </div>
           </div>
         </div>
