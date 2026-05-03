@@ -2,12 +2,11 @@ import React, { useEffect, useState } from 'react';
 import marcaBranca from '../assets/marca-branca.png';
 import { playWelcome } from '../utils/sounds';
 
-/* Duração total: HOLD_MS + EXIT_MS ≈ 4 s (Rafa pediu 4s "como se estivesse lendo o sistema"). */
+/* Duração total: HOLD_MS + EXIT_MS ≈ 4 s.
+   Replica fiel do mock `.design/mockups/splash.html` — sem barra de loading. */
 const HOLD_MS = 3400;
 const EXIT_MS = 600;
 
-/* Splash dark glassmorphism — fundo profundo + blobs animados + deco-rings + logo branca.
-   Independente do tema do app (tela de intro fixa). */
 export default function SplashScreen({ onDone }) {
   const [phase, setPhase] = useState('enter');
 
@@ -33,7 +32,7 @@ export default function SplashScreen({ onDone }) {
       animation:      phase === 'exit' ? `splashOut ${EXIT_MS}ms ease forwards` : 'none',
     }}>
 
-      {/* Keyframes locais (não tocam no index.css) */}
+      {/* Keyframes locais (replicados do mock) */}
       <style>{`
         @keyframes splashFloatA {
           0%   { transform: translate(0, 0) scale(1); }
@@ -57,102 +56,54 @@ export default function SplashScreen({ onDone }) {
           0%, 100% { transform: scale(1);   opacity: .55; }
           50%      { transform: scale(1.4); opacity: 1;   }
         }
-        @keyframes splashMeshFlow {
-          0%   { background-position: 0 0, 0 0; }
-          100% { background-position: 60px 60px, 60px 60px; }
+        @keyframes splashDotsFadeIn {
+          to { opacity: 1; }
         }
-        @keyframes splashMeshFlowReverse {
-          0%   { background-position: 0 0, 0 0; }
-          100% { background-position: -120px -120px, -120px -120px; }
+        /* ── Orbit dots (2 bolinhas — rosa raio 270, azul raio 360 reverso) ── */
+        @keyframes splashOrbitPink {
+          from { transform: translate(-50%, -50%) rotate(0deg)   translateX(270px); }
+          to   { transform: translate(-50%, -50%) rotate(360deg) translateX(270px); }
         }
-        @keyframes splashMeshPulse {
-          0%, 100% { opacity: .55; }
-          50%      { opacity: 1;   }
-        }
-        @keyframes splashMeshBreath {
-          0%, 100% { opacity: .35; }
-          50%      { opacity: .85; }
-        }
-        @keyframes splashScanLine {
-          0%   { top: -8%;  opacity: 0; }
-          12%  { opacity: 1; }
-          88%  { opacity: 1; }
-          100% { top: 108%; opacity: 0; }
-        }
-        @keyframes splashNodePulse {
-          0%, 100% { transform: scale(1);   opacity: .3; }
-          50%      { transform: scale(1.8); opacity: 1;  }
+        @keyframes splashOrbitBlue {
+          from { transform: translate(-50%, -50%) rotate(0deg)   translateX(360px); }
+          to   { transform: translate(-50%, -50%) rotate(-360deg) translateX(360px); }
         }
         @media (prefers-reduced-motion: reduce) {
-          .splash-blob, .splash-ring, .splash-mesh-1, .splash-mesh-2, .splash-scan, .splash-node {
-            animation: none !important;
+          .splash-blob, .splash-ring, .splash-orbit { animation: none !important; }
+        }
+        @media (max-width: 480px) {
+          .splash-orbit-pink {
+            animation-name: splashOrbitPinkSm !important;
+          }
+          .splash-orbit-blue {
+            animation-name: splashOrbitBlueSm !important;
+          }
+          @keyframes splashOrbitPinkSm {
+            from { transform: translate(-50%, -50%) rotate(0deg)   translateX(170px); }
+            to   { transform: translate(-50%, -50%) rotate(360deg) translateX(170px); }
+          }
+          @keyframes splashOrbitBlueSm {
+            from { transform: translate(-50%, -50%) rotate(0deg)   translateX(250px); }
+            to   { transform: translate(-50%, -50%) rotate(-360deg) translateX(250px); }
           }
         }
       `}</style>
 
-      {/* ── Malha tecnológica viva — camada 1: branca grande, fluxo diagonal ── */}
-      <div className="splash-mesh-1" style={{
+      {/* ── Background tech grid sutil (estático, mascarado) ── */}
+      <div style={{
         position: 'absolute',
         inset: 0,
         backgroundImage:
-          'linear-gradient(rgba(255,255,255,.07) 1px, transparent 1px),' +
-          'linear-gradient(90deg, rgba(255,255,255,.07) 1px, transparent 1px)',
-        backgroundSize: '60px 60px, 60px 60px',
-        animation: 'splashMeshFlow 6s linear infinite, splashMeshPulse 5s ease-in-out infinite',
-        WebkitMaskImage: 'radial-gradient(ellipse 90% 80% at center, rgba(0,0,0,.9), transparent 75%)',
-        maskImage:       'radial-gradient(ellipse 90% 80% at center, rgba(0,0,0,.9), transparent 75%)',
+          'linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),' +
+          'linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px)',
+        backgroundSize: '60px 60px',
+        WebkitMaskImage: 'radial-gradient(ellipse 80% 70% at center, rgba(0,0,0,.7), transparent 70%)',
+        maskImage:       'radial-gradient(ellipse 80% 70% at center, rgba(0,0,0,.7), transparent 70%)',
         zIndex: 0,
       }} />
-
-      {/* ── Malha tecnológica viva — camada 2: rosa accent, contra-fluxo, sutil ── */}
-      <div className="splash-mesh-2" style={{
-        position: 'absolute',
-        inset: 0,
-        backgroundImage:
-          'linear-gradient(rgba(193,53,132,.10) 1px, transparent 1px),' +
-          'linear-gradient(90deg, rgba(193,53,132,.10) 1px, transparent 1px)',
-        backgroundSize: '120px 120px, 120px 120px',
-        animation: 'splashMeshFlowReverse 14s linear infinite, splashMeshBreath 7s ease-in-out infinite',
-        WebkitMaskImage: 'radial-gradient(ellipse 70% 60% at center, rgba(0,0,0,.8), transparent 70%)',
-        maskImage:       'radial-gradient(ellipse 70% 60% at center, rgba(0,0,0,.8), transparent 70%)',
-        zIndex: 0,
-      }} />
-
-      {/* ── Scan line horizontal (varredura tech) ── */}
-      <div className="splash-scan" style={{
-        position: 'absolute',
-        left: 0, right: 0,
-        top: 0,
-        height: '2px',
-        background: 'linear-gradient(90deg, transparent 0%, rgba(193,53,132,.0) 10%, rgba(193,53,132,.55) 50%, rgba(193,53,132,.0) 90%, transparent 100%)',
-        boxShadow: '0 0 12px rgba(193,53,132,.5)',
-        animation: 'splashScanLine 4.5s linear infinite',
-        zIndex: 1,
-        pointerEvents: 'none',
-      }} />
-
-      {/* ── Nodes brilhantes em intersecções (5 pontos pulsando em delays diferentes) ── */}
-      {[
-        { top: '22%', left: '18%', delay: '0s'   },
-        { top: '70%', left: '12%', delay: '1.2s' },
-        { top: '32%', left: '82%', delay: '2.1s' },
-        { top: '78%', left: '88%', delay: '0.6s' },
-        { top: '54%', left: '50%', delay: '1.6s' },
-      ].map((n, i) => (
-        <div key={i} className="splash-node" style={{
-          position: 'absolute',
-          top: n.top, left: n.left,
-          width: '4px', height: '4px',
-          borderRadius: '50%',
-          background: '#C13584',
-          boxShadow: '0 0 10px rgba(193,53,132,.7), 0 0 20px rgba(193,53,132,.35)',
-          animation: `splashNodePulse 2.4s ${n.delay} ease-in-out infinite`,
-          zIndex: 1,
-        }} />
-      ))}
 
       {/* ── Blob 1 (rosa accent — topo esquerda) ── */}
-      <div style={{
+      <div className="splash-blob" style={{
         position: 'absolute',
         width: '520px', height: '520px',
         borderRadius: '50%',
@@ -165,7 +116,7 @@ export default function SplashScreen({ onDone }) {
       }} />
 
       {/* ── Blob 2 (vinho profundo — base direita) ── */}
-      <div style={{
+      <div className="splash-blob" style={{
         position: 'absolute',
         width: '440px', height: '440px',
         borderRadius: '50%',
@@ -178,7 +129,7 @@ export default function SplashScreen({ onDone }) {
       }} />
 
       {/* ── Blob 3 (azul sutil — centro) ── */}
-      <div style={{
+      <div className="splash-blob" style={{
         position: 'absolute',
         width: '320px', height: '320px',
         borderRadius: '50%',
@@ -191,8 +142,8 @@ export default function SplashScreen({ onDone }) {
         animation: 'splashFloatC 18s cubic-bezier(.22,1,.36,1) infinite alternate',
       }} />
 
-      {/* ── Deco ring externo (720px, branco sutil, contra-rotação) ── */}
-      <div style={{
+      {/* ── Deco ring externo (720px, branco sutil, contra-rotação 60s) ── */}
+      <div className="splash-ring" style={{
         position: 'absolute',
         width: '720px', height: '720px',
         borderRadius: '50%',
@@ -203,8 +154,8 @@ export default function SplashScreen({ onDone }) {
         animation: 'splashSpin 60s linear infinite reverse',
       }} />
 
-      {/* ── Deco ring interno (540px, rosa accent) ── */}
-      <div style={{
+      {/* ── Deco ring interno (540px, rosa accent, 36s) ── */}
+      <div className="splash-ring" style={{
         position: 'absolute',
         width: '540px', height: '540px',
         borderRadius: '50%',
@@ -213,6 +164,30 @@ export default function SplashScreen({ onDone }) {
         transform: 'translate(-50%,-50%)',
         zIndex: 0,
         animation: 'splashSpin 36s linear infinite',
+      }} />
+
+      {/* ── Orbit dot 1 — ROSA accent, raio 270px, 12s ── */}
+      <div className="splash-orbit splash-orbit-pink" style={{
+        position: 'absolute',
+        width: '6px', height: '6px',
+        borderRadius: '50%',
+        background: '#C13584',
+        boxShadow: '0 0 10px #C13584, 0 0 20px rgba(193,53,132,.6)',
+        top: '50%', left: '50%',
+        zIndex: 1,
+        animation: 'splashOrbitPink 12s linear infinite',
+      }} />
+
+      {/* ── Orbit dot 2 — AZUL, raio 360px, 22s reverso (se encontra com a rosa) ── */}
+      <div className="splash-orbit splash-orbit-blue" style={{
+        position: 'absolute',
+        width: '6px', height: '6px',
+        borderRadius: '50%',
+        background: '#60A5FA',
+        boxShadow: '0 0 8px #60A5FA',
+        top: '50%', left: '50%',
+        zIndex: 1,
+        animation: 'splashOrbitBlue 22s linear infinite',
       }} />
 
       {/* ── Logo + divisor + tagline (stage central) ── */}
@@ -227,14 +202,12 @@ export default function SplashScreen({ onDone }) {
         opacity:    0,
         transform:  'translateY(8px)',
       }}>
-        {/* Logo wrap com glow rosa atrás */}
         <div style={{
           position:    'relative',
           display:     'grid',
           placeItems:  'center',
           padding:     '8px 14px',
         }}>
-          {/* Glow atrás do logo */}
           <div style={{
             position: 'absolute',
             inset: '-16px',
@@ -258,7 +231,6 @@ export default function SplashScreen({ onDone }) {
           />
         </div>
 
-        {/* Linha gradient accent (substitui traço sólido) */}
         <div style={{
           width:      '1px',
           height:     '50px',
@@ -267,7 +239,6 @@ export default function SplashScreen({ onDone }) {
           flexShrink: 0,
         }} />
 
-        {/* Tagline */}
         <div style={{
           display:       'flex',
           flexDirection: 'column',
@@ -294,7 +265,7 @@ export default function SplashScreen({ onDone }) {
         </div>
       </div>
 
-      {/* ── Pontos pulsantes ── */}
+      {/* ── Pontos pulsantes (3 dots rosa) ── */}
       <div style={{
         position:  'absolute',
         bottom:    '28px',
@@ -304,7 +275,7 @@ export default function SplashScreen({ onDone }) {
         gap:       '7px',
         zIndex:    3,
         opacity:   0,
-        animation: 'splashTagIn .4s .9s ease forwards',
+        animation: 'splashDotsFadeIn .4s .9s ease forwards',
       }}>
         {[0, 1, 2].map(i => (
           <div key={i} style={{
