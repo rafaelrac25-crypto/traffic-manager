@@ -870,6 +870,7 @@ async function createAdInExistingAdSet(creds, {
   baseCreativeId,
   overrides = null,
   newAdName = 'Anúncio novo',
+  newMedia = null,  /* { type: 'image'|'video', metaHash?, metaVideoId? } — trocar mídia */
 }) {
   const token = getToken(creds);
   if (!adAccountId) throw new Error('createAdInExistingAdSet: adAccountId obrigatório');
@@ -880,10 +881,13 @@ async function createAdInExistingAdSet(creds, {
   let creativeIdToUse = baseCreativeId;
   let reusedCreative = true;
 
-  /* Se overrides existem e não estão vazios, clona creative aplicando overrides
-     (mesmo padrão de replaceCreative). Senão reusa creative_id existente direto. */
+  /* Precisamos clonar o creative se há overrides de texto OU se há nova mídia.
+     Ambos os casos requerem buscar o object_story_spec atual como base. */
   const hasOverrides = overrides && (overrides.message != null || overrides.title != null || overrides.link != null || overrides.ctaType != null);
-  if (hasOverrides) {
+  const hasNewMedia  = newMedia && (newMedia.metaHash || newMedia.metaVideoId);
+  const needsClone   = hasOverrides || hasNewMedia;
+
+  if (needsClone) {
     const { metaGet } = require('./metaHttp');
     const current = await metaGet(`/${baseCreativeId}`, {
       fields: 'name,object_story_spec'
@@ -892,6 +896,8 @@ async function createAdInExistingAdSet(creds, {
       throw new Error(`Creative ${baseCreativeId} não tem object_story_spec — não dá pra clonar`);
     }
     const newSpec = JSON.parse(JSON.stringify(current.object_story_spec));
+
+    /* Limpa campos read-only que Meta rejeita em POST de creative novo */
     if (newSpec.video_data) {
       delete newSpec.video_data.image_url;
       delete newSpec.video_data.thumbnail_url;
@@ -906,48 +912,124 @@ async function createAdInExistingAdSet(creds, {
     delete newSpec.effective_object_story_id;
     delete newSpec.branded_content_sponsor_page_id;
 
+    /* ── Aplica overrides de texto ── */
     if (newSpec.video_data) {
-      if (overrides.message != null) newSpec.video_data.message = String(overrides.message);
-      if (overrides.title != null) newSpec.video_data.title = String(overrides.title);
-      if (!newSpec.video_data.call_to_action) newSpec.video_data.call_to_action = { type: 'LEARN_MORE' };
-      if (overrides.ctaType) newSpec.video_data.call_to_action.type = overrides.ctaType;
-      if (overrides.link != null) {
-        const t = newSpec.video_data.call_to_action.type || 'LEARN_MORE';
-        if (t === 'WHATSAPP_MESSAGE') {
-          newSpec.video_data.call_to_action.value = { app_destination: 'WHATSAPP' };
-        } else if (t === 'MESSAGE_PAGE' || t === 'SEND_MESSAGE') {
-          newSpec.video_data.call_to_action.value = { app_destination: 'MESSENGER' };
-        } else {
-          newSpec.video_data.call_to_action.value = { link: String(overrides.link) };
+      if (hasOverrides) {
+        if (overrides.message != null) newSpec.video_data.message = String(overrides.message);
+        if (overrides.title != null)   newSpec.video_data.title   = String(overrides.title);
+        if (!newSpec.video_data.call_to_action) newSpec.video_data.call_to_action = { type: 'LEARN_MORE' };
+        if (overrides.ctaType) newSpec.video_data.call_to_action.type = overrides.ctaType;
+        if (overrides.link != null) {
+          const t = newSpec.video_data.call_to_action.type || 'LEARN_MORE';
+          if (t === 'WHATSAPP_MESSAGE') {
+            newSpec.video_data.call_to_action.value = { app_destination: 'WHATSAPP' };
+          } else if (t === 'MESSAGE_PAGE' || t === 'SEND_MESSAGE') {
+            newSpec.video_data.call_to_action.value = { app_destination: 'MESSENGER' };
+          } else {
+            newSpec.video_data.call_to_action.value = { link: String(overrides.link) };
+          }
+        }
+      }
+
+      /* ── Aplica nova mídia em creative de vídeo ── */
+      if (hasNewMedia) {
+        if (newMedia.type === 'video' && newMedia.metaVideoId) {
+          /* Troca vídeo: substitui video_id e image_hash (capa) */
+          newSpec.video_data.video_id    = newMedia.metaVideoId;
+          newSpec.video_data.image_hash  = newMedia.metaHash;  /* capa obrigatória */
+          console.log('[create-ad-in-adset] trocando vídeo → video_id:', newMedia.metaVideoId, 'image_hash:', newMedia.metaHash);
+        } else if (newMedia.type === 'image' && newMedia.metaHash) {
+          /* Usuário mandou imagem num creative originalmente de vídeo:
+             converte para link_data (creative de imagem). */
+          console.log('[create-ad-in-adset] convertendo creative vídeo → imagem, image_hash:', newMedia.metaHash);
+          const cta  = newSpec.video_data.call_to_action || { type: 'LEARN_MORE' };
+          const link = cta?.value?.link || null;
+          delete newSpec.video_data;
+          newSpec.link_data = {
+            image_hash:    newMedia.metaHash,
+            ...(newSpec.link_data || {}),
+            call_to_action: cta,
+            ...(link ? { link } : {}),
+          };
         }
       }
     } else if (newSpec.link_data) {
-      if (overrides.message != null) newSpec.link_data.message = String(overrides.message);
-      if (overrides.title != null) newSpec.link_data.name = String(overrides.title);
-      if (overrides.link != null) newSpec.link_data.link = String(overrides.link);
-      if (!newSpec.link_data.call_to_action) newSpec.link_data.call_to_action = { type: 'LEARN_MORE' };
-      if (overrides.ctaType) newSpec.link_data.call_to_action.type = overrides.ctaType;
+      if (hasOverrides) {
+        if (overrides.message != null) newSpec.link_data.message = String(overrides.message);
+        if (overrides.title != null)   newSpec.link_data.name    = String(overrides.title);
+        if (overrides.link != null)    newSpec.link_data.link    = String(overrides.link);
+        if (!newSpec.link_data.call_to_action) newSpec.link_data.call_to_action = { type: 'LEARN_MORE' };
+        if (overrides.ctaType) newSpec.link_data.call_to_action.type = overrides.ctaType;
+      }
+
+      /* ── Aplica nova mídia em creative de imagem ── */
+      if (hasNewMedia) {
+        if (newMedia.type === 'image' && newMedia.metaHash) {
+          /* Troca simples: substitui image_hash */
+          newSpec.link_data.image_hash = newMedia.metaHash;
+          console.log('[create-ad-in-adset] trocando imagem → image_hash:', newMedia.metaHash);
+        } else if (newMedia.type === 'video' && newMedia.metaVideoId) {
+          /* Usuário mandou vídeo num creative originalmente de imagem:
+             converte para video_data. */
+          console.log('[create-ad-in-adset] convertendo creative imagem → vídeo, video_id:', newMedia.metaVideoId);
+          const cta  = newSpec.link_data.call_to_action || { type: 'LEARN_MORE' };
+          const msg  = newSpec.link_data.message || null;
+          const ttl  = newSpec.link_data.name    || null;
+          delete newSpec.link_data;
+          newSpec.video_data = {
+            video_id:   newMedia.metaVideoId,
+            image_hash: newMedia.metaHash,  /* capa obrigatória */
+            ...(msg ? { message: msg } : {}),
+            ...(ttl ? { title:   ttl } : {}),
+            call_to_action: cta,
+          };
+        }
+      }
     } else {
       throw new Error(`Creative ${baseCreativeId} não tem video_data nem link_data`);
     }
 
-    const newCreativeResp = await request('POST', `/${accountId}/adcreatives`, {
-      name: (current.name || 'Creative') + ' — novo',
-      object_story_spec: newSpec,
-    }, { token });
-    if (!newCreativeResp?.id) throw new Error('Meta não retornou ID do creative novo');
-    creativeIdToUse = newCreativeResp.id;
+    /* Cria creative novo — se falhar, não há órfão de ad (ad ainda não foi criado) */
+    let newCreativeId;
+    try {
+      const newCreativeResp = await request('POST', `/${accountId}/adcreatives`, {
+        name: (current.name || 'Creative') + ' — variação',
+        object_story_spec: newSpec,
+      }, { token });
+      if (!newCreativeResp?.id) throw new Error('Meta não retornou ID do creative novo');
+      newCreativeId = newCreativeResp.id;
+    } catch (creativeErr) {
+      console.error('[create-ad-in-adset] falha ao criar creative — nenhum órfão gerado:', creativeErr.message, creativeErr.meta);
+      throw creativeErr;  /* propaga sem deixar lixo no Meta */
+    }
+
+    creativeIdToUse = newCreativeId;
     reusedCreative = false;
   }
 
-  /* Cria ad novo no adset existente — sempre PAUSED */
-  const newAdResp = await request('POST', `/${accountId}/ads`, {
-    name: newAdName,
-    adset_id: platformAdSetId,
-    creative: { creative_id: creativeIdToUse },
-    status: 'PAUSED',
-  }, { token });
-  if (!newAdResp?.id) throw new Error('Meta não retornou ID do ad novo');
+  /* Cria ad novo no adset existente — sempre PAUSED.
+     Se falhar aqui e criamos creative novo acima, deletamos o creative órfão. */
+  let newAdResp;
+  try {
+    newAdResp = await request('POST', `/${accountId}/ads`, {
+      name: newAdName,
+      adset_id: platformAdSetId,
+      creative: { creative_id: creativeIdToUse },
+      status: 'PAUSED',
+    }, { token });
+    if (!newAdResp?.id) throw new Error('Meta não retornou ID do ad novo');
+  } catch (adErr) {
+    /* Cleanup de creative órfão: só tenta deletar se foi criado nesta chamada */
+    if (!reusedCreative && creativeIdToUse) {
+      try {
+        await request('DELETE', `/${creativeIdToUse}`, {}, { token });
+        console.warn('[create-ad-in-adset] creative órfão deletado após falha no ad:', creativeIdToUse);
+      } catch (cleanErr) {
+        console.warn('[create-ad-in-adset] falha ao deletar creative órfão', creativeIdToUse, cleanErr.message);
+      }
+    }
+    throw adErr;
+  }
 
   return {
     new_ad_id: newAdResp.id,

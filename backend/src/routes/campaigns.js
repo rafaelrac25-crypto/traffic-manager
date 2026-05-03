@@ -2101,11 +2101,25 @@ router.post('/:id/duplicate-adset', async (req, res) => {
    Body: {
      adsetId: string (obrigatório),
      overrides?: { message?, title?, link?, ctaType? },
-     newAdName?: string (default "Anúncio novo")
+     newAdName?: string (default "Anúncio novo"),
+     media?: { type: 'image'|'video', metaHash?: string, metaVideoId?: string }
    } */
 router.post('/:id/adsets/:adsetId/ads', async (req, res) => {
-  const { overrides = null, newAdName } = req.body || {};
+  const { overrides = null, newAdName, media = null } = req.body || {};
   const { id, adsetId } = req.params;
+
+  /* Validação básica de mídia se vier no body */
+  if (media != null) {
+    if (!['image', 'video'].includes(media.type)) {
+      return res.status(400).json({ error: 'media.type inválido — deve ser "image" ou "video"' });
+    }
+    if (media.type === 'image' && !media.metaHash) {
+      return res.status(400).json({ error: 'media.metaHash obrigatório para imagem' });
+    }
+    if (media.type === 'video' && (!media.metaVideoId || !media.metaHash)) {
+      return res.status(400).json({ error: 'media.metaVideoId e media.metaHash (capa) obrigatórios para vídeo' });
+    }
+  }
 
   try {
     const result = await db.query('SELECT * FROM campaigns WHERE id = ?', [id]);
@@ -2144,6 +2158,7 @@ router.post('/:id/adsets/:adsetId/ads', async (req, res) => {
         baseCreativeId,
         overrides,
         newAdName: newAdName || 'Anúncio novo',
+        newMedia: media || null,
       });
     } catch (e) {
       console.error('[create-ad-in-adset] Meta erro:', e.message, e.meta);
@@ -2159,6 +2174,7 @@ router.post('/:id/adsets/:adsetId/ads', async (req, res) => {
         new_ad_id: createResult.new_ad_id,
         creative_id: createResult.creative_id,
         reused_creative: createResult.reused_creative,
+        media_swapped: !!media,
       });
 
     res.json({
@@ -2167,6 +2183,7 @@ router.post('/:id/adsets/:adsetId/ads', async (req, res) => {
       new_ad_name: createResult.new_ad_name,
       creative_id: createResult.creative_id,
       reused_creative: createResult.reused_creative,
+      media_swapped: !!media,
       learning_reset: true,
       note: 'Anúncio novo em PAUSED. Aprendizado do conjunto vai resetar quando o ad ativar (significant edit). Ative quando estiver pronto.',
     });
