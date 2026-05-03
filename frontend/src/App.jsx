@@ -58,11 +58,10 @@ const SunIcon = () => (
 
 function ThemeToggleButton() {
   const { isDark, toggle } = useTheme();
-  /* Ícone "aceso" indica o tema ativo:
-     - dark ativo  → SunIcon dourado com glow âmbar (clicando vai pro claro)
-     - light ativo → MoonIcon rosa accent com glow (clicando vai pro escuro) */
-  const activeColor = isDark ? '#F5C447' : 'var(--c-accent)';
-  const activeGlow  = isDark ? 'rgba(245,196,71,.55)' : 'rgba(193,53,132,.5)';
+  /* Ícone representa o estado atual:
+     - Light ativo → SunIcon amarelo aceso (#F5C447), só o ícone
+     - Dark ativo  → MoonIcon desligado (cinza neutro, sem glow) */
+  const iconColor = isDark ? 'var(--c-text-3)' : '#F5C447';
   return (
     <button
       onClick={toggle}
@@ -70,19 +69,17 @@ function ThemeToggleButton() {
       aria-label="Alternar tema"
       style={{
         cursor: 'pointer',
-        color: activeColor,
+        color: iconColor,
         background: 'var(--c-surface)',
-        border: `1.5px solid ${activeColor}`,
+        border: '1.5px solid var(--c-border)',
         width: '40px', height: '40px', borderRadius: '12px',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         flexShrink: 0, transition: 'all .18s',
-        boxShadow: `0 0 0 3px ${activeGlow.replace(/[\d.]+\)$/, '.14)')}, 0 0 12px ${activeGlow}`,
-        filter: `drop-shadow(0 0 6px ${activeGlow})`,
       }}
       onMouseEnter={e => e.currentTarget.style.background = 'var(--c-active-bg)'}
       onMouseLeave={e => e.currentTarget.style.background = 'var(--c-surface)'}
     >
-      {isDark ? <SunIcon /> : <MoonIcon />}
+      {isDark ? <MoonIcon /> : <SunIcon />}
     </button>
   );
 }
