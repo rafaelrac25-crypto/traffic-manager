@@ -1287,3 +1287,85 @@ Refatorar exigiria migrar catalogos inteiros — fora do escopo da regra.
 - Pre-preencher locations no CreateAd quando vier de "Aplicar sugestao"
   (location.state.prefillLocations ja eh enviado, mas wizard ainda nao consome)
 - Code-splitting do bundle (869kB)
+
+---
+
+## Sessão 2026-05-03 — Cron resolvido + CTAs + Upload modal + UI fixes
+
+### Commits desta leva
+- `517f0a9` feat(cta): adiciona Fale conosco/Agendar/Reservar para wa.me + sino cinza
+- `34b1012` fix(cron): trim defensivo no CRON_SECRET
+- `ed6acb8` feat(modal): upload de midia no "+ Anuncio novo" do conjunto
+- `716d0d2` fix(cron): https.request nativo + endpoint /ping diagnostico
+- `cc7f579` fix(vercel): remove cron config temporariamente
+- `764eec2` fix(cron): self-call usa VERCEL_PROJECT_PRODUCTION_URL (alias publico)
+- `7189c18` feat(cron): reativa cron sync-meta 1x/dia 9h BRT
+
+### Cron sync Meta — 100% funcional
+- `vercel.json` crons[]: `0 12 * * *` UTC = 9h BRT, dispara `/api/cron/sync-meta`
+- `backend/src/routes/cron.js`:
+  - `https.request` nativo (compat Node 14+, evita fetch global)
+  - Trim defensivo no CRON_SECRET (tolera whitespace)
+  - Self-call usa `VERCEL_PROJECT_PRODUCTION_URL` (alias publico criscosta.vercel.app)
+    em vez de `VERCEL_URL` (deploy-especifico bloqueado por Deployment Protection)
+- Endpoint `/api/cron/ping` (sem auth) pra diagnostico
+- CRON_SECRET no Vercel = `BKzBv6G7XV1p9kN_TjuIMboXHfjgnlewgab4zhSVqo4`
+- Vercel Deployment Protection com bypass para Automation configurado pelo Rafa
+
+### CTAs novos pra wa.me
+- `metaRules.js` CTA_TO_META: 'Fale conosco'->CONTACT_US, 'Agendar'/'Reservar'->BOOK_TRAVEL
+- `CreateAd.jsx` Step5: pra messages+wa.me agora libera 4 CTAs
+  (Saiba mais, Fale conosco, Agendar, Reservar) — antes era so Saiba mais
+- `metaNormalize.js` WAME_SAFE_CTAS aceita LEARN_MORE/CONTACT_US/BOOK_TRAVEL
+  sem rebaixar pra LEARN_MORE
+- Recomendacao gestor: usar BOOK_TRAVEL ('Agendar') filtra curiosos
+  (CTR cai 10-30%, mensagens reais sobem muito mais)
+
+### UI fixes
+- App.jsx sino: sem notificacao = var(--c-text-3) cinza (igual MoonIcon dark);
+  com notificacao = var(--c-accent) rosa pulsando
+- CampaignsHierarchy statusLabel: 'Rodando' -> 'Ativo' (mais natural)
+- PlayPauseButton (visao Meta): bg neutro, icone amarelo se vai pausar
+  (status ACTIVE), verde se vai dar play (status PAUSED). Mesma regra
+  global do PlayIcon/PauseIcon em /anuncios.
+- Botoes do AdSet (Duplicar/Editar/+Anuncio/Meta/Excluir) flex nowrap +
+  scroll horizontal
+- Botoes da Campanha (Meta/Editar orcamento/Criar A/B) idem
+
+### Catalogos refatorados (emoji -> Icon stroke)
+- KINDS em Relatorios.jsx: campaign=chart-bar, system=shield, reminder=clock
+- FORMAT_META em References.jsx: reels=video, carousel=refresh, image=image
+
+### Upload de midia no modal "+ Anuncio novo" (CampaignsHierarchy)
+- Modal NewAdInAdSetModal agora aceita upload de imagem ou video
+- uploadIfNeeded: video usa uploadVideoChunked + extractVideoThumbnail +
+  uploadMedia pra capa; imagem >3.5MB usa uploadImageChunked
+- Validacao: img <=10MB, video <=100MB
+- Backend POST /:id/adsets/:adsetId/ads aceita campo media opcional
+- createAdInExistingAdSet em metaWrite.js: clona creative se ha overrides
+  OU nova midia; suporta 4 casos (img->img, vid->vid, img->vid, vid->img);
+  cleanup de creative orfao se POST do ad falhar
+- Flow sem midia (reusar creative existente): comportamento intacto
+
+### Bug raiz dos emails de falha do Vercel — RESOLVIDO
+3 problemas encadeados:
+1. CRON_SECRET com whitespace -> Vercel rejeitava header -> deploy falhava
+2. Build cached antigo (sem cron.js) -> /api/cron retornava HTML SPA
+3. Self-call usava VERCEL_URL (deploy-especifico com Protection) -> 401
+
+Solucao final: env var limpa + VERCEL_PROJECT_PRODUCTION_URL +
+Bypass Deployment Protection no Vercel.
+
+### Pendente (proxima leva)
+- Refatorar TYPE_META em History.jsx (catalogo grande)
+- Pre-preencher locations no CreateAd quando vier de "Aplicar sugestao"
+  (location.state.prefillLocations ja eh enviado)
+- Code-splitting do bundle (~870kB)
+- Testar upload de midia no modal com Meta real (so foi testado em build local)
+
+### Estado de todas integracoes (validado ao vivo)
+- DB Neon: ok
+- Meta Ads (act_1330468201431069): ok, token valido 48 dias
+- Groq: ok
+- Webhook Meta: ok
+- Cron Vercel: ativo (proxima execucao automatica amanha 9h BRT)
