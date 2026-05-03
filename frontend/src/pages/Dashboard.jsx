@@ -730,40 +730,45 @@ function MiniCalendar({ onViewFull, onPickCommercialDate }) {
 function MetricCard({ label, value, trend, trendUp, sub, icon, iconBg, iconColor, hint, alert, alertReason }) {
   const { isDark } = useTheme();
 
-  /* Dark mode: layout horizontal — ícone à esquerda, label ao lado, valor
-     abaixo (entrelinha reduzida). Quando `alert=true`, stroke vermelho
-     vibrante + halo sutil pra chamar atenção. Light mode: layout original. */
+  /* Layout (proporcoes da print de referencia): icone 40x40 alinhado vertical
+     centralizado abrangendo as 2 linhas; coluna direita com label + ?
+     em cima e valor + setinha de delta embaixo. Tema atual preservado
+     (dark glass cards com accent rosa, alerta vermelho mantido). */
   if (isDark) {
     return (
       <div className="ccb-card" style={{
         borderRadius: '14px',
-        padding: '13px 16px',
+        padding: '14px 18px',
         position: 'relative',
         overflow: 'hidden',
         cursor: 'default',
-        minHeight: '84px',
+        display: 'flex', alignItems: 'center', gap: '14px',
+        minHeight: '72px',
         border: alert ? '1.5px solid #EF4444' : undefined,
         boxShadow: alert
           ? '0 0 0 3px rgba(239,68,68,.12), 0 0 18px rgba(239,68,68,.18)'
           : undefined,
       }}>
-        {/* Header row: ícone à esquerda + label ao lado */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{
-            width: '34px', height: '34px', borderRadius: '10px',
-            background: alert ? 'rgba(239,68,68,.14)' : 'var(--c-accent-soft)',
-            color: alert ? '#EF4444' : 'var(--c-accent)',
-            border: alert ? '1px solid rgba(239,68,68,.4)' : '1px solid rgba(193,53,132,.3)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0,
-          }}>
-            {React.cloneElement(icon, { width: 16, height: 16 })}
-          </div>
+        {/* Ícone à esquerda — centralizado vertical entre label e valor */}
+        <div style={{
+          width: '40px', height: '40px', borderRadius: '10px',
+          background: alert ? 'rgba(239,68,68,.14)' : 'var(--c-accent-soft)',
+          color: alert ? '#EF4444' : 'var(--c-accent)',
+          border: alert ? '1px solid rgba(239,68,68,.4)' : '1px solid rgba(193,53,132,.3)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0,
+        }}>
+          {React.cloneElement(icon, { width: 18, height: 18 })}
+        </div>
+
+        {/* Coluna direita — label em cima, valor + delta embaixo */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          {/* Linha 1: label + ? */}
           <div style={{
             fontSize: '11px', color: 'var(--c-text-3)',
-            textTransform: 'uppercase', letterSpacing: '1.2px', fontWeight: 500,
+            textTransform: 'uppercase', letterSpacing: '1.2px', fontWeight: 600,
             display: 'flex', alignItems: 'center', gap: '5px',
-            minWidth: 0, flex: 1,
+            lineHeight: 1.1,
           }}>
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
             {(hint || alertReason) && (
@@ -780,43 +785,29 @@ function MetricCard({ label, value, trend, trendUp, sub, icon, iconBg, iconColor
               }}>{alert ? '!' : '?'}</span>
             )}
           </div>
-        </div>
 
-        {/* Valor — entrelinha reduzida (4px), alinhado com label (paddingLeft 44px = 34 ícone + 10 gap) */}
-        <div style={{
-          fontSize: '26px', fontWeight: 800,
-          color: alert ? '#EF4444' : 'var(--c-text-1)', letterSpacing: '-0.02em',
-          fontFeatureSettings: "'tnum'",
-          marginTop: '4px', lineHeight: 1.05,
-          paddingLeft: '44px',
-        }}>
-          {value}
-        </div>
-
-        {(trend || sub) && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap',
-            marginTop: '4px', paddingLeft: '44px',
-          }}>
+          {/* Linha 2: valor + setinha (sem texto, sem pill — igual print) */}
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+            <span style={{
+              fontSize: '20px', fontWeight: 700,
+              color: alert ? '#EF4444' : 'var(--c-text-1)', letterSpacing: '-0.01em',
+              fontFeatureSettings: "'tnum'",
+              lineHeight: 1.1,
+            }}>
+              {value}
+            </span>
             {trend && (
               <span style={{
-                fontSize: '11px', fontWeight: 700,
-                padding: '2px 8px', borderRadius: '999px',
-                background: trendUp ? 'rgba(52,211,153,.16)' : 'rgba(248,113,113,.16)',
-                border: `1px solid ${trendUp ? 'rgba(52,211,153,.3)' : 'rgba(248,113,113,.3)'}`,
+                fontSize: '12px', fontWeight: 700,
                 color: trendUp ? '#34D399' : '#F87171',
-                display: 'inline-flex', alignItems: 'center', gap: '3px',
-              }}>
-                {trendUp ? '▲' : '▼'} {trend}
-              </span>
-            )}
-            {sub && (
-              <span style={{ fontSize: '11px', color: 'var(--c-text-3)', fontWeight: 400 }}>
-                {sub}
+                lineHeight: 1,
+              }}
+              title={trend}>
+                {trendUp ? '▲' : '▼'}
               </span>
             )}
           </div>
-        )}
+        </div>
       </div>
     );
   }
