@@ -302,6 +302,12 @@ body {
   transition: background .25s ease;
 }
 
+/* No dark: app-wrapper transparente pra deixar passar bg-tech, glows e
+   noise definidos em body::before/::after. Light mantém sólido. */
+[data-theme="dark"] .app-wrapper {
+  background: transparent;
+}
+
 .main-content {
   margin-left: 220px;
   flex: 1;
