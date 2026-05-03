@@ -490,7 +490,7 @@ function Layout() {
                 className={unreadCount > 0 && !bellOpen ? 'bell-button-pulse' : ''}
                 style={{
                   position: 'relative', cursor: 'pointer',
-                  color: unreadCount > 0 && !bellOpen ? 'var(--c-accent)' : 'var(--c-text-2)',
+                  color: unreadCount > 0 && !bellOpen ? 'var(--c-accent)' : 'var(--c-text-3)',
                   background: bellOpen ? 'var(--c-active-bg)' : 'var(--c-surface)',
                   border: `1.5px solid ${unreadCount > 0 && !bellOpen ? 'var(--c-accent)' : 'var(--c-border)'}`,
                   width: '40px', height: '40px', borderRadius: '12px',

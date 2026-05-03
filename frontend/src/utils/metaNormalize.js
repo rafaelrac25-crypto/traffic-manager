@@ -160,10 +160,12 @@ export function toMetaPayload(ad) {
   const rawCtaMeta = CTA_TO_META[ad.ctaButton] || 'LEARN_MORE';
   const isMessagingCTA = MESSAGING_CTAS.includes(rawCtaMeta);
   const isMessagesObjective = ad.objective === 'messages';
-  /* Fallback wa.me/: força LEARN_MORE (CTA universal que aceita link).
+  /* Fallback wa.me/: aceita LEARN_MORE/CONTACT_US/BOOK_TRAVEL (CTAs universais
+     que aceitam link externo). Outros CTAs viram LEARN_MORE como default seguro.
      Pessoa clica → abre o link wa.me/ → app WhatsApp abre na conversa. */
+  const WAME_SAFE_CTAS = ['LEARN_MORE', 'CONTACT_US', 'BOOK_TRAVEL'];
   const finalCtaType = usingWaLink
-    ? 'LEARN_MORE'
+    ? (WAME_SAFE_CTAS.includes(rawCtaMeta) ? rawCtaMeta : 'LEARN_MORE')
     : ((isMessagesObjective && !isMessagingCTA) ? 'SEND_MESSAGE' : rawCtaMeta);
 
   /* Trunca strings nos limites Meta v22+ pra evitar rejeição em IG Reels/

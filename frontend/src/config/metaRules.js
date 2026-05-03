@@ -83,6 +83,9 @@ export const BILLING_EVENT = {
 export const CTA_TO_META = {
   'Saiba mais':         'LEARN_MORE',
   'Entrar em contato':  'CONTACT_US',
+  'Fale conosco':       'CONTACT_US',
+  'Reservar':           'BOOK_TRAVEL',
+  'Agendar':            'BOOK_TRAVEL',
   'WhatsApp':           'WHATSAPP_MESSAGE',
   'Enviar mensagem':    'MESSAGE_PAGE',
   'Mande uma mensagem': 'MESSAGE_PAGE',

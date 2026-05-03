@@ -2565,7 +2565,7 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
   const isWaMeLink = typeof destUrl === 'string'
     && /(wa\.me\/|api\.whatsapp\.com|whatsapp\.com\/)/i.test(destUrl);
   const allowedCTAs = (objective === 'messages' && isWaMeLink)
-    ? ['Saiba mais']
+    ? ['Saiba mais', 'Fale conosco', 'Agendar', 'Reservar']
     : (CTA_BY_OBJECTIVE[objective] || CTA_BY_OBJECTIVE.traffic);
 
   /* Auto-corrige ctaButton se o user voltou pro passo 1 e trocou de objetivo
