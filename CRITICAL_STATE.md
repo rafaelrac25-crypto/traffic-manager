@@ -1194,3 +1194,38 @@ SpyCompetitor, SystemStatus, App.jsx
   "WhatsApp" em Sobre/Informacoes da Page do Facebook)
 - can_run_click_to_whatsapp: false
 - Quando virar true, trocar CTA padrao dos novos anuncios pra WHATSAPP_MESSAGE
+
+---
+
+## Sessão 2026-05-03 — 2a leva emojis + cores semanticas + splash 3s
+
+**Commit:** `fa4d4ce` feat(ui): emojis 2a leva + cores semanticas + splash 3s
+
+### Concluído
+- **Emojis -> Icon (2a leva):** ~44 conversoes em 15 arquivos restantes
+  (Audiences, Calendar, CreativeLibrary, Investment, References, Rejected,
+   Relatorios, History, App, AIAssistant, RingRecommendation, SpyCompetitor,
+   SystemStatus). Sidebar/SplashScreen ja estavam limpos.
+- **Cores semanticas em Campaigns/CampaignsHierarchy:**
+  - active = var(--c-success) verde
+  - paused/pending/with_issues = var(--c-warning) amarelo (era laranja)
+  - disapproved = var(--c-attention) laranja
+- **Play/Pause em /anuncios:**
+  - PlayIcon (vai dar play) = stroke verde
+  - PauseIcon (ja rodando) = stroke amarelo
+  - Stroke 2.2 pra contraste
+- **Splash 3s** (era 4s): HOLD_MS 3400 -> 2400
+
+### Mantidos como dado de configuracao (correto)
+- FORMAT_META.emoji em References (catalogo de formatos)
+- KINDS.emoji em Relatorios (tipos de relatorio)
+- TYPE_META.icon em History (20+ tipos de evento)
+- colors.emoji em App.jsx NotificationDropdown (vindo de contexto)
+Refatorar exigiria migrar catalogos inteiros — fora do escopo da regra.
+
+### Pendente / pos-validacao Rafa
+- Aguardando confirmacao Rafa: cron sync Meta (item 6) ou
+  feature recomendacao por bairro (item 7) — proximo passo
+- WhatsApp Page: Cris ainda precisa adicionar como WhatsApp em Sobre
+  (suporte Meta esta atendendo o Rafa nessa frente)
+- Dataset Meta acabou de ser configurado pelo Rafa
