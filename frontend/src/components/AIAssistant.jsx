@@ -7,8 +7,8 @@ const RobotIcon = ({ size = 24 }) => (
     <line x1="12" y1="1.5" x2="12" y2="5" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
     <circle cx="12" cy="1.5" r="1.3" fill="white"/>
     <rect x="3" y="5" width="18" height="13" rx="3" fill="white"/>
-    <circle cx="9" cy="11" r="2" fill="var(--c-accent)"/>
-    <circle cx="15" cy="11" r="2" fill="var(--c-accent)"/>
+    <circle className="ai-eye ai-eye-l" cx="9" cy="11" r="2" fill="var(--c-accent)" style={{ transformOrigin: '9px 11px', transformBox: 'fill-box' }} />
+    <circle className="ai-eye ai-eye-r" cx="15" cy="11" r="2" fill="var(--c-accent)" style={{ transformOrigin: '15px 11px', transformBox: 'fill-box' }} />
     <rect x="7.5" y="14.2" width="9" height="1.5" rx="0.75" fill="var(--c-accent)"/>
   </svg>
 );
@@ -159,8 +159,68 @@ export default function AIAssistant() {
 
   return (
     <>
+      {/* Animações do botão flutuante (flutuar + piscar olhos + balão de fala) */}
+      <style>{`
+        @keyframes aiBubbleFloat {
+          0%, 100% { transform: translateY(0); }
+          50%      { transform: translateY(-5px); }
+        }
+        @keyframes aiBlink {
+          0%, 92%, 100% { transform: scaleY(1); }
+          95%, 97%      { transform: scaleY(.08); }
+        }
+        @keyframes aiSpeechIn {
+          0%   { opacity: 0; transform: translateY(6px) scale(.96); }
+          100% { opacity: 1; transform: translateY(0)   scale(1);    }
+        }
+        .ai-bubble-float:not(.ai-bubble-open) {
+          animation: aiBubbleFloat 3.5s ease-in-out infinite;
+        }
+        .ai-eye {
+          animation: aiBlink 4.5s ease-in-out infinite;
+        }
+        .ai-eye-r { animation-delay: 0s; }
+        .ai-eye-l { animation-delay: .04s; } /* dessincroniza levemente */
+        .ai-speech-bubble {
+          animation: aiSpeechIn .4s .8s cubic-bezier(.22,1,.36,1) backwards;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .ai-bubble-float, .ai-eye, .ai-speech-bubble { animation: none !important; }
+        }
+      `}</style>
+
+      {/* Balão de fala "Oi, como posso te ajudar?" — só quando chat fechado */}
+      {!open && (
+        <div className="ai-speech-bubble" style={{
+          position: 'fixed', bottom: '40px', right: '92px', zIndex: 500,
+          background: 'var(--c-card-bg)',
+          backdropFilter: 'var(--c-blur-strong)',
+          WebkitBackdropFilter: 'var(--c-blur-strong)',
+          border: '1px solid var(--c-border)',
+          borderRadius: '14px',
+          padding: '8px 14px',
+          fontSize: '12px', fontWeight: 600,
+          color: 'var(--c-text-1)',
+          boxShadow: '0 6px 20px rgba(193,53,132,.18)',
+          whiteSpace: 'nowrap',
+          pointerEvents: 'none',
+          fontFamily: "'Open Sans', sans-serif",
+        }}>
+          Oi, como posso te ajudar?
+          <span style={{
+            position: 'absolute',
+            right: '-6px', top: '50%', transform: 'translateY(-50%) rotate(45deg)',
+            width: '10px', height: '10px',
+            background: 'var(--c-card-bg)',
+            borderRight: '1px solid var(--c-border)',
+            borderTop: '1px solid var(--c-border)',
+          }} />
+        </div>
+      )}
+
       {/* Botão flutuante */}
       <button
+        className={`ai-bubble-float${open ? ' ai-bubble-open' : ''}`}
         onClick={() => setOpen(o => !o)}
         title="Assistente IA"
         style={{
@@ -170,8 +230,8 @@ export default function AIAssistant() {
           border: 'none', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           boxShadow: '0 4px 16px rgba(193,53,132,.4)',
-          transition: 'transform .2s',
-          transform: open ? 'scale(0.92)' : 'scale(1)',
+          transition: 'transform .2s, box-shadow .2s',
+          transform: open ? 'scale(0.92)' : undefined, /* sem scale fora do open — animação do flutuar cuida */
         }}
       >
         <RobotIcon size={26} />
