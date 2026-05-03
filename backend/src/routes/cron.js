@@ -76,9 +76,15 @@ router.get('/ping', (req, res) => {
 router.get('/sync-meta', requireCronAuth, async (req, res) => {
   const startedAt = new Date().toISOString();
   try {
-    const baseUrl = process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : `http://127.0.0.1:${process.env.PORT || 3001}`;
+    /* VERCEL_PROJECT_PRODUCTION_URL = alias publico (criscosta.vercel.app),
+       sem deployment protection. VERCEL_URL = url do deploy especifico
+       (preview-xxx) que bloqueia self-call com 401 quando Deployment Protection
+       esta ativo. Usar alias publico evita esse loop. */
+    const baseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : (process.env.VERCEL_URL
+          ? `https://${process.env.VERCEL_URL}`
+          : `http://127.0.0.1:${process.env.PORT || 3001}`);
 
     const r = await httpRequest(`${baseUrl}/api/campaigns/sync-meta-status`, {
       method: 'POST',
