@@ -52,9 +52,24 @@ export function playBubble() {
   playTone({ freq: 300, freqEnd: 650, duration: 0.12, type: 'sine', volume: 0.16, attack: 0.005, release: 0.08 });
 }
 
-// boas-vindas: mini acorde em C (pra splash)
+// boas-vindas: mini acorde em C (pra splash) — substituido por playSparkle
 export function playWelcome() {
   playTone({ freq: 523.25, duration: 0.22, type: 'sine', volume: 0.11, delay: 0 });     // C5
   playTone({ freq: 659.25, duration: 0.22, type: 'sine', volume: 0.11, delay: 0.12 });  // E5
   playTone({ freq: 783.99, duration: 0.38, type: 'sine', volume: 0.11, delay: 0.24 });  // G5
+}
+
+// brilho de varinha magica (pra splash de entrada)
+// Whoosh ascendente + arpejo de altas frequencias + chime cintilante
+export function playSparkle() {
+  // Whoosh magico ascendente (400Hz -> 2400Hz)
+  playTone({ freq: 400, freqEnd: 2400, duration: 0.5, type: 'sine', volume: 0.09, attack: 0.02, release: 0.25, delay: 0 });
+  // Arpejo brilhante em alta frequencia
+  playTone({ freq: 1568, duration: 0.08, type: 'triangle', volume: 0.11, delay: 0.16 }); // G6
+  playTone({ freq: 1975, duration: 0.08, type: 'triangle', volume: 0.10, delay: 0.23 }); // B6
+  playTone({ freq: 2349, duration: 0.09, type: 'triangle', volume: 0.10, delay: 0.30 }); // D7
+  playTone({ freq: 2637, duration: 0.20, type: 'sine',     volume: 0.08, delay: 0.40 }); // E7 com sustain
+  // Chime final cintilante
+  playTone({ freq: 3136, duration: 0.06, type: 'sine', volume: 0.06, delay: 0.56 }); // G7
+  playTone({ freq: 3951, duration: 0.10, type: 'sine', volume: 0.05, delay: 0.62 }); // B7
 }

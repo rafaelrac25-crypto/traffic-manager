@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import marcaBranca from '../assets/marca-branca.png';
-import { playWelcome } from '../utils/sounds';
+import { playSparkle } from '../utils/sounds';
 
 /* Duração total: HOLD_MS + EXIT_MS ≈ 4 s.
    Replica fiel do mock `.design/mockups/splash.html` — sem barra de loading. */
@@ -11,7 +11,7 @@ export default function SplashScreen({ onDone }) {
   const [phase, setPhase] = useState('enter');
 
   useEffect(() => {
-    const t0 = setTimeout(() => playWelcome(), 200);
+    const t0 = setTimeout(() => playSparkle(), 200);
     const t1 = setTimeout(() => setPhase('hold'), 600);
     const t2 = setTimeout(() => setPhase('exit'), HOLD_MS);
     const t3 = setTimeout(() => onDone(), HOLD_MS + EXIT_MS);
