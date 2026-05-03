@@ -402,6 +402,46 @@ router.get('/meta/campaign-status', async (req, res) => {
   }
 });
 
+/* Busca foto de perfil + username + nome do Instagram Business conectado.
+   Usado pelo avatar da sidebar (Cris Costa Beauty no canto inferior esquerdo).
+   Cache em memória 30 min — a profile_picture_url da CDN do Facebook é
+   estável por horas mas pode rotacionar. */
+let _igProfileCache = null;
+const IG_PROFILE_CACHE_TTL_MS = 30 * 60 * 1000;
+
+router.get('/meta/instagram-profile', async (req, res) => {
+  try {
+    if (_igProfileCache && (Date.now() - _igProfileCache.at < IG_PROFILE_CACHE_TTL_MS)) {
+      return res.json({ ..._igProfileCache.data, cached: true });
+    }
+    const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
+    const creds = credResult.rows[0];
+    if (!creds) return res.status(404).json({ error: 'Meta não conectado' });
+    if (!creds.ig_business_id) return res.status(404).json({ error: 'IG Business não vinculado à conta Meta' });
+
+    const { decrypt } = require('../services/crypto');
+    const token = String(creds.access_token).includes(':')
+      ? (() => { try { return decrypt(creds.access_token); } catch { return creds.access_token; } })()
+      : creds.access_token;
+
+    const info = await metaGet(`/${creds.ig_business_id}`, {
+      fields: 'id,username,name,profile_picture_url',
+    }, { token });
+
+    const data = {
+      ig_business_id: info.id,
+      username: info.username || null,
+      name: info.name || null,
+      profile_picture_url: info.profile_picture_url || null,
+    };
+    _igProfileCache = { at: Date.now(), data };
+    return res.json({ ...data, cached: false });
+  } catch (err) {
+    console.error('[instagram-profile]', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 /* Deleta uma campanha órfã direto no Meta pelo platform_campaign_id.
    Usado quando: (a) "descartar" em /reprovados precisa propagar, (b) limpar
    órfãos deixados por publish que falhou no meio (campaign criada, adset

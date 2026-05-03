@@ -66,12 +66,13 @@ export function AppStateProvider({ children }) {
 
   /* Sincroniza metaAccount com a realidade do backend — sem isso o frontend
      mostrava 'Conta Meta não conectada' mesmo quando platform_credentials
-     tinha linha válida no banco. */
+     tinha linha válida no banco. Em seguida busca foto de perfil do IG
+     Business pra mostrar no avatar da sidebar. */
   useEffect(() => {
     let cancelled = false;
     fetch('/api/platforms', { cache: 'no-store' })
       .then(r => r.ok ? r.json() : null)
-      .then(data => {
+      .then(async data => {
         if (cancelled || !Array.isArray(data)) return;
         const meta = data.find(p => p.platform === 'meta');
         if (!meta) return;
@@ -82,6 +83,20 @@ export function AppStateProvider({ children }) {
           accountId: meta.account_id || prev.accountId,
           igBusinessId: meta.ig_business_id || prev.igBusinessId,
         }));
+        if (meta.ig_business_id) {
+          try {
+            const r = await fetch('/api/platforms/meta/instagram-profile', { cache: 'no-store' });
+            if (!r.ok) return;
+            const ig = await r.json();
+            if (cancelled) return;
+            setMetaAccount(prev => ({
+              ...prev,
+              avatarUrl: ig.profile_picture_url || prev.avatarUrl,
+              name:      ig.name || ig.username || prev.name,
+              username:  ig.username || prev.username,
+            }));
+          } catch (_) { /* fallback CC */ }
+        }
       })
       .catch(() => {});
     return () => { cancelled = true; };
