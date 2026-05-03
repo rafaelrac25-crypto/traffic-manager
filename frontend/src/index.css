@@ -368,12 +368,14 @@ body {
   flex-shrink: 0;
 }
 
-/* ── Topbar grid (ambos os temas) — paridade com mockup dashboard.html ── */
+/* ── Topbar grid (ambos os temas) — paridade com mockup dashboard.html.
+   Altura 116px pra base do "Resumo das campanhas Meta" alinhar com a base da
+   palavra "BEAUTY" da logo da sidebar — mais harmônico. ── */
 .topbar-grid {
   display: grid !important;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  height: 96px !important;
+  height: 116px !important;
   padding: 0 32px !important;
   gap: 16px;
   position: relative;
