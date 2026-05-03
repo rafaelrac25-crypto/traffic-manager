@@ -169,7 +169,7 @@ export default function AIAssistant() {
           background: 'linear-gradient(135deg, var(--c-accent), #7D4A5E)',
           border: 'none', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 4px 16px rgba(214,141,143,.4)',
+          boxShadow: '0 4px 16px rgba(193,53,132,.4)',
           transition: 'transform .2s',
           transform: open ? 'scale(0.92)' : 'scale(1)',
         }}
