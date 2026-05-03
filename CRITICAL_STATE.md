@@ -1242,3 +1242,48 @@ Refatorar exigiria migrar catalogos inteiros — fora do escopo da regra.
 - WhatsApp Page: Cris ainda precisa adicionar como WhatsApp em Sobre
   (suporte Meta esta atendendo o Rafa nessa frente)
 - Dataset Meta acabou de ser configurado pelo Rafa
+
+---
+
+## Sessão 2026-05-03 — Cron + Recomendacao bairro + Play/Pause + UI
+
+**Commit:** `725caa5` feat: cron sync Meta + recomendacao por bairro + cores play/pause + UI fixes
+
+### Cron sync Meta (item 6 fechado)
+- vercel.json: `crons` 1x/dia 12h UTC = 9h BRT
+- GET /api/cron/sync-meta self-call em POST /api/campaigns/sync-meta-status
+- Auth opcional via env CRON_SECRET (Vercel injeta automaticamente)
+- Hobby plan limita 1x/dia. Pra freq maior precisa upgrade
+
+### Recomendacao investimento por bairro (item 7 fechado — esqueleto)
+- frontend/src/data/serviceInsights.js (novo): algoritmo puro
+- CreateAd Step1: select "Servico promovido" com 13 servicos da Cris
+- CreateAd Step2: banner sugestao bairro (silencioso sem dados)
+- Campaigns AdPreviewModal: painel Top 3 bairros + Aplicar sugestao
+- AppStateContext: watcher dispara notificacao a cada 6h, throttle 24h
+- backend GET /api/campaigns/analytics/insights-by-service?service=ID
+- **Sem dados na 1a semana = silencioso**. Vai aprendendo conforme campanhas
+  novas marcam `service` no payload e acumulam insights por bairro.
+
+### Cores Play/Pause (regra global)
+- Lista /anuncios: PlayIcon verde, PauseIcon amarelo
+- /campanhas-v2 PlayPauseButton (campaign+adset+ad): icone amarelo se vai
+  pausar (active), verde se vai ativar (paused), bg neutro var(--c-surface)
+
+### UI fixes
+- CampaignsHierarchy statusLabel: 'Rodando' -> 'Ativo', cores via vars
+- Botoes do AdSet (Duplicar/Editar/+Anuncio/Meta/Excluir): linha so com
+  flex nowrap + scroll horizontal
+- Botoes Campanha (Meta/Editar orcamento/Criar A/B): mesma diagramacao
+
+### Catalogos refatorados (emoji -> Icon)
+- KINDS em Relatorios (campaign=chart-bar, system=shield, reminder=clock)
+- FORMAT_META em References (reels=video, carousel=refresh, image=image)
+- TYPE_META em History: NAO refatorado (catalogo de 20+ tipos com mix
+  de simbolos tipograficos -- proxima leva)
+
+### Pendente (proxima leva)
+- Refatorar TYPE_META em History.jsx (20+ tipos: 📅 🗑 🚀 ✅ 💰 🔗 💳 ⚠ ❌ 🔐 🔥 📉)
+- Pre-preencher locations no CreateAd quando vier de "Aplicar sugestao"
+  (location.state.prefillLocations ja eh enviado, mas wizard ainda nao consome)
+- Code-splitting do bundle (869kB)
