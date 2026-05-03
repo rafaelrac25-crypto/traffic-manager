@@ -3635,15 +3635,20 @@ export default function CreateAd() {
     return out;
   }
 
-  async function handlePublish() {
-    // Revalidação final — evita estado inválido após navegar entre steps.
-    const finalErrs = validateAll();
-    if (Object.keys(finalErrs).length > 0) {
-      setErrors(finalErrs);
-      const firstStepWithError = [0, 1, 2, 3].find(i => Object.keys(validateStep(i)).length > 0);
-      if (firstStepWithError !== undefined) setStep(firstStepWithError);
-      /* Sino é só pra alertas — formulário já destaca campos inline */
-      return;
+  async function handlePublish(asDraft = false) {
+    /* Rascunho: pula validacao estrita, upload e Meta. Salva o que tiver
+       preenchido pra Rafa publicar depois (ao reabrir o anuncio em /anuncios,
+       wizard re-popula tudo via editingAd e o botao "Publicar" funciona normal). */
+    if (!asDraft) {
+      // Revalidação final — evita estado inválido após navegar entre steps.
+      const finalErrs = validateAll();
+      if (Object.keys(finalErrs).length > 0) {
+        setErrors(finalErrs);
+        const firstStepWithError = [0, 1, 2, 3].find(i => Object.keys(validateStep(i)).length > 0);
+        if (firstStepWithError !== undefined) setStep(firstStepWithError);
+        /* Sino é só pra alertas — formulário já destaca campos inline */
+        return;
+      }
     }
 
     // Validar conta Meta conectada
@@ -3681,38 +3686,41 @@ export default function CreateAd() {
 
     /* Upload de mídia em etapa separada — via multipart dedicado pra evitar
        o limite de 4.5MB do body JSON do Vercel. Cada arquivo vai individual,
-       independente do tamanho total (até 15MB por vídeo, imagens comprimidas). */
-    let mediaFilesData;
-    try {
-      mediaFilesData = await uploadAllMedia(mediaFiles);
-    } catch (uploadErr) {
-      setPublishing(false);
-      addNotification({
-        kind: 'publish-failed',
-        title: 'Falha no upload da mídia',
-        message: `"${adName}" não foi publicado. ${uploadErr?.message || 'Erro no upload'}. Tente uma imagem/vídeo menor.`,
-      });
-      return;
-    }
+       independente do tamanho total (até 15MB por vídeo, imagens comprimidas).
+       Rascunho NÃO faz upload (zero chamada Meta) — só salva o que tiver. */
+    let mediaFilesData = [];
+    if (!asDraft) {
+      try {
+        mediaFilesData = await uploadAllMedia(mediaFiles);
+      } catch (uploadErr) {
+        setPublishing(false);
+        addNotification({
+          kind: 'publish-failed',
+          title: 'Falha no upload da mídia',
+          message: `"${adName}" não foi publicado. ${uploadErr?.message || 'Erro no upload'}. Tente uma imagem/vídeo menor.`,
+        });
+        return;
+      }
 
-    /* Validação: precisa ter AO MENOS 1 hash real do Meta (imagem ou vídeo).
-       Sem isso, Meta rejeita creative. Cenário comum: reaproveitou ad reprovado
-       sem re-subir a mídia (File não persiste em localStorage). */
-    const hasRealMedia = mediaFilesData.some(m => {
-      const h = m.metaHash;
-      const v = m.metaVideoId;
-      const realHash = typeof h === 'string' && /^[a-f0-9]{20,}$/i.test(h) && !h.startsWith('17');
-      const realVideoId = typeof v === 'string' && /^\d{10,20}$/.test(v);
-      return realHash || realVideoId;
-    });
-    if (!hasRealMedia) {
-      setPublishing(false);
-      addNotification({
-        kind: 'publish-failed',
-        title: 'Mídia precisa ser enviada novamente',
-        message: `Detectei que você está reaproveitando um anúncio. Por segurança, volte ao Passo 5 (Criativo), remova a imagem/vídeo atual e adicione de novo antes de publicar.`,
+      /* Validação: precisa ter AO MENOS 1 hash real do Meta (imagem ou vídeo).
+         Sem isso, Meta rejeita creative. Cenário comum: reaproveitou ad reprovado
+         sem re-subir a mídia (File não persiste em localStorage). */
+      const hasRealMedia = mediaFilesData.some(m => {
+        const h = m.metaHash;
+        const v = m.metaVideoId;
+        const realHash = typeof h === 'string' && /^[a-f0-9]{20,}$/i.test(h) && !h.startsWith('17');
+        const realVideoId = typeof v === 'string' && /^\d{10,20}$/.test(v);
+        return realHash || realVideoId;
       });
-      return;
+      if (!hasRealMedia) {
+        setPublishing(false);
+        addNotification({
+          kind: 'publish-failed',
+          title: 'Mídia precisa ser enviada novamente',
+          message: `Detectei que você está reaproveitando um anúncio. Por segurança, volte ao Passo 5 (Criativo), remova a imagem/vídeo atual e adicione de novo antes de publicar.`,
+        });
+        return;
+      }
     }
 
     // Referências (em vez de duplicar) quando o user reusa audience/creative
@@ -3723,7 +3731,8 @@ export default function CreateAd() {
     const adPayload = {
       name: adName,
       platform: 'instagram',
-      status: 'review', /* Meta revê todo anúncio antes de ativar */
+      status: asDraft ? 'draft' : 'review', /* draft = só local, sem Meta */
+      publishMode: asDraft ? 'draft' : 'immediate',
 
       // Orçamento (local)
       budget: Number(budgetValue) || 0,
@@ -3965,38 +3974,64 @@ export default function CreateAd() {
                 {canReview ? '✓ Atualizar e voltar à revisão' : 'Próximo →'}
               </button>
             ) : (
-              <button
-                onClick={handlePublish}
-                /* Bloqueia double-click — sem isso, 2 cliques rápidos criam
-                   2 campanhas Meta + 2 INSERTs locais. handlePublish é async
-                   e leva alguns segundos (upload de mídia → create campaign). */
-                disabled={publishing}
-                aria-disabled={publishing}
-                aria-busy={publishing}
-                style={{
-                  padding: '11px 28px',
-                  background: fixMode
-                    ? 'linear-gradient(135deg, #34D399, #10B981)'
-                    : 'linear-gradient(135deg, var(--c-accent), var(--c-accent-dk))',
-                  color: '#fff', border: 'none', borderRadius: '12px',
-                  fontSize: '14px', fontWeight: 700,
-                  cursor: publishing ? 'not-allowed' : 'pointer',
-                  opacity: publishing ? 0.6 : 1,
-                  pointerEvents: publishing ? 'none' : 'auto',
-                  boxShadow: fixMode
-                    ? '0 8px 24px rgba(52,211,153,.4), inset 0 1px 0 rgba(255,255,255,.18)'
-                    : '0 8px 24px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)',
-                  transition: 'opacity .15s',
-                }}
-              >
-                {publishing
-                  ? (uploadProgress
-                      ? `⏳ ${uploadProgress.label || 'Enviando…'} (${uploadProgress.pct || 0}%)`
-                      : '⏳ Publicando...')
-                  : fixMode
-                    ? '✅ Corrigir e publicar'
-                    : (isScheduled ? '📅 Agendar campanha' : '🚀 Publicar campanha')}
-              </button>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                {/* Salvar rascunho — bypassa Meta, salva local pra publicar depois */}
+                {!fixMode && (
+                  <button
+                    onClick={() => handlePublish(true)}
+                    disabled={publishing}
+                    aria-disabled={publishing}
+                    title="Salva o que voce preencheu sem publicar no Meta. Voce pode abrir o anuncio depois e clicar em Publicar."
+                    style={{
+                      padding: '11px 22px',
+                      background: 'transparent',
+                      color: 'var(--c-text-2)',
+                      border: '1.5px solid var(--c-border)',
+                      borderRadius: '12px',
+                      fontSize: '13px', fontWeight: 600,
+                      cursor: publishing ? 'not-allowed' : 'pointer',
+                      opacity: publishing ? 0.5 : 1,
+                      transition: 'border-color .15s, color .15s',
+                    }}
+                    onMouseEnter={e => { if (!publishing) { e.currentTarget.style.borderColor = 'var(--c-accent)'; e.currentTarget.style.color = 'var(--c-accent)'; }}}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--c-border)'; e.currentTarget.style.color = 'var(--c-text-2)'; }}
+                  >
+                    Salvar como rascunho
+                  </button>
+                )}
+                <button
+                  onClick={() => handlePublish(false)}
+                  /* Bloqueia double-click — sem isso, 2 cliques rápidos criam
+                     2 campanhas Meta + 2 INSERTs locais. handlePublish é async
+                     e leva alguns segundos (upload de mídia → create campaign). */
+                  disabled={publishing}
+                  aria-disabled={publishing}
+                  aria-busy={publishing}
+                  style={{
+                    padding: '11px 28px',
+                    background: fixMode
+                      ? 'linear-gradient(135deg, #34D399, #10B981)'
+                      : 'linear-gradient(135deg, var(--c-accent), var(--c-accent-dk))',
+                    color: '#fff', border: 'none', borderRadius: '12px',
+                    fontSize: '14px', fontWeight: 700,
+                    cursor: publishing ? 'not-allowed' : 'pointer',
+                    opacity: publishing ? 0.6 : 1,
+                    pointerEvents: publishing ? 'none' : 'auto',
+                    boxShadow: fixMode
+                      ? '0 8px 24px rgba(52,211,153,.4), inset 0 1px 0 rgba(255,255,255,.18)'
+                      : '0 8px 24px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)',
+                    transition: 'opacity .15s',
+                  }}
+                >
+                  {publishing
+                    ? (uploadProgress
+                        ? `${uploadProgress.label || 'Enviando…'} (${uploadProgress.pct || 0}%)`
+                        : 'Publicando...')
+                    : fixMode
+                      ? 'Corrigir e publicar'
+                      : (isScheduled ? 'Agendar campanha' : 'Publicar campanha')}
+                </button>
+              </div>
             )}
           </div>
           {publishing && uploadProgress && (

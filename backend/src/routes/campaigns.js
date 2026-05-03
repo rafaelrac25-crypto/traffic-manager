@@ -106,12 +106,12 @@ router.post('/', async (req, res) => {
 
   const mode = publish_mode || 'immediate';
   const isImmediate = mode === 'immediate';
+  const isDraft = mode === 'draft';
   /* publishCampaign cria os 3 níveis (campaign+adset+ad) PAUSED no Meta por
      segurança. Status local reflete isso: 'paused' até user clicar play (que
-     cascata pra ACTIVE nos 3 níveis via updateCampaignStatus). Antes era
-     'review' — passava impressão falsa de "rodando" e usuário esperava
-     entrega que nunca vinha (caso da camp 437 "Adeus cravos!!!"). */
-  let status = statusIn || (isImmediate ? 'paused' : 'scheduled');
+     cascata pra ACTIVE nos 3 níveis via updateCampaignStatus).
+     mode='draft' = só salva local (zero chamada Meta) pra Rafa publicar depois. */
+  let status = statusIn || (isDraft ? 'draft' : isImmediate ? 'paused' : 'scheduled');
   const submitted_at = isImmediate ? new Date().toISOString() : null;
   const sched = (!isImmediate && scheduled_for) ? scheduled_for : null;
 

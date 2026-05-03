@@ -22,6 +22,7 @@ const STATUS = {
   active:  { label: 'Ativo',       dot: '#22C55E', bg: 'rgba(52,211,153,.16)', color: '#34D399' },
   paused:  { label: 'Pausado',     dot: '#F97316', bg: 'rgba(251,191,36,.16)', color: '#FBBF24' },
   review:  { label: 'Em revisão',  dot: '#8B5CF6', bg: 'rgba(139,92,246,.16)', color: '#A78BFA' },
+  draft:   { label: 'Rascunho',    dot: '#94A3B8', bg: 'rgba(148,163,184,.16)', color: 'var(--c-text-3)' },
   ended:   { label: 'Inativo',     dot: '#94A3B8', bg: 'var(--c-surface)', color: 'var(--c-text-4)' },
 };
 
@@ -1407,7 +1408,7 @@ export default function Campaigns() {
         <FilterSelect
           value={statusFilter}
           onChange={setStatusFilter}
-          options={[['','Todos os status'],['active','Ativo'],['paused','Pausado'],['review','Em revisão'],['ended','Encerrado']]}
+          options={[['','Todos os status'],['active','Ativo'],['paused','Pausado'],['review','Em revisão'],['draft','Rascunho'],['ended','Encerrado']]}
         />
         <FilterSelect
           value={platformFilter}
