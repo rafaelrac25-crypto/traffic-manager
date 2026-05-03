@@ -9,6 +9,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../contexts/AppStateContext';
 import { updateAdTargeting, searchInterests } from '../services/adsApi';
+import Icon from '../components/Icon';
 
 
 /* ── Configurações visuais ── */
@@ -99,9 +100,10 @@ function AdThumb({ ad }) {
   const grad = ad.thumbGrad || 'linear-gradient(135deg,#FECDD3,#FDA4AF,#FB7185)';
   const format = ad.adFormat || ad.format;
   const mediaUrl = ad.mediaFiles?.[0]?.url || ad.mediaUrl;
-  const formatIcon = {
-    reels: '🎬', stories: '📱', carousel: '🔄', video: '▶', image: '🖼️',
-  }[format] || '🌸';
+  const FORMAT_ICON_NAME = {
+    reels: 'video', stories: 'phone', carousel: 'refresh', video: 'play', image: 'image',
+  };
+  const iconName = FORMAT_ICON_NAME[format] || 'sparkles';
 
   return (
     <div style={{
@@ -109,17 +111,17 @@ function AdThumb({ ad }) {
       background: mediaUrl ? `url(${mediaUrl}) center/cover` : grad,
       flexShrink: 0,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: '16px', opacity: 0.95,
+      opacity: 0.95,
       position: 'relative', overflow: 'hidden',
     }}>
-      {!mediaUrl && <span>{formatIcon}</span>}
+      {!mediaUrl && <Icon name={iconName} size={16} color="#fff" />}
       {format && mediaUrl && (
         <span style={{
           position: 'absolute', bottom: '2px', right: '2px',
-          fontSize: '10px', background: 'rgba(0,0,0,.55)', color: '#fff',
+          background: 'rgba(0,0,0,.55)', color: '#fff',
           width: '14px', height: '14px', borderRadius: '4px',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>{formatIcon}</span>
+        }}><Icon name={iconName} size={10} color="#fff" /></span>
       )}
     </div>
   );
@@ -322,7 +324,7 @@ function AdPreviewModal({ ad, onClose, onDuplicate, onEdit }) {
           {/* Copy do anúncio */}
           {(ad.primaryText || ad.headline || ad.ctaButton) && (
             <>
-              <div style={sectionH}>✍️ Texto do anúncio</div>
+              <div style={sectionH}><Icon name="edit" size={13} /> Texto do anúncio</div>
               {ad.primaryText && (
                 <div style={{ fontSize: '12.5px', color: 'var(--c-text-1)', lineHeight: 1.55, whiteSpace: 'pre-wrap', marginBottom: '8px' }}>
                   {ad.primaryText}
@@ -349,7 +351,7 @@ function AdPreviewModal({ ad, onClose, onDuplicate, onEdit }) {
           )}
 
           {/* Desempenho */}
-          <div style={sectionH}>📊 Desempenho</div>
+          <div style={sectionH}><Icon name="chart-bar" size={13} /> Desempenho</div>
           <div style={{
             display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px',
             background: 'var(--c-surface)', border: '1px solid var(--c-border)',
@@ -364,7 +366,7 @@ function AdPreviewModal({ ad, onClose, onDuplicate, onEdit }) {
           </div>
 
           {/* Investimento */}
-          <div style={sectionH}>💰 Investimento</div>
+          <div style={sectionH}><Icon name="money" size={13} /> Investimento</div>
           <div>
             <div style={row}><span style={label}>Orçamento diário</span><span style={val}>{fmtBRL(ad.budget ?? ad.budgetValue)}</span></div>
             <div style={row}><span style={label}>Total gasto</span><span style={val}>{fmtBRL(ad.spent)}</span></div>
@@ -375,7 +377,7 @@ function AdPreviewModal({ ad, onClose, onDuplicate, onEdit }) {
           {/* Objetivo */}
           {(ad.objective || ad.effective_status) && (
             <>
-              <div style={sectionH}>🎯 Objetivo</div>
+              <div style={sectionH}><Icon name="target" size={13} /> Objetivo</div>
               <div>
                 {ad.objective && <div style={row}><span style={label}>Objetivo Meta</span><span style={val}>{objectivePt(ad.objective)}</span></div>}
                 {ad.effective_status && <div style={row}><span style={label}>Estado Meta</span><span style={val}>{ad.effective_status}</span></div>}
@@ -387,7 +389,7 @@ function AdPreviewModal({ ad, onClose, onDuplicate, onEdit }) {
           {/* Público */}
           {hasTargeting && (
             <>
-              <div style={sectionH}>🎯 Público</div>
+              <div style={sectionH}><Icon name="users" size={13} /> Público</div>
               <div>
                 {ageLabel && <div style={row}><span style={label}>Idade</span><span style={val}>{ageLabel}</span></div>}
                 {ad.gender != null && <div style={row}><span style={label}>Gênero</span><span style={val}>{genderPt(ad.gender)}</span></div>}
@@ -410,7 +412,7 @@ function AdPreviewModal({ ad, onClose, onDuplicate, onEdit }) {
           {/* IDs Meta */}
           {(ad.platform_campaign_id || ad.metaCampaignId || ad.metaAdSetId || ad.metaAdId || ad.metaCreativeId) && (
             <>
-              <div style={sectionH}>🔗 IDs Meta</div>
+              <div style={sectionH}><Icon name="link" size={13} /> IDs Meta</div>
               <div>
                 {(ad.platform_campaign_id || ad.metaCampaignId) && (
                   <div style={row}><span style={label}>Campaign ID</span><span style={{ ...val, fontFamily: 'ui-monospace, monospace', fontSize: '11px' }}>{ad.platform_campaign_id || ad.metaCampaignId}</span></div>
@@ -445,7 +447,7 @@ function AdPreviewModal({ ad, onClose, onDuplicate, onEdit }) {
                   cursor: 'pointer',
                   boxShadow: '0 8px 24px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)',
                 }}
-              >📋 Duplicar como novo</button>
+              ><Icon name="clipboard" size={13} /> Duplicar como novo</button>
             )}
             {onEdit && (
               <button
@@ -456,7 +458,7 @@ function AdPreviewModal({ ad, onClose, onDuplicate, onEdit }) {
                   border: '1px solid var(--c-border)', fontSize: '12.5px', fontWeight: 700,
                   cursor: 'pointer',
                 }}
-              >✏️ Editar</button>
+              ><Icon name="edit" size={13} /> Editar</button>
             )}
           </div>
         </div>
@@ -656,7 +658,7 @@ function AdRow({ ad, isLast, highCpc, onPreview, onToggle, onDuplicate, onEdit, 
         <span style={{ color: highCpc ? '#F87171' : 'var(--c-text-2)', fontWeight: highCpc ? 700 : 400 }}>
           {fmtCurrency(ad.costPerResult)}
         </span>
-        {highCpc && <span title="Custo por resultado acima da média" style={{ marginLeft: '4px', color: '#F87171' }}>⚠</span>}
+        {highCpc && <span title="Custo por resultado acima da média" style={{ marginLeft: '4px', color: '#F87171', display: 'inline-flex', verticalAlign: 'middle' }}><Icon name="alert" color="danger" size={13} /></span>}
       </td>
 
       {/* Ações — sempre visíveis pra deixar claro */}
@@ -751,7 +753,7 @@ function PerformanceReport({ ads, avgCostPerResult }) {
         marginBottom: '16px',
         display: 'flex', alignItems: 'center', gap: '10px',
       }}>
-        <span style={{ fontSize: '18px' }}>✅</span>
+        <Icon name="check-circle" color="success" size={18} />
         <div>
           <div style={{ fontSize: '13px', fontWeight: 700, color: '#34D399' }}>Todos os anúncios performando bem</div>
           <div style={{ fontSize: '11.5px', color: 'var(--c-text-3)', fontWeight: 400, marginTop: '2px' }}>Nenhum alerta de performance no momento.</div>
@@ -768,7 +770,7 @@ function PerformanceReport({ ads, avgCostPerResult }) {
       borderColor: 'rgba(248,113,113,.4)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-        <span style={{ fontSize: '18px' }}>📊</span>
+        <Icon name="chart-bar" size={18} />
         <div>
           <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)' }}>
             Relatório de performance — {problematic.length} {problematic.length === 1 ? 'anúncio precisa' : 'anúncios precisam'} de atenção
@@ -1445,7 +1447,7 @@ export default function Campaigns() {
             cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
           }}
         >
-          📊 {reportOpen ? 'Ocultar' : 'Ver'} relatório de performance
+          <Icon name="chart-bar" size={13} /> {reportOpen ? 'Ocultar' : 'Ver'} relatório de performance
         </button>
       </div>
 
@@ -1510,7 +1512,7 @@ export default function Campaigns() {
             {sorted.length === 0 ? (
               <tr>
                 <td colSpan={8} style={{ padding: '60px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '32px', marginBottom: '10px', opacity: .4 }}>📣</div>
+                  <div style={{ marginBottom: '10px', opacity: .4 }}><Icon name="bell" size={32} /></div>
                   <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>Nenhum anúncio encontrado</div>
                   <div style={{ fontSize: '12px', color: 'var(--c-text-3)', fontWeight: 400 }}>Tente remover os filtros ou crie um novo anúncio.</div>
                 </td>

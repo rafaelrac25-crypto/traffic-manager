@@ -31,6 +31,7 @@ import {
   JOINVILLE_MAX_RADIUS_KM,
   MIN_DAILY_PER_RING_BRL,
 } from '../config/metaRules';
+import Icon from '../components/Icon';
 
 function isWithinJoinville(lat, lng) {
   const d = distanceKm(HOME_COORDS, { lat, lng });
@@ -85,29 +86,29 @@ const META_OBJECTIVES = [
     category: 'Reconhecimento',
     color: '#3B82F6',
     items: [
-      { id: 'brand_awareness', label: 'Reconhecimento de marca', icon: '⭐', desc: 'Alcance pessoas com maior probabilidade de lembrar do seu negócio.' },
-      { id: 'reach',           label: 'Alcance',                 icon: '📡', desc: 'Exiba seu anúncio para o máximo de pessoas dentro do público.' },
+      { id: 'brand_awareness', label: 'Reconhecimento de marca', icon: 'star', desc: 'Alcance pessoas com maior probabilidade de lembrar do seu negócio.' },
+      { id: 'reach',           label: 'Alcance',                 icon: 'target', desc: 'Exiba seu anúncio para o máximo de pessoas dentro do público.' },
     ],
   },
   {
     category: 'Consideração',
     color: '#8B5CF6',
     items: [
-      { id: 'traffic',      label: 'Tráfego',             icon: '🔗', desc: 'Direcione pessoas para seu site, WhatsApp ou aplicativo.' },
-      { id: 'engagement',   label: 'Engajamento',         icon: '💬', desc: 'Aumente curtidas, comentários e compartilhamentos.' },
+      { id: 'traffic',      label: 'Tráfego',             icon: 'link', desc: 'Direcione pessoas para seu site, WhatsApp ou aplicativo.' },
+      { id: 'engagement',   label: 'Engajamento',         icon: 'chat', desc: 'Aumente curtidas, comentários e compartilhamentos.' },
       /* "Geração de leads" removido: Meta v20 exige lead_gen_form_id no creative
          (Instant Forms), e ainda não temos UI pra criar formulários nativos.
          Cris pode usar "Mensagens" pro mesmo objetivo (leads via WhatsApp). */
-      { id: 'messages',     label: 'Mensagens',           icon: '💌', desc: 'Incentive conversas no WhatsApp, Messenger ou Instagram Direct.' },
-      { id: 'app_installs', label: 'Instalações do app',  icon: '📱', desc: 'Aumente os downloads do seu aplicativo.' },
+      { id: 'messages',     label: 'Mensagens',           icon: 'whatsapp', desc: 'Incentive conversas no WhatsApp, Messenger ou Instagram Direct.' },
+      { id: 'app_installs', label: 'Instalações do app',  icon: 'phone', desc: 'Aumente os downloads do seu aplicativo.' },
     ],
   },
   {
     category: 'Conversão',
     color: 'var(--c-accent)',
     items: [
-      { id: 'sales',         label: 'Vendas',              icon: '🛍️', desc: 'Encontre pessoas com maior probabilidade de comprar.' },
-      { id: 'store_traffic', label: 'Tráfego para loja',   icon: '🏪', desc: 'Atraia visitantes para seu estabelecimento físico.' },
+      { id: 'sales',         label: 'Vendas',              icon: 'cart', desc: 'Encontre pessoas com maior probabilidade de comprar.' },
+      { id: 'store_traffic', label: 'Tráfego para loja',   icon: 'pin', desc: 'Atraia visitantes para seu estabelecimento físico.' },
     ],
   },
 ];
@@ -252,7 +253,7 @@ function StepIndicator({ steps, current }) {
                 boxShadow: active ? '0 0 18px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)' : 'none',
                 transition: 'background .2s, border-color .2s',
               }}>
-                {done ? '✓' : i + 1}
+                {done ? <Icon name="check" size={11} /> : i + 1}
               </div>
               <span style={{
                 fontSize: '12px', whiteSpace: 'nowrap',
@@ -374,7 +375,7 @@ function Step1Objective({ objective, setObjective, errors = {} }) {
                 <div
                   key={obj.id}
                   onClick={() => setObjective(obj.id)}
-                  title={preferred ? `${obj.desc}\n⭐ Preferido da Cris (leads via WhatsApp)` : obj.desc}
+                  title={preferred ? `${obj.desc}\n★ Preferido da Cris (leads via WhatsApp)` : obj.desc}
                   style={{
                     display: 'flex', alignItems: 'center', gap: '8px',
                     padding: '8px 10px',
@@ -387,7 +388,7 @@ function Step1Objective({ objective, setObjective, errors = {} }) {
                   onMouseEnter={(e) => { if (!sel) e.currentTarget.style.borderColor = color; }}
                   onMouseLeave={(e) => { if (!sel) e.currentTarget.style.borderColor = preferred ? '#F59E0B' : 'var(--c-border)'; }}
                 >
-                  <span style={{ fontSize: '18px', lineHeight: 1, flexShrink: 0 }}>{obj.icon}</span>
+                  <Icon name={obj.icon} size={18} />
                   <span style={{
                     fontSize: '12px', fontWeight: sel ? 700 : 600,
                     color: sel ? color : 'var(--c-text-1)',
@@ -405,7 +406,7 @@ function Step1Objective({ objective, setObjective, errors = {} }) {
                         flexShrink: 0,
                       }}
                     >
-                      ⭐
+                      <Icon name="star" size={10} color="warning" />
                     </span>
                   )}
                 </div>
@@ -425,12 +426,12 @@ function Step1Objective({ objective, setObjective, errors = {} }) {
           borderRadius: '8px',
           fontSize: '12px', color: 'var(--c-text-2)', lineHeight: 1.5,
         }}>
-          <strong style={{ color: selected.color }}>{selected.icon} {selected.label}</strong> — {selected.desc}
+          <strong style={{ color: selected.color, display: 'inline-flex', alignItems: 'center', gap: '5px' }}><Icon name={selected.icon} size={14} /> {selected.label}</strong> — {selected.desc}
         </div>
       )}
 
       {errors.objective && (
-        <p style={{ fontSize: '13px', color: '#F87171', fontWeight: 600, marginTop: '8px' }}>⚠ {errors.objective}</p>
+        <p style={{ fontSize: '13px', color: '#F87171', fontWeight: 600, marginTop: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}><Icon name="alert" size={13} color="danger" /> {errors.objective}</p>
       )}
     </div>
   );
@@ -504,7 +505,7 @@ function LocationPresetBar({ locations, setLocations, ringsMode, setRingsMode })
           }}
           title={locationPresets.length === 0 ? 'Nenhum preset salvo ainda' : 'Carregar preset salvo'}
         >
-          📂 Presets {locationPresets.length > 0 && <span style={{ color: 'var(--c-text-4)' }}>({locationPresets.length})</span>}
+          <Icon name="clipboard" size={13} /> Presets {locationPresets.length > 0 && <span style={{ color: 'var(--c-text-4)' }}>({locationPresets.length})</span>}
           <span style={{ fontSize: '9px' }}>▾</span>
         </button>
         {open && locationPresets.length > 0 && (
@@ -551,7 +552,7 @@ function LocationPresetBar({ locations, setLocations, ringsMode, setRingsMode })
           }}
           title={hasLocs ? 'Salvar os bairros e anéis atuais como preset' : 'Adicione ao menos 1 bairro para salvar'}
         >
-          💾 Salvar atual
+          <Icon name="download" size={13} /> Salvar atual
         </button>
       ) : (
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -581,7 +582,7 @@ function LocationPresetBar({ locations, setLocations, ringsMode, setRingsMode })
               cursor: presetName.trim() ? 'pointer' : 'not-allowed',
               opacity: presetName.trim() ? 1 : 0.5,
             }}
-          >✓</button>
+          ><Icon name="check" size={13} /></button>
           <button
             type="button"
             onClick={() => { setSaving(false); setPresetName(''); }}
@@ -590,7 +591,7 @@ function LocationPresetBar({ locations, setLocations, ringsMode, setRingsMode })
               background: 'var(--c-surface)', border: '1px solid var(--c-border)', borderRadius: '8px',
               color: 'var(--c-text-3)', cursor: 'pointer',
             }}
-          >✕</button>
+          ><Icon name="x" size={13} /></button>
         </div>
       )}
 
@@ -606,7 +607,7 @@ function LocationPresetBar({ locations, setLocations, ringsMode, setRingsMode })
             cursor: 'pointer', fontFamily: 'inherit',
           }}
           title="Renomear ou excluir presets"
-        >⚙️</button>
+        ><Icon name="settings" size={14} /></button>
       )}
 
       {/* Modal de gerenciamento */}
@@ -631,7 +632,7 @@ function LocationPresetBar({ locations, setLocations, ringsMode, setRingsMode })
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
               <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--c-text-1)', margin: 0 }}>Gerenciar presets</h3>
-              <button onClick={() => setManageOpen(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: 'var(--c-text-3)' }}>✕</button>
+              <button onClick={() => setManageOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--c-text-3)', display: 'flex', alignItems: 'center' }}><Icon name="x" size={18} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {locationPresets.map(p => (
@@ -677,7 +678,7 @@ function LocationPresetBar({ locations, setLocations, ringsMode, setRingsMode })
                       color: 'var(--c-text-2)', cursor: 'pointer',
                     }}
                     title="Renomear"
-                  >✏️</button>
+                  ><Icon name="edit" size={13} /></button>
                   <button
                     type="button"
                     onClick={() => {
@@ -689,7 +690,7 @@ function LocationPresetBar({ locations, setLocations, ringsMode, setRingsMode })
                       color: '#F87171', cursor: 'pointer',
                     }}
                     title="Excluir"
-                  >🗑️</button>
+                  ><Icon name="trash" size={13} color="danger" /></button>
                 </div>
               ))}
               {locationPresets.length === 0 && (
@@ -741,7 +742,7 @@ function DistrictInsightsBanner() {
           padding: '0 4px', lineHeight: 1,
         }}
         title="Fechar"
-      >✕</button>
+      ><Icon name="x" size={14} /></button>
     </div>
   );
 }
@@ -872,7 +873,7 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
             color: '#F87171', fontSize: '12px', fontWeight: 600,
             display: 'flex', alignItems: 'center', gap: '8px',
           }}>
-            🚫 {locationError}
+            <Icon name="x-circle" size={14} color="danger" /> {locationError}
           </div>
         )}
 
@@ -911,7 +912,7 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
                       transition: 'background .1s',
                     }}
                   >
-                    📍 {r.display_name.split(',').slice(0, 3).join(',')}
+                    <Icon name="pin" size={12} /> {r.display_name.split(',').slice(0, 3).join(',')}
                   </div>
                 ))}
                 <div style={{ padding: '6px 14px', fontSize: '10px', color: 'var(--c-text-4)', background: 'var(--c-surface)' }}>
@@ -938,11 +939,11 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
                 <button
                   onClick={() => { if (Number(customRadius) > 0) setRadius(Number(customRadius)); setEditingRadius(false); }}
                   style={{ padding: '8px 10px', background: 'var(--c-accent)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
-                >✓</button>
+                ><Icon name="check" size={13} /></button>
                 <button
                   onClick={() => { setEditingRadius(false); setCustomRadius(''); }}
                   style={{ padding: '8px 10px', background: 'var(--c-surface)', border: '1.5px solid var(--c-border)', borderRadius: '10px', fontSize: '12px', color: 'var(--c-text-3)', cursor: 'pointer' }}
-                >✕</button>
+                ><Icon name="x" size={13} /></button>
               </div>
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -956,8 +957,8 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
                 <button
                   onClick={() => { setCustomRadius(String(radius)); setEditingRadius(true); }}
                   title="Definir raio personalizado"
-                  style={{ padding: '8px 10px', background: 'var(--c-surface)', border: '1.5px solid var(--c-border)', borderRadius: '10px', fontSize: '12px', color: 'var(--c-text-3)', cursor: 'pointer', whiteSpace: 'nowrap' }}
-                >✏️ Editar</button>
+                  style={{ padding: '8px 10px', background: 'var(--c-surface)', border: '1.5px solid var(--c-border)', borderRadius: '10px', fontSize: '12px', color: 'var(--c-text-3)', cursor: 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                ><Icon name="edit" size={12} /> Editar</button>
               </div>
             )}
           </div>
@@ -968,7 +969,7 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' }}>
             {locations.map(loc => (
               <div key={loc.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 12px', background: 'rgba(193,53,132,.08)', border: '1px solid rgba(193,53,132,.25)', borderRadius: '10px', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '12px', color: 'var(--c-accent)', fontWeight: 600, flex: 1, minWidth: '100px' }}>📍 {loc.name}</span>
+                <span style={{ fontSize: '12px', color: 'var(--c-accent)', fontWeight: 600, flex: 1, minWidth: '100px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Icon name="pin" size={12} /> {loc.name}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>Raio:</span>
                   {loc.custom ? (
@@ -1093,7 +1094,7 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
         {/* Presets por serviço — carregam 3 interesses curados de uma vez */}
         <div style={{ marginBottom: '12px' }}>
           <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--c-text-3)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '.5px' }}>
-            🎯 Conjuntos prontos por serviço
+            <Icon name="target" size={12} /> Conjuntos prontos por serviço
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
             {INTEREST_PRESETS.map(p => {
@@ -1123,7 +1124,7 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
                 >
                   <span>{p.emoji}</span>
                   <span>{p.service}</span>
-                  {allPresent && <span style={{ fontSize: '13px' }}>✓</span>}
+                  {allPresent && <Icon name="check" size={13} color="success" />}
                 </button>
               );
             })}
@@ -1196,8 +1197,8 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
                 ? '✅ ATIVADO — Meta vai mostrar o anúncio também pra perfis fora dos seus interesses/idade se achar que vão converter. Recomendado quando você quer alcance.'
                 : '⏸️ DESATIVADO — Meta respeita exatamente os interesses, idade e bairros que você definiu. Recomendado pra negócio hiperlocal como o da Cris.'}
             </div>
-            <div style={{ fontSize: '10px', color: 'var(--c-text-5)', marginTop: '4px', fontStyle: 'italic' }}>
-              ⚠️ Em alguns objetivos Meta força ATIVO mesmo quando desligado — confirme via Audit após publicar.
+            <div style={{ fontSize: '10px', color: 'var(--c-text-5)', marginTop: '4px', fontStyle: 'italic', display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
+              <Icon name="alert" size={11} color="warning" style={{ flexShrink: 0, marginTop: '1px' }} /> Em alguns objetivos Meta força ATIVO mesmo quando desligado — confirme via Audit após publicar.
             </div>
           </div>
         </label>
@@ -1274,7 +1275,7 @@ function RingBudgetSplit({ locations, budgetValue, budgetType, split, setSplit, 
         background: 'var(--c-surface)',
         fontSize: '12px', color: 'var(--c-text-3)', lineHeight: 1.55,
       }}>
-        <strong style={{ color: 'var(--c-text-2)' }}>🎯 Split por anel indisponível</strong> — todas as suas localizações caem {only ? `no ${onlyLabel}` : onlyLabel}.
+        <strong style={{ color: 'var(--c-text-2)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Icon name="target" size={13} /> Split por anel indisponível</strong> — todas as suas localizações caem {only ? `no ${onlyLabel}` : onlyLabel}.
         Para dividir o orçamento entre anéis diferentes, adicione bairros de outras distâncias do Boa Vista (ex: Boa Vista está no anel interno; Glória no anel médio).
       </div>
     );
@@ -1289,7 +1290,7 @@ function RingBudgetSplit({ locations, budgetValue, budgetType, split, setSplit, 
         background: 'rgba(193,53,132,.05)',
         fontSize: '12px', color: 'var(--c-text-2)', lineHeight: 1.55,
       }}>
-        <strong style={{ color: 'var(--c-accent)' }}>🎯 Split por anel pronto</strong> — suas localizações cobrem {activeKeys.length} anéis.
+        <strong style={{ color: 'var(--c-accent)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Icon name="target" size={13} color="accent" /> Split por anel pronto</strong> — suas localizações cobrem {activeKeys.length} anéis.
         Digite o <strong>orçamento</strong> acima e o controle de divisão por % aparece aqui.
       </div>
     );
@@ -1329,7 +1330,7 @@ function RingBudgetSplit({ locations, budgetValue, budgetType, split, setSplit, 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
         <div>
           <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '2px' }}>
-            🎯 Dividir orçamento por anel
+            <Icon name="target" size={13} /> Dividir orçamento por anel
           </div>
           <div style={{ fontSize: '11px', color: 'var(--c-text-4)', lineHeight: 1.5 }}>
             Você marcou bairros em mais de um anel. Defina quanto % vai pra cada. Quando integrarmos o Meta Ads, isso gera um conjunto de anúncios por anel.
@@ -1388,7 +1389,7 @@ function RingBudgetSplit({ locations, budgetValue, budgetType, split, setSplit, 
               />
               <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', marginTop: '3px', lineHeight: 1.4 }}>
                 {hoods
-                  ? <>📍 <strong>{buckets[r.key].length} {buckets[r.key].length === 1 ? 'bairro' : 'bairros'}:</strong> {hoods}</>
+                  ? <><Icon name="pin" size={12} /> <strong>{buckets[r.key].length} {buckets[r.key].length === 1 ? 'bairro' : 'bairros'}:</strong> {hoods}</>
                   : 'Nenhum bairro neste anel.'}
               </div>
             </div>
@@ -1567,7 +1568,7 @@ function BudgetSummaryPanel({ budgetValue, budgetType, startDate, endDate, locat
     }}>
       <div>
         <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '2px' }}>
-          📋 Resumo do investimento
+          <Icon name="clipboard" size={13} /> Resumo do investimento
         </div>
         <div style={{ fontSize: '11px', color: 'var(--c-text-4)', lineHeight: 1.5 }}>
           Confira duração, divisão por anel e se seu saldo no Meta cobre a campanha.
@@ -1576,7 +1577,7 @@ function BudgetSummaryPanel({ budgetValue, budgetType, startDate, endDate, locat
 
       {/* 1. Duração */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '8px', background: 'var(--c-card-bg)' }}>
-        <span style={{ fontSize: '16px' }}>📅</span>
+        <Icon name="calendar" size={16} />
         <div style={{ flex: 1 }}>
           {days ? (
             <>
@@ -1603,7 +1604,7 @@ function BudgetSummaryPanel({ budgetValue, budgetType, startDate, endDate, locat
       {perRing.length >= 2 && (
         <div style={{ padding: '10px 12px', borderRadius: '8px', background: 'var(--c-card-bg)' }}>
           <div style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--c-text-2)', marginBottom: '8px' }}>
-            💰 Divisão diária por anel ({perRing.length === 1 ? '1 anel' : `${perRing.length} anéis`})
+            <Icon name="money" size={13} /> Divisão diária por anel ({perRing.length === 1 ? '1 anel' : `${perRing.length} anéis`})
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {perRing.map(r => {
@@ -1619,11 +1620,11 @@ function BudgetSummaryPanel({ budgetValue, budgetType, startDate, endDate, locat
                     <span style={{ fontWeight: 700, color: ok ? '#34D399' : '#F87171' }}>
                       {fmtBRL(r.daily)}/dia
                     </span>
-                    <span style={{ fontSize: '14px' }}>{ok ? '✅' : '❌'}</span>
+                    <span style={{ display: 'flex' }}>{ok ? <Icon name="check-circle" size={14} color="success" /> : <Icon name="x-circle" size={14} color="danger" />}</span>
                   </div>
                   {hoods.length > 0 && (
-                    <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', marginLeft: '16px', marginTop: '3px', lineHeight: 1.45 }}>
-                      📍 <strong>{hoods.length} {hoods.length === 1 ? 'bairro' : 'bairros'}:</strong> {hoods.join(', ')}
+                    <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', marginLeft: '16px', marginTop: '3px', lineHeight: 1.45, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                      <Icon name="pin" size={11} /> <strong>{hoods.length} {hoods.length === 1 ? 'bairro' : 'bairros'}:</strong> {hoods.join(', ')}
                     </div>
                   )}
                 </div>
@@ -1651,7 +1652,7 @@ function BudgetSummaryPanel({ budgetValue, budgetType, startDate, endDate, locat
         return (
           <div style={{ padding: '12px 14px', borderRadius: '8px', background: 'var(--c-card-bg)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '16px' }}>📊</span>
+              <Icon name="chart-bar" size={16} />
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: '11.5px', color: 'var(--c-text-4)' }}>Gasto previsto da campanha</div>
                 <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--c-text-1)' }}>
@@ -1664,7 +1665,7 @@ function BudgetSummaryPanel({ budgetValue, budgetType, startDate, endDate, locat
             </div>
             <div style={{ height: '1px', background: 'var(--c-border-lt)' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '16px' }}>💳</span>
+              <Icon name="money" size={16} color="accent" />
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: '11.5px', color: 'var(--c-text-4)' }}>
                   Saldo que você precisa ter no Meta
@@ -1677,8 +1678,8 @@ function BudgetSummaryPanel({ budgetValue, budgetType, startDate, endDate, locat
                 {fmtBRL(totalEstimated)}<br />+ 20% folga
               </div>
             </div>
-            <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', lineHeight: 1.5, paddingTop: '2px' }}>
-              ℹ A folga de 20% é recomendação do Meta — alguns dias gastam um pouco mais que o diário. Sem ela, o anúncio pode pausar no meio por falta de saldo.
+            <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', lineHeight: 1.5, paddingTop: '2px', display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
+              <Icon name="info" size={12} color="info" style={{ flexShrink: 0, marginTop: '1px' }} /> A folga de 20% é recomendação do Meta — alguns dias gastam um pouco mais que o diário. Sem ela, o anúncio pode pausar no meio por falta de saldo.
             </div>
           </div>
         );
@@ -1687,12 +1688,12 @@ function BudgetSummaryPanel({ budgetValue, budgetType, startDate, endDate, locat
       {/* 4. Check de saldo (assíncrono) — compara available com needed+20% */}
       {days ? (
         balanceState.loading ? (
-          <div style={{ padding: '10px 12px', borderRadius: '8px', background: 'var(--c-card-bg)', fontSize: '12px', color: 'var(--c-text-4)' }}>
-            🔎 Consultando saldo no Meta…
+          <div style={{ padding: '10px 12px', borderRadius: '8px', background: 'var(--c-card-bg)', fontSize: '12px', color: 'var(--c-text-4)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Icon name="search" size={13} /> Consultando saldo no Meta…
           </div>
         ) : balanceState.error ? (
-          <div style={{ padding: '10px 12px', borderRadius: '8px', background: 'rgba(251,191,36,.16)', border: '1px solid rgba(251,191,36,.3)', fontSize: '11.5px', color: '#FBBF24', lineHeight: 1.5 }}>
-            ⚠ Não consegui checar o saldo: {balanceState.error}. Verifique na etapa de revisão.
+          <div style={{ padding: '10px 12px', borderRadius: '8px', background: 'rgba(251,191,36,.16)', border: '1px solid rgba(251,191,36,.3)', fontSize: '11.5px', color: '#FBBF24', lineHeight: 1.5, display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+            <Icon name="alert" size={14} color="warning" style={{ flexShrink: 0, marginTop: '1px' }} /> Não consegui checar o saldo: {balanceState.error}. Verifique na etapa de revisão.
           </div>
         ) : balanceState.data ? (
           (() => {
@@ -1705,18 +1706,23 @@ function BudgetSummaryPanel({ budgetValue, budgetType, startDate, endDate, locat
                - verde: saldo cobre needed (estimado + 20% folga) com sobra
                - amarelo: cobre apenas o estimado bruto, mas não a folga de 20%
                - vermelho: não cobre nem o estimado */
-            let status = 'green', title = 'Dá pra rodar com folga', icon = '✅';
-            if (avail < est) { status = 'red'; title = 'Não cabe no saldo'; icon = '❌'; }
-            else if (avail < need) { status = 'yellow'; title = 'Cabe, mas sem folga de 20%'; icon = '⚠'; }
+            let status = 'green', title = 'Dá pra rodar com folga';
+            if (avail < est) { status = 'red'; title = 'Não cabe no saldo'; }
+            else if (avail < need) { status = 'yellow'; title = 'Cabe, mas sem folga de 20%'; }
             const palette = {
               green:  { bg: 'rgba(52,211,153,.16)', bd: 'rgba(52,211,153,.3)', fg: '#34D399' },
               yellow: { bg: 'rgba(251,191,36,.16)', bd: 'rgba(251,191,36,.3)', fg: '#FBBF24' },
               red:    { bg: 'rgba(248,113,113,.16)', bd: 'rgba(248,113,113,.3)', fg: '#F87171' },
             }[status];
+            const statusIcon = status === 'green'
+              ? <Icon name="check-circle" size={14} color="success" />
+              : status === 'red'
+              ? <Icon name="x-circle" size={14} color="danger" />
+              : <Icon name="alert" size={14} color="warning" />;
             return (
               <div style={{ padding: '10px 12px', borderRadius: '8px', background: palette.bg, border: `1px solid ${palette.bd}` }}>
-                <div style={{ fontSize: '12.5px', fontWeight: 700, color: palette.fg, marginBottom: '4px' }}>
-                  {icon} {title}
+                <div style={{ fontSize: '12.5px', fontWeight: 700, color: palette.fg, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  {statusIcon} {title}
                 </div>
                 <div style={{ fontSize: '11.5px', color: 'var(--c-text-2)', lineHeight: 1.6 }}>
                   Saldo disponível no Meta: <strong>{fmtBRL(avail)}</strong><br />
@@ -1802,8 +1808,8 @@ function BusinessHoursPicker({ value, onChange, budgetType, error }) {
           style={{ width: '16px', height: '16px', accentColor: 'var(--c-accent)', cursor: 'pointer' }}
         />
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '2px' }}>
-            🕒 Rodar só em horário comercial
+          <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Icon name="clock" size={14} /> Rodar só em horário comercial
           </div>
           <div style={{ fontSize: '11px', color: 'var(--c-text-4)', lineHeight: 1.5 }}>
             Pausa o anúncio fora do horário em que você atende. Evita gastar com mensagens que vão ficar sem resposta.
@@ -1827,9 +1833,10 @@ function BusinessHoursPicker({ value, onChange, budgetType, error }) {
                 color: 'var(--c-accent)', background: 'transparent',
                 border: 'none', cursor: 'pointer', padding: 0,
                 textDecoration: 'underline',
+                display: 'inline-flex', alignItems: 'center', gap: '4px',
               }}
             >
-              ⚙ Personalizar horário
+              <Icon name="settings" size={12} /> Personalizar horário
             </button>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
@@ -1930,8 +1937,9 @@ function BusinessHoursPicker({ value, onChange, budgetType, error }) {
               borderLeft: '2px solid #F59E0B',
               borderRadius: '8px',
               fontSize: '11.5px', color: 'var(--c-text-2)', lineHeight: 1.5,
+              display: 'flex', alignItems: 'flex-start', gap: '6px',
             }}>
-              ⚠ <b>Atenção:</b> horário comercial só funciona com <b>"Orçamento total"</b>. Mude o tipo de orçamento acima ou desative essa opção.
+              <Icon name="alert" size={13} color="warning" style={{ flexShrink: 0, marginTop: '1px' }} /> <b>Atenção:</b> horário comercial só funciona com <b>"Orçamento total"</b>. Mude o tipo de orçamento acima ou desative essa opção.
             </div>
           )}
         </div>
@@ -1941,7 +1949,8 @@ function BusinessHoursPicker({ value, onChange, budgetType, error }) {
         <div style={{
           marginTop: '10px',
           fontSize: '12px', color: '#F87171', fontWeight: 600,
-        }}>⚠ {error}</div>
+          display: 'flex', alignItems: 'center', gap: '4px',
+        }}><Icon name="alert" size={13} color="danger" /> {error}</div>
       )}
     </div>
   );
@@ -1989,7 +1998,7 @@ function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, s
             style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '20px', fontWeight: 700, color: 'var(--c-text-1)', fontFamily: 'inherit', padding: '10px 0', width: '120px' }}
           />
         </div>
-        {errors.budgetValue && <p style={{ fontSize: '12px', color: '#F87171', fontWeight: 600, marginTop: '6px' }}>⚠ {errors.budgetValue}</p>}
+        {errors.budgetValue && <p style={{ fontSize: '12px', color: '#F87171', fontWeight: 600, marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}><Icon name="alert" size={13} color="danger" /> {errors.budgetValue}</p>}
         {budgetValue && budgetType === 'daily' && (
           <p style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '6px' }}>
             Estimativa semanal: <b>R$ {(Number(budgetValue) * 7).toFixed(2).replace('.', ',')}</b>
@@ -2009,8 +2018,8 @@ function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, s
         borderRadius: '14px', padding: '14px 18px',
       }}>
         <div style={{ marginBottom: '10px' }}>
-          <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '2px' }}>
-            💼 Como distribuir o orçamento?
+          <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Icon name="money" size={13} /> Como distribuir o orçamento?
           </div>
           <div style={{ fontSize: '11px', color: 'var(--c-text-4)', lineHeight: 1.5 }}>
             Escolha se você controla manualmente por anel, ou se deixa o Meta otimizar automaticamente entre os anéis.
@@ -2073,8 +2082,8 @@ function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, s
             borderRadius: '14px', padding: '14px 18px',
           }}>
             <div style={{ marginBottom: '10px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '2px' }}>
-                🎯 Quantos anéis (ad sets) criar?
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Icon name="target" size={13} /> Quantos anéis (ad sets) criar?
               </div>
               <div style={{ fontSize: '11px', color: 'var(--c-text-4)', lineHeight: 1.5 }}>
                 Cada anel vira 1 ad set no Meta com seus bairros agrupados por distância. Lembrete: cada ad set precisa de pelo menos R$ 7/dia.
@@ -2172,7 +2181,7 @@ function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, s
             border: '1.5px solid var(--c-border)', background: 'var(--c-surface)',
             fontSize: '13px', color: 'var(--c-text-1)',
           }}>
-            <span style={{ fontSize: '16px' }}>📅</span>
+            <Icon name="calendar" size={16} />
             <span><strong>{d} {d === 1 ? 'dia' : 'dias'}</strong> de campanha</span>
           </div>
         );
@@ -2393,8 +2402,8 @@ function VideoCoverPicker({ videoFile, thumbnail, setThumbnail }) {
 
       <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
         {[
-          { v: 'auto', l: '🪄 Automática', d: 'Sistema tira um frame do vídeo' },
-          { v: 'manual', l: '📷 Enviar imagem', d: 'Você sobe uma imagem própria' },
+          { v: 'auto', l: 'Automática', icon: 'sparkles', d: 'Sistema tira um frame do vídeo' },
+          { v: 'manual', l: 'Enviar imagem', icon: 'image', d: 'Você sobe uma imagem própria' },
         ].map(o => (
           <button
             key={o.v}
@@ -2408,8 +2417,8 @@ function VideoCoverPicker({ videoFile, thumbnail, setThumbnail }) {
               transition: 'all .15s',
             }}
           >
-            <div style={{ fontSize: '12.5px', fontWeight: 700, color: mode === o.v ? 'var(--c-accent)' : 'var(--c-text-1)', marginBottom: '2px' }}>
-              {o.l}
+            <div style={{ fontSize: '12.5px', fontWeight: 700, color: mode === o.v ? 'var(--c-accent)' : 'var(--c-text-1)', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <Icon name={o.icon} size={13} /> {o.l}
             </div>
             <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)' }}>
               {o.d}
@@ -2449,7 +2458,7 @@ function VideoCoverPicker({ videoFile, thumbnail, setThumbnail }) {
                 alignItems: 'center', justifyContent: 'center', gap: '6px',
               }}
             >
-              <span style={{ fontSize: '22px' }}>📁</span>
+              <Icon name="upload" size={22} />
               Clique para enviar
             </button>
             <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', marginTop: '4px', textAlign: 'center', width: '120px' }}>
@@ -2463,7 +2472,7 @@ function VideoCoverPicker({ videoFile, thumbnail, setThumbnail }) {
       </div>
 
       {err && (
-        <div style={{ marginTop: '8px', fontSize: '11px', color: '#F87171', fontWeight: 600 }}>🚫 {err}</div>
+        <div style={{ marginTop: '8px', fontSize: '11px', color: '#F87171', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}><Icon name="x-circle" size={12} color="danger" /> {err}</div>
       )}
     </div>
   );
@@ -2585,9 +2594,9 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
       <div>
         <SectionLabel>Formato do anúncio</SectionLabel>
         <div style={{ display: 'flex', gap: '8px' }}>
-          {[{ v: 'image', l: 'Imagem única', icon: '🖼️' }, { v: 'carousel', l: 'Carrossel', icon: '🎠' }, { v: 'video', l: 'Vídeo', icon: '🎬' }].map(f => (
+          {[{ v: 'image', l: 'Imagem única', icon: 'image' }, { v: 'carousel', l: 'Carrossel', icon: 'layers' }, { v: 'video', l: 'Vídeo', icon: 'video' }].map(f => (
             <RadioCard key={f.v} selected={adFormat === f.v} onClick={() => setAdFormat(f.v)} style={{ flex: 1, textAlign: 'center' }}>
-              <div style={{ fontSize: '22px', marginBottom: '5px' }}>{f.icon}</div>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '5px' }}><Icon name={f.icon} size={22} /></div>
               <div style={{ fontSize: '12px', fontWeight: 600, color: adFormat === f.v ? 'var(--c-accent)' : 'var(--c-text-2)' }}>{f.l}</div>
             </RadioCard>
           ))}
@@ -2645,8 +2654,9 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
             padding: '10px 14px', marginBottom: '8px',
             background: 'rgba(193, 53, 132, 0.08)', border: '1px solid rgba(193, 53, 132, 0.25)',
             borderRadius: '10px', fontSize: '12px', color: 'var(--c-text-2)',
+            display: 'flex', alignItems: 'center', gap: '6px',
           }}>
-            ⚙️ {progress || 'Otimizando mídia…'}
+            <Icon name="settings" size={13} style={{ flexShrink: 0 }} /> {progress || 'Otimizando mídia…'}
           </div>
         )}
 
@@ -2659,8 +2669,9 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
             padding: '10px 14px', marginBottom: '8px',
             background: 'rgba(248,113,113,.12)', border: '1px solid rgba(248,113,113,.35)',
             borderRadius: '10px', fontSize: '12px', color: '#F87171', fontWeight: 600, lineHeight: 1.5,
+            display: 'flex', alignItems: 'flex-start', gap: '6px',
           }}>
-            🚫 {uploadError}
+            <Icon name="x-circle" size={14} color="danger" style={{ flexShrink: 0, marginTop: '1px' }} /> <span>{uploadError}</span>
             {uploadIsHevc && (
               <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(248,113,113,.2)' }}>
                 <div style={{ fontWeight: 700, marginBottom: '6px', color: '#F87171' }}>
@@ -2705,7 +2716,7 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
           onDragLeave={() => setDrag(false)}
           onDrop={e => { e.preventDefault(); setDrag(false); handleFiles(e.dataTransfer.files); }}
         >
-          <div style={{ fontSize: '28px', marginBottom: '8px' }}>📁</div>
+          <div style={{ marginBottom: '8px' }}><Icon name="upload" size={28} /></div>
           <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--c-text-1)', marginBottom: '4px' }}>
             {adFormat === 'carousel' ? 'Adicionar cartões (2–10 imagens)' : 'Clique ou arraste o arquivo aqui'}
           </div>
@@ -2738,7 +2749,7 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
           rows={3}
           style={{ width: '100%', padding: '10px 14px', border: `1.5px solid ${errors.primaryText ? '#F87171' : 'var(--c-border)'}`, borderRadius: '10px', background: 'var(--c-surface)', color: 'var(--c-text-1)', fontSize: '13px', fontFamily: 'inherit', outline: 'none', resize: 'vertical', lineHeight: 1.5, boxSizing: 'border-box' }}
         />
-        {errors.primaryText && <p style={{ fontSize: '12px', color: '#F87171', fontWeight: 600, marginTop: '4px' }}>⚠ {errors.primaryText}</p>}
+        {errors.primaryText && <p style={{ fontSize: '12px', color: '#F87171', fontWeight: 600, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><Icon name="alert" size={13} color="danger" /> {errors.primaryText}</p>}
       </div>
 
       {/* Título */}
@@ -2772,13 +2783,13 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
               fontSize: '12px', fontWeight: 600, color: destUrl.includes('wa.me') ? '#0F8A49' : 'var(--c-text-2)',
               cursor: 'pointer',
             }}
-          >💬 Usar WhatsApp da Cris</button>
+          ><Icon name="whatsapp" size={14} /> Usar WhatsApp da Cris</button>
           <span style={{ fontSize: '11px', color: 'var(--c-text-4)', alignSelf: 'center' }}>
             ou cole um link personalizado abaixo
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--c-surface)', border: `1.5px solid ${(errors.destUrl || (destUrl && !destUrl.startsWith('http'))) ? '#F87171' : 'var(--c-border)'}`, borderRadius: '10px', padding: '0 14px', transition: 'border-color .15s' }}>
-          <span style={{ fontSize: '13px', color: 'var(--c-text-4)', flexShrink: 0 }}>🔗</span>
+          <Icon name="link" size={13} color="info" style={{ flexShrink: 0 }} />
           <input
             type="url"
             placeholder="https://wa.me/5547997071161"
@@ -2786,10 +2797,10 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
             onChange={e => setDestUrl(e.target.value)}
             style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '13px', color: 'var(--c-text-1)', fontFamily: 'inherit', padding: '10px 0', width: '100%' }}
           />
-          {destUrl && destUrl.startsWith('http') && <span style={{ color: '#34D399', fontSize: '14px' }}>✓</span>}
+          {destUrl && destUrl.startsWith('http') && <Icon name="check" size={14} color="success" style={{ flexShrink: 0 }} />}
         </div>
         {(errors.destUrl || (destUrl && !destUrl.startsWith('http'))) && (
-          <p style={{ fontSize: '12px', color: '#F87171', fontWeight: 600, marginTop: '4px' }}>⚠ {errors.destUrl || 'URL deve começar com https://'}</p>
+          <p style={{ fontSize: '12px', color: '#F87171', fontWeight: 600, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><Icon name="alert" size={13} color="danger" /> {errors.destUrl || 'URL deve começar com https://'}</p>
         )}
       </div>
 
@@ -2932,7 +2943,7 @@ function Step6Review({ data, onGoTo }) {
             <button
               onClick={() => onGoTo(s.step)}
               style={{ fontSize: '12px', color: 'var(--c-accent)', fontWeight: 600, cursor: 'pointer', background: 'none', border: 'none', padding: '0' }}
-            >✏️ Editar</button>
+            ><Icon name="edit" size={12} /> Editar</button>
           </div>
           <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
             {s.rows.map((row, i) => (
@@ -2962,8 +2973,8 @@ function Step6Review({ data, onGoTo }) {
               <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--c-text-3)' }}>
                 {activeKeys.length} conjuntos de anúncios serão criados
               </span>
-              <button onClick={() => onGoTo(2)} style={{ fontSize: '12px', color: 'var(--c-accent)', fontWeight: 600, cursor: 'pointer', background: 'none', border: 'none' }}>
-                ✏️ Editar split
+              <button onClick={() => onGoTo(2)} style={{ fontSize: '12px', color: 'var(--c-accent)', fontWeight: 600, cursor: 'pointer', background: 'none', border: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Icon name="edit" size={12} /> Editar split
               </button>
             </div>
             <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -2986,8 +2997,8 @@ function Step6Review({ data, onGoTo }) {
                       <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '2px' }}>
                         Conjunto · {meta.label}
                       </div>
-                      <div style={{ fontSize: '11px', color: 'var(--c-text-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        📍 {hoods}
+                      <div style={{ fontSize: '11px', color: 'var(--c-text-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                        <Icon name="pin" size={10} /> {hoods}
                       </div>
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -2998,8 +3009,8 @@ function Step6Review({ data, onGoTo }) {
                 );
               })}
               {total !== 100 && (
-                <div style={{ fontSize: '11.5px', fontWeight: 700, color: '#F87171' }}>
-                  ⚠️ Split está em {total}% — ajuste para 100% no passo Orçamento.
+                <div style={{ fontSize: '11.5px', fontWeight: 700, color: '#F87171', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <Icon name="alert" size={13} color="danger" /> Split está em {total}% — ajuste para 100% no passo Orçamento.
                 </div>
               )}
             </div>
@@ -3016,7 +3027,7 @@ function Step6Review({ data, onGoTo }) {
         if (!warns.length) return null;
         return (
           <div style={{ padding: '14px 16px', background: 'rgba(248,113,113,.1)', border: '1px solid rgba(248,113,113,.3)', borderRadius: '12px' }}>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: '#F87171', marginBottom: '8px' }}>🔤 Atenção — possíveis erros de texto:</div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: '#F87171', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}><Icon name="alert" size={14} color="danger" /> Atenção — possíveis erros de texto:</div>
             <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
               {warns.map((w, i) => (
                 <li key={i} style={{ fontSize: '12px', color: '#F87171', lineHeight: 1.5 }}>{w}</li>
@@ -3029,7 +3040,7 @@ function Step6Review({ data, onGoTo }) {
 
       {/* Aviso de revisão */}
       <div style={{ padding: '14px 16px', background: 'rgba(251,191,36,.12)', border: '1px solid rgba(251,191,36,.3)', borderRadius: '12px', fontSize: '12px', color: 'var(--c-text-2)', lineHeight: 1.6 }}>
-        <span style={{ fontWeight: 700, color: '#FBBF24' }}>⚠️ Revisão do Meta:</span> Após a publicação, o anúncio passa por análise automática. O processo geralmente ocorre em menos de 24 horas. Certifique-se de que o criativo segue as <a href="https://www.facebook.com/policies/ads/" target="_blank" rel="noreferrer" style={{ color: 'var(--c-accent)' }}>Políticas de Publicidade do Meta</a>.
+        <span style={{ fontWeight: 700, color: '#FBBF24', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Icon name="alert" size={13} color="warning" /> Revisão do Meta:</span> Após a publicação, o anúncio passa por análise automática. O processo geralmente ocorre em menos de 24 horas. Certifique-se de que o criativo segue as <a href="https://www.facebook.com/policies/ads/" target="_blank" rel="noreferrer" style={{ color: 'var(--c-accent)' }}>Políticas de Publicidade do Meta</a>.
       </div>
 
       {/* Preflight check — consulta Meta em tempo real */}
@@ -3082,7 +3093,7 @@ function PreflightCheckPanel({ data }) {
   if (state.loading) {
     return (
       <div style={box}>
-        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-2)', marginBottom: '4px' }}>🔎 Verificando compatibilidade com Meta Ads…</div>
+        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-2)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}><Icon name="search" size={13} /> Verificando compatibilidade com Meta Ads…</div>
         <div style={{ fontSize: '12px', color: 'var(--c-text-4)' }}>Checando token, saldo, Page e Instagram.</div>
       </div>
     );
@@ -3099,23 +3110,28 @@ function PreflightCheckPanel({ data }) {
   const borderColor = state.ok_overall ? 'rgba(52,211,153,.35)' : 'rgba(248,113,113,.35)';
   const bgColor = state.ok_overall ? 'rgba(52,211,153,.1)' : 'rgba(248,113,113,.1)';
   const headerColor = state.ok_overall ? '#34D399' : '#F87171';
-  const headerIcon = state.ok_overall ? '✅' : '❌';
+  const headerIcon = state.ok_overall
+    ? <Icon name="check-circle" size={14} color="success" />
+    : <Icon name="x-circle" size={14} color="danger" />;
   const headerText = state.ok_overall ? 'Tudo certo pra publicar' : 'Corrija antes de publicar';
 
   return (
     <div style={{ ...box, borderColor, background: bgColor }}>
-      <div style={{ fontSize: '13px', fontWeight: 700, color: headerColor, marginBottom: '10px' }}>
+      <div style={{ fontSize: '13px', fontWeight: 700, color: headerColor, marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
         {headerIcon} {headerText}
       </div>
       <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '6px' }}>
         {state.checks.map(c => {
-          const icon = c.ok ? '✅' : (c.severity === 'warn' ? '⚠️' : '❌');
+          const checkIcon = c.ok
+            ? <Icon name="check-circle" size={13} color="success" />
+            : c.severity === 'warn'
+            ? <Icon name="alert" size={13} color="warning" />
+            : <Icon name="x-circle" size={13} color="danger" />;
           const color = c.ok ? 'var(--c-text-2)' : (c.severity === 'warn' ? '#FBBF24' : '#F87171');
           return (
-            <li key={c.key} style={{ fontSize: '12px', color, lineHeight: 1.5 }}>
-              <span style={{ marginRight: '6px' }}>{icon}</span>
-              <strong>{c.label}</strong>
-              {c.details && <span style={{ color: 'var(--c-text-4)', fontWeight: 400 }}> — {c.details}</span>}
+            <li key={c.key} style={{ fontSize: '12px', color, lineHeight: 1.5, display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+              <span style={{ flexShrink: 0, marginTop: '1px' }}>{checkIcon}</span>
+              <span><strong>{c.label}</strong>{c.details && <span style={{ color: 'var(--c-text-4)', fontWeight: 400 }}> — {c.details}</span>}</span>
             </li>
           );
         })}
@@ -3158,7 +3174,7 @@ function SummaryPanel({ step, objective, locations, budgetType, budgetValue, adF
                 boxShadow: active ? '0 0 14px rgba(193,53,132,.35)' : 'none',
                 transition: 'background .2s, border-color .2s',
               }}>
-                {done ? '✓' : i + 1}
+                {done ? <Icon name="check" size={9} /> : i + 1}
               </div>
               {/* Nome da etapa */}
               <span style={{
@@ -3180,7 +3196,7 @@ function SummaryPanel({ step, objective, locations, budgetType, budgetValue, adF
                 </span>
               )}
               {done && (
-                <span style={{ marginLeft: 'auto', fontSize: '9px', color: '#34D399' }}>✓</span>
+                <span style={{ marginLeft: 'auto' }}><Icon name="check" size={9} color="success" /></span>
               )}
             </div>
           );
@@ -3192,7 +3208,7 @@ function SummaryPanel({ step, objective, locations, budgetType, budgetValue, adF
         {obj && (
           <div>
             <div style={{ fontSize: '10px', color: 'var(--c-text-4)', marginBottom: '3px' }}>OBJETIVO</div>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--c-text-1)' }}>{obj.icon} {obj.label}</div>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--c-text-1)', display: 'flex', alignItems: 'center', gap: '5px' }}><Icon name={obj.icon} size={13} /> {obj.label}</div>
           </div>
         )}
 
@@ -3200,7 +3216,7 @@ function SummaryPanel({ step, objective, locations, budgetType, budgetValue, adF
           <div>
             <div style={{ fontSize: '10px', color: 'var(--c-text-4)', marginBottom: '3px' }}>LOCALIZAÇÃO</div>
             {locations.slice(0, 2).map(l => (
-              <div key={l.id} style={{ fontSize: '12px', color: 'var(--c-text-2)' }}>📍 {l.name}</div>
+              <div key={l.id} style={{ fontSize: '12px', color: 'var(--c-text-2)', display: 'flex', alignItems: 'center', gap: '4px' }}><Icon name="pin" size={11} /> {l.name}</div>
             ))}
             {locations.length > 2 && <div style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>+{locations.length - 2} regiões</div>}
           </div>
@@ -3219,8 +3235,9 @@ function SummaryPanel({ step, objective, locations, budgetType, budgetValue, adF
         {adFormat && (
           <div>
             <div style={{ fontSize: '10px', color: 'var(--c-text-4)', marginBottom: '3px' }}>FORMATO</div>
-            <div style={{ fontSize: '12px', color: 'var(--c-text-2)' }}>
-              {{ image: '🖼️ Imagem única', carousel: '🎠 Carrossel', video: '🎬 Vídeo' }[adFormat]}
+            <div style={{ fontSize: '12px', color: 'var(--c-text-2)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <Icon name={{ image: 'image', carousel: 'layers', video: 'video' }[adFormat]} size={12} />
+              {{ image: 'Imagem única', carousel: 'Carrossel', video: 'Vídeo' }[adFormat]}
             </div>
           </div>
         )}
@@ -3252,7 +3269,7 @@ function PublishModal({ onClose, scheduled, startDate }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.65)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
       <div className="ccb-card ccb-modal" style={{ padding: '40px 36px', maxWidth: '440px', width: '100%', textAlign: 'center', borderRadius: '20px' }}>
-        <div style={{ fontSize: '54px', marginBottom: '16px' }}>{scheduled ? '📅' : '🎉'}</div>
+        <div style={{ marginBottom: '16px' }}><Icon name={scheduled ? 'calendar' : 'celebrate'} size={48} /></div>
         <h2 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '10px' }}>
           {scheduled ? 'Campanha agendada!' : 'Anúncio enviado para revisão!'}
         </h2>
@@ -3263,7 +3280,7 @@ function PublishModal({ onClose, scheduled, startDate }) {
           Você receberá uma notificação no sino quando o Meta aprovar ou reprovar. Se for reprovado, aparecerá na sessão <strong>Reprovados</strong> com o motivo e orientação.
         </p>
         <div style={{ padding: '12px 16px', background: 'var(--c-accent-soft)', border: '1px solid rgba(193,53,132,.4)', borderRadius: '12px', fontSize: '12px', color: 'var(--c-text-3)', marginBottom: '24px', lineHeight: 1.5 }}>
-          📋 Status atual: <strong style={{ color: 'var(--c-accent)' }}>{scheduled ? `Agendado para ${dateLabel} · Em revisão` : 'Em revisão pelo Meta'}</strong>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><Icon name="info" size={13} color="info" /></span> Status atual: <strong style={{ color: 'var(--c-accent)' }}>{scheduled ? `Agendado para ${dateLabel} · Em revisão` : 'Em revisão pelo Meta'}</strong>
         </div>
         <button
           onClick={onClose}
@@ -3859,14 +3876,14 @@ export default function CreateAd() {
               borderRadius: '10px',
               marginBottom: '22px',
             }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: '#F87171', letterSpacing: '.5px', marginBottom: '6px' }}>
-                ⚠️ MOTIVO DA REPROVAÇÃO
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#F87171', letterSpacing: '.5px', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <Icon name="alert" size={12} color="danger" /> MOTIVO DA REPROVAÇÃO
               </div>
               <p style={{ fontSize: '13px', color: 'var(--c-text-2)', margin: '0 0 10px 0', lineHeight: 1.6 }}>
                 <strong>{rejectedAd.reason}</strong>{rejectedAd.details ? ` — ${rejectedAd.details}` : ''}
               </p>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: '#34D399', letterSpacing: '.5px', marginBottom: '4px' }}>
-                💡 COMO CORRIGIR
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#34D399', letterSpacing: '.5px', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <Icon name="info" size={12} color="success" /> COMO CORRIGIR
               </div>
               <p style={{ fontSize: '12px', color: 'var(--c-text-2)', margin: 0, lineHeight: 1.6 }}>
                 {rejectionInfo.hint}
@@ -3899,10 +3916,10 @@ export default function CreateAd() {
                 {commercialDate
                   ? `${commercialDate.emoji} PRÉ-PREENCHIDO · ${commercialDate.name.toUpperCase()}`
                   : reuseCreative
-                    ? `🎨 PRÉ-PREENCHIDO · CRIATIVO "${reuseCreative.name.toUpperCase()}"`
+                    ? `PRÉ-PREENCHIDO · CRIATIVO "${reuseCreative.name.toUpperCase()}"`
                     : reuseAudience
-                      ? `👥 PRÉ-PREENCHIDO · PÚBLICO "${reuseAudience.name.toUpperCase()}"`
-                      : '✨ PRÉ-PREENCHIDO'}
+                      ? `PRÉ-PREENCHIDO · PÚBLICO "${reuseAudience.name.toUpperCase()}"`
+                      : 'PRÉ-PREENCHIDO'}
               </div>
               <p style={{ fontSize: '13px', color: 'var(--c-text-2)', margin: '0 0 8px 0', lineHeight: 1.55 }}>
                 Revise abaixo o que foi montado:
@@ -3932,9 +3949,10 @@ export default function CreateAd() {
                   padding: '7px 12px',
                   background: 'var(--c-surface)', border: '1.5px solid var(--c-border)',
                   color: 'var(--c-text-2)', borderRadius: '8px', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: '4px',
                 }}
               >
-                ✏️ Personalizar do início
+                <Icon name="edit" size={11} /> Personalizar do início
               </button>
             </div>
           )}

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useAppState } from '../contexts/AppStateContext';
+import Icon from '../components/Icon';
 
 /* ============================================================
    Visão Meta — Campanhas em 3 níveis (Campanha > Conjunto > Anúncio)
@@ -576,7 +577,7 @@ function PlayPauseButton({ status, onToggle, disabled, size = 'sm' }) {
       onMouseEnter={e => { if (!disabled) e.currentTarget.style.transform = 'scale(1.08)'; }}
       onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
     >
-      {isActive ? '⏸' : '▶'}
+      {isActive ? <Icon name="pause" size={14} /> : <Icon name="play" size={14} />}
     </button>
   );
 }
@@ -627,8 +628,8 @@ function AdSetCard({ adset, campaignLocalId, onAction, onSelect, selected, onSta
       </div>
 
       <div style={{ display: 'flex', gap: '14px', fontSize: '12px', color: 'var(--c-text-3)', marginBottom: '10px', fontWeight: 400, fontFeatureSettings: "'tnum'" }}>
-        <div>💰 {fmtBRL(adset.daily_budget)} /dia</div>
-        <div>📢 {adsCount} {adsCount === 1 ? 'anúncio' : 'anúncios'}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Icon name="money" size={12} /> {fmtBRL(adset.daily_budget)} /dia</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Icon name="bell" size={12} /> {adsCount} {adsCount === 1 ? 'anúncio' : 'anúncios'}</div>
       </div>
 
       {adset.targeting && (
@@ -638,10 +639,10 @@ function AdSetCard({ adset, campaignLocalId, onAction, onSelect, selected, onSta
           padding: '6px 10px', marginBottom: '10px', lineHeight: 1.5,
         }}>
           {adset.targeting.age_min && adset.targeting.age_max && (
-            <span>👤 {adset.targeting.age_min}-{adset.targeting.age_max} anos</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}><Icon name="user" size={11} /> {adset.targeting.age_min}-{adset.targeting.age_max} anos</span>
           )}
           {Array.isArray(adset.targeting.interests) && adset.targeting.interests.length > 0 && (
-            <span> · 🎯 {adset.targeting.interests.length} interesse{adset.targeting.interests.length > 1 ? 's' : ''}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}> · <Icon name="target" size={11} /> {adset.targeting.interests.length} interesse{adset.targeting.interests.length > 1 ? 's' : ''}</span>
           )}
         </div>
       )}
@@ -705,7 +706,7 @@ function AdSetCard({ adset, campaignLocalId, onAction, onSelect, selected, onSta
           }}
           title="Cria um conjunto novo idêntico — bom pra testar outro público"
         >
-          📋 Duplicar conjunto
+          <Icon name="clipboard" size={12} /> Duplicar conjunto
         </button>
         <button
           onClick={e => { e.stopPropagation(); onAction('budget', adset); }}
@@ -717,7 +718,7 @@ function AdSetCard({ adset, campaignLocalId, onAction, onSelect, selected, onSta
           }}
           title="Mude o orçamento até 20% sem resetar aprendizado"
         >
-          💰 Editar orçamento
+          <Icon name="money" size={12} /> Editar orçamento
         </button>
         <button
           onClick={e => { e.stopPropagation(); onAction('newAd', adset); }}
@@ -744,7 +745,7 @@ function AdSetCard({ adset, campaignLocalId, onAction, onSelect, selected, onSta
           }}
           title="Excluir este conjunto e seus anúncios"
         >
-          🗑️ Excluir
+          <Icon name="trash" size={12} /> Excluir
         </button>
       </div>
     </div>
@@ -783,7 +784,7 @@ function AdCard({ ad, onStatusChange, onDelete, busy }) {
             padding: '4px 8px', fontSize: '11px', fontWeight: 600,
             cursor: 'pointer', opacity: busy ? 0.5 : 1,
           }}
-        >🗑️</button>
+        ><Icon name="trash" size={12} /></button>
         <span style={{
           fontSize: '10.5px', fontWeight: 700, color: '#fff',
           background: status.color,
@@ -869,7 +870,7 @@ function CreateABTestModal({ open, onClose, campaign, hierarchy, onSaved }) {
     <Modal
       open={open}
       onClose={onClose}
-      title="🧪 Criar teste A/B"
+      title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Icon name="sparkles" size={15} /> Criar teste A/B</span>}
       footer={
         <>
           <GhostButton onClick={onClose} disabled={loading}>Cancelar</GhostButton>
@@ -895,9 +896,9 @@ function CreateABTestModal({ open, onClose, campaign, hierarchy, onSaved }) {
         <Field label="O que você quer testar?">
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             {[
-              { v: 'audience', label: '👤 Público', desc: 'Idade ou interesses diferentes' },
-              { v: 'placement', label: '📱 Posicionamento', desc: 'Reels, Feed, Stories' },
-              { v: 'creative', label: '🎬 Criativo', desc: 'Mesmo público, vídeos diferentes' },
+              { v: 'audience', label: <><Icon name="user" size={12} /> Público</>, desc: 'Idade ou interesses diferentes' },
+              { v: 'placement', label: <><Icon name="phone" size={12} /> Posicionamento</>, desc: 'Reels, Feed, Stories' },
+              { v: 'creative', label: <><Icon name="video" size={12} /> Criativo</>, desc: 'Mesmo público, vídeos diferentes' },
             ].map(opt => (
               <button
                 key={opt.v}
@@ -1046,7 +1047,7 @@ function ABTestCard({ test, onStop }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '8px' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--c-accent)', textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: '2px' }}>
-            🧪 Teste A/B · {test.variable}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Icon name="sparkles" size={11} /> Teste A/B · {test.variable}</span>
           </div>
           <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {test.name}
@@ -1442,7 +1443,7 @@ export default function CampaignsHierarchy() {
           borderRadius: '18px',
           color: 'var(--c-text-3)',
         }}>
-          <div style={{ fontSize: '34px', marginBottom: '8px' }}>📭</div>
+          <div style={{ marginBottom: '8px' }}><Icon name="bell-off" size={34} /></div>
           <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-2)' }}>Nenhuma campanha Meta publicada ainda</div>
           <div style={{ fontSize: '12.5px', marginTop: '4px', fontWeight: 400 }}>Publique pelo menos uma campanha em "Criar anúncio" pra ver a hierarquia aqui.</div>
         </div>
@@ -1475,7 +1476,7 @@ export default function CampaignsHierarchy() {
                 borderRadius: '18px',
                 color: 'var(--c-text-3)',
               }}>
-                <div style={{ fontSize: '32px', marginBottom: '8px' }}>👈</div>
+                <div style={{ marginBottom: '8px' }}><Icon name="arrow-left" size={32} /></div>
                 <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-2)' }}>Selecione uma campanha</div>
                 <div style={{ fontSize: '12.5px', marginTop: '4px', fontWeight: 400 }}>Clica numa campanha à esquerda pra ver os conjuntos e anúncios.</div>
               </div>
@@ -1535,7 +1536,7 @@ export default function CampaignsHierarchy() {
                             cursor: 'pointer',
                           }}
                         >
-                          💰 Editar orçamento
+                          <Icon name="money" size={12} /> Editar orçamento
                         </button>
                       )}
                       <button
@@ -1550,7 +1551,7 @@ export default function CampaignsHierarchy() {
                         }}
                         title="Cria teste A/B oficial Meta com divisão automática de público"
                       >
-                        🧪 Criar teste A/B
+                        <Icon name="sparkles" size={13} /> Criar teste A/B
                       </button>
                     </div>
                   </div>

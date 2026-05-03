@@ -5,6 +5,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { getUpcomingCommercialDates } from '../data/commercialDates';
 import { globalRingPerformance } from '../data/performanceMock';
 import RingRecommendation from '../components/RingRecommendation';
+import Icon from '../components/Icon';
 
 const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const WEEK_DAYS_SHORT = ['DOM','SEG','TER','QUA','QUI','SEX','SÁB'];
@@ -718,7 +719,7 @@ function MiniCalendar({ onViewFull, onPickCommercialDate }) {
       {/* Legenda */}
       <div style={{ display: 'flex', gap: '12px', marginTop: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <span style={{ fontSize: '12px' }}>🗓️</span>
+          <Icon name="calendar" size={12} />
           <span style={{ fontSize: '10px', color: 'var(--c-text-3)' }}>Data comercial — clique para estratégia</span>
         </div>
       </div>
@@ -902,7 +903,9 @@ function BalanceCard({ funds, lowBalance, threshold, onAdd, dailyBudget }) {
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ fontSize: '14px' }}>{lowBalance ? '⚠️' : '💰'}</span>
+          {lowBalance
+            ? <Icon name="alert" color="danger" size={16} />
+            : <Icon name="money" size={16} />}
           <span style={{ fontSize: '10px', fontWeight: 700, color: lowBalance ? '#DC2626' : 'var(--c-text-3)', letterSpacing: '.4px', textTransform: 'uppercase' }}>
             Saldo
           </span>
@@ -960,7 +963,7 @@ function RingPerformanceTeaser({ ads, onOpen }) {
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ fontSize: '14px' }}>🏆</span>
+          <Icon name="star" color="warning" size={16} />
           <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--c-text-3)', letterSpacing: '.4px', textTransform: 'uppercase' }}>
             Melhor anel (7d)
           </span>
@@ -1055,7 +1058,7 @@ function HistoricalComparisonCard({ onViewCalendar }) {
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flex: 1 }}>
-          <span style={{ fontSize: '14px', flexShrink: 0 }}>📊</span>
+          <Icon name="chart-bar" size={16} style={{ flexShrink: 0 }} />
           <span style={{
             fontSize: '10px', fontWeight: 700, color: 'var(--c-text-3)',
             letterSpacing: '.4px', textTransform: 'uppercase',
@@ -1257,7 +1260,7 @@ function RingPerformanceCard({ onDataChange, refreshSignal } = {}) {
         background: '#FEF2F2', borderRadius: '10px',
         border: '1px dashed #FCA5A5',
       }}>
-        <div style={{ fontSize: '20px', marginBottom: '6px' }}>⚠️</div>
+        <div style={{ marginBottom: '6px', display: 'flex', justifyContent: 'center' }}><Icon name="alert" color="danger" size={22} /></div>
         <div style={{ fontSize: '12px', fontWeight: 600, color: '#B91C1C', marginBottom: '10px' }}>
           Não foi possível carregar performance por anel
         </div>
@@ -1335,8 +1338,9 @@ function RingPerformanceCard({ onDataChange, refreshSignal } = {}) {
                 padding: '2px 8px', borderRadius: '8px',
                 letterSpacing: '.3px',
                 boxShadow: `0 2px 6px ${visual.color}55`,
+                display: 'inline-flex', alignItems: 'center', gap: '4px',
               }}>
-                🏆 Melhor retorno
+                <Icon name="star" size={11} color="#fff" /> Melhor retorno
               </div>
             )}
 
@@ -1431,7 +1435,7 @@ function CpcAlertCard({ ads, benchmark, benchmarkLabel, onOpenAds }) {
         height: '100%', justifyContent: 'center',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ fontSize: '14px' }}>✅</span>
+          <Icon name="check-circle" color="success" size={16} />
           <span style={{ fontSize: '10px', fontWeight: 700, color: '#16A34A', letterSpacing: '.4px', textTransform: 'uppercase' }}>
             CPC saudável
           </span>
@@ -1455,7 +1459,7 @@ function CpcAlertCard({ ads, benchmark, benchmarkLabel, onOpenAds }) {
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ fontSize: '14px' }}>🚨</span>
+          <Icon name="alert" color="danger" size={16} />
           <span style={{ fontSize: '10px', fontWeight: 700, color: '#DC2626', letterSpacing: '.4px', textTransform: 'uppercase' }}>
             CPC acima do ramo
           </span>
@@ -1524,7 +1528,7 @@ function CampaignMetricsBlock({ campaigns, selectedId, onSelect, onCreate, onOpe
         textAlign: 'center',
         marginBottom: '20px',
       }}>
-        <div style={{ fontSize: '28px', marginBottom: '8px' }}>📭</div>
+        <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'center' }}><Icon name="bell-off" size={28} /></div>
         <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
           Nenhuma campanha no ar
         </div>
@@ -1583,9 +1587,9 @@ function CampaignMetricsBlock({ campaigns, selectedId, onSelect, onCreate, onOpe
             {statusStyle.label}
           </span>
           {hasMultiple && isTop && (
-            <span title="Melhor CPR entre as campanhas no ar" style={{
-              fontSize: '12px', flexShrink: 0,
-            }}>🏆</span>
+            <span title="Melhor CPR entre as campanhas no ar" style={{ flexShrink: 0, display: 'inline-flex' }}>
+              <Icon name="star" color="warning" size={14} />
+            </span>
           )}
         </div>
 
@@ -1695,7 +1699,7 @@ function LearningPhaseCard({ campaigns }) {
         marginBottom: '14px',
         display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap',
       }}>
-        <div style={{ fontSize: '20px', flexShrink: 0, opacity: .9 }}>⏳</div>
+        <div style={{ flexShrink: 0, opacity: .9 }}><Icon name="hourglass" color="warning" size={20} /></div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '2px' }}>
             {learning.length === 1
@@ -1722,7 +1726,7 @@ function LearningPhaseCard({ campaigns }) {
       boxShadow: '0 2px 8px rgba(180, 83, 9, 0.08)',
       display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap',
     }}>
-      <div style={{ fontSize: '24px', flexShrink: 0 }}>⏳</div>
+      <div style={{ flexShrink: 0 }}><Icon name="hourglass" color="warning" size={24} /></div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: '13px', fontWeight: 700, color: '#92400E', marginBottom: '2px' }}>
           {learning.length === 1
@@ -2041,9 +2045,10 @@ function ExecActiveAdsTable({ ads, onSeeAll }) {
               background: 'linear-gradient(135deg, var(--c-accent-soft), rgba(125,74,94,.2))',
               border: '1px solid var(--c-border)',
               display: 'grid', placeItems: 'center',
-              color: 'var(--c-accent)', fontSize: '14px',
+              color: 'var(--c-accent)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              📷
+              <Icon name="image" size={16} />
             </div>
             <div style={{ minWidth: 0 }}>
               <div style={{
@@ -2272,7 +2277,7 @@ export default function Dashboard() {
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
           <div>
             <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
-              {saudacao} 👋
+              {saudacao} <Icon name="sparkles" color="warning" size={18} />
             </h1>
             <p style={{ fontSize: '13px', color: 'var(--c-text-3)' }}>
               {liveCampaigns.length === 1
