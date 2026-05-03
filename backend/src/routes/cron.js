@@ -10,9 +10,10 @@ const router = express.Router();
    Authorization: Bearer <CRON_SECRET>. Vercel injeta isso automaticamente
    se a env var existir. Se nao definida, aceita qualquer (uso local). */
 function requireCronAuth(req, res, next) {
-  const expected = process.env.CRON_SECRET;
+  /* Trim defensivo — se admin colou env var com espaco/newline, ainda funciona */
+  const expected = (process.env.CRON_SECRET || '').trim();
   if (!expected) return next();
-  const auth = req.headers.authorization || '';
+  const auth = (req.headers.authorization || '').trim();
   if (auth === `Bearer ${expected}`) return next();
   return res.status(401).json({ error: 'unauthorized' });
 }
