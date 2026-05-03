@@ -1085,3 +1085,35 @@ mostra qual pass venceu (720p/480p/360p).
 - Rafa testar play/pause em adset/ad pelo painel
 - Rafa criar 1 teste A/B real em campanha futura (não recomendado em 437/436 ativas)
 - Backlog: editor direto de criativo (decisão atual: duplicar conjunto é o caminho)
+
+---
+
+## Sessão 2026-05-03 — Refino IA (Groq)
+
+**Commit:** `8594f59` feat(ai): consultor sênior + estrutura título/descritivo/CTA + sem emoji/#/1ª pessoa
+
+### Mudanças no SYSTEM_PROMPT (backend/src/routes/ai.js)
+- **Posicionamento:** "assistente" → "consultor sênior de tráfego pago e copy"
+- **Estrutura obrigatória de toda resposta:**
+  1. TÍTULO (≤60 chars, só primeira maiúscula, sem ponto)
+  2. DESCRITIVO (2-4 linhas, específico Cris/Joinville)
+  3. CTA (linha de ação concreta com WhatsApp/agenda)
+- **Proibições rígidas (Rafa pediu):**
+  - SEM emojis (só se pedir "com emoji")
+  - SEM caractere `#` (zero markdown header)
+  - SEM hashtags por padrão
+  - SEMPRE segunda pessoa "você/teu" — NUNCA "nós/eu/a gente/vamos/nosso"
+  - Bullets só em listas ≥3 itens
+- **Processo de raciocínio interno** (4 passos antes de responder, não exposto)
+- **Lista "evite genérico"** com substituições concretas (R$/bairro/prazo/serviço)
+- **Temperature** 0.7 → 0.5 (menos genérico)
+
+### Não tocado
+- Modelos (llama-3.3-70b texto · llama-4-scout vision) intactos
+- Frontend AIAssistant.jsx intacto (só renderiza resposta)
+- Lista de SERVIÇOS OFICIAIS preservada
+- Endpoints intactos
+
+### Próximo
+- Rafa testar chat IA in-app pra validar tom novo
+- Se algum item escapar (emoji/#/1ª pessoa), reforçar regra ou baixar temperature mais
