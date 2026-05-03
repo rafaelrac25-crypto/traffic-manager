@@ -30,7 +30,7 @@ function RejectedCard({ ad, onRemove, onEdit }) {
 
   return (
     <div className="ccb-card" style={{
-      borderLeft: '4px solid #F87171',
+      borderLeft: '2px solid #F87171',
       borderRadius: '18px',
       padding: '18px 20px',
       marginBottom: '14px',

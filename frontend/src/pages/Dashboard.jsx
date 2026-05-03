@@ -1690,7 +1690,7 @@ function LearningPhaseCard({ campaigns }) {
     return (
       <div className="ccb-card" style={{
         borderRadius: '12px',
-        borderLeft: '3px solid #FBBF24',
+        borderLeft: '2px solid #FBBF24',
         padding: '12px 16px',
         marginBottom: '14px',
         display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap',

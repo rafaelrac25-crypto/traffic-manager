@@ -438,7 +438,7 @@ function DistrictAnalyzer() {
 
   return (
     <div className="ccb-card" style={{
-      borderLeft: '4px solid var(--c-accent)',
+      borderLeft: '2px solid var(--c-accent)',
       borderRadius: '18px',
       padding: '18px 20px',
       marginBottom: '20px',

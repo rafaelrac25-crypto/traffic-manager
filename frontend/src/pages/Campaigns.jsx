@@ -44,10 +44,10 @@ const DELIVERY_STATUS = {
 
 /* ── Ícones ── */
 const PauseIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
 );
 const PlayIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
 );
 const EditIcon = () => (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -61,7 +61,7 @@ const CopyIcon = () => (
   </svg>
 );
 const DotsIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
   </svg>
 );
@@ -225,7 +225,7 @@ function AdPreviewModal({ ad, onClose, onDuplicate, onEdit }) {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="ccb-card"
+        className="ccb-card ccb-modal"
         style={{
           borderRadius: '18px',
           width: '100%', maxWidth: '520px',
@@ -950,7 +950,7 @@ function EditAudienceModal({ ad, onClose, onSaved }) {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="ccb-card"
+        className="ccb-card ccb-modal"
         style={{
           borderRadius: '18px',
           width: '100%', maxWidth: '540px', maxHeight: '90vh', overflow: 'auto',

@@ -621,8 +621,9 @@ function LocationPresetBar({ locations, setLocations, ringsMode, setRingsMode })
         >
           <div
             onClick={e => e.stopPropagation()}
+            className="ccb-modal"
             style={{
-              background: 'var(--c-card-bg)', borderRadius: '14px',
+              borderRadius: '14px',
               padding: '18px 20px', width: '100%', maxWidth: '460px',
               maxHeight: '80vh', overflowY: 'auto',
               border: '1px solid var(--c-border)',
@@ -1926,7 +1927,7 @@ function BusinessHoursPicker({ value, onChange, budgetType, error }) {
               padding: '10px 12px',
               background: 'rgba(251,191,36,.16)',
               border: '1px solid rgba(251,191,36,.35)',
-              borderLeft: '3px solid #F59E0B',
+              borderLeft: '2px solid #F59E0B',
               borderRadius: '8px',
               fontSize: '11.5px', color: 'var(--c-text-2)', lineHeight: 1.5,
             }}>
@@ -3250,7 +3251,7 @@ function PublishModal({ onClose, scheduled, startDate }) {
   const dateLabel = startDate ? new Date(startDate + 'T12:00:00').toLocaleDateString('pt-BR') : '';
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.65)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-      <div className="ccb-card" style={{ padding: '40px 36px', maxWidth: '440px', width: '100%', textAlign: 'center', borderRadius: '20px' }}>
+      <div className="ccb-card ccb-modal" style={{ padding: '40px 36px', maxWidth: '440px', width: '100%', textAlign: 'center', borderRadius: '20px' }}>
         <div style={{ fontSize: '54px', marginBottom: '16px' }}>{scheduled ? '📅' : '🎉'}</div>
         <h2 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '10px' }}>
           {scheduled ? 'Campanha agendada!' : 'Anúncio enviado para revisão!'}
@@ -3845,7 +3846,7 @@ export default function CreateAd() {
               padding: '14px 16px',
               background: 'rgba(248,113,113,.12)',
               border: '1px solid rgba(248,113,113,.3)',
-              borderLeft: '4px solid #EF4444',
+              borderLeft: '2px solid #EF4444',
               borderRadius: '10px',
               marginBottom: '22px',
             }}>
@@ -3881,7 +3882,7 @@ export default function CreateAd() {
               padding: '14px 16px',
               background: 'linear-gradient(135deg, rgba(193,53,132,.12), rgba(125,74,94,.04))',
               border: '1px solid var(--c-border)',
-              borderLeft: '4px solid var(--c-accent)',
+              borderLeft: '2px solid var(--c-accent)',
               borderRadius: '10px',
               marginBottom: '22px',
             }}>

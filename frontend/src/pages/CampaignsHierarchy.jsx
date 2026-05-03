@@ -121,7 +121,7 @@ function Modal({ open, onClose, title, children, footer }) {
     >
       <div
         onClick={e => e.stopPropagation()}
-        className="ccb-card"
+        className="ccb-card ccb-modal"
         style={{
           borderRadius: '18px',
           maxWidth: '560px',

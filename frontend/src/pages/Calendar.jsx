@@ -138,7 +138,7 @@ function CommercialDateModal({ entry, onClose, onCreateAd }) {
       }}
     >
       <div
-        className="ccb-card"
+        className="ccb-card ccb-modal"
         onClick={e => e.stopPropagation()}
         style={{
           borderRadius: '18px',
@@ -283,7 +283,7 @@ function DayDetailsModal({ dateStr, events, commercial, onClose, onOpenCommercia
       }}
     >
       <div
-        className="ccb-card"
+        className="ccb-card ccb-modal"
         onClick={e => e.stopPropagation()}
         style={{
           borderRadius: '18px',

@@ -51,6 +51,11 @@
   --c-accent-dk:  #c27577;
   --c-shadow:     rgba(214,141,143,.07);
   --c-shadow-md:  rgba(214,141,143,.12);
+  /* Tokens semanticos para icones (rosa default = --c-accent) */
+  --c-success:    #2EBB7A;
+  --c-warning:    #F5A623;
+  --c-info:       #3B9DDB;
+  --c-attention:  #FF7849;
 }
 
 /* ── Tema claro glass equivalente — Glassmorphism light com accent rosa Cris (#C13584) ── */
@@ -63,6 +68,8 @@
   /* Cards: glass branco translúcido (clarinho) */
   --c-card-bg:       rgba(255,255,255,.65);
   --c-surface:       rgba(255,255,255,.85);
+  /* Modais e popups: bem mais opaco para contraste de leitura */
+  --c-modal-bg:      rgba(255,255,255,.96);
   --c-hover:         rgba(0,0,0,.04);
   --c-active-bg:     rgba(193,53,132,.10);
   /* Bordas glass — sutis escuras translúcidas */
@@ -78,6 +85,11 @@
   --c-accent-dk:     #7D4A5E;
   --c-accent-soft:   rgba(193,53,132,.10);
   --c-accent-glow:   rgba(193,53,132,.25);
+  /* Tokens semanticos para icones */
+  --c-success:       #2EBB7A;
+  --c-warning:       #F5A623;
+  --c-info:          #3B9DDB;
+  --c-attention:     #FF7849;
   /* Glass tokens */
   --c-glass-shine:   rgba(255,255,255,.5);
   --c-glass-border-2:rgba(0,0,0,.14);
@@ -162,6 +174,8 @@
   /* Cards: glass dark fumê (escurece em vez de clarear) */
   --c-card-bg:       rgba(18,24,30,.45);
   --c-surface:       rgba(28,34,42,.55);
+  /* Modais e popups: bem mais opaco para contraste de leitura */
+  --c-modal-bg:      rgba(16,20,26,.94);
   --c-hover:         rgba(255,255,255,.04);
   --c-active-bg:     rgba(193,53,132,.18);
   /* Bordas glass — sutis brancas translúcidas */
@@ -177,6 +191,11 @@
   --c-accent-dk:     #7D4A5E;
   --c-accent-soft:   rgba(193,53,132,.18);
   --c-accent-glow:   rgba(193,53,132,.55);
+  /* Tokens semanticos para icones (mais saturados no dark) */
+  --c-success:       #5CD49A;
+  --c-warning:       #FFC857;
+  --c-info:          #5BB8E8;
+  --c-attention:     #FF9266;
   /* Glass tokens */
   --c-glass-shine:   rgba(255,255,255,.07);
   --c-glass-border-2:rgba(255,255,255,.16);
@@ -643,6 +662,20 @@ input[type="range"] { accent-color: var(--c-accent); }
 .ccb-card:active {
   transform: translateY(-1px) scale(.997);
   transition-duration: .08s;
+}
+
+/* ── Modal/Popup: bem mais opaco que card normal (contraste de leitura) ── */
+.ccb-modal {
+  background: var(--c-modal-bg) !important;
+  backdrop-filter: blur(28px) saturate(140%);
+  -webkit-backdrop-filter: blur(28px) saturate(140%);
+}
+[data-theme="light"] .ccb-modal {
+  border: 1px solid rgba(0,0,0,.10);
+}
+[data-theme="dark"] .ccb-modal {
+  background: var(--c-modal-bg) !important;
+  border: 1px solid rgba(255,255,255,.12);
 }
 
 /* ── Glass dark fumê nos cards (só no dark) ── */

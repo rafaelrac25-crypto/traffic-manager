@@ -374,7 +374,7 @@ function ReferenceModal({ item, onClose, onUse, isFavorite, onToggleFavorite }) 
     >
       <div
         onClick={e => e.stopPropagation()}
-        className="ccb-card"
+        className="ccb-card ccb-modal"
         style={{
           borderRadius: '18px',
           width: '100%', maxWidth: '720px',

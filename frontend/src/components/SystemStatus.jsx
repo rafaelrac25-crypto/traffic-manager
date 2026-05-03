@@ -15,16 +15,16 @@ import { Link } from 'react-router-dom';
 const POLL_INTERVAL_MS = 60_000;
 
 const STATUS_META = {
-  ok:      { color: '#16A34A', label: 'Sistema ok',      icon: '🟢' },
-  warn:    { color: '#F59E0B', label: 'Atenção',         icon: '🟡' },
-  error:   { color: '#DC2626', label: 'Precisa atenção', icon: '🔴' },
-  loading: { color: '#9CA3AF', label: 'Verificando…',    icon: '⚪' },
+  ok:      { color: 'var(--c-success)',   label: 'Sistema ok',      icon: '🟢' },
+  warn:    { color: 'var(--c-warning)',   label: 'Atenção',         icon: '🟡' },
+  error:   { color: 'var(--c-attention)', label: 'Precisa atenção', icon: '🔴' },
+  loading: { color: 'var(--c-text-4)',    label: 'Verificando…',    icon: '⚪' },
 };
 
 const StatusIcon = ({ color }) => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="9" />
-    <circle cx="12" cy="12" r="3" fill={color} stroke="none" />
+    <circle cx="12" cy="12" r="3" strokeWidth="3" />
   </svg>
 );
 
