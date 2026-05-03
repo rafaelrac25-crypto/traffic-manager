@@ -466,7 +466,7 @@ function Layout() {
             )}
             <div className="topbar-greeting">
               <span className="hi">
-                {greeting()}, Cris
+                Olá, Cris
                 <span className="tag">PRO</span>
               </span>
               <span className="sub">
