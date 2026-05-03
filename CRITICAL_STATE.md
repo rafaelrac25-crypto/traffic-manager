@@ -1149,3 +1149,48 @@ mostra qual pass venceu (720p/480p/360p).
 ### Próximo
 - Rafa validar in-app pop-up de anúncio em /anuncios e bordas em /
 - Se algum modal novo for criado, lembrar `className="ccb-card ccb-modal"`
+
+---
+
+## Sessão 2026-05-03 — Rascunho no wizard + Icon stroke (1ª leva)
+
+### Commits
+- `ce5152b` feat(wizard): salvar como rascunho (alternativa a publicar)
+- `2951379` feat(ui): emojis decorativos -> Icon stroke nas 4 telas principais
+
+### Rascunho no wizard
+- Backend POST /api/campaigns aceita `publish_mode='draft'` (skip Meta + status='draft')
+- Frontend handlePublish(asDraft) bypassa validacao/upload/Meta quando true
+- 2 botoes no Step 5: "Salvar como rascunho" (cinza outline) + "Publicar campanha" (rosa)
+- Lista /anuncios mostra rascunhos com badge cinza "Rascunho" + filtro
+- Pra publicar depois: clicar editar -> wizard reabre -> botao Publicar normal
+
+### Icon component (`frontend/src/components/Icon.jsx`)
+- 60+ ícones SVG stroke monocromaticos no padrao Lucide-style
+- API: `<Icon name="check" color="success" size={18} />`
+- Cores semanticas: success (verde), warning (amarelo), info (azul), 
+  attention (laranja), danger (vermelho), accent (rosa explicito)
+- Default `currentColor` herda contexto (rosa via --c-accent)
+- Mapeamento emoji->name documentado no rodape do arquivo
+
+### Conversao emoji -> Icon (1ª leva)
+- Dashboard.jsx: 14 convertidos
+- Campaigns.jsx: 14 convertidos
+- CampaignsHierarchy.jsx: 16 convertidos
+- CreateAd.jsx: 30+ convertidos (PublishModal, banners, presets, controles)
+
+**Mantidos como string (correto):** emojis em title/message de notification, 
+template literals que viram payload/copy do anuncio, caracteres tipograficos 
+(->, --), emoji em <option> HTML.
+
+### Pendente (próxima leva — 15 arquivos menores)
+Audiences, Calendar, CreativeLibrary, Investment, References, Rejected,
+Relatorios, History, AIAssistant, RingRecommendation, Sidebar, SplashScreen,
+SpyCompetitor, SystemStatus, App.jsx
+
+### Diagnostico Page WhatsApp (Cris ainda precisa configurar)
+- Page criscosta_sobrancelhas (108033148885275) — phone_listed +5547997071161 ok
+- whatsapp.number_publicly_listed: NULL (Cris precisa adicionar como 
+  "WhatsApp" em Sobre/Informacoes da Page do Facebook)
+- can_run_click_to_whatsapp: false
+- Quando virar true, trocar CTA padrao dos novos anuncios pra WHATSAPP_MESSAGE
