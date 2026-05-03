@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../contexts/AppStateContext';
+import Icon from '../components/Icon';
 import {
   DISTRICT_COORDS,
   DISTRICT_NAMES_FOR_SUGGESTION,
@@ -160,7 +161,7 @@ function AudienceCard({ audience, onEdit, onRemove, onReuseQuick, onReuseAdjust 
           <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
             {audience.locations.map((l, i) => {
               const label = locName(l);
-              return <Chip key={l.id || `loc-${i}-${label}`} label={`📍 ${label}`} active={false} />;
+              return <Chip key={l.id || `loc-${i}-${label}`} label={<><Icon name="pin" size={11} /> {label}</>} active={false} />;
             })}
           </div>
         </div>
@@ -194,7 +195,7 @@ function AudienceCard({ audience, onEdit, onRemove, onReuseQuick, onReuseAdjust 
             boxShadow: '0 6px 18px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)',
           }}
         >
-          🚀 Publicar rápido
+          <Icon name="rocket" size={14} /> Publicar rápido
         </button>
         <button
           onClick={() => onReuseAdjust(audience)}
@@ -207,7 +208,7 @@ function AudienceCard({ audience, onEdit, onRemove, onReuseQuick, onReuseAdjust 
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
           }}
         >
-          ✏️ Usar e ajustar
+          <Icon name="edit" size={14} /> Usar e ajustar
         </button>
       </div>
     </div>
@@ -346,7 +347,7 @@ function AudienceForm({ initial, onSave, onCancel }) {
         <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginBottom: '8px' }}>
           {data.locations.map((l, i) => {
             const label = locName(l);
-            return <Chip key={l.id || `loc-${i}-${label}`} label={`📍 ${label}`} onRemove={() => removeLocation(l)} />;
+            return <Chip key={l.id || `loc-${i}-${label}`} label={<><Icon name="pin" size={11} /> {label}</>} onRemove={() => removeLocation(l)} />;
           })}
         </div>
         <div style={{ fontSize: '10px', color: 'var(--c-text-4)', marginBottom: '4px' }}>Sugestões:</div>
@@ -448,7 +449,7 @@ function DistrictAnalyzer() {
     }}>
       <div>
         <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '3px' }}>
-          🎯 Analisador de bairro
+          <Icon name="target" size={16} /> Analisador de bairro
         </div>
         <div style={{ fontSize: '12px', color: 'var(--c-text-3)', lineHeight: 1.5, fontWeight: 400 }}>
           Digite um bairro de Joinville. Retorna distância do <strong>{HOME_DISTRICT}</strong> (clínica),

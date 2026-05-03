@@ -4,7 +4,7 @@ import { playWelcome } from '../utils/sounds';
 
 /* Duração total: HOLD_MS + EXIT_MS ≈ 4 s.
    Replica fiel do mock `.design/mockups/splash.html` — sem barra de loading. */
-const HOLD_MS = 3400;
+const HOLD_MS = 2400;
 const EXIT_MS = 600;
 
 export default function SplashScreen({ onDone }) {

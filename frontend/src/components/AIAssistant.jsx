@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import api from '../services/api';
 import { playBubble } from '../utils/sounds';
+import Icon from './Icon';
 
 const RobotIcon = ({ size = 24 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -375,11 +376,11 @@ export default function AIAssistant() {
                 border: `1.5px solid ${imagePreview ? 'var(--c-accent)' : 'var(--c-border)'}`,
                 background: imagePreview ? 'linear-gradient(135deg, var(--c-accent), #7D4A5E)' : 'var(--c-surface)',
                 color: imagePreview ? '#fff' : 'var(--c-text-3)',
-                cursor: 'pointer', fontSize: '15px',
+                cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 transition: 'all .15s', flexShrink: 0,
               }}
-            >📎</button>
+            ><Icon name="attach" size={16} /></button>
             <textarea
               ref={inputRef}
               value={input}

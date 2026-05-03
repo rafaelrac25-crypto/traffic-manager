@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppState } from '../contexts/AppStateContext';
 import api from '../services/api';
+import Icon from '../components/Icon';
 
 function formatBRL(v) {
   return `R$ ${Number(v || 0).toFixed(2).replace('.', ',')}`;
@@ -146,7 +147,7 @@ export default function Investment() {
               boxShadow: '0 8px 24px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)',
             }}
           >
-            💳 Adicionar crédito no Meta
+            <Icon name="money" size={16} /> Adicionar crédito no Meta
           </a>
         </div>
       )}
@@ -158,7 +159,7 @@ export default function Investment() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '22px' }}>📱</span>
+            <Icon name="phone" size={22} />
             <div>
               <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--c-text-1)' }}>
                 Facebook / Instagram Ads
@@ -215,7 +216,7 @@ export default function Investment() {
                   boxShadow: '0 8px 24px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)',
                 }}
               >
-                {metaSyncing ? '⏳ Sincronizando…' : '🔄 Sincronizar agora'}
+                {metaSyncing ? <><Icon name="hourglass" size={14} color="warning" /> Sincronizando…</> : <><Icon name="refresh" size={14} /> Sincronizar agora</>}
               </button>
               <button
                 onClick={disconnectMeta}
@@ -243,7 +244,7 @@ export default function Investment() {
               boxShadow: '0 6px 18px rgba(24,119,242,.35)',
             }}
           >
-            <span style={{ fontSize: '16px' }}>🅕</span> Conectar Facebook
+            <Icon name="plug" size={16} /> Conectar Facebook
           </button>
         )}
 
@@ -279,8 +280,8 @@ export default function Investment() {
               display: 'inline-block', fontSize: '13px', color: 'var(--c-text-4)',
               transform: pixelOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform .18s',
             }}>›</span>
-            <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-1)' }}>
-              📊 Pixel de rastreamento
+            <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-1)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <Icon name="chart-bar" size={16} /> Pixel de rastreamento
             </span>
             {pixel?.enabled && (
               <span style={{

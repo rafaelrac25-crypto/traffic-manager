@@ -8,6 +8,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getUpcomingCommercialDates, getCommercialDateByKey } from '../data/commercialDates';
+import Icon from '../components/Icon';
 
 const MONTHS_ABBR = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
 
@@ -361,7 +362,7 @@ function DayDetailsModal({ dateStr, events, commercial, onClose, onOpenCommercia
               border: '1px dashed var(--c-border)',
               borderRadius: '12px',
             }}>
-              <div style={{ fontSize: '24px', marginBottom: '6px', opacity: 0.7 }}>📅</div>
+              <div style={{ marginBottom: '6px', opacity: 0.7 }}><Icon name="calendar" size={24} /></div>
               <div style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
                 Dia livre
               </div>
@@ -823,7 +824,7 @@ export default function Calendar() {
             padding: '18px 20px',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-              <span style={{ fontSize: '16px' }}>🗓️</span>
+              <Icon name="calendar" size={16} />
               <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-1)' }}>
                 Datas comerciais
               </span>

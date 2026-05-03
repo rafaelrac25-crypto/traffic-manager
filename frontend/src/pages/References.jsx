@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AD_REFERENCES, REFERENCE_FILTERS, isRelevantForCris, adLibraryForService } from '../data/adReferences';
 import { SERVICES, inferServiceFromText } from '../data/services';
+import Icon from '../components/Icon';
 
 const FORMAT_META = {
   reels:    { label: 'Reels',     emoji: '🎬', color: '#E91E63' },
@@ -147,7 +148,7 @@ function ReferenceListRow({ item, position, topScore, onOpen, isFavorite, onTogg
           fontSize: '11.5px', color: 'var(--c-text-3)', lineHeight: 1.4, fontWeight: 400,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '6px',
         }}>
-          💡 {item.hook}
+          <Icon name="lightbulb" size={13} color="info" style={{ verticalAlign: 'middle', marginRight: '3px' }} /> {item.hook}
         </div>
         {/* Barra de performance proporcional ao topo */}
         <div style={{
@@ -207,7 +208,7 @@ function ReferenceListRow({ item, position, topScore, onOpen, isFavorite, onTogg
               boxShadow: '0 0 18px rgba(193,53,132,.18), inset 0 0 12px rgba(193,53,132,.08)',
             }}
           >
-            Abrir 🔗
+            Abrir <Icon name="link" size={13} />
           </a>
         )}
       </div>
@@ -308,7 +309,7 @@ function ReferenceCard({ item, position, onOpen, isFavorite, onToggleFavorite })
 
       {/* Footer: objetivo + biblioteca Meta + CTA visual */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: 'var(--c-text-3)', gap: '8px', fontWeight: 400 }}>
-        <span>🎯 {OBJECTIVE_LABEL[item.objective]}</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Icon name="target" size={13} /> {OBJECTIVE_LABEL[item.objective]}</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {item.adLibraryUrl && (
             <a
@@ -322,7 +323,7 @@ function ReferenceCard({ item, position, onOpen, isFavorite, onToggleFavorite })
                 display: 'inline-flex', alignItems: 'center', gap: '3px',
               }}
             >
-              🔗 Ver anúncio
+              <Icon name="link" size={12} /> Ver anúncio
             </a>
           )}
           <span style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Detalhes →</span>
@@ -354,7 +355,7 @@ function CopyButton({ text, label = 'Copiar' }) {
         transition: 'all .15s',
       }}
     >
-      {copied ? '✓ Copiado!' : `📋 ${label}`}
+      {copied ? <><Icon name="check" size={12} color="success" /> Copiado!</> : <><Icon name="clipboard" size={12} /> {label}</>}
     </button>
   );
 }
@@ -540,7 +541,7 @@ function ReferenceModal({ item, onClose, onUse, isFavorite, onToggleFavorite }) 
                 boxShadow: '0 0 22px rgba(193,53,132,.18), inset 0 0 14px rgba(193,53,132,.08)',
               }}
             >
-              🔗 Ver anúncio real
+              <Icon name="link" size={14} /> Ver anúncio real
             </a>
           )}
           <button
@@ -553,7 +554,7 @@ function ReferenceModal({ item, onClose, onUse, isFavorite, onToggleFavorite }) 
               boxShadow: '0 8px 24px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)',
             }}
           >
-            🚀 Criar anúncio a partir desta referência
+            <Icon name="rocket" size={15} /> Criar anúncio a partir desta referência
           </button>
         </div>
       </div>
@@ -790,7 +791,7 @@ export default function References() {
                     display: 'inline-flex', alignItems: 'center',
                   }}
                 >
-                  🔗
+                  <Icon name="link" size={12} />
                 </a>
               </span>
             );
@@ -810,8 +811,8 @@ export default function References() {
         <div style={{ position: 'relative', flex: '1 1 220px', minWidth: '180px' }}>
           <span style={{
             position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)',
-            fontSize: '12px', color: 'var(--c-text-4)', pointerEvents: 'none',
-          }}>🔍</span>
+            color: 'var(--c-text-4)', pointerEvents: 'none', display: 'flex',
+          }}><Icon name="search" size={14} /></span>
           <input
             type="text"
             value={query}
@@ -879,7 +880,7 @@ export default function References() {
           border: '1px dashed var(--c-border)',
           borderRadius: '18px',
         }}>
-          <div style={{ fontSize: '34px', marginBottom: '8px', opacity: .6 }}>🔍</div>
+          <div style={{ marginBottom: '8px', opacity: .6 }}><Icon name="search" size={34} /></div>
           <div style={{ fontSize: '13px', color: 'var(--c-text-3)', fontWeight: 400, marginBottom: '12px' }}>
             Nenhuma referência com esses filtros.
           </div>
@@ -892,9 +893,10 @@ export default function References() {
               color: 'var(--c-accent)', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer',
               textShadow: '0 0 12px rgba(193,53,132,.4)',
               boxShadow: '0 0 22px rgba(193,53,132,.18), inset 0 0 14px rgba(193,53,132,.08)',
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
             }}
           >
-            🧹 Limpar filtros
+            <Icon name="refresh" size={14} /> Limpar filtros
           </button>
         </div>
       ) : (

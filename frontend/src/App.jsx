@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import Icon from './components/Icon';
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
@@ -184,7 +185,7 @@ function NotificationDropdown({ open, onClose }) {
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {notifications.length === 0 ? (
           <div style={{ padding: '40px 20px', textAlign: 'center' }}>
-            <div style={{ fontSize: '34px', marginBottom: '8px' }}>🔕</div>
+            <div style={{ marginBottom: '8px' }}><Icon name="bell-off" size={34} /></div>
             <div style={{ fontSize: '12px', color: 'var(--c-text-4)' }}>Nenhuma notificação no momento</div>
           </div>
         ) : notifications.map(n => {
@@ -373,7 +374,7 @@ function SearchBar() {
               onMouseEnter={e => e.currentTarget.style.background = 'var(--c-hover)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
             >
-              💬 <span>Perguntar à IA: <strong>"{search}"</strong></span>
+              <Icon name="chat" size={15} /> <span>Perguntar à IA: <strong>"{search}"</strong></span>
             </div>
           )}
         </div>

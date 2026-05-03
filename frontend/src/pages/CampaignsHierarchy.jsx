@@ -70,14 +70,14 @@ function MetaLinkButton({ campaignId, adsetId, adId, label = 'Abrir no Meta', si
 }
 function statusLabel(s) {
   const map = {
-    ACTIVE: { txt: 'Rodando', color: '#34D399' },
-    PAUSED: { txt: 'Pausado', color: '#8A8A8A' },
-    PENDING_REVIEW: { txt: 'Em análise', color: '#FBBF24' },
-    DISAPPROVED: { txt: 'Reprovado', color: '#F87171' },
-    WITH_ISSUES: { txt: 'Com avisos', color: '#FBBF24' },
-    CAMPAIGN_PAUSED: { txt: 'Campanha pausada', color: '#8A8A8A' },
-    ADSET_PAUSED: { txt: 'Conjunto pausado', color: '#8A8A8A' },
-    AD_PAUSED: { txt: 'Anúncio pausado', color: '#8A8A8A' },
+    ACTIVE: { txt: 'Rodando', color: 'var(--c-success)' },
+    PAUSED: { txt: 'Pausado', color: 'var(--c-warning)' },
+    PENDING_REVIEW: { txt: 'Em análise', color: 'var(--c-warning)' },
+    DISAPPROVED: { txt: 'Reprovado', color: 'var(--c-attention)' },
+    WITH_ISSUES: { txt: 'Com avisos', color: 'var(--c-warning)' },
+    CAMPAIGN_PAUSED: { txt: 'Campanha pausada', color: 'var(--c-warning)' },
+    ADSET_PAUSED: { txt: 'Conjunto pausado', color: 'var(--c-warning)' },
+    AD_PAUSED: { txt: 'Anúncio pausado', color: 'var(--c-warning)' },
   };
   return map[s] || { txt: s || '—', color: '#8A8A8A' };
 }

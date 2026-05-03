@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../contexts/AppStateContext';
 import SpyCompetitor from '../components/SpyCompetitor';
+import Icon from '../components/Icon';
 
 /**
  * CreativeLibrary — biblioteca de criativos (texto, título, imagem/vídeo).
@@ -105,8 +106,9 @@ function CreativeCard({ creative, onRemove, onCopy, onReuseQuick, onReuseAdjust 
             border: '1px solid rgba(193,53,132,.3)',
             borderRadius: '999px',
             alignSelf: 'flex-start',
+            display: 'inline-flex', alignItems: 'center', gap: '4px',
           }}>
-            🎯 {creative.headline}
+            <Icon name="target" size={12} /> {creative.headline}
           </div>
         )}
 
@@ -125,7 +127,7 @@ function CreativeCard({ creative, onRemove, onCopy, onReuseQuick, onReuseAdjust 
                 boxShadow: '0 6px 18px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)',
               }}
             >
-              🚀 Publicar rápido
+              <Icon name="rocket" size={14} /> Publicar rápido
             </button>
             <button
               onClick={() => onReuseAdjust(creative)}
@@ -138,7 +140,7 @@ function CreativeCard({ creative, onRemove, onCopy, onReuseQuick, onReuseAdjust 
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
               }}
             >
-              ✏️ Usar e ajustar
+              <Icon name="edit" size={14} /> Usar e ajustar
             </button>
           </div>
           <div style={{ display: 'flex', gap: '6px' }}>
@@ -321,8 +323,8 @@ export default function CreativeLibrary() {
         borderBottom: '1px solid var(--c-border)',
         marginBottom: '20px',
       }}>
-        <TabBtn active={tab === 'mine'} onClick={() => setTab('mine')}>🎨 Meus criativos</TabBtn>
-        <TabBtn active={tab === 'spy'} onClick={() => setTab('spy')}>🔍 Espionar concorrente</TabBtn>
+        <TabBtn active={tab === 'mine'} onClick={() => setTab('mine')}><Icon name="image" size={14} /> Meus criativos</TabBtn>
+        <TabBtn active={tab === 'spy'} onClick={() => setTab('spy')}><Icon name="search" size={14} /> Espionar concorrente</TabBtn>
       </div>
 
       {tab === 'spy' ? <SpyCompetitor /> : mode === 'edit' ? (
@@ -334,7 +336,7 @@ export default function CreativeLibrary() {
         <>
           {creatives.length === 0 ? (
             <div style={emptyState}>
-              <div style={{ fontSize: '40px', marginBottom: '10px' }}>🎨</div>
+              <div style={{ marginBottom: '10px' }}><Icon name="image" size={40} /></div>
               <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '6px' }}>
                 Nenhum criativo salvo
               </div>

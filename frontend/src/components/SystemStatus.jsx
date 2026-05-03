@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import Icon from './Icon';
 
 /**
  * Linha de status do sistema integrada na sidebar (acima do "Tema escuro").
@@ -15,10 +16,10 @@ import { Link } from 'react-router-dom';
 const POLL_INTERVAL_MS = 60_000;
 
 const STATUS_META = {
-  ok:      { color: 'var(--c-success)',   label: 'Sistema ok',      icon: '🟢' },
-  warn:    { color: 'var(--c-warning)',   label: 'Atenção',         icon: '🟡' },
-  error:   { color: 'var(--c-attention)', label: 'Precisa atenção', icon: '🔴' },
-  loading: { color: 'var(--c-text-4)',    label: 'Verificando…',    icon: '⚪' },
+  ok:      { color: 'var(--c-success)',   label: 'Sistema ok',      iconName: 'check-circle', iconColor: 'success'   },
+  warn:    { color: 'var(--c-warning)',   label: 'Atenção',         iconName: 'alert',        iconColor: 'warning'   },
+  error:   { color: 'var(--c-attention)', label: 'Precisa atenção', iconName: 'x-circle',     iconColor: 'attention' },
+  loading: { color: 'var(--c-text-4)',    label: 'Verificando…',    iconName: 'clock',        iconColor: 'currentColor' },
 };
 
 const StatusIcon = ({ color }) => (
@@ -147,15 +148,15 @@ export default function SystemStatus() {
 
           <div style={{ padding: '6px 0' }}>
             {state.items.length === 0 && state.overall === 'loading' && (
-              <div style={{ padding: '20px', textAlign: 'center', fontSize: '12px', color: 'var(--c-text-4)' }}>
-                🔎 Verificando integrações…
+              <div style={{ padding: '20px', textAlign: 'center', fontSize: '12px', color: 'var(--c-text-4)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                <Icon name="search" size={14} /> Verificando integrações…
               </div>
             )}
             {state.items.map(item => {
               const palette = STATUS_META[item.status] || STATUS_META.loading;
               return (
                 <div key={item.key} style={{ padding: '10px 14px', borderTop: '1px solid var(--c-border-lt)', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                  <span style={{ fontSize: '13px', marginTop: '1px' }}>{palette.icon}</span>
+                  <Icon name={palette.iconName} size={14} color={palette.iconColor} style={{ marginTop: '1px', flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '2px' }}>
                       {item.label}

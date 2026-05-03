@@ -20,8 +20,8 @@ const PLAT = {
 };
 
 const STATUS = {
-  active:  { label: 'Ativo',       dot: '#22C55E', bg: 'rgba(52,211,153,.16)', color: '#34D399' },
-  paused:  { label: 'Pausado',     dot: '#F97316', bg: 'rgba(251,191,36,.16)', color: '#FBBF24' },
+  active:  { label: 'Ativo',       dot: 'var(--c-success)', bg: 'rgba(46,187,122,.18)', color: 'var(--c-success)' },
+  paused:  { label: 'Pausado',     dot: 'var(--c-warning)', bg: 'rgba(245,166,35,.18)', color: 'var(--c-warning)' },
   review:  { label: 'Em revisão',  dot: '#8B5CF6', bg: 'rgba(139,92,246,.16)', color: '#A78BFA' },
   draft:   { label: 'Rascunho',    dot: '#94A3B8', bg: 'rgba(148,163,184,.16)', color: 'var(--c-text-3)' },
   ended:   { label: 'Inativo',     dot: '#94A3B8', bg: 'var(--c-surface)', color: 'var(--c-text-4)' },
@@ -46,10 +46,10 @@ const DELIVERY_STATUS = {
 
 /* ── Ícones ── */
 const PauseIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--c-warning)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
 );
 const PlayIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--c-success)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
 );
 const EditIcon = () => (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

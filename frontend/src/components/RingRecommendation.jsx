@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import Icon from './Icon';
 
 /**
  * RingRecommendation — sugere e aplica nova distribuição % de orçamento
@@ -195,7 +196,7 @@ export default function RingRecommendation({ rings, activeCampaigns, onApplied }
           fontSize: '14px', fontWeight: 700, color: 'var(--c-text-1)',
           marginBottom: '3px', display: 'flex', alignItems: 'center', gap: '6px',
         }}>
-          <span aria-hidden="true">💡</span> Sugestão de ajuste
+          <Icon name="lightbulb" size={16} color="info" /> Sugestão de ajuste
         </div>
         <div style={{ fontSize: '12px', color: 'var(--c-text-3)', lineHeight: 1.5 }}>
           {noChangeNeeded ? (

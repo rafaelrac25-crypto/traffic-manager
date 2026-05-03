@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
+import Icon from './Icon';
 
 /**
  * SpyCompetitor — análise de concorrente "Lite assistido".
@@ -194,7 +195,7 @@ export default function SpyCompetitor() {
             rel="noopener noreferrer"
             style={btnAccent}
           >
-            🔍 Abrir Ads Library do concorrente
+            <Icon name="search" size={14} /> Abrir Ads Library do concorrente
           </a>
           <span style={{ fontSize: '11px', color: 'var(--c-text-3)' }}>
             Tire prints dos anúncios e arraste aqui embaixo, ou copie o texto e cole no campo de texto.
@@ -271,7 +272,7 @@ export default function SpyCompetitor() {
           disabled={isAnalyzing || !name.trim() || items.length === 0}
           style={{ ...btnPrimary, opacity: isAnalyzing || !name.trim() || items.length === 0 ? 0.5 : 1 }}
         >
-          {isAnalyzing ? 'Analisando…' : '🤖 Analisar concorrente'}
+          {isAnalyzing ? 'Analisando…' : <><Icon name="bot" size={14} /> Analisar concorrente</>}
         </button>
         {(items.length > 0 || result) && !isAnalyzing && (
           <button onClick={reset} style={btnGhost}>Limpar</button>
@@ -349,7 +350,7 @@ function DropZone({ onDrop }) {
         textAlign: 'center',
       }}
     >
-      <div style={{ fontSize: '24px' }}>🖼️</div>
+      <Icon name="image" size={24} />
       <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--c-text-1)' }}>
         Arraste imagens aqui ou clique para selecionar
       </div>

@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../contexts/AppStateContext';
 import { getRejectionInfo } from '../data/rejectionRules';
+import Icon from '../components/Icon';
 
 function SuggestionBox({ reason }) {
   const { hint } = getRejectionInfo(reason);
@@ -13,8 +14,8 @@ function SuggestionBox({ reason }) {
       border: '1px solid rgba(52,211,153,.3)',
       borderRadius: '10px',
     }}>
-      <div style={{ fontSize: '11px', fontWeight: 500, color: '#34D399', marginBottom: '4px', letterSpacing: '.5px' }}>
-        💡 COMO CORRIGIR
+      <div style={{ fontSize: '11px', fontWeight: 500, color: '#34D399', marginBottom: '4px', letterSpacing: '.5px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+        <Icon name="lightbulb" size={13} color="success" /> COMO CORRIGIR
       </div>
       <p style={{ fontSize: '12px', color: 'var(--c-text-2)', margin: 0, lineHeight: 1.6, fontWeight: 400 }}>
         {hint}
@@ -76,8 +77,8 @@ function RejectedCard({ ad, onRemove, onEdit }) {
          enviados quando Meta retorna erro sem error_user_msg específico */}
       {(ad.stage || ad.sentParams) && (
         <details style={{ marginTop: '10px', fontSize: '11.5px' }}>
-          <summary style={{ cursor: 'pointer', color: 'var(--c-text-3)', fontWeight: 500 }}>
-            🔧 Diagnóstico técnico (pro dev)
+          <summary style={{ cursor: 'pointer', color: 'var(--c-text-3)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Icon name="settings" size={13} /> Diagnóstico técnico (pro dev)
           </summary>
           <div style={{ marginTop: '8px', padding: '10px 12px', background: 'var(--c-surface)', border: '1px solid var(--c-border)', borderRadius: '10px', fontFamily: 'monospace', fontSize: '11px', color: 'var(--c-text-3)' }}>
             {ad.stage && <div><strong>Etapa:</strong> {ad.stage}</div>}
@@ -208,7 +209,7 @@ export default function Rejected() {
         <div className="ccb-card" style={{
           borderRadius: '18px', padding: '60px 30px', textAlign: 'center',
         }}>
-          <div style={{ fontSize: '44px', marginBottom: '12px' }}>✅</div>
+          <div style={{ marginBottom: '12px' }}><Icon name="check-circle" size={44} color="success" /></div>
           <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '6px' }}>
             Nenhum anúncio reprovado
           </h3>

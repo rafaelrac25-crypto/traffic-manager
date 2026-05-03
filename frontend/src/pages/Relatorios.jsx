@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
+import Icon from '../components/Icon';
 
 /* ── Mapa de "kind" técnico → contexto leigo ──
    Por trás roda routine de cron / one-shot / monitoramento. Pra Cris/Rafa,
@@ -326,7 +327,7 @@ export default function Relatorios() {
           color: 'var(--c-text-1)', margin: 0,
           display: 'flex', alignItems: 'center', gap: '10px',
         }}>
-          📋 Relatórios
+          <Icon name="clipboard" size={22} /> Relatórios
           {unreadCount > 0 && (
             <span style={{
               fontSize: '11px', fontWeight: 700,
@@ -360,7 +361,7 @@ export default function Relatorios() {
           fontSize: '12px', color: 'var(--c-text-3)', fontWeight: 400,
           marginRight: '4px',
         }}>
-          ⚡ Gerar relatório agora:
+          <Icon name="sparkles" size={14} color="warning" /> Gerar relatório agora:
         </div>
         {(filter === 'all' || filter === 'campaign') && (
           <RefreshButton kind="campaign" label="Sua campanha" color={KINDS.campaign.color} />
@@ -449,8 +450,9 @@ export default function Relatorios() {
           padding: '16px 18px', borderRadius: '12px',
           background: '#FEE2E2', border: '1px solid #FCA5A5',
           color: '#991B1B', fontSize: '13px',
+          display: 'flex', alignItems: 'center', gap: '8px',
         }}>
-          ⚠️ {error}
+          <Icon name="alert" size={16} color="danger" /> {error}
         </div>
       )}
 
@@ -459,7 +461,7 @@ export default function Relatorios() {
           padding: '48px 24px', textAlign: 'center',
           borderRadius: '18px',
         }}>
-          <div style={{ fontSize: '40px', marginBottom: '10px' }}>📭</div>
+          <div style={{ marginBottom: '10px' }}><Icon name="bell-off" size={40} /></div>
           <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-2)', marginBottom: '4px' }}>
             Nenhum relatório por aqui ainda
           </div>

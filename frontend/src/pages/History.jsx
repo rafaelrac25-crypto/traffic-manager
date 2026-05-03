@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useAppState } from '../contexts/AppStateContext';
+import Icon from '../components/Icon';
 
 const TYPE_META = {
   'commercial-dismissed': { icon: '📅', label: 'Data dispensada', color: '#A78BFA' },
@@ -289,7 +290,7 @@ export default function History() {
             padding: '60px 20px', textAlign: 'center',
             color: 'var(--c-text-4)', fontSize: '13px',
           }}>
-            <div style={{ fontSize: '32px', marginBottom: '8px', opacity: 0.5 }}>📭</div>
+            <div style={{ marginBottom: '8px', opacity: 0.5 }}><Icon name="bell-off" size={32} /></div>
             Nenhuma ação registrada.
           </div>
         ) : (
