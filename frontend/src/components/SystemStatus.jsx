@@ -91,18 +91,19 @@ export default function SystemStatus() {
           onMouseEnter={e => { if (!open) e.currentTarget.style.background = 'var(--c-hover)'; }}
           onMouseLeave={e => { if (!open) e.currentTarget.style.background = 'transparent'; }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '9px', color: 'var(--c-text-3)' }}>
-            <StatusIcon color={s.color} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--c-text-3)' }}>
+            {/* Bolinha tipo sinaleira (única — substitui ícone alvo + bolinha da direita) */}
+            <span style={{
+              width: '10px', height: '10px', borderRadius: '50%',
+              background: s.color,
+              flexShrink: 0,
+              boxShadow: `0 0 0 3px ${s.color}22, 0 0 8px ${s.color}66`,
+              display: 'inline-block',
+            }} />
             <span style={{ fontSize: '12px', fontWeight: 500 }}>
               Status do sistema
             </span>
           </div>
-          <div style={{
-            width: '8px', height: '8px', borderRadius: '50%',
-            background: s.color,
-            flexShrink: 0,
-            boxShadow: `0 0 0 3px ${s.color}22`,
-          }} />
         </div>
       </div>
 

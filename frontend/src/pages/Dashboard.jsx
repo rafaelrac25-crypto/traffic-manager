@@ -709,6 +709,91 @@ function MiniCalendar({ onViewFull, onPickCommercialDate }) {
 
 /* ── Card de métrica (compacto — visão geral) ── */
 function MetricCard({ label, value, trend, trendUp, sub, icon, iconBg, iconColor, hint }) {
+  const { isDark } = useTheme();
+
+  /* Dark mode: layout estilo ExecMetricCard (mockup) — ícone top-right
+     absoluto, label uppercase letter-spacing 1.2px peso 500, valor 28px
+     tnum, delta como pill semântico. Light mode: layout horizontal compacto
+     original (intacto). */
+  if (isDark) {
+    return (
+      <div className="ccb-card" style={{
+        borderRadius: '14px',
+        padding: '14px 18px',
+        position: 'relative',
+        overflow: 'hidden',
+        cursor: 'default',
+        minHeight: '92px',
+      }}>
+        {/* Ícone top-right rosa-soft */}
+        <div style={{
+          position: 'absolute', top: '14px', right: '14px',
+          width: '34px', height: '34px', borderRadius: '10px',
+          background: 'var(--c-accent-soft)',
+          color: 'var(--c-accent)',
+          border: '1px solid rgba(193,53,132,.3)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          {React.cloneElement(icon, { width: 16, height: 16 })}
+        </div>
+
+        {/* Label uppercase + hint */}
+        <div style={{
+          fontSize: '11px', color: 'var(--c-text-3)',
+          textTransform: 'uppercase', letterSpacing: '1.2px', fontWeight: 500,
+          display: 'flex', alignItems: 'center', gap: '5px',
+          paddingRight: '46px', /* não sobreposto pelo ícone */
+        }}>
+          {label}
+          {hint && (
+            <span title={hint} style={{
+              cursor: 'help',
+              width: '13px', height: '13px',
+              borderRadius: '50%',
+              border: '1px solid var(--c-text-4)',
+              color: 'var(--c-text-4)',
+              fontSize: '9px', fontWeight: 700,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              lineHeight: 1, opacity: 0.7,
+            }}>?</span>
+          )}
+        </div>
+
+        {/* Valor 28px tnum */}
+        <div style={{
+          fontSize: '28px', fontWeight: 800,
+          color: 'var(--c-text-1)', letterSpacing: '-0.02em',
+          fontFeatureSettings: "'tnum'",
+          marginTop: '8px', lineHeight: 1.05,
+        }}>
+          {value}
+        </div>
+
+        {/* Delta pill + sub */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '6px' }}>
+          {trend && (
+            <span style={{
+              fontSize: '11px', fontWeight: 700,
+              padding: '2px 8px', borderRadius: '999px',
+              background: trendUp ? 'rgba(52,211,153,.16)' : 'rgba(248,113,113,.16)',
+              border: `1px solid ${trendUp ? 'rgba(52,211,153,.3)' : 'rgba(248,113,113,.3)'}`,
+              color: trendUp ? '#34D399' : '#F87171',
+              display: 'inline-flex', alignItems: 'center', gap: '3px',
+            }}>
+              {trendUp ? '▲' : '▼'} {trend}
+            </span>
+          )}
+          {sub && (
+            <span style={{ fontSize: '11px', color: 'var(--c-text-3)', fontWeight: 400 }}>
+              {sub}
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  /* Light mode — visual original (intocado) */
   return (
     <div className="ccb-card" style={{
       background: 'var(--c-card-bg)',
@@ -1550,6 +1635,7 @@ function CampaignMetricsBlock({ campaigns, selectedId, onSelect, onCreate, onOpe
    todas estabilizam. Avisa o Rafa pra não mexer no orçamento (>20% reseta o
    algoritmo). Bate com a regra documentada em CRITICAL_STATE.md. */
 function LearningPhaseCard({ campaigns }) {
+  const { isDark } = useTheme();
   const learning = useMemo(() => {
     return campaigns
       .filter(c => c.status === 'active')
@@ -1579,6 +1665,33 @@ function LearningPhaseCard({ campaigns }) {
   const ageD = Math.floor(ageH / 24);
   const ageHRest = ageH % 24;
   const ageLabel = ageD > 0 ? `${ageD}d ${ageHRest}h` : `${ageH}h`;
+
+  /* Dark: discreto/glass com border-left amarelo. Light: card amarelo gradient (intacto). */
+  if (isDark) {
+    return (
+      <div className="ccb-card" style={{
+        borderRadius: '12px',
+        borderLeft: '3px solid #FBBF24',
+        padding: '12px 16px',
+        marginBottom: '14px',
+        display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap',
+      }}>
+        <div style={{ fontSize: '20px', flexShrink: 0, opacity: .9 }}>⏳</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '2px' }}>
+            {learning.length === 1
+              ? `Campanha em fase de aprendizado — ${ageLabel} de 7d`
+              : `${learning.length} campanhas em fase de aprendizado`}
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--c-text-3)', fontWeight: 400, lineHeight: 1.4 }}>
+            {learning.length === 1
+              ? <>Estabiliza em <strong style={{ color: '#FBBF24', fontWeight: 700 }}>{remLabel}</strong>. Não mexer no orçamento até lá — alterações &gt;20% resetam o algoritmo do Meta.</>
+              : <>A mais nova estabiliza em <strong style={{ color: '#FBBF24', fontWeight: 700 }}>{remLabel}</strong>. Não mexer nos orçamentos até lá.</>}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="ccb-card" style={{
@@ -2170,39 +2283,9 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ── Resumo executivo (apenas dark) ──
-         Reproduz o mockup `.design/mockups/dashboard.html`:
-         4 métricas + gráfico de barras + próximas datas + tabela de anúncios.
-         Light mode permanece com o cabeçalho original logo acima. */}
-      {isDark && (
-        <ResumoExecutivo
-          liveCampaigns={liveCampaigns}
-          metaBilling={metaBilling}
-          onSeeAllAds={() => navigate('/anuncios')}
-        />
-      )}
-
-      {/* ── Subtítulo "Detalhes operacionais" — separa o resumo do bloco
-         legado (LearningPhase, CampaignMetrics, RingPerformance). Só dark. */}
-      {isDark && (
-        <div style={{
-          borderTop: '1px solid var(--c-border)',
-          paddingTop: '24px',
-          marginTop: '8px',
-          marginBottom: '4px',
-        }}>
-          <h2 style={{
-            fontSize: '14px',
-            fontWeight: 700,
-            color: 'var(--c-text-3)',
-            textTransform: 'uppercase',
-            letterSpacing: '1.2px',
-            margin: 0,
-          }}>
-            Detalhes operacionais
-          </h2>
-        </div>
-      )}
+      {/* Onda 6.1: ResumoExecutivo removido — Dashboard começa direto pelos
+         "detalhes operacionais". Definições de Exec* permanecem no arquivo
+         como código morto reutilizável caso queira voltar. */}
 
       {/* ── Aviso de fase de aprendizado (some sozinho quando não há campanha <7d) ── */}
       <LearningPhaseCard campaigns={liveCampaigns} />

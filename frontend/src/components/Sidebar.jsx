@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import SystemStatus from './SystemStatus';
@@ -8,18 +8,18 @@ import marcaColorida from '../assets/marca-colorida.png';
 
 /* ── Ícones SVG ── */
 const IconDashboard = ({ active }) => (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--c-accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
     <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
   </svg>
 );
 const IconAds = ({ active }) => (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--c-accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
   </svg>
 );
 const IconHierarchy = ({ active }) => (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--c-accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="3" width="6" height="6" rx="1"/>
     <rect x="15" y="3" width="6" height="6" rx="1"/>
     <rect x="9" y="15" width="6" height="6" rx="1"/>
@@ -27,28 +27,28 @@ const IconHierarchy = ({ active }) => (
   </svg>
 );
 const IconCalendar = ({ active }) => (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--c-accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
   </svg>
 );
 const IconCreate = ({ active }) => (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--c-accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
   </svg>
 );
 const IconRejected = ({ active }) => (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--c-accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
   </svg>
 );
 const IconInvestment = ({ active }) => (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--c-accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
   </svg>
 );
 const IconAudiences = ({ active }) => (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--c-accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
     <circle cx="9" cy="7" r="4"/>
     <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
@@ -56,20 +56,20 @@ const IconAudiences = ({ active }) => (
   </svg>
 );
 const IconCreatives = ({ active }) => (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--c-accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="3" width="18" height="18" rx="2"/>
     <circle cx="8.5" cy="8.5" r="1.5"/>
     <polyline points="21 15 16 10 5 21"/>
   </svg>
 );
 const IconHistory = ({ active }) => (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--c-accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><polyline points="3 3 3 8 8 8"/>
     <line x1="12" y1="7" x2="12" y2="12"/><line x1="12" y1="12" x2="15" y2="14"/>
   </svg>
 );
 const IconReports = ({ active }) => (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--c-accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
   </svg>
 );
@@ -106,7 +106,7 @@ const PRIMARY_NAV = [
 
 const NAV = [
   { to: '/anuncios',      label: 'Anúncios',      Icon: IconAds },
-  { to: '/campanhas-v2',  label: 'Visão Meta',    Icon: IconHierarchy, badge: 'NOVO' },
+  { to: '/campanhas-v2',  label: 'Visão Meta',    Icon: IconHierarchy },
   { to: '/relatorios',    label: 'Relatórios',    Icon: IconReports, badgeKey: 'unreadReportsCount' },
   { to: '/reprovados',    label: 'Reprovados',    Icon: IconRejected, badgeKey: 'rejectedCount' },
   { to: '/calendario',    label: 'Calendário',    Icon: IconCalendar },
@@ -123,6 +123,9 @@ export default function Sidebar({ open = false, isMobile = false }) {
   const navigate             = useNavigate();
   const location             = useLocation();
   const { isDark, toggle }   = useTheme();
+  /* Estado collapsible dos grupos da nav (Biblioteca etc). Por default,
+     grupo abre se algum item dele estiver ativo (não esconde rota atual). */
+  const [groupsOpen, setGroupsOpen] = useState({});
   const { rejectedCount, metaAccount, syncStatus, unreadReportsCount = 0 } = useAppState();
 
   const syncInfo = (() => {
@@ -210,17 +213,17 @@ export default function Sidebar({ open = false, isMobile = false }) {
                   fontSize: '13px', fontWeight: 700,
                   letterSpacing: darkCreate ? '.2px' : '-0.1px',
                   transition: 'transform .15s var(--ease-out-soft), box-shadow .15s var(--ease-out-soft), background .2s ease, border-color .2s ease',
-                  background: darkCreate
+                  background: darkCreate && active
                     ? 'rgba(193,53,132,.10)'
-                    : darkDashboard
-                      ? (active ? 'var(--c-active-bg)' : 'transparent')
-                      : (active ? 'var(--c-active-bg)' : 'transparent'),
-                  color: 'var(--c-accent)',
-                  border: darkCreate
-                    ? '1.5px solid rgba(193,53,132,.65)'
-                    : darkDashboard
-                      ? '1.5px solid transparent'
-                      : '1.5px solid var(--c-accent)',
+                    : (active ? 'var(--c-active-bg)' : 'transparent'),
+                  color: active ? 'var(--c-accent)' : 'var(--c-text-3)',
+                  /* Stroke rosa só quando ATIVO. Inativo = sem borda visível
+                     (igual aos demais itens de nav). Aplica em ambos modos. */
+                  border: active
+                    ? (darkCreate
+                        ? '1.5px solid rgba(193,53,132,.65)'
+                        : '1.5px solid var(--c-accent)')
+                    : '1.5px solid transparent',
                   boxShadow: darkCreate
                     ? '0 0 22px rgba(193,53,132,.18), inset 0 0 14px rgba(193,53,132,.08)'
                     : 'none',
@@ -273,12 +276,14 @@ export default function Sidebar({ open = false, isMobile = false }) {
         {NAV.map((entry, idx) => {
           if (entry.kind === 'group') {
             const anyActive = entry.items.some(it => isActive(it.to));
+            const explicit = groupsOpen[entry.label];
+            const isOpen = explicit === undefined ? anyActive : explicit;
             return (
               <div
                 key={`group-${idx}`}
                 style={{
                   margin: '10px 4px 10px',
-                  padding: '10px 8px 8px',
+                  padding: isOpen ? '10px 8px 8px' : '10px 8px',
                   borderRadius: '12px',
                   background: anyActive ? 'var(--c-active-bg)' : 'var(--c-surface)',
                   border: `1px solid ${anyActive ? 'var(--c-accent)' : 'var(--c-border-lt)'}`,
@@ -286,20 +291,26 @@ export default function Sidebar({ open = false, isMobile = false }) {
                 }}
               >
                 <div
+                  onClick={() => setGroupsOpen(s => ({ ...s, [entry.label]: !isOpen }))}
                   title={entry.description}
                   style={{
                     fontSize: '10px', fontWeight: 700, letterSpacing: '.8px',
                     textTransform: 'uppercase',
                     color: anyActive ? 'var(--c-accent)' : 'var(--c-text-4)',
-                    padding: '0 8px 6px', display: 'flex', alignItems: 'center', gap: '6px',
+                    padding: isOpen ? '0 8px 6px' : '0 8px',
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    cursor: 'pointer', userSelect: 'none',
                   }}
                 >
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
                   </svg>
-                  {entry.label}
+                  <span style={{ flex: 1 }}>{entry.label}</span>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform .2s' }}>
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
                 </div>
-                {entry.items.map(({ to, label, Icon }) => {
+                {isOpen && entry.items.map(({ to, label, Icon }) => {
                   const active = isActive(to);
                   return (
                     <div
@@ -363,7 +374,13 @@ export default function Sidebar({ open = false, isMobile = false }) {
                   borderRadius: '0 3px 3px 0',
                 }} />
               )}
-              <Icon active={active} />
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                transform: active ? 'scale(1.15)' : 'scale(1)',
+                transition: 'transform .38s cubic-bezier(.34, 1.56, .64, 1)',
+              }}>
+                <Icon active={active} />
+              </span>
               <span style={{ flex: 1 }}>{label}</span>
               {badgeText && (
                 <span style={{
