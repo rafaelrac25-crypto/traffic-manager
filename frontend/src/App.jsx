@@ -332,11 +332,12 @@ function SearchBar() {
         display: 'flex', alignItems: 'center', gap: '8px',
         background: 'var(--c-surface)', border: '1.5px solid var(--c-border)',
         borderRadius: '10px', padding: '8px 14px',
-        width: '100%', maxWidth: '420px',
+        width: '100%', maxWidth: '840px',
       }}>
         <span style={{ color: 'var(--c-text-4)', display: 'flex' }}><SearchIcon /></span>
         <input
           type="text"
+          className="topbar-search-input"
           placeholder="Buscar páginas, ajuda ou perguntar à IA..."
           value={search}
           onChange={e => { setSearch(e.target.value); setShowDrop(true); }}
@@ -352,7 +353,7 @@ function SearchBar() {
         <div style={{
           position: 'absolute', top: 'calc(100% + 6px)',
           left: '50%', transform: 'translateX(-50%)',
-          width: '100%', maxWidth: '420px',
+          width: '100%', maxWidth: '840px',
           background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',
           borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,.12)',
           zIndex: 1000, overflow: 'hidden',
@@ -444,24 +445,19 @@ function Layout() {
         style={(isDark && !isMobile) ? { marginLeft: '252px' } : undefined}
       >
 
-        <div className={isDark ? 'topbar-grid' : ''} style={{
-          background: isDark ? 'transparent' : 'var(--c-topbar-bg)',
-          borderBottom: isDark ? 'none' : '1px solid var(--c-border)',
-          padding: isDark ? undefined : '0 24px',
-          height: isDark ? undefined : '60px',
-          display: isDark ? undefined : 'flex',
-          alignItems: 'center',
-          gap: '16px',
+        <div className="topbar-grid" style={{
+          background: 'transparent',
+          borderBottom: 'none',
           position: 'sticky',
           top: 0,
           zIndex: 50,
-          transition: 'background .25s ease, border-color .25s ease, height .25s ease',
+          transition: 'background .25s ease, border-color .25s ease',
           backdropFilter: 'none',
           WebkitBackdropFilter: 'none',
         }}>
 
-          {/* Bloco esquerda: hamburger (mobile) + greeting (dark) */}
-          <div className={isDark ? 'topbar-left' : undefined} style={!isDark ? { display: 'flex', alignItems: 'center', gap: '12px' } : undefined}>
+          {/* Bloco esquerda: hamburger (mobile) + greeting */}
+          <div className="topbar-left">
             {isMobile && (
               <button
                 className="hamburger-btn"
@@ -471,23 +467,21 @@ function Layout() {
                 <HamburgerIcon />
               </button>
             )}
-            {isDark && (
-              <div className="topbar-greeting">
-                <span className="hi">
-                  {greeting()}, Cris
-                  <span className="tag">PRO</span>
-                </span>
-                <span className="sub">
-                  Resumo das suas campanhas Meta · {dateLabel()}
-                </span>
-              </div>
-            )}
+            <div className="topbar-greeting">
+              <span className="hi">
+                {greeting()}, Cris
+                <span className="tag">PRO</span>
+              </span>
+              <span className="sub">
+                Resumo das suas campanhas Meta · {dateLabel()}
+              </span>
+            </div>
           </div>
 
           <SearchBar />
 
           {/* Bloco direita: theme + sino */}
-          <div className={isDark ? 'topbar-actions' : undefined} style={!isDark ? { display: 'flex', alignItems: 'center', gap: '10px' } : undefined}>
+          <div className="topbar-actions">
             <ThemeToggleButton />
 
             {/* Sino de notificações */}
