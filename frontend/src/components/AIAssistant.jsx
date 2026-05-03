@@ -162,8 +162,15 @@ export default function AIAssistant() {
       {/* Animações do botão flutuante (flutuar + piscar olhos + balão de fala) */}
       <style>{`
         @keyframes aiBubbleFloat {
-          0%, 100% { transform: translateY(0); }
-          50%      { transform: translateY(-5px); }
+          0%   { transform: translateY(0)     rotate(0deg); }
+          25%  { transform: translateY(-9px)  rotate(-3deg); }
+          50%  { transform: translateY(-12px) rotate(0deg); }
+          75%  { transform: translateY(-9px)  rotate(3deg); }
+          100% { transform: translateY(0)     rotate(0deg); }
+        }
+        @keyframes aiGlowPulse {
+          0%, 100% { box-shadow: 0 4px 16px rgba(193,53,132,.4); }
+          50%      { box-shadow: 0 10px 30px rgba(193,53,132,.75), 0 0 28px rgba(193,53,132,.5); }
         }
         @keyframes aiBlink {
           0%, 92%, 100% { transform: scaleY(1); }
@@ -174,7 +181,9 @@ export default function AIAssistant() {
           100% { opacity: 1; transform: translateY(0)   scale(1);    }
         }
         .ai-bubble-float:not(.ai-bubble-open) {
-          animation: aiBubbleFloat 3.5s ease-in-out infinite;
+          animation:
+            aiBubbleFloat 2.6s ease-in-out infinite,
+            aiGlowPulse   2.6s ease-in-out infinite;
         }
         .ai-eye {
           animation: aiBlink 4.5s ease-in-out infinite;
