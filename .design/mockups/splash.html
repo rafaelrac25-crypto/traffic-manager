@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Mockup · SplashScreen · AdManager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --c-accent:        #C13584;
+    --c-accent-2:      #7D4A5E;
+    --c-accent-glow:   rgba(193,53,132,.6);
+    --c-page-bg:       #06080B;
+    --c-text-1:        #F2F2F2;
+    --c-text-3:        #8A8A8A;
+    --ease:            cubic-bezier(.22,1,.36,1);
+  }
+  *,*::before,*::after { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--c-page-bg);
+    color: var(--c-text-1);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Mockup banner */
+  .mockup-banner {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+    background: rgba(193,53,132,.92);
+    color: #fff; text-align: center; font-size: 11px; font-weight: 700;
+    letter-spacing: 1.4px; text-transform: uppercase; padding: 6px;
+  }
+  .replay {
+    position: fixed; bottom: 18px; right: 18px; z-index: 10000;
+    padding: 9px 14px; border-radius: 999px;
+    background: rgba(255,255,255,.08); color: #fff;
+    border: 1px solid rgba(255,255,255,.18);
+    font-family: inherit; font-size: 12px; font-weight: 600;
+    cursor: pointer; backdrop-filter: blur(10px);
+  }
+  .replay:hover { background: rgba(255,255,255,.16); }
+
+  .splash {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    overflow: hidden;
+    background: var(--c-page-bg);
+  }
+
+  /* Background tech grid sutil */
+  .splash::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse 80% 70% at center, rgba(0,0,0,.7), transparent 70%);
+    -webkit-mask-image: radial-gradient(ellipse 80% 70% at center, rgba(0,0,0,.7), transparent 70%);
+    z-index: 0;
+  }
+
+  /* Blobs animados */
+  .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    z-index: 0;
+    opacity: .6;
+  }
+  .blob.b1 {
+    width: 520px; height: 520px;
+    background: var(--c-accent-glow);
+    top: -120px; left: -100px;
+    animation: floatA 14s var(--ease) infinite alternate;
+  }
+  .blob.b2 {
+    width: 440px; height: 440px;
+    background: rgba(125,74,94,.6);
+    bottom: -120px; right: -100px;
+    animation: floatB 16s var(--ease) infinite alternate;
+  }
+  .blob.b3 {
+    width: 320px; height: 320px;
+    background: rgba(96,165,250,.3);
+    top: 50%; left: 50%; transform: translate(-50%,-50%);
+    animation: floatC 18s var(--ease) infinite alternate;
+    opacity: .35;
+  }
+  @keyframes floatA { 0%{transform:translate(0,0) scale(1);} 100%{transform:translate(80px,60px) scale(1.15);} }
+  @keyframes floatB { 0%{transform:translate(0,0) scale(1);} 100%{transform:translate(-90px,-60px) scale(1.12);} }
+  @keyframes floatC { 0%{transform:translate(-50%,-50%) scale(1);} 100%{transform:translate(-30%,-70%) scale(1.2);} }
+
+  /* Pontilhado decorativo orbitando */
+  .deco-ring {
+    position: absolute;
+    width: 540px; height: 540px;
+    border-radius: 50%;
+    border: 1px dashed rgba(193,53,132,.28);
+    top: 50%; left: 50%; transform: translate(-50%,-50%);
+    animation: spin 36s linear infinite;
+    z-index: 0;
+  }
+  .deco-ring.outer {
+    width: 720px; height: 720px;
+    border-color: rgba(255,255,255,.05);
+    animation-duration: 60s;
+    animation-direction: reverse;
+  }
+  @keyframes spin { to { transform: translate(-50%,-50%) rotate(360deg); } }
+
+  /* Orbita de pontinhos */
+  .orbit-dot {
+    position: absolute;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--c-accent);
+    box-shadow: 0 0 10px var(--c-accent), 0 0 20px var(--c-accent-glow);
+    top: 50%; left: 50%;
+  }
+  .orbit-dot.o1 { transform: translate(-50%,-50%) translateX(270px); animation: spin 12s linear infinite; transform-origin: 0 0; }
+  .orbit-dot.o2 { background: #60A5FA; box-shadow: 0 0 8px #60A5FA; transform: translate(-50%,-50%) translateX(360px); animation: spin 22s linear infinite reverse; transform-origin: 0 0; }
+
+  /* Conteúdo central */
+  .stage {
+    position: relative; z-index: 2;
+    display: flex; align-items: center; gap: 22px;
+    max-width: 88vw;
+    animation: stageIn 1s var(--ease) forwards;
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  @keyframes stageIn { to { opacity: 1; transform: translateY(0); } }
+
+  .logo-wrap {
+    position: relative;
+    display: grid; place-items: center;
+    padding: 8px 14px;
+  }
+  .logo-wrap::before {
+    content: '';
+    position: absolute; inset: -16px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--c-accent-glow) 0%, transparent 70%);
+    filter: blur(20px); opacity: .65;
+    z-index: -1;
+  }
+  .logo {
+    height: clamp(46px, 9vw, 70px);
+    width: auto;
+    filter: drop-shadow(0 6px 24px rgba(193,53,132,.45));
+  }
+
+  .divider {
+    width: 1px; height: 50px;
+    background: linear-gradient(180deg, transparent, var(--c-accent), transparent);
+    box-shadow: 0 0 8px var(--c-accent-glow);
+  }
+
+  .tagline { display: flex; flex-direction: column; gap: 4px; }
+  .tagline span {
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 3px; text-transform: uppercase;
+    color: var(--c-accent);
+    line-height: 1;
+    text-shadow: 0 0 14px var(--c-accent-glow);
+  }
+  .tagline span:last-child {
+    color: rgba(255,255,255,.92);
+    text-shadow: none;
+  }
+
+  /* Barra de progresso */
+  .progress {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    height: 3px;
+    background: rgba(193,53,132,.12);
+    z-index: 3;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, transparent, var(--c-accent), #fff, var(--c-accent), transparent);
+    width: 0%;
+    box-shadow: 0 0 14px var(--c-accent-glow);
+    animation: progress 2.4s linear forwards;
+  }
+  @keyframes progress { to { width: 100%; } }
+
+  /* Pontos pulsantes */
+  .dots {
+    position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 7px; z-index: 3;
+    opacity: 0;
+    animation: fadeIn .4s .9s ease forwards;
+  }
+  .dots span {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--c-accent);
+    box-shadow: 0 0 10px var(--c-accent-glow);
+    animation: pulseDot 1.4s ease-in-out infinite;
+  }
+  .dots span:nth-child(2) { animation-delay: .2s; }
+  .dots span:nth-child(3) { animation-delay: .4s; }
+  @keyframes pulseDot {
+    0%, 100% { transform: scale(1);  opacity: .55; }
+    50%      { transform: scale(1.4); opacity: 1; }
+  }
+  @keyframes fadeIn { to { opacity: 1; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .blob, .deco-ring, .orbit-dot { animation: none; }
+  }
+  @media (max-width: 768px) {
+    .blob.b1, .blob.b2 { filter: blur(60px); }
+    .blob.b3 { display: none; }
+    .deco-ring.outer { display: none; }
+    .stage { gap: 14px; }
+    .divider { height: 38px; }
+    .tagline span { font-size: 10px; letter-spacing: 2.5px; }
+  }
+  @media (max-width: 480px) {
+    .deco-ring { width: 380px; height: 380px; }
+    .orbit-dot.o1 { transform: translate(-50%,-50%) translateX(170px); }
+    .orbit-dot.o2 { transform: translate(-50%,-50%) translateX(250px); }
+  }
+</style>
+</head>
+<body>
+<div class="mockup-banner">⚠ MOCKUP — não é o sistema real · pra aprovação visual</div>
+
+<div class="splash" id="splash">
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+  <div class="blob b3"></div>
+  <div class="deco-ring outer"></div>
+  <div class="deco-ring"></div>
+  <div class="orbit-dot o1"></div>
+  <div class="orbit-dot o2"></div>
+
+  <div class="stage">
+    <div class="logo-wrap">
+      <img src="marca-branca.png" alt="Cris Costa Beauty" class="logo" />
+    </div>
+    <div class="divider"></div>
+    <div class="tagline">
+      <span>Gestor de</span>
+      <span>Tráfego</span>
+    </div>
+  </div>
+
+  <div class="progress"><div class="progress-fill"></div></div>
+  <div class="dots"><span></span><span></span><span></span></div>
+</div>
+
+<button class="replay" onclick="replay()">↻ Repetir animação</button>
+
+<script>
+  function replay() {
+    const splash = document.getElementById('splash');
+    const clone = splash.cloneNode(true);
+    splash.replaceWith(clone);
+  }
+</script>
+</body>
+</html>

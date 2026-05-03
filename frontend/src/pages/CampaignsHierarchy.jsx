@@ -15,9 +15,9 @@ import { useAppState } from '../contexts/AppStateContext';
    - Vermelho ⚠ "Reseta aprendizado do conjunto"
    ============================================================ */
 
-const COLOR_SAFE   = { bg: '#F0FDF4', border: '#86EFAC', text: '#15803D', icon: '✓' };
-const COLOR_RESET  = { bg: '#FEF2F2', border: '#FCA5A5', text: '#B91C1C', icon: '⚠' };
-const COLOR_INFO   = { bg: '#EFF6FF', border: '#93C5FD', text: '#1D4ED8', icon: 'ℹ' };
+const COLOR_SAFE   = { bg: 'rgba(52,211,153,.12)',  border: 'rgba(52,211,153,.35)',  text: '#34D399', icon: '✓' };
+const COLOR_RESET  = { bg: 'rgba(248,113,113,.12)', border: 'rgba(248,113,113,.35)', text: '#F87171', icon: '⚠' };
+const COLOR_INFO   = { bg: 'rgba(96,165,250,.12)',  border: 'rgba(96,165,250,.35)',  text: '#60A5FA', icon: 'ℹ' };
 
 function fmtBRL(n) {
   if (n == null) return '—';
@@ -39,9 +39,9 @@ function MetaLinkButton({ campaignId, adsetId, adId, label = 'Abrir no Meta', si
   const FS = size === 'lg' ? '12px' : '11px';
   const PAD = size === 'lg' ? '7px 12px' : '5px 9px';
   const styles = variant === 'solid' ? {
-    background: '#1877F2', color: '#fff', border: 'none',
+    background: '#3B82F6', color: '#fff', border: 'none',
   } : {
-    background: 'transparent', color: '#1877F2', border: '1px solid #1877F2',
+    background: 'rgba(96,165,250,.12)', color: '#60A5FA', border: '1px solid rgba(96,165,250,.4)',
   };
   return (
     <a
@@ -69,16 +69,16 @@ function MetaLinkButton({ campaignId, adsetId, adId, label = 'Abrir no Meta', si
 }
 function statusLabel(s) {
   const map = {
-    ACTIVE: { txt: 'Rodando', color: '#22C55E' },
-    PAUSED: { txt: 'Pausado', color: '#9CA3AF' },
-    PENDING_REVIEW: { txt: 'Em análise', color: '#F59E0B' },
-    DISAPPROVED: { txt: 'Reprovado', color: '#EF4444' },
-    WITH_ISSUES: { txt: 'Com avisos', color: '#F59E0B' },
-    CAMPAIGN_PAUSED: { txt: 'Campanha pausada', color: '#9CA3AF' },
-    ADSET_PAUSED: { txt: 'Conjunto pausado', color: '#9CA3AF' },
-    AD_PAUSED: { txt: 'Anúncio pausado', color: '#9CA3AF' },
+    ACTIVE: { txt: 'Rodando', color: '#34D399' },
+    PAUSED: { txt: 'Pausado', color: '#8A8A8A' },
+    PENDING_REVIEW: { txt: 'Em análise', color: '#FBBF24' },
+    DISAPPROVED: { txt: 'Reprovado', color: '#F87171' },
+    WITH_ISSUES: { txt: 'Com avisos', color: '#FBBF24' },
+    CAMPAIGN_PAUSED: { txt: 'Campanha pausada', color: '#8A8A8A' },
+    ADSET_PAUSED: { txt: 'Conjunto pausado', color: '#8A8A8A' },
+    AD_PAUSED: { txt: 'Anúncio pausado', color: '#8A8A8A' },
   };
-  return map[s] || { txt: s || '—', color: '#9CA3AF' };
+  return map[s] || { txt: s || '—', color: '#8A8A8A' };
 }
 
 function Banner({ kind = 'info', title, children }) {
@@ -87,14 +87,15 @@ function Banner({ kind = 'info', title, children }) {
     <div style={{
       background: c.bg,
       border: `1px solid ${c.border}`,
-      borderRadius: '10px',
+      borderRadius: '12px',
       padding: '10px 14px',
       display: 'flex',
       alignItems: 'flex-start',
       gap: '10px',
       fontSize: '12.5px',
       color: c.text,
-      lineHeight: 1.5,
+      lineHeight: 1.55,
+      fontWeight: 400,
     }}>
       <span style={{ fontSize: '16px', flexShrink: 0, fontWeight: 700 }}>{c.icon}</span>
       <div>
@@ -120,20 +121,20 @@ function Modal({ open, onClose, title, children, footer }) {
     >
       <div
         onClick={e => e.stopPropagation()}
+        className="ccb-card"
         style={{
-          background: 'var(--c-card-bg)',
-          borderRadius: '14px',
+          borderRadius: '18px',
           maxWidth: '560px',
           width: '100%',
           maxHeight: '90vh',
           overflow: 'auto',
-          boxShadow: '0 20px 60px rgba(0,0,0,.3)',
-          border: '1px solid var(--c-border)',
+          padding: 0,
+          boxShadow: '0 20px 60px rgba(0,0,0,.55)',
         }}
       >
         <div style={{
           padding: '16px 20px',
-          borderBottom: '1px solid var(--c-border-lt)',
+          borderBottom: '1px solid var(--c-border)',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         }}>
           <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--c-text-1)' }}>
@@ -154,7 +155,7 @@ function Modal({ open, onClose, title, children, footer }) {
         {footer && (
           <div style={{
             padding: '14px 20px',
-            borderTop: '1px solid var(--c-border-lt)',
+            borderTop: '1px solid var(--c-border)',
             display: 'flex', justifyContent: 'flex-end', gap: '10px',
           }}>
             {footer}
@@ -171,19 +172,24 @@ function PrimaryButton({ children, onClick, disabled, danger, ...rest }) {
       onClick={onClick}
       disabled={disabled}
       style={{
-        background: danger ? '#EF4444' : 'var(--c-accent)',
+        background: danger
+          ? 'linear-gradient(135deg, #F87171, #DC2626)'
+          : 'linear-gradient(135deg, var(--c-accent), var(--c-accent-dk))',
         color: '#fff',
         border: 'none',
-        borderRadius: '9px',
-        padding: '9px 18px',
+        borderRadius: '12px',
+        padding: '11px 18px',
         fontSize: '13px',
-        fontWeight: 600,
+        fontWeight: 700,
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.6 : 1,
-        transition: 'transform .12s, box-shadow .12s',
+        transition: 'transform .2s, box-shadow .2s',
+        boxShadow: danger
+          ? '0 8px 24px rgba(248,113,113,.4), inset 0 1px 0 rgba(255,255,255,.18)'
+          : '0 8px 24px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)',
       }}
-      onMouseEnter={e => { if (!disabled) { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 14px rgba(214,141,143,.3)'; } }}
-      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+      onMouseEnter={e => { if (!disabled) { e.currentTarget.style.transform = 'translateY(-1px)'; } }}
+      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
       {...rest}
     >
       {children}
@@ -196,13 +202,13 @@ function GhostButton({ children, onClick, disabled, ...rest }) {
       onClick={onClick}
       disabled={disabled}
       style={{
-        background: 'transparent',
+        background: 'var(--c-surface)',
         color: 'var(--c-text-2)',
         border: '1px solid var(--c-border)',
-        borderRadius: '9px',
-        padding: '9px 16px',
+        borderRadius: '10px',
+        padding: '10px 16px',
         fontSize: '13px',
-        fontWeight: 500,
+        fontWeight: 600,
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.6 : 1,
       }}
@@ -215,12 +221,12 @@ function GhostButton({ children, onClick, disabled, ...rest }) {
 function Field({ label, hint, children }) {
   return (
     <div style={{ marginBottom: '14px' }}>
-      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--c-text-2)', marginBottom: '6px' }}>
+      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: 'var(--c-text-3)', marginBottom: '6px', letterSpacing: '.3px' }}>
         {label}
       </label>
       {children}
       {hint && (
-        <div style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '4px', lineHeight: 1.5 }}>
+        <div style={{ fontSize: '11.5px', color: 'var(--c-text-4)', marginTop: '4px', lineHeight: 1.5, fontWeight: 400 }}>
           {hint}
         </div>
       )}
@@ -233,9 +239,9 @@ function TextInput(props) {
       {...props}
       style={{
         width: '100%',
-        padding: '9px 12px',
-        border: '1.5px solid var(--c-border)',
-        borderRadius: '9px',
+        padding: '11px 14px',
+        border: '1px solid var(--c-border)',
+        borderRadius: '10px',
         fontSize: '13px',
         fontFamily: 'inherit',
         background: 'var(--c-surface)',
@@ -399,9 +405,9 @@ function DuplicateAdSetModal({ open, onClose, adset, campaignLocalId, onSaved })
 
       <div style={{ marginTop: '16px' }}>
         <div style={{
-          fontSize: '11px', fontWeight: 700, color: '#15803D',
-          background: '#F0FDF4', border: '1px solid #86EFAC',
-          padding: '6px 10px', borderRadius: '6px', display: 'inline-block', marginBottom: '12px',
+          fontSize: '10.5px', fontWeight: 700, color: '#34D399',
+          background: 'rgba(52,211,153,.16)', border: '1px solid rgba(52,211,153,.3)',
+          padding: '4px 9px', borderRadius: '999px', display: 'inline-block', marginBottom: '12px',
           letterSpacing: '.3px', textTransform: 'uppercase',
         }}>
           ✓ Edições seguras
@@ -439,7 +445,7 @@ function DuplicateAdSetModal({ open, onClose, adset, campaignLocalId, onSaved })
 
         <div style={{ marginTop: '8px', marginBottom: '12px' }}>
           <div style={{
-            fontSize: '11px', fontWeight: 600, color: 'var(--c-text-4)',
+            fontSize: '11.5px', fontWeight: 400, color: 'var(--c-text-4)',
             padding: '6px 0',
           }}>
             Bairros e interesses específicos: edite pelo Meta Ads Manager depois (link no card do conjunto novo).
@@ -530,7 +536,7 @@ function NewAdInAdSetModal({ open, onClose, adset, campaignLocalId, onSaved }) {
         {errMsg && <Banner kind="reset" title="Erro">{errMsg}</Banner>}
 
         <div style={{
-          fontSize: '11px', color: 'var(--c-text-4)', marginTop: '8px', lineHeight: 1.5,
+          fontSize: '11.5px', color: 'var(--c-text-4)', marginTop: '8px', lineHeight: 1.5, fontWeight: 400,
         }}>
           O anúncio novo será criado <strong>pausado</strong>. Após o Meta aprovar, você pode ativar manualmente.
         </div>
@@ -553,15 +559,19 @@ function PlayPauseButton({ status, onToggle, disabled, size = 'sm' }) {
         width: W, height: W,
         borderRadius: '50%',
         border: 'none',
-        background: isActive ? '#22C55E' : '#9CA3AF',
-        color: '#fff',
+        background: isActive
+          ? 'linear-gradient(135deg, #34D399, #22C55E)'
+          : 'var(--c-surface)',
+        color: isActive ? '#fff' : 'var(--c-text-3)',
         cursor: disabled ? 'not-allowed' : 'pointer',
         fontSize: FS,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         flexShrink: 0,
         opacity: disabled ? 0.6 : 1,
         transition: 'transform .12s, box-shadow .12s, background .15s',
-        boxShadow: isActive ? '0 2px 6px rgba(34,197,94,.35)' : 'none',
+        boxShadow: isActive
+          ? '0 4px 12px rgba(52,211,153,.45), inset 0 1px 0 rgba(255,255,255,.18)'
+          : 'inset 0 0 0 1px var(--c-border)',
       }}
       onMouseEnter={e => { if (!disabled) e.currentTarget.style.transform = 'scale(1.08)'; }}
       onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
@@ -580,17 +590,17 @@ function AdSetCard({ adset, campaignLocalId, onAction, onSelect, selected, onSta
   return (
     <div
       onClick={() => onSelect?.(adset)}
+      className="ccb-card"
       style={{
-        background: 'var(--c-card-bg)',
-        border: `1.5px solid ${selected ? 'var(--c-accent)' : 'var(--c-border-lt)'}`,
-        borderRadius: '12px',
+        borderColor: selected ? 'rgba(193,53,132,.55)' : undefined,
+        borderRadius: '14px',
         padding: '14px 16px',
         cursor: 'pointer',
         transition: 'all .15s',
-        boxShadow: selected ? '0 6px 16px rgba(214,141,143,.18)' : 'none',
+        boxShadow: selected
+          ? '0 8px 30px rgba(0,0,0,.4), 0 0 36px rgba(193,53,132,.16), inset 0 1px 0 rgba(255,194,228,.18), inset 0 0 18px rgba(193,53,132,.08)'
+          : undefined,
       }}
-      onMouseEnter={e => { if (!selected) e.currentTarget.style.borderColor = 'var(--c-border)'; }}
-      onMouseLeave={e => { if (!selected) e.currentTarget.style.borderColor = 'var(--c-border-lt)'; }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '8px' }}>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flex: 1, minWidth: 0 }}>
@@ -603,27 +613,28 @@ function AdSetCard({ adset, campaignLocalId, onAction, onSelect, selected, onSta
             <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {adset.name}
             </div>
-            <div style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '2px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '2px', fontWeight: 400 }}>
               ID: {adset.id}
             </div>
           </div>
         </div>
         <span style={{
-          fontSize: '10px', fontWeight: 700, color: '#fff',
+          fontSize: '10.5px', fontWeight: 700, color: '#fff',
           background: status.color,
-          padding: '3px 8px', borderRadius: '999px', flexShrink: 0,
+          padding: '4px 9px', borderRadius: '999px', flexShrink: 0,
+          letterSpacing: '.3px',
         }}>{status.txt}</span>
       </div>
 
-      <div style={{ display: 'flex', gap: '14px', fontSize: '12px', color: 'var(--c-text-3)', marginBottom: '10px' }}>
+      <div style={{ display: 'flex', gap: '14px', fontSize: '12px', color: 'var(--c-text-3)', marginBottom: '10px', fontWeight: 400, fontFeatureSettings: "'tnum'" }}>
         <div>💰 {fmtBRL(adset.daily_budget)} /dia</div>
         <div>📢 {adsCount} {adsCount === 1 ? 'anúncio' : 'anúncios'}</div>
       </div>
 
       {adset.targeting && (
         <div style={{
-          fontSize: '11px', color: 'var(--c-text-4)',
-          background: 'var(--c-surface)', borderRadius: '8px',
+          fontSize: '11px', color: 'var(--c-text-3)', fontWeight: 400,
+          background: 'var(--c-surface)', border: '1px solid var(--c-border)', borderRadius: '10px',
           padding: '6px 10px', marginBottom: '10px', lineHeight: 1.5,
         }}>
           {adset.targeting.age_min && adset.targeting.age_max && (
@@ -640,10 +651,10 @@ function AdSetCard({ adset, campaignLocalId, onAction, onSelect, selected, onSta
         onClick={(e) => { e.stopPropagation(); onAdvantageToggle?.(adset, !advantageOn); }}
         style={{
           display: 'flex', alignItems: 'center', gap: '10px',
-          padding: '8px 10px',
-          background: advantageOn ? '#FFFBEB' : 'var(--c-surface)',
-          border: `1px solid ${advantageOn ? '#FCD34D' : 'var(--c-border-lt)'}`,
-          borderRadius: '8px',
+          padding: '8px 12px',
+          background: advantageOn ? 'rgba(251,191,36,.12)' : 'var(--c-surface)',
+          border: `1px solid ${advantageOn ? 'rgba(251,191,36,.35)' : 'var(--c-border)'}`,
+          borderRadius: '10px',
           cursor: 'pointer',
           marginBottom: '10px',
           transition: 'all .15s',
@@ -655,7 +666,7 @@ function AdSetCard({ adset, campaignLocalId, onAction, onSelect, selected, onSta
         <div style={{
           width: '32px', height: '18px',
           borderRadius: '20px',
-          background: advantageOn ? '#F59E0B' : 'var(--c-border)',
+          background: advantageOn ? '#FBBF24' : 'var(--c-border)',
           position: 'relative',
           flexShrink: 0,
           transition: 'background .2s',
@@ -668,14 +679,14 @@ function AdSetCard({ adset, campaignLocalId, onAction, onSelect, selected, onSta
             top: '2px',
             left: advantageOn ? '16px' : '2px',
             transition: 'left .2s',
-            boxShadow: '0 1px 3px rgba(0,0,0,.2)',
+            boxShadow: '0 1px 3px rgba(0,0,0,.4)',
           }} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '11.5px', fontWeight: 700, color: advantageOn ? '#92400E' : 'var(--c-text-2)' }}>
+          <div style={{ fontSize: '11.5px', fontWeight: 700, color: advantageOn ? '#FBBF24' : 'var(--c-text-2)' }}>
             Advantage+ Público {advantageOn ? '· LIGADO' : ''}
           </div>
-          <div style={{ fontSize: '10px', color: advantageOn ? '#B45309' : 'var(--c-text-4)', marginTop: '1px' }}>
+          <div style={{ fontSize: '10.5px', color: advantageOn ? '#FBBF24' : 'var(--c-text-4)', marginTop: '1px', fontWeight: 400, opacity: advantageOn ? .8 : 1 }}>
             {advantageOn
               ? 'Meta pode expandir além de Joinville pra achar conversões'
               : 'Meta otimiza o público sozinho (pode entregar fora de Joinville)'}
@@ -688,7 +699,7 @@ function AdSetCard({ adset, campaignLocalId, onAction, onSelect, selected, onSta
           onClick={e => { e.stopPropagation(); onAction('duplicate', adset); }}
           style={{
             background: 'var(--c-surface)', border: '1px solid var(--c-border)',
-            color: 'var(--c-text-2)', borderRadius: '7px',
+            color: 'var(--c-text-2)', borderRadius: '8px',
             padding: '6px 10px', fontSize: '11.5px', fontWeight: 600,
             cursor: 'pointer',
           }}
@@ -700,7 +711,7 @@ function AdSetCard({ adset, campaignLocalId, onAction, onSelect, selected, onSta
           onClick={e => { e.stopPropagation(); onAction('budget', adset); }}
           style={{
             background: 'var(--c-surface)', border: '1px solid var(--c-border)',
-            color: 'var(--c-text-2)', borderRadius: '7px',
+            color: 'var(--c-text-2)', borderRadius: '8px',
             padding: '6px 10px', fontSize: '11.5px', fontWeight: 600,
             cursor: 'pointer',
           }}
@@ -711,10 +722,12 @@ function AdSetCard({ adset, campaignLocalId, onAction, onSelect, selected, onSta
         <button
           onClick={e => { e.stopPropagation(); onAction('newAd', adset); }}
           style={{
-            background: 'var(--c-surface)', border: '1px solid var(--c-border)',
-            color: 'var(--c-text-2)', borderRadius: '7px',
-            padding: '6px 10px', fontSize: '11.5px', fontWeight: 600,
+            background: 'rgba(193,53,132,.10)', border: '1.5px solid rgba(193,53,132,.65)',
+            color: 'var(--c-accent)', borderRadius: '8px',
+            padding: '6px 10px', fontSize: '11.5px', fontWeight: 700,
             cursor: 'pointer',
+            textShadow: '0 0 12px rgba(193,53,132,.4)',
+            boxShadow: '0 0 14px rgba(193,53,132,.16), inset 0 0 10px rgba(193,53,132,.06)',
           }}
           title="Cria anúncio novo neste conjunto"
         >
@@ -724,8 +737,8 @@ function AdSetCard({ adset, campaignLocalId, onAction, onSelect, selected, onSta
         <button
           onClick={e => { e.stopPropagation(); onAction('delete', adset); }}
           style={{
-            background: 'transparent', border: '1px solid #FCA5A5',
-            color: '#B91C1C', borderRadius: '7px',
+            background: 'rgba(248,113,113,.08)', border: '1px solid rgba(248,113,113,.4)',
+            color: '#F87171', borderRadius: '8px',
             padding: '6px 10px', fontSize: '11.5px', fontWeight: 600,
             cursor: 'pointer',
           }}
@@ -742,10 +755,8 @@ function AdSetCard({ adset, campaignLocalId, onAction, onSelect, selected, onSta
 function AdCard({ ad, onStatusChange, onDelete, busy }) {
   const status = statusLabel(ad.effective_status || ad.status);
   return (
-    <div style={{
-      background: 'var(--c-card-bg)',
-      border: '1px solid var(--c-border-lt)',
-      borderRadius: '10px',
+    <div className="ccb-card" style={{
+      borderRadius: '12px',
       padding: '10px 14px',
       marginBottom: '8px',
     }}>
@@ -759,7 +770,7 @@ function AdCard({ ad, onStatusChange, onDelete, busy }) {
           <div style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--c-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {ad.name}
           </div>
-          <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)' }}>ID: {ad.id}</div>
+          <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', fontWeight: 400 }}>ID: {ad.id}</div>
         </div>
         <MetaLinkButton adId={ad.id} label="Meta" />
         <button
@@ -767,16 +778,17 @@ function AdCard({ ad, onStatusChange, onDelete, busy }) {
           disabled={busy}
           title="Excluir este anúncio"
           style={{
-            background: 'transparent', border: '1px solid #FCA5A5',
-            color: '#B91C1C', borderRadius: '6px',
+            background: 'rgba(248,113,113,.08)', border: '1px solid rgba(248,113,113,.4)',
+            color: '#F87171', borderRadius: '8px',
             padding: '4px 8px', fontSize: '11px', fontWeight: 600,
             cursor: 'pointer', opacity: busy ? 0.5 : 1,
           }}
         >🗑️</button>
         <span style={{
-          fontSize: '10px', fontWeight: 700, color: '#fff',
+          fontSize: '10.5px', fontWeight: 700, color: '#fff',
           background: status.color,
-          padding: '2px 7px', borderRadius: '999px',
+          padding: '3px 8px', borderRadius: '999px',
+          letterSpacing: '.3px',
         }}>{status.txt}</span>
       </div>
     </div>
@@ -893,17 +905,19 @@ function CreateABTestModal({ open, onClose, campaign, hierarchy, onSaved }) {
                 style={{
                   flex: '1 1 30%',
                   padding: '10px 12px',
-                  border: `1.5px solid ${variable === opt.v ? 'var(--c-accent)' : 'var(--c-border)'}`,
-                  background: variable === opt.v ? 'var(--c-active-bg)' : 'var(--c-surface)',
-                  borderRadius: '10px',
+                  border: `1.5px solid ${variable === opt.v ? 'rgba(193,53,132,.65)' : 'var(--c-border)'}`,
+                  background: variable === opt.v ? 'var(--c-accent-soft)' : 'var(--c-surface)',
+                  borderRadius: '11px',
                   cursor: 'pointer',
                   textAlign: 'left',
+                  boxShadow: variable === opt.v ? '0 0 18px rgba(193,53,132,.18), inset 0 0 12px rgba(193,53,132,.05)' : 'none',
+                  transition: 'all .15s',
                 }}
               >
                 <div style={{ fontSize: '12.5px', fontWeight: 700, color: variable === opt.v ? 'var(--c-accent)' : 'var(--c-text-1)' }}>
                   {opt.label}
                 </div>
-                <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', marginTop: '3px' }}>{opt.desc}</div>
+                <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', marginTop: '3px', fontWeight: 400 }}>{opt.desc}</div>
               </button>
             ))}
           </div>
@@ -914,10 +928,11 @@ function CreateABTestModal({ open, onClose, campaign, hierarchy, onSaved }) {
             value={sourceAdSetId}
             onChange={(e) => setSourceAdSet(e.target.value)}
             style={{
-              width: '100%', padding: '9px 12px',
-              border: '1.5px solid var(--c-border)',
-              borderRadius: '9px', fontSize: '13px',
+              width: '100%', padding: '11px 14px',
+              border: '1px solid var(--c-border)',
+              borderRadius: '10px', fontSize: '13px',
               background: 'var(--c-surface)', color: 'var(--c-text-1)',
+              fontFamily: 'inherit',
             }}
           >
             {(hierarchy?.adsets || []).map(as => (
@@ -945,10 +960,11 @@ function CreateABTestModal({ open, onClose, campaign, hierarchy, onSaved }) {
               value={variantPlacements}
               onChange={(e) => setVariantPlacements(e.target.value)}
               style={{
-                width: '100%', padding: '9px 12px',
-                border: '1.5px solid var(--c-border)',
-                borderRadius: '9px', fontSize: '13px',
+                width: '100%', padding: '11px 14px',
+                border: '1px solid var(--c-border)',
+                borderRadius: '10px', fontSize: '13px',
                 background: 'var(--c-surface)', color: 'var(--c-text-1)',
+                fontFamily: 'inherit',
               }}
             >
               <option value="reels-only">Só Reels (Instagram)</option>
@@ -983,10 +999,10 @@ function CreateABTestModal({ open, onClose, campaign, hierarchy, onSaved }) {
         <label
           style={{
             display: 'flex', alignItems: 'flex-start', gap: '10px',
-            padding: '10px 12px',
-            background: autoPauseLoser ? '#F0FDF4' : 'var(--c-surface)',
-            border: `1px solid ${autoPauseLoser ? '#86EFAC' : 'var(--c-border-lt)'}`,
-            borderRadius: '10px', cursor: 'pointer',
+            padding: '10px 14px',
+            background: autoPauseLoser ? 'rgba(52,211,153,.12)' : 'var(--c-surface)',
+            border: `1px solid ${autoPauseLoser ? 'rgba(52,211,153,.3)' : 'var(--c-border)'}`,
+            borderRadius: '12px', cursor: 'pointer',
             marginBottom: '12px',
           }}
         >
@@ -994,13 +1010,13 @@ function CreateABTestModal({ open, onClose, campaign, hierarchy, onSaved }) {
             type="checkbox"
             checked={autoPauseLoser}
             onChange={(e) => setAutoPauseLoser(e.target.checked)}
-            style={{ marginTop: '2px', flexShrink: 0, accentColor: '#15803D' }}
+            style={{ marginTop: '2px', flexShrink: 0, accentColor: '#34D399' }}
           />
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '12.5px', fontWeight: 700, color: autoPauseLoser ? '#15803D' : 'var(--c-text-2)' }}>
+            <div style={{ fontSize: '12.5px', fontWeight: 700, color: autoPauseLoser ? '#34D399' : 'var(--c-text-2)' }}>
               Pausar o perdedor automaticamente quando o teste terminar
             </div>
-            <div style={{ fontSize: '11px', color: autoPauseLoser ? '#166534' : 'var(--c-text-4)', marginTop: '3px', lineHeight: 1.5 }}>
+            <div style={{ fontSize: '11.5px', color: autoPauseLoser ? '#34D399' : 'var(--c-text-4)', marginTop: '3px', lineHeight: 1.5, fontWeight: 400, opacity: autoPauseLoser ? .85 : 1 }}>
               No fim do teste, o sistema compara as métricas (custo por mensagem ou CPC), pausa o conjunto pior e te avisa no sino. Se diferença for menor que 5%, considera empate e não pausa nenhum.
             </div>
           </div>
@@ -1022,16 +1038,14 @@ function ABTestCard({ test, onStop }) {
   const liveStatus = test.live?.status || (isFinished ? 'COMPLETED' : 'RUNNING');
 
   return (
-    <div style={{
-      background: 'var(--c-card-bg)',
-      border: '1.5px solid var(--c-border-lt)',
-      borderRadius: '12px',
+    <div className="ccb-card" style={{
+      borderRadius: '14px',
       padding: '14px 16px',
       marginBottom: '10px',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '8px' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--c-accent)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: '2px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--c-accent)', textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: '2px' }}>
             🧪 Teste A/B · {test.variable}
           </div>
           <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1039,28 +1053,32 @@ function ABTestCard({ test, onStop }) {
           </div>
         </div>
         <span style={{
-          fontSize: '10px', fontWeight: 700, color: '#fff',
-          background: isFinished ? '#22C55E' : '#F59E0B',
-          padding: '3px 8px', borderRadius: '999px',
+          fontSize: '10.5px', fontWeight: 700, color: '#fff',
+          background: isFinished ? '#34D399' : '#FBBF24',
+          padding: '4px 9px', borderRadius: '999px',
+          letterSpacing: '.3px',
         }}>{isFinished ? 'Finalizado' : liveStatus}</span>
       </div>
 
       <div style={{ marginBottom: '10px' }}>
         <div style={{
-          height: '8px', background: 'var(--c-surface)', borderRadius: '4px', overflow: 'hidden',
+          height: '8px', background: 'var(--c-surface)', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--c-border)',
         }}>
           <div style={{
             height: '100%', width: `${pct}%`,
-            background: isFinished ? '#22C55E' : 'var(--c-accent)',
+            background: isFinished
+              ? 'linear-gradient(90deg, #34D399, #22C55E)'
+              : 'linear-gradient(90deg, var(--c-accent), var(--c-accent-dk))',
+            boxShadow: isFinished ? '0 0 12px rgba(52,211,153,.5)' : '0 0 12px rgba(193,53,132,.5)',
             transition: 'width .3s',
           }} />
         </div>
-        <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', marginTop: '4px' }}>
+        <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', marginTop: '4px', fontWeight: 400, fontFeatureSettings: "'tnum'" }}>
           {Math.floor(elapsed / 86400)} de {Math.floor(totalDur / 86400)} dias · {pct}%
         </div>
       </div>
 
-      <div style={{ fontSize: '11.5px', color: 'var(--c-text-3)', marginBottom: '8px' }}>
+      <div style={{ fontSize: '11.5px', color: 'var(--c-text-3)', marginBottom: '8px', fontWeight: 400 }}>
         Controle (A): {test.split_percent_a}% · Variante (B): {100 - test.split_percent_a}%
       </div>
 
@@ -1068,9 +1086,9 @@ function ABTestCard({ test, onStop }) {
         <button
           onClick={() => onStop?.(test)}
           style={{
-            background: 'transparent', border: '1px solid var(--c-border)',
-            color: 'var(--c-text-3)', borderRadius: '7px',
-            padding: '5px 10px', fontSize: '11px', fontWeight: 600,
+            background: 'var(--c-surface)', border: '1px solid var(--c-border)',
+            color: 'var(--c-text-2)', borderRadius: '8px',
+            padding: '6px 12px', fontSize: '11.5px', fontWeight: 600,
             cursor: 'pointer',
           }}
         >
@@ -1078,7 +1096,7 @@ function ABTestCard({ test, onStop }) {
         </button>
       )}
       {test.live_error && (
-        <div style={{ fontSize: '10.5px', color: '#B91C1C', marginTop: '6px' }}>
+        <div style={{ fontSize: '10.5px', color: '#F87171', marginTop: '6px', fontWeight: 500 }}>
           Erro ao ler do Meta: {test.live_error}
         </div>
       )}
@@ -1092,27 +1110,31 @@ function CampaignTile({ camp, selected, onSelect }) {
   return (
     <div
       onClick={() => onSelect(camp)}
+      className="ccb-card"
       style={{
         padding: '12px 14px',
-        background: selected ? 'var(--c-active-bg)' : 'var(--c-card-bg)',
-        border: `1.5px solid ${selected ? 'var(--c-accent)' : 'var(--c-border-lt)'}`,
-        borderRadius: '10px',
+        borderColor: selected ? 'rgba(193,53,132,.55)' : undefined,
+        borderRadius: '12px',
         marginBottom: '8px',
         cursor: 'pointer',
         transition: 'all .12s',
+        boxShadow: selected
+          ? '0 8px 30px rgba(0,0,0,.4), 0 0 30px rgba(193,53,132,.16), inset 0 1px 0 rgba(255,194,228,.18)'
+          : undefined,
       }}
     >
       <div style={{ fontSize: '13px', fontWeight: 700, color: selected ? 'var(--c-accent)' : 'var(--c-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '4px' }}>
         {camp.name}
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-        <span style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>
+        <span style={{ fontSize: '11px', color: 'var(--c-text-4)', fontWeight: 400, fontFeatureSettings: "'tnum'" }}>
           {fmtBRL(camp.budget)} /dia
         </span>
         <span style={{
-          fontSize: '9.5px', fontWeight: 700, color: '#fff',
+          fontSize: '10px', fontWeight: 700, color: '#fff',
           background: status.color,
-          padding: '2px 7px', borderRadius: '999px',
+          padding: '3px 8px', borderRadius: '999px',
+          letterSpacing: '.3px',
         }}>{status.txt}</span>
       </div>
     </div>
@@ -1392,15 +1414,16 @@ export default function CampaignsHierarchy() {
       {/* Header */}
       <div style={{ marginBottom: '20px' }}>
         <div style={{
-          fontSize: '11px', fontWeight: 700, letterSpacing: '.8px',
+          fontSize: '10.5px', fontWeight: 700, letterSpacing: '1.4px',
           color: 'var(--c-accent)', textTransform: 'uppercase', marginBottom: '4px',
+          textShadow: '0 0 12px rgba(193,53,132,.35)',
         }}>
           Visão Meta · Beta
         </div>
-        <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--c-text-1)', margin: 0 }}>
+        <h1 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.01em', color: 'var(--c-text-1)', margin: 0 }}>
           Campanha → Conjunto → Anúncio
         </h1>
-        <div style={{ fontSize: '13px', color: 'var(--c-text-3)', marginTop: '4px' }}>
+        <div style={{ fontSize: '13px', color: 'var(--c-text-3)', marginTop: '4px', fontWeight: 400 }}>
           Mesma estrutura que o Meta Ads Manager. Aqui você duplica conjuntos, cria anúncios novos e edita orçamentos com aviso visual quando algo reseta o aprendizado.
         </div>
       </div>
@@ -1413,25 +1436,23 @@ export default function CampaignsHierarchy() {
       </div>
 
       {metaCamps.length === 0 ? (
-        <div style={{
+        <div className="ccb-card" style={{
           padding: '40px',
           textAlign: 'center',
-          background: 'var(--c-card-bg)',
-          border: '1px dashed var(--c-border)',
-          borderRadius: '14px',
+          borderRadius: '18px',
           color: 'var(--c-text-3)',
         }}>
           <div style={{ fontSize: '34px', marginBottom: '8px' }}>📭</div>
-          <div style={{ fontSize: '14px', fontWeight: 600 }}>Nenhuma campanha Meta publicada ainda</div>
-          <div style={{ fontSize: '12px', marginTop: '4px' }}>Publique pelo menos uma campanha em "Criar anúncio" pra ver a hierarquia aqui.</div>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-2)' }}>Nenhuma campanha Meta publicada ainda</div>
+          <div style={{ fontSize: '12.5px', marginTop: '4px', fontWeight: 400 }}>Publique pelo menos uma campanha em "Criar anúncio" pra ver a hierarquia aqui.</div>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '20px', alignItems: 'flex-start' }}>
           {/* Coluna esquerda: lista campanhas */}
           <div>
             <div style={{
-              fontSize: '11px', fontWeight: 700, letterSpacing: '.6px',
-              color: 'var(--c-text-4)', textTransform: 'uppercase', marginBottom: '8px',
+              fontSize: '10.5px', fontWeight: 500, letterSpacing: '1.2px',
+              color: 'var(--c-text-3)', textTransform: 'uppercase', marginBottom: '8px',
               padding: '0 4px',
             }}>
               Campanhas Meta ({metaCamps.length})
@@ -1449,19 +1470,18 @@ export default function CampaignsHierarchy() {
           {/* Coluna direita: hierarquia da campanha selecionada */}
           <div>
             {!selectedCamp ? (
-              <div style={{
+              <div className="ccb-card" style={{
                 padding: '40px', textAlign: 'center',
-                background: 'var(--c-card-bg)',
-                border: '1px dashed var(--c-border)', borderRadius: '14px',
+                borderRadius: '18px',
                 color: 'var(--c-text-3)',
               }}>
                 <div style={{ fontSize: '32px', marginBottom: '8px' }}>👈</div>
-                <div style={{ fontSize: '14px', fontWeight: 600 }}>Selecione uma campanha</div>
-                <div style={{ fontSize: '12px', marginTop: '4px' }}>Clica numa campanha à esquerda pra ver os conjuntos e anúncios.</div>
+                <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-2)' }}>Selecione uma campanha</div>
+                <div style={{ fontSize: '12.5px', marginTop: '4px', fontWeight: 400 }}>Clica numa campanha à esquerda pra ver os conjuntos e anúncios.</div>
               </div>
             ) : loadingHier ? (
               <div style={{
-                padding: '40px', textAlign: 'center', color: 'var(--c-text-3)',
+                padding: '40px', textAlign: 'center', color: 'var(--c-text-3)', fontWeight: 400,
               }}>
                 Carregando hierarquia direto do Meta...
               </div>
@@ -1472,29 +1492,27 @@ export default function CampaignsHierarchy() {
                 {/* Breadcrumb */}
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: '8px',
-                  fontSize: '12px', color: 'var(--c-text-4)', marginBottom: '14px',
+                  fontSize: '12px', color: 'var(--c-text-4)', marginBottom: '14px', fontWeight: 400,
                 }}>
                   <span>{hierarchy.campaign?.name}</span>
                   {selectedAdSet && (
                     <>
                       <span>›</span>
-                      <span style={{ color: 'var(--c-accent)', fontWeight: 600 }}>{selectedAdSet.name}</span>
+                      <span style={{ color: 'var(--c-accent)', fontWeight: 700 }}>{selectedAdSet.name}</span>
                     </>
                   )}
                 </div>
 
                 {/* Resumo da campanha + ação */}
-                <div style={{
-                  background: 'var(--c-card-bg)',
-                  border: '1px solid var(--c-border-lt)',
-                  borderRadius: '12px', padding: '14px 16px', marginBottom: '16px',
+                <div className="ccb-card" style={{
+                  borderRadius: '14px', padding: '14px 16px', marginBottom: '16px',
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
                     <div>
                       <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-1)' }}>
                         {hierarchy.campaign?.name}
                       </div>
-                      <div style={{ fontSize: '12px', color: 'var(--c-text-3)', marginTop: '4px' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--c-text-3)', marginTop: '4px', fontWeight: 400, fontFeatureSettings: "'tnum'" }}>
                         Objetivo: {hierarchy.campaign?.objective || '—'} · {fmtBRL(hierarchy.campaign?.daily_budget)} /dia
                       </div>
                     </div>
@@ -1512,8 +1530,8 @@ export default function CampaignsHierarchy() {
                           })}
                           style={{
                             background: 'var(--c-surface)', border: '1px solid var(--c-border)',
-                            color: 'var(--c-text-2)', borderRadius: '8px',
-                            padding: '7px 12px', fontSize: '12px', fontWeight: 600,
+                            color: 'var(--c-text-2)', borderRadius: '10px',
+                            padding: '8px 14px', fontSize: '12.5px', fontWeight: 600,
                             cursor: 'pointer',
                           }}
                         >
@@ -1523,11 +1541,12 @@ export default function CampaignsHierarchy() {
                       <button
                         onClick={() => setABTestModal(true)}
                         style={{
-                          background: 'var(--c-accent)', border: 'none',
-                          color: '#fff', borderRadius: '8px',
-                          padding: '7px 12px', fontSize: '12px', fontWeight: 700,
+                          background: 'linear-gradient(135deg, var(--c-accent), var(--c-accent-dk))',
+                          border: 'none',
+                          color: '#fff', borderRadius: '10px',
+                          padding: '8px 14px', fontSize: '12.5px', fontWeight: 700,
                           cursor: 'pointer',
-                          boxShadow: '0 2px 6px rgba(214,141,143,.25)',
+                          boxShadow: '0 6px 18px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)',
                         }}
                         title="Cria teste A/B oficial Meta com divisão automática de público"
                       >
@@ -1539,8 +1558,8 @@ export default function CampaignsHierarchy() {
 
                 {/* Conjuntos */}
                 <div style={{
-                  fontSize: '11px', fontWeight: 700, letterSpacing: '.6px',
-                  color: 'var(--c-text-4)', textTransform: 'uppercase', marginBottom: '8px',
+                  fontSize: '10.5px', fontWeight: 500, letterSpacing: '1.2px',
+                  color: 'var(--c-text-3)', textTransform: 'uppercase', marginBottom: '8px',
                   padding: '0 4px',
                 }}>
                   Conjuntos ({hierarchy.adsets?.length || 0})
@@ -1588,7 +1607,7 @@ export default function CampaignsHierarchy() {
                       Anúncios em "{selectedAdSet.name}" ({selectedAdSet.ads?.length || 0})
                     </div>
                     {(selectedAdSet.ads || []).length === 0 ? (
-                      <div style={{ padding: '14px', fontSize: '12px', color: 'var(--c-text-4)' }}>
+                      <div style={{ padding: '14px', fontSize: '12px', color: 'var(--c-text-4)', fontWeight: 400 }}>
                         Nenhum anúncio neste conjunto.
                       </div>
                     ) : (
@@ -1602,7 +1621,7 @@ export default function CampaignsHierarchy() {
                   </div>
                 )}
 
-                <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', marginTop: '14px', textAlign: 'right' }}>
+                <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', marginTop: '14px', textAlign: 'right', fontWeight: 400 }}>
                   Atualizado em: {new Date(hierarchy.fetched_at).toLocaleString('pt-BR')}
                 </div>
               </>
@@ -1615,11 +1634,12 @@ export default function CampaignsHierarchy() {
       {toast && (
         <div style={{
           position: 'fixed', bottom: '20px', right: '20px',
-          background: '#15803D', color: '#fff',
-          padding: '12px 18px', borderRadius: '10px',
-          fontSize: '13px', fontWeight: 600,
-          boxShadow: '0 8px 24px rgba(0,0,0,.2)',
+          background: 'linear-gradient(135deg, #34D399, #15803D)', color: '#fff',
+          padding: '12px 18px', borderRadius: '12px',
+          fontSize: '13px', fontWeight: 700,
+          boxShadow: '0 12px 32px rgba(0,0,0,.5), 0 0 24px rgba(52,211,153,.3), inset 0 1px 0 rgba(255,255,255,.18)',
           zIndex: 1100, maxWidth: '400px',
+          border: '1px solid rgba(52,211,153,.4)',
         }}>
           ✓ {toast.note || 'Pronto'}
         </div>
@@ -1660,11 +1680,12 @@ export default function CampaignsHierarchy() {
       {errToast && (
         <div style={{
           position: 'fixed', bottom: '20px', right: '20px',
-          background: '#B91C1C', color: '#fff',
-          padding: '12px 18px', borderRadius: '10px',
-          fontSize: '13px', fontWeight: 600,
-          boxShadow: '0 8px 24px rgba(0,0,0,.2)',
+          background: 'linear-gradient(135deg, #F87171, #B91C1C)', color: '#fff',
+          padding: '12px 18px', borderRadius: '12px',
+          fontSize: '13px', fontWeight: 700,
+          boxShadow: '0 12px 32px rgba(0,0,0,.5), 0 0 24px rgba(248,113,113,.3), inset 0 1px 0 rgba(255,255,255,.18)',
           zIndex: 1100, maxWidth: '420px',
+          border: '1px solid rgba(248,113,113,.4)',
         }}>
           ⚠ {errToast}
         </div>

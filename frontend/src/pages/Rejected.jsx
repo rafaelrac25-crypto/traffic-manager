@@ -9,14 +9,14 @@ function SuggestionBox({ reason }) {
     <div style={{
       marginTop: '10px',
       padding: '12px 14px',
-      background: 'rgba(34,197,94,.07)',
-      border: '1px solid rgba(34,197,94,.25)',
+      background: 'rgba(52,211,153,.10)',
+      border: '1px solid rgba(52,211,153,.3)',
       borderRadius: '10px',
     }}>
-      <div style={{ fontSize: '11px', fontWeight: 700, color: '#16A34A', marginBottom: '4px', letterSpacing: '.5px' }}>
+      <div style={{ fontSize: '11px', fontWeight: 500, color: '#34D399', marginBottom: '4px', letterSpacing: '.5px' }}>
         💡 COMO CORRIGIR
       </div>
-      <p style={{ fontSize: '12px', color: 'var(--c-text-2)', margin: 0, lineHeight: 1.6 }}>
+      <p style={{ fontSize: '12px', color: 'var(--c-text-2)', margin: 0, lineHeight: 1.6, fontWeight: 400 }}>
         {hint}
       </p>
     </div>
@@ -30,23 +30,21 @@ function RejectedCard({ ad, onRemove, onEdit }) {
 
   return (
     <div className="ccb-card" style={{
-      background: 'var(--c-card-bg)',
-      border: '1px solid var(--c-border)',
-      borderLeft: '4px solid #EF4444',
-      borderRadius: '14px',
+      borderLeft: '4px solid #F87171',
+      borderRadius: '18px',
       padding: '18px 20px',
-      boxShadow: '0 2px 8px var(--c-shadow)',
       marginBottom: '14px',
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '10px' }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
             <span style={{
-              fontSize: '10px', fontWeight: 700, color: '#DC2626',
-              background: 'rgba(239,68,68,.1)', padding: '3px 8px', borderRadius: '20px',
-              letterSpacing: '.5px',
+              fontSize: '10.5px', fontWeight: 700, color: '#F87171',
+              background: 'rgba(248,113,113,.16)', border: '1px solid rgba(248,113,113,.3)',
+              padding: '4px 9px', borderRadius: '999px',
+              letterSpacing: '.3px',
             }}>REPROVADO</span>
-            <span style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>{when}</span>
+            <span style={{ fontSize: '11px', color: 'var(--c-text-4)', fontWeight: 400 }}>{when}</span>
           </div>
           <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--c-text-1)', margin: 0 }}>
             {ad.name || 'Anúncio sem nome'}
@@ -56,20 +54,20 @@ function RejectedCard({ ad, onRemove, onEdit }) {
           onClick={() => onRemove(ad.id)}
           title="Remover da lista"
           style={{
-            background: 'none', border: '1px solid var(--c-border)',
-            color: 'var(--c-text-4)', cursor: 'pointer',
+            background: 'var(--c-surface)', border: '1px solid var(--c-border)',
+            color: 'var(--c-text-3)', cursor: 'pointer',
             width: '28px', height: '28px', borderRadius: '8px',
             fontSize: '14px', lineHeight: 1, flexShrink: 0,
           }}
         >×</button>
       </div>
 
-      <div style={{ fontSize: '13px', color: 'var(--c-text-2)', lineHeight: 1.6 }}>
-        <strong style={{ color: '#DC2626' }}>Motivo do Meta:</strong> {ad.reason || 'políticas de anúncio não atendidas'}
+      <div style={{ fontSize: '13px', color: 'var(--c-text-2)', lineHeight: 1.6, fontWeight: 400 }}>
+        <strong style={{ color: '#F87171', fontWeight: 700 }}>Motivo do Meta:</strong> {ad.reason || 'políticas de anúncio não atendidas'}
       </div>
 
       {ad.details && (
-        <p style={{ fontSize: '12px', color: 'var(--c-text-3)', lineHeight: 1.6, marginTop: '8px', marginBottom: 0 }}>
+        <p style={{ fontSize: '12px', color: 'var(--c-text-3)', lineHeight: 1.6, marginTop: '8px', marginBottom: 0, fontWeight: 400 }}>
           {ad.details}
         </p>
       )}
@@ -78,10 +76,10 @@ function RejectedCard({ ad, onRemove, onEdit }) {
          enviados quando Meta retorna erro sem error_user_msg específico */}
       {(ad.stage || ad.sentParams) && (
         <details style={{ marginTop: '10px', fontSize: '11.5px' }}>
-          <summary style={{ cursor: 'pointer', color: 'var(--c-text-3)', fontWeight: 600 }}>
+          <summary style={{ cursor: 'pointer', color: 'var(--c-text-3)', fontWeight: 500 }}>
             🔧 Diagnóstico técnico (pro dev)
           </summary>
-          <div style={{ marginTop: '8px', padding: '10px 12px', background: 'var(--c-surface)', borderRadius: '8px', fontFamily: 'monospace', fontSize: '11px', color: 'var(--c-text-3)' }}>
+          <div style={{ marginTop: '8px', padding: '10px 12px', background: 'var(--c-surface)', border: '1px solid var(--c-border)', borderRadius: '10px', fontFamily: 'monospace', fontSize: '11px', color: 'var(--c-text-3)' }}>
             {ad.stage && <div><strong>Etapa:</strong> {ad.stage}</div>}
             {ad.code != null && <div><strong>Código Meta:</strong> {ad.code}{ad.subcode ? ` / ${ad.subcode}` : ''}</div>}
             {ad.endpoint && <div><strong>Endpoint:</strong> {ad.endpoint}</div>}
@@ -103,8 +101,11 @@ function RejectedCard({ ad, onRemove, onEdit }) {
         <button
           onClick={() => onEdit(ad)}
           style={{
-            padding: '9px 16px', background: 'var(--c-accent)', color: '#fff',
-            border: 'none', borderRadius: '10px', fontSize: '12px', fontWeight: 700,
+            padding: '11px 18px', borderRadius: '12px',
+            border: 0,
+            background: 'linear-gradient(135deg, var(--c-accent), var(--c-accent-dk))',
+            color: '#fff', fontWeight: 700, fontSize: '13px',
+            boxShadow: '0 8px 24px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)',
             cursor: 'pointer',
           }}
         >
@@ -113,9 +114,10 @@ function RejectedCard({ ad, onRemove, onEdit }) {
         <button
           onClick={() => onRemove(ad.id)}
           style={{
-            padding: '9px 16px', background: 'var(--c-surface)', color: 'var(--c-text-3)',
-            border: '1.5px solid var(--c-border)', borderRadius: '10px',
-            fontSize: '12px', fontWeight: 500, cursor: 'pointer',
+            padding: '8px 14px', borderRadius: '10px',
+            background: 'var(--c-surface)', color: 'var(--c-text-2)',
+            border: '1px solid var(--c-border)',
+            fontSize: '13px', fontWeight: 600, cursor: 'pointer',
           }}
         >
           Descartar
@@ -165,10 +167,10 @@ export default function Rejected() {
     <div className="page-container">
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
+          <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '4px', letterSpacing: '-0.01em' }}>
             Anúncios reprovados
           </h1>
-          <p style={{ fontSize: '13px', color: 'var(--c-text-3)' }}>
+          <p style={{ fontSize: '13px', color: 'var(--c-text-3)', fontWeight: 400 }}>
             Veja os motivos da recusa pelo Meta e como corrigir antes de reenviar.
           </p>
         </div>
@@ -177,9 +179,10 @@ export default function Rejected() {
             <button
               onClick={seedDemo}
               style={{
-                padding: '8px 14px', fontSize: '11px',
-                background: 'var(--c-surface)', border: '1.5px solid var(--c-border)',
-                borderRadius: '10px', cursor: 'pointer', color: 'var(--c-text-3)',
+                padding: '8px 14px', fontSize: '12px',
+                background: 'var(--c-surface)', border: '1px solid var(--c-border)',
+                borderRadius: '10px', cursor: 'pointer', color: 'var(--c-text-2)',
+                fontWeight: 600,
               }}
             >
               + Simular reprovação (teste)
@@ -188,8 +191,11 @@ export default function Rejected() {
           <button
             onClick={() => navigate('/criar-anuncio')}
             style={{
-              padding: '10px 18px', background: 'var(--c-accent)', color: '#fff',
-              border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 700,
+              padding: '11px 18px', borderRadius: '12px',
+              border: 0,
+              background: 'linear-gradient(135deg, var(--c-accent), var(--c-accent-dk))',
+              color: '#fff', fontSize: '13px', fontWeight: 700,
+              boxShadow: '0 8px 24px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)',
               cursor: 'pointer',
             }}
           >
@@ -199,16 +205,14 @@ export default function Rejected() {
       </div>
 
       {rejectedAds.length === 0 ? (
-        <div style={{
-          background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',
-          borderRadius: '16px', padding: '60px 30px', textAlign: 'center',
-          boxShadow: '0 2px 8px var(--c-shadow)',
+        <div className="ccb-card" style={{
+          borderRadius: '18px', padding: '60px 30px', textAlign: 'center',
         }}>
           <div style={{ fontSize: '44px', marginBottom: '12px' }}>✅</div>
           <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '6px' }}>
             Nenhum anúncio reprovado
           </h3>
-          <p style={{ fontSize: '13px', color: 'var(--c-text-4)', margin: 0 }}>
+          <p style={{ fontSize: '13px', color: 'var(--c-text-3)', margin: 0, fontWeight: 400 }}>
             Quando o Meta rejeitar algum anúncio, ele aparecerá aqui com o motivo e sugestões de correção.
           </p>
         </div>

@@ -93,9 +93,9 @@ function Chip({ label, onRemove, active = true }) {
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: '6px',
-      padding: '4px 10px', borderRadius: '20px',
-      background: active ? 'var(--c-active-bg)' : 'var(--c-surface)',
-      border: `1px solid ${active ? 'var(--c-accent)' : 'var(--c-border)'}`,
+      padding: '4px 10px', borderRadius: '999px',
+      background: active ? 'var(--c-accent-soft)' : 'var(--c-surface)',
+      border: `1px solid ${active ? 'rgba(193,53,132,.4)' : 'var(--c-border)'}`,
       fontSize: '11px', fontWeight: 600,
       color: active ? 'var(--c-accent)' : 'var(--c-text-3)',
     }}>
@@ -115,10 +115,8 @@ function Chip({ label, onRemove, active = true }) {
 function AudienceCard({ audience, onEdit, onRemove, onReuseQuick, onReuseAdjust }) {
   return (
     <div className="ccb-card" style={{
-      background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',
-      borderRadius: '14px', padding: '18px',
+      padding: '18px', borderRadius: '18px',
       display: 'flex', flexDirection: 'column', gap: '10px',
-      boxShadow: '0 2px 8px var(--c-shadow)',
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -126,7 +124,7 @@ function AudienceCard({ audience, onEdit, onRemove, onReuseQuick, onReuseAdjust 
             {audience.name}
           </div>
           {audience.description && (
-            <div style={{ fontSize: '11px', color: 'var(--c-text-3)', lineHeight: 1.5 }}>
+            <div style={{ fontSize: '11.5px', color: 'var(--c-text-3)', lineHeight: 1.5, fontWeight: 400 }}>
               {audience.description}
             </div>
           )}
@@ -142,7 +140,7 @@ function AudienceCard({ audience, onEdit, onRemove, onReuseQuick, onReuseAdjust 
           <button
             onClick={() => onRemove(audience.id)}
             title="Remover"
-            style={{ ...iconBtnStyle, color: '#DC2626' }}
+            style={{ ...iconBtnStyle, color: '#F87171' }}
           >
             <IconTrash />
           </button>
@@ -156,7 +154,7 @@ function AudienceCard({ audience, onEdit, onRemove, onReuseQuick, onReuseAdjust 
 
       {audience.locations?.length > 0 && (
         <div>
-          <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--c-text-4)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '.5px' }}>
+          <div style={{ fontSize: '10.5px', fontWeight: 500, color: 'var(--c-text-3)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '1.2px' }}>
             Localização
           </div>
           <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
@@ -170,7 +168,7 @@ function AudienceCard({ audience, onEdit, onRemove, onReuseQuick, onReuseAdjust 
 
       {audience.interests?.length > 0 && (
         <div>
-          <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--c-text-4)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '.5px' }}>
+          <div style={{ fontSize: '10.5px', fontWeight: 500, color: 'var(--c-text-3)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '1.2px' }}>
             Interesses
           </div>
           <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
@@ -181,17 +179,19 @@ function AudienceCard({ audience, onEdit, onRemove, onReuseQuick, onReuseAdjust 
 
       <div style={{
         display: 'flex', gap: '6px', marginTop: '4px',
-        paddingTop: '10px', borderTop: '1px solid var(--c-border-lt)',
+        paddingTop: '10px', borderTop: '1px solid var(--c-border)',
       }}>
         <button
           onClick={() => onReuseQuick(audience)}
           title="Abre a criação direto na revisão, com texto e orçamento padrão já preenchidos"
           style={{
-            flex: 1, padding: '8px 10px',
-            background: 'var(--c-accent)', color: '#fff',
-            border: 'none', borderRadius: '8px',
+            flex: 1, padding: '10px 12px',
+            background: 'linear-gradient(135deg, var(--c-accent), var(--c-accent-dk))',
+            color: '#fff',
+            border: 0, borderRadius: '10px',
             fontSize: '12px', fontWeight: 700, cursor: 'pointer',
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+            boxShadow: '0 6px 18px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)',
           }}
         >
           🚀 Publicar rápido
@@ -200,9 +200,9 @@ function AudienceCard({ audience, onEdit, onRemove, onReuseQuick, onReuseAdjust 
           onClick={() => onReuseAdjust(audience)}
           title="Abre a criação com este público selecionado, mas com o passo a passo completo"
           style={{
-            flex: 1, padding: '8px 10px',
+            flex: 1, padding: '10px 12px',
             background: 'var(--c-surface)', color: 'var(--c-text-2)',
-            border: '1.5px solid var(--c-border)', borderRadius: '8px',
+            border: '1px solid var(--c-border)', borderRadius: '10px',
             fontSize: '12px', fontWeight: 600, cursor: 'pointer',
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
           }}
@@ -251,10 +251,11 @@ function AudienceForm({ initial, onSave, onCancel }) {
   }
 
   return (
-    <div style={{
-      background: 'var(--c-card-bg)', border: '1.5px solid var(--c-accent)',
-      borderRadius: '16px', padding: '22px',
+    <div className="ccb-card" style={{
+      borderRadius: '18px', padding: '22px',
       display: 'flex', flexDirection: 'column', gap: '14px',
+      borderColor: 'rgba(193,53,132,.55)',
+      boxShadow: '0 8px 30px rgba(0,0,0,.4), 0 0 36px rgba(193,53,132,.16), inset 0 1px 0 rgba(255,194,228,.18), inset 0 0 18px rgba(193,53,132,.08)',
     }}>
       <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--c-text-1)', margin: 0 }}>
         {initial ? 'Editar público' : 'Novo público'}
@@ -296,8 +297,8 @@ function AudienceForm({ initial, onSave, onCancel }) {
                 onClick={() => update({ gender: id })}
                 style={{
                   flex: 1, padding: '9px', fontSize: '12px', fontWeight: 600,
-                  border: `1.5px solid ${data.gender === id ? 'var(--c-accent)' : 'var(--c-border)'}`,
-                  background: data.gender === id ? 'var(--c-active-bg)' : 'var(--c-surface)',
+                  border: `1px solid ${data.gender === id ? 'var(--c-accent)' : 'var(--c-border)'}`,
+                  background: data.gender === id ? 'var(--c-accent-soft)' : 'var(--c-surface)',
                   color: data.gender === id ? 'var(--c-accent)' : 'var(--c-text-2)',
                   borderRadius: '10px', cursor: 'pointer',
                 }}
@@ -436,11 +437,9 @@ function DistrictAnalyzer() {
   function fmtBRL(n) { return `R$\u00A0${Number(n).toFixed(2).replace('.', ',')}`; }
 
   return (
-    <div style={{
-      background: 'linear-gradient(135deg, rgba(214,141,143,.08), rgba(125,74,94,.04))',
-      border: '1.5px solid var(--c-border)',
+    <div className="ccb-card" style={{
       borderLeft: '4px solid var(--c-accent)',
-      borderRadius: '14px',
+      borderRadius: '18px',
       padding: '18px 20px',
       marginBottom: '20px',
       display: 'flex',
@@ -451,7 +450,7 @@ function DistrictAnalyzer() {
         <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '3px' }}>
           🎯 Analisador de bairro
         </div>
-        <div style={{ fontSize: '12px', color: 'var(--c-text-3)', lineHeight: 1.5 }}>
+        <div style={{ fontSize: '12px', color: 'var(--c-text-3)', lineHeight: 1.5, fontWeight: 400 }}>
           Digite um bairro de Joinville. Retorna distância do <strong>{HOME_DISTRICT}</strong> (clínica),
           perfil de renda, ticket médio esperado e faixa etária ideal do público.
         </div>
@@ -466,9 +465,9 @@ function DistrictAnalyzer() {
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); runAnalyze(); } }}
           list="joinville-districts-datalist"
           style={{
-            flex: 1, minWidth: '180px', padding: '7px 12px',
-            border: '1px solid var(--c-border)', borderRadius: '8px',
-            background: 'var(--c-surface)', color: 'var(--c-text-2)',
+            flex: 1, minWidth: '180px', padding: '9px 12px',
+            border: '1px solid var(--c-border)', borderRadius: '10px',
+            background: 'var(--c-surface)', color: 'var(--c-text-1)',
             fontSize: '12px', fontFamily: 'inherit', outline: 'none',
           }}
         />
@@ -478,8 +477,8 @@ function DistrictAnalyzer() {
         <button
           onClick={() => runAnalyze()}
           style={{
-            padding: '7px 14px', borderRadius: '8px',
-            border: '1px solid var(--c-border)', background: 'var(--c-card-bg)',
+            padding: '9px 14px', borderRadius: '10px',
+            border: '1px solid var(--c-border)', background: 'var(--c-surface)',
             color: 'var(--c-text-2)', fontSize: '12px', fontWeight: 600,
             cursor: 'pointer', whiteSpace: 'nowrap',
           }}
@@ -491,8 +490,8 @@ function DistrictAnalyzer() {
       {noMatch && (
         <div style={{
           padding: '12px 14px', borderRadius: '10px',
-          background: '#FEF2F2', border: '1px solid #FECACA',
-          fontSize: '12px', color: '#991B1B', lineHeight: 1.5,
+          background: 'rgba(248,113,113,.16)', border: '1px solid rgba(248,113,113,.3)',
+          fontSize: '12px', color: '#F87171', lineHeight: 1.5,
         }}>
           Bairro <strong>"{query}"</strong> não está no nosso catálogo de Joinville. Verifique a grafia ou me avise que adicionamos.
           Catálogo atual tem {DISTRICTS.length} bairros.
@@ -541,18 +540,18 @@ function DistrictAnalyzer() {
 function StatBlock({ label, value, sub, accent }) {
   return (
     <div style={{
-      background: 'var(--c-card-bg)',
+      background: 'var(--c-surface)',
       border: `1px solid ${accent || 'var(--c-border)'}`,
-      borderRadius: '10px',
+      borderRadius: '12px',
       padding: '10px 12px',
     }}>
-      <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--c-text-4)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: '4px' }}>
+      <div style={{ fontSize: '10.5px', fontWeight: 500, color: 'var(--c-text-3)', textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: '4px' }}>
         {label}
       </div>
-      <div style={{ fontSize: '14px', fontWeight: 700, color: accent || 'var(--c-text-1)', lineHeight: 1.25, marginBottom: '3px', wordBreak: 'keep-all' }}>
+      <div style={{ fontSize: '14px', fontWeight: 700, color: accent || 'var(--c-text-1)', lineHeight: 1.25, marginBottom: '3px', wordBreak: 'keep-all', fontFeatureSettings: "'tnum'" }}>
         {value}
       </div>
-      {sub && <div style={{ fontSize: '10.5px', color: 'var(--c-text-3)', lineHeight: 1.4 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: '10.5px', color: 'var(--c-text-3)', lineHeight: 1.4, fontWeight: 400 }}>{sub}</div>}
     </div>
   );
 }
@@ -595,10 +594,10 @@ export default function Audiences() {
     <div className="page-container">
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', gap: '16px', flexWrap: 'wrap' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '4px', letterSpacing: '-0.01em' }}>
             Públicos salvos
           </h1>
-          <p style={{ fontSize: '13px', color: 'var(--c-text-3)', margin: 0 }}>
+          <p style={{ fontSize: '13px', color: 'var(--c-text-3)', margin: 0, fontWeight: 400 }}>
             Crie e reutilize segmentações de público. Use ao montar um anúncio para agilizar o processo.
           </p>
         </div>
@@ -658,37 +657,43 @@ export default function Audiences() {
 }
 
 const inputStyle = {
-  width: '100%', padding: '10px 14px', fontSize: '13px',
-  border: '1.5px solid var(--c-border)', borderRadius: '10px',
+  width: '100%', padding: '11px 14px', fontSize: '13px',
+  border: '1px solid var(--c-border)', borderRadius: '10px',
   background: 'var(--c-surface)', color: 'var(--c-text-1)',
   outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
 };
 const labelStyle = {
-  display: 'block', fontSize: '11px', fontWeight: 700,
+  display: 'block', fontSize: '10.5px', fontWeight: 500,
   color: 'var(--c-text-3)', marginBottom: '6px',
-  textTransform: 'uppercase', letterSpacing: '.4px',
+  textTransform: 'uppercase', letterSpacing: '1.2px',
 };
 const btnPrimary = {
   flex: 1, padding: '12px', fontSize: '13px', fontWeight: 700,
-  background: 'var(--c-accent)', color: '#fff',
-  border: 'none', borderRadius: '10px', cursor: 'pointer',
+  background: 'linear-gradient(135deg, var(--c-accent), var(--c-accent-dk))',
+  color: '#fff',
+  border: 0, borderRadius: '12px', cursor: 'pointer',
+  boxShadow: '0 8px 24px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)',
 };
 const btnPrimaryInline = {
-  padding: '10px 16px', fontSize: '12px', fontWeight: 700,
-  background: 'var(--c-accent)', color: '#fff',
-  border: 'none', borderRadius: '10px', cursor: 'pointer',
-  display: 'inline-flex', alignItems: 'center', gap: '6px',
+  padding: '11px 18px', fontSize: '13px', fontWeight: 700,
+  background: 'linear-gradient(135deg, var(--c-accent), var(--c-accent-dk))',
+  color: '#fff',
+  border: 0, borderRadius: '12px', cursor: 'pointer',
+  display: 'inline-flex', alignItems: 'center', gap: '8px',
+  boxShadow: '0 8px 24px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)',
 };
 const btnSecondary = {
-  padding: '10px 14px', fontSize: '12px', fontWeight: 600,
-  background: 'var(--c-surface)', color: 'var(--c-accent)',
-  border: '1.5px solid var(--c-accent)', borderRadius: '10px', cursor: 'pointer',
+  padding: '11px 14px', fontSize: '13px', fontWeight: 700,
+  background: 'rgba(193,53,132,.10)', color: 'var(--c-accent)',
+  border: '1.5px solid rgba(193,53,132,.65)', borderRadius: '11px', cursor: 'pointer',
   display: 'flex', alignItems: 'center',
+  textShadow: '0 0 12px rgba(193,53,132,.4)',
+  boxShadow: '0 0 22px rgba(193,53,132,.18), inset 0 0 14px rgba(193,53,132,.08)',
 };
 const btnGhost = {
-  padding: '12px 18px', fontSize: '13px', fontWeight: 600,
-  background: 'var(--c-surface)', color: 'var(--c-text-3)',
-  border: '1.5px solid var(--c-border)', borderRadius: '10px', cursor: 'pointer',
+  padding: '11px 18px', fontSize: '13px', fontWeight: 600,
+  background: 'var(--c-surface)', color: 'var(--c-text-2)',
+  border: '1px solid var(--c-border)', borderRadius: '10px', cursor: 'pointer',
 };
 const iconBtnStyle = {
   padding: '6px 8px', background: 'var(--c-surface)',
@@ -697,12 +702,14 @@ const iconBtnStyle = {
   display: 'flex', alignItems: 'center',
 };
 const suggestionBtn = {
-  padding: '4px 9px', fontSize: '10px', fontWeight: 600,
+  padding: '4px 10px', fontSize: '10.5px', fontWeight: 500,
   background: 'var(--c-surface)', color: 'var(--c-text-3)',
-  border: '1px dashed var(--c-border)', borderRadius: '14px', cursor: 'pointer',
+  border: '1px dashed var(--c-border)', borderRadius: '999px', cursor: 'pointer',
 };
 const emptyState = {
   background: 'var(--c-card-bg)', border: '1px dashed var(--c-border)',
   borderRadius: '18px', padding: '56px 24px', textAlign: 'center',
   color: 'var(--c-text-3)',
+  backdropFilter: 'blur(28px)',
+  WebkitBackdropFilter: 'blur(28px)',
 };

@@ -43,15 +43,18 @@ function engagementNumeric(str) {
 
 function ScoreBadge({ score }) {
   const tier = score >= 90 ? 'ouro' : score >= 85 ? 'prata' : 'bronze';
-  const bg = tier === 'ouro' ? '#FEF3C7' : tier === 'prata' ? '#E5E7EB' : '#FDE2CC';
-  const color = tier === 'ouro' ? '#A16207' : tier === 'prata' ? '#4B5563' : '#9A3412';
+  const bg = tier === 'ouro' ? 'rgba(251,191,36,.16)' : tier === 'prata' ? 'rgba(255,255,255,.08)' : 'rgba(251,191,36,.10)';
+  const border = tier === 'ouro' ? 'rgba(251,191,36,.3)' : tier === 'prata' ? 'rgba(255,255,255,.18)' : 'rgba(251,191,36,.22)';
+  const color = tier === 'ouro' ? '#FBBF24' : tier === 'prata' ? '#C2C2C2' : '#FBBF24';
   const icon = tier === 'ouro' ? '🏆' : tier === 'prata' ? '🥈' : '🥉';
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: '4px',
-      padding: '3px 9px', borderRadius: '999px',
+      padding: '4px 9px', borderRadius: '999px',
       background: bg, color,
-      fontSize: '11px', fontWeight: 700,
+      border: `1px solid ${border}`,
+      fontSize: '10.5px', fontWeight: 700, letterSpacing: '.3px',
+      fontFeatureSettings: "'tnum'",
     }}>
       {icon} {score}
     </span>
@@ -71,7 +74,7 @@ function FavoriteButton({ active, onClick, size = 18 }) {
         fontSize: `${size}px`,
         lineHeight: 1,
         padding: '4px',
-        color: active ? '#F59E0B' : 'var(--c-text-4)',
+        color: active ? '#FBBF24' : 'var(--c-text-4)',
         transition: 'transform .15s',
       }}
       onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.2)'}
@@ -85,26 +88,25 @@ function FavoriteButton({ active, onClick, size = 18 }) {
 function ReferenceListRow({ item, position, topScore, onOpen, isFavorite, onToggleFavorite }) {
   const fmt = FORMAT_META[item.format] || FORMAT_META.image;
   const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : null;
-  const tierColor = item.score >= 90 ? '#A16207' : item.score >= 85 ? '#4B5563' : '#9A3412';
+  const tierColor = item.score >= 90 ? '#FBBF24' : item.score >= 85 ? '#C2C2C2' : '#FBBF24';
   const barPct = Math.max(8, (item.score / Math.max(topScore || item.score, 1)) * 100);
 
   return (
     <div
       onClick={() => onOpen(item)}
+      className="ccb-card"
       style={{
         display: 'grid',
         gridTemplateColumns: '42px 1fr auto auto auto',
         gap: '12px',
         alignItems: 'center',
-        padding: '10px 14px',
-        background: 'var(--c-card-bg)',
-        border: '1px solid var(--c-border)',
+        padding: '12px 14px',
         borderLeft: `4px solid ${tierColor}`,
-        borderRadius: '10px',
+        borderRadius: '14px',
         cursor: 'pointer',
         transition: 'all .15s',
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--c-accent)'; e.currentTarget.style.borderLeftColor = tierColor; }}
+      onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(193,53,132,.55)'; e.currentTarget.style.borderLeftColor = tierColor; }}
       onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--c-border)'; e.currentTarget.style.borderLeftColor = tierColor; }}
     >
       {/* Posição / medalha */}
@@ -112,8 +114,8 @@ function ReferenceListRow({ item, position, topScore, onOpen, isFavorite, onTogg
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         gap: '2px', textAlign: 'center',
       }}>
-        <span style={{ fontSize: '22px', lineHeight: 1 }}>{medal || <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-3)' }}>#{position}</span>}</span>
-        {medal && <span style={{ fontSize: '9.5px', fontWeight: 700, color: 'var(--c-text-4)' }}>#{position}</span>}
+        <span style={{ fontSize: '22px', lineHeight: 1 }}>{medal || <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-3)', fontFeatureSettings: "'tnum'" }}>#{position}</span>}</span>
+        {medal && <span style={{ fontSize: '9.5px', fontWeight: 500, color: 'var(--c-text-4)', fontFeatureSettings: "'tnum'" }}>#{position}</span>}
       </div>
 
       {/* Coluna principal: marca + título + hook + barra */}
@@ -121,13 +123,14 @@ function ReferenceListRow({ item, position, topScore, onOpen, isFavorite, onTogg
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '18px', lineHeight: 1 }}>{item.brandLogo}</span>
           <span style={{
-            fontSize: '10.5px', fontWeight: 700, color: 'var(--c-text-4)',
-            letterSpacing: '.3px', textTransform: 'uppercase',
+            fontSize: '10.5px', fontWeight: 500, color: 'var(--c-text-3)',
+            letterSpacing: '1.2px', textTransform: 'uppercase',
           }}>{item.brand}</span>
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: '3px',
-            padding: '1px 7px', borderRadius: '10px',
-            background: `${fmt.color}15`, color: fmt.color,
+            padding: '2px 8px', borderRadius: '999px',
+            background: `${fmt.color}22`, color: fmt.color,
+            border: `1px solid ${fmt.color}55`,
             fontSize: '9.5px', fontWeight: 700,
           }}>
             {fmt.emoji} {fmt.label}
@@ -141,7 +144,7 @@ function ReferenceListRow({ item, position, topScore, onOpen, isFavorite, onTogg
           {item.title}
         </div>
         <div style={{
-          fontSize: '11px', color: 'var(--c-text-3)', lineHeight: 1.4,
+          fontSize: '11.5px', color: 'var(--c-text-3)', lineHeight: 1.4, fontWeight: 400,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '6px',
         }}>
           💡 {item.hook}
@@ -149,7 +152,7 @@ function ReferenceListRow({ item, position, topScore, onOpen, isFavorite, onTogg
         {/* Barra de performance proporcional ao topo */}
         <div style={{
           height: '6px', borderRadius: '3px', background: 'var(--c-surface)',
-          border: '1px solid var(--c-border-lt)', overflow: 'hidden', maxWidth: '320px',
+          border: '1px solid var(--c-border)', overflow: 'hidden', maxWidth: '320px',
         }}>
           <div style={{
             height: '100%',
@@ -162,22 +165,22 @@ function ReferenceListRow({ item, position, topScore, onOpen, isFavorite, onTogg
 
       {/* Métricas */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', minWidth: '56px' }}>
-        <div style={{ fontSize: '17px', fontWeight: 800, color: tierColor, lineHeight: 1 }}>
+        <div style={{ fontSize: '17px', fontWeight: 800, color: tierColor, lineHeight: 1, fontFeatureSettings: "'tnum'" }}>
           {item.score}
         </div>
-        <div style={{ fontSize: '9.5px', color: 'var(--c-text-4)', fontWeight: 700, textTransform: 'uppercase' }}>
+        <div style={{ fontSize: '9.5px', color: 'var(--c-text-4)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '1.2px' }}>
           score
         </div>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', minWidth: '64px' }}>
-        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', lineHeight: 1.1 }}>
+        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', lineHeight: 1.1, fontFeatureSettings: "'tnum'" }}>
           {item.engagementRate}
         </div>
-        <div style={{ fontSize: '9.5px', color: 'var(--c-text-4)', fontWeight: 700, textTransform: 'uppercase' }}>
+        <div style={{ fontSize: '9.5px', color: 'var(--c-text-4)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '1.2px' }}>
           engaj.
         </div>
-        <div style={{ fontSize: '10px', color: 'var(--c-text-3)' }}>
+        <div style={{ fontSize: '10px', color: 'var(--c-text-3)', fontWeight: 400, fontFeatureSettings: "'tnum'" }}>
           {item.activeDays}d ativo
         </div>
       </div>
@@ -193,11 +196,15 @@ function ReferenceListRow({ item, position, topScore, onOpen, isFavorite, onTogg
             onClick={(e) => e.stopPropagation()}
             title="Abrir anúncio na Meta Ad Library"
             style={{
-              padding: '6px 12px', borderRadius: '8px',
-              background: 'var(--c-accent)', color: '#fff',
+              padding: '8px 14px', borderRadius: '999px',
+              background: 'rgba(193,53,132,.10)',
+              border: '1.5px solid rgba(193,53,132,.65)',
+              color: 'var(--c-accent)',
               fontSize: '11px', fontWeight: 700,
               textDecoration: 'none', display: 'inline-flex',
               alignItems: 'center', gap: '4px',
+              textShadow: '0 0 12px rgba(193,53,132,.4)',
+              boxShadow: '0 0 18px rgba(193,53,132,.18), inset 0 0 12px rgba(193,53,132,.08)',
             }}
           >
             Abrir 🔗
@@ -213,10 +220,9 @@ function ReferenceCard({ item, position, onOpen, isFavorite, onToggleFavorite })
   return (
     <div
       onClick={() => onOpen(item)}
+      className="ccb-card"
       style={{
-        background: 'var(--c-card-bg)',
-        border: '1px solid var(--c-border)',
-        borderRadius: '14px',
+        borderRadius: '18px',
         padding: '14px 16px',
         cursor: 'pointer',
         transition: 'all .18s',
@@ -224,30 +230,30 @@ function ReferenceCard({ item, position, onOpen, isFavorite, onToggleFavorite })
         position: 'relative',
       }}
       onMouseEnter={e => {
-        e.currentTarget.style.borderColor = 'var(--c-accent)';
+        e.currentTarget.style.borderColor = 'rgba(193,53,132,.55)';
         e.currentTarget.style.transform = 'translateY(-2px)';
-        e.currentTarget.style.boxShadow = '0 8px 24px rgba(214,141,143,.18)';
+        e.currentTarget.style.boxShadow = '0 12px 30px rgba(0,0,0,.45), 0 0 24px rgba(193,53,132,.18), inset 0 1px 0 var(--c-glass-shine)';
       }}
       onMouseLeave={e => {
         e.currentTarget.style.borderColor = 'var(--c-border)';
         e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = 'none';
+        e.currentTarget.style.boxShadow = '';
       }}
     >
       {/* Header: posição + marca + favorito + score */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
         <span style={{
           width: '28px', height: '28px', borderRadius: '50%',
-          background: 'var(--c-surface)', border: '1.5px solid var(--c-border)',
+          background: 'var(--c-surface)', border: '1px solid var(--c-border)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: '12px', fontWeight: 700, color: 'var(--c-text-3)',
-          flexShrink: 0,
+          flexShrink: 0, fontFeatureSettings: "'tnum'",
         }}>
           #{position}
         </span>
         <span style={{ fontSize: '20px' }}>{item.brandLogo}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--c-text-4)', letterSpacing: '.3px', textTransform: 'uppercase' }}>
+          <div style={{ fontSize: '10.5px', fontWeight: 500, color: 'var(--c-text-3)', letterSpacing: '1.2px', textTransform: 'uppercase' }}>
             {item.brand}
           </div>
           <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', lineHeight: 1.3 }}>
@@ -260,14 +266,14 @@ function ReferenceCard({ item, position, onOpen, isFavorite, onToggleFavorite })
 
       {/* Preview visual: placeholder com paleta */}
       <div style={{
-        height: '120px', borderRadius: '10px', overflow: 'hidden',
+        height: '120px', borderRadius: '12px', overflow: 'hidden',
         position: 'relative',
         background: `linear-gradient(135deg, ${item.colorPalette.join(', ')})`,
       }}>
         <div style={{
           position: 'absolute', top: '8px', left: '10px',
           display: 'flex', alignItems: 'center', gap: '4px',
-          padding: '3px 8px', borderRadius: '20px',
+          padding: '3px 9px', borderRadius: '999px',
           background: 'rgba(255,255,255,.85)', color: fmt.color,
           fontSize: '10px', fontWeight: 700,
         }}>
@@ -275,9 +281,10 @@ function ReferenceCard({ item, position, onOpen, isFavorite, onToggleFavorite })
         </div>
         <div style={{
           position: 'absolute', bottom: '8px', right: '10px',
-          padding: '2px 7px', borderRadius: '8px',
-          background: 'rgba(0,0,0,.55)', color: '#fff',
-          fontSize: '9px', fontWeight: 600,
+          padding: '3px 8px', borderRadius: '999px',
+          background: 'rgba(0,0,0,.65)', color: '#fff',
+          fontSize: '9.5px', fontWeight: 600,
+          fontFeatureSettings: "'tnum'",
         }}>
           {item.activeDays}d ativo · {item.engagementRate}
         </div>
@@ -291,15 +298,16 @@ function ReferenceCard({ item, position, onOpen, isFavorite, onToggleFavorite })
 
       {/* Hook */}
       <div style={{
-        padding: '8px 10px', borderRadius: '8px',
+        padding: '8px 10px', borderRadius: '10px',
         background: 'var(--c-surface)',
-        fontSize: '11.5px', color: 'var(--c-text-2)', lineHeight: 1.45,
+        border: '1px solid var(--c-border)',
+        fontSize: '11.5px', color: 'var(--c-text-2)', lineHeight: 1.45, fontWeight: 400,
       }}>
-        <strong style={{ color: 'var(--c-accent)' }}>Gancho:</strong> {item.hook}
+        <strong style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Gancho:</strong> {item.hook}
       </div>
 
       {/* Footer: objetivo + biblioteca Meta + CTA visual */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '10.5px', color: 'var(--c-text-3)', gap: '8px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: 'var(--c-text-3)', gap: '8px', fontWeight: 400 }}>
         <span>🎯 {OBJECTIVE_LABEL[item.objective]}</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {item.adLibraryUrl && (
@@ -339,8 +347,8 @@ function CopyButton({ text, label = 'Copiar' }) {
     <button
       onClick={handleCopy}
       style={{
-        padding: '4px 10px', borderRadius: '7px',
-        border: '1px solid var(--c-border)', background: 'var(--c-card-bg)',
+        padding: '5px 11px', borderRadius: '8px',
+        border: '1px solid var(--c-border)', background: 'var(--c-surface)',
         fontSize: '10.5px', fontWeight: 600, color: copied ? 'var(--c-accent)' : 'var(--c-text-3)',
         cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px',
         transition: 'all .15s',
@@ -366,13 +374,12 @@ function ReferenceModal({ item, onClose, onUse, isFavorite, onToggleFavorite }) 
     >
       <div
         onClick={e => e.stopPropagation()}
+        className="ccb-card"
         style={{
-          background: 'var(--c-card-bg)',
           borderRadius: '18px',
-          border: '1px solid var(--c-border)',
-          boxShadow: '0 20px 60px rgba(0,0,0,.4)',
           width: '100%', maxWidth: '720px',
           maxHeight: '90vh', overflow: 'auto',
+          padding: 0,
         }}
       >
         {/* Hero */}
@@ -440,8 +447,8 @@ function ReferenceModal({ item, onClose, onUse, isFavorite, onToggleFavorite }) 
           <Section title="Texto do anúncio" action={<CopyButton text={item.primaryText} label="Copiar texto" />}>
             <div style={{
               padding: '12px 14px', borderRadius: '10px',
-              background: 'var(--c-surface)', border: '1px solid var(--c-border-lt)',
-              fontSize: '12.5px', color: 'var(--c-text-1)', lineHeight: 1.55,
+              background: 'var(--c-surface)', border: '1px solid var(--c-border)',
+              fontSize: '12.5px', color: 'var(--c-text-1)', lineHeight: 1.55, fontWeight: 400,
             }}>
               {item.primaryText}
             </div>
@@ -450,7 +457,7 @@ function ReferenceModal({ item, onClose, onUse, isFavorite, onToggleFavorite }) 
           <Section title="Título" action={<CopyButton text={item.headline} label="Copiar título" />}>
             <div style={{
               padding: '10px 14px', borderRadius: '10px',
-              background: 'var(--c-surface)', border: '1px solid var(--c-border-lt)',
+              background: 'var(--c-surface)', border: '1px solid var(--c-border)',
               fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)',
             }}>
               {item.headline}
@@ -459,9 +466,11 @@ function ReferenceModal({ item, onClose, onUse, isFavorite, onToggleFavorite }) 
 
           <Section title="Botão CTA">
             <span style={{
-              display: 'inline-block', padding: '6px 14px', borderRadius: '8px',
-              background: 'var(--c-accent)', color: '#fff',
+              display: 'inline-block', padding: '8px 16px', borderRadius: '10px',
+              background: 'linear-gradient(135deg, var(--c-accent), var(--c-accent-dk))',
+              color: '#fff',
               fontSize: '12px', fontWeight: 700,
+              boxShadow: '0 6px 18px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)',
             }}>
               {item.cta}
             </span>
@@ -474,7 +483,7 @@ function ReferenceModal({ item, onClose, onUse, isFavorite, onToggleFavorite }) 
           </Section>
 
           <Section title="Estilo visual">
-            <p style={{ fontSize: '12px', color: 'var(--c-text-3)', margin: '0 0 8px', lineHeight: 1.55 }}>
+            <p style={{ fontSize: '12px', color: 'var(--c-text-3)', margin: '0 0 8px', lineHeight: 1.55, fontWeight: 400 }}>
               {item.mediaStyle}
             </p>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -484,7 +493,7 @@ function ReferenceModal({ item, onClose, onUse, isFavorite, onToggleFavorite }) 
                   onClick={() => navigator.clipboard?.writeText(c)}
                   title={`Clique pra copiar ${c}`}
                   style={{
-                    width: '44px', height: '44px', borderRadius: '8px',
+                    width: '44px', height: '44px', borderRadius: '10px',
                     background: c, border: '1px solid var(--c-border)',
                     display: 'flex', alignItems: 'end', justifyContent: 'center',
                     fontSize: '8px', color: 'rgba(0,0,0,.65)', fontWeight: 700,
@@ -508,8 +517,8 @@ function ReferenceModal({ item, onClose, onUse, isFavorite, onToggleFavorite }) 
           <button
             onClick={onClose}
             style={{
-              padding: '9px 14px', borderRadius: '9px',
-              border: '1.5px solid var(--c-border)', background: 'var(--c-card-bg)',
+              padding: '11px 18px', borderRadius: '10px',
+              border: '1px solid var(--c-border)', background: 'var(--c-surface)',
               fontSize: '12px', fontWeight: 600, color: 'var(--c-text-2)', cursor: 'pointer',
             }}
           >
@@ -521,10 +530,14 @@ function ReferenceModal({ item, onClose, onUse, isFavorite, onToggleFavorite }) 
               target="_blank"
               rel="noopener noreferrer"
               style={{
-                padding: '9px 14px', borderRadius: '9px',
-                border: '1.5px solid var(--c-border)', background: 'var(--c-card-bg)',
-                fontSize: '12px', fontWeight: 600, color: 'var(--c-text-2)',
+                padding: '11px 16px', borderRadius: '11px',
+                background: 'rgba(193,53,132,.10)',
+                border: '1.5px solid rgba(193,53,132,.65)',
+                color: 'var(--c-accent)',
+                fontSize: '12.5px', fontWeight: 700,
                 textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px',
+                textShadow: '0 0 12px rgba(193,53,132,.4)',
+                boxShadow: '0 0 22px rgba(193,53,132,.18), inset 0 0 14px rgba(193,53,132,.08)',
               }}
             >
               🔗 Ver anúncio real
@@ -533,9 +546,11 @@ function ReferenceModal({ item, onClose, onUse, isFavorite, onToggleFavorite }) 
           <button
             onClick={() => onUse(item)}
             style={{
-              padding: '9px 18px', borderRadius: '9px',
-              border: 'none', background: 'var(--c-accent)',
-              fontSize: '12px', fontWeight: 700, color: '#fff', cursor: 'pointer',
+              padding: '11px 18px', borderRadius: '12px',
+              border: 0,
+              background: 'linear-gradient(135deg, var(--c-accent), var(--c-accent-dk))',
+              fontSize: '13px', fontWeight: 700, color: '#fff', cursor: 'pointer',
+              boxShadow: '0 8px 24px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)',
             }}
           >
             🚀 Criar anúncio a partir desta referência
@@ -549,13 +564,13 @@ function ReferenceModal({ item, onClose, onUse, isFavorite, onToggleFavorite }) 
 function Stat({ label, value }) {
   return (
     <div style={{
-      padding: '8px 10px', borderRadius: '8px',
-      background: 'var(--c-surface)', border: '1px solid var(--c-border-lt)',
+      padding: '10px 12px', borderRadius: '10px',
+      background: 'var(--c-surface)', border: '1px solid var(--c-border)',
     }}>
-      <div style={{ fontSize: '9.5px', fontWeight: 700, color: 'var(--c-text-4)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: '2px' }}>
+      <div style={{ fontSize: '10px', fontWeight: 500, color: 'var(--c-text-3)', textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: '3px' }}>
         {label}
       </div>
-      <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)' }}>
+      <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', fontFeatureSettings: "'tnum'" }}>
         {value}
       </div>
     </div>
@@ -570,8 +585,8 @@ function Section({ title, children, action }) {
         gap: '8px', marginBottom: '6px',
       }}>
         <div style={{
-          fontSize: '10px', fontWeight: 700, color: 'var(--c-text-4)',
-          letterSpacing: '.5px', textTransform: 'uppercase',
+          fontSize: '10.5px', fontWeight: 500, color: 'var(--c-text-3)',
+          letterSpacing: '1.2px', textTransform: 'uppercase',
         }}>
           {title}
         </div>
@@ -687,20 +702,22 @@ export default function References() {
     <div className="page-container">
       <div style={{ marginBottom: '18px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '4px', letterSpacing: '-0.01em' }}>
             Referências
           </h1>
-          <p style={{ fontSize: '12.5px', color: 'var(--c-text-3)', lineHeight: 1.5, maxWidth: '640px' }}>
+          <p style={{ fontSize: '13px', color: 'var(--c-text-3)', lineHeight: 1.5, maxWidth: '640px', fontWeight: 400 }}>
             Anúncios de marcas renomadas de estética e beleza que estão performando muito bem na biblioteca de anúncios do Meta.
             Ranking do melhor pro pior. Clique em um card para ver o criativo completo e criar um anúncio inspirado nele.
           </p>
         </div>
         {favoriteCount > 0 && (
           <div style={{
-            padding: '8px 14px', borderRadius: '10px',
-            background: '#FEF3C7', color: '#A16207',
+            padding: '8px 14px', borderRadius: '999px',
+            background: 'rgba(251,191,36,.16)', color: '#FBBF24',
+            border: '1px solid rgba(251,191,36,.3)',
             fontSize: '11.5px', fontWeight: 700,
             display: 'inline-flex', alignItems: 'center', gap: '6px',
+            fontFeatureSettings: "'tnum'",
           }}>
             ★ {favoriteCount} favorita{favoriteCount > 1 ? 's' : ''}
           </div>
@@ -708,13 +725,12 @@ export default function References() {
       </div>
 
       {/* Chips de serviços — abrem Meta Ad Library ou filtram a lista local */}
-      <div style={{
+      <div className="ccb-card" style={{
         marginBottom: '14px',
-        background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',
-        borderRadius: '12px', padding: '10px 12px',
+        borderRadius: '14px', padding: '12px 14px',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--c-text-3)', textTransform: 'uppercase', letterSpacing: '.5px' }}>
+          <div style={{ fontSize: '10.5px', fontWeight: 500, color: 'var(--c-text-3)', textTransform: 'uppercase', letterSpacing: '1.2px' }}>
             Serviços da Cris — filtrar referências e buscar na Meta Ad Library
           </div>
           {serviceFilter !== 'all' && (
@@ -731,9 +747,9 @@ export default function References() {
           <button
             onClick={() => setServiceFilter('all')}
             style={{
-              padding: '5px 10px', borderRadius: '20px',
-              border: `1.5px solid ${serviceFilter === 'all' ? 'var(--c-accent)' : 'var(--c-border)'}`,
-              background: serviceFilter === 'all' ? 'var(--c-active-bg)' : 'var(--c-surface)',
+              padding: '5px 11px', borderRadius: '999px',
+              border: `1px solid ${serviceFilter === 'all' ? 'rgba(193,53,132,.4)' : 'var(--c-border)'}`,
+              background: serviceFilter === 'all' ? 'var(--c-accent-soft)' : 'var(--c-surface)',
               color: serviceFilter === 'all' ? 'var(--c-accent)' : 'var(--c-text-3)',
               fontSize: '11px', fontWeight: 700, cursor: 'pointer',
             }}
@@ -749,10 +765,10 @@ export default function References() {
                   onClick={() => setServiceFilter(active ? 'all' : s.id)}
                   title={`Filtrar referências por ${s.label}`}
                   style={{
-                    padding: '5px 10px', borderRadius: '20px 0 0 20px',
-                    border: `1.5px solid ${active ? 'var(--c-accent)' : 'var(--c-border)'}`,
+                    padding: '5px 11px', borderRadius: '999px 0 0 999px',
+                    border: `1px solid ${active ? 'rgba(193,53,132,.4)' : 'var(--c-border)'}`,
                     borderRight: 'none',
-                    background: active ? 'var(--c-active-bg)' : 'var(--c-surface)',
+                    background: active ? 'var(--c-accent-soft)' : 'var(--c-surface)',
                     color: active ? 'var(--c-accent)' : 'var(--c-text-3)',
                     fontSize: '11px', fontWeight: active ? 700 : 500,
                     cursor: 'pointer',
@@ -766,9 +782,9 @@ export default function References() {
                   rel="noopener noreferrer"
                   title={`Abrir Meta Ad Library buscando "${s.label}"`}
                   style={{
-                    padding: '5px 8px', borderRadius: '0 20px 20px 0',
-                    border: `1.5px solid ${active ? 'var(--c-accent)' : 'var(--c-border)'}`,
-                    background: active ? 'var(--c-active-bg)' : 'var(--c-card-bg)',
+                    padding: '5px 9px', borderRadius: '0 999px 999px 0',
+                    border: `1px solid ${active ? 'rgba(193,53,132,.4)' : 'var(--c-border)'}`,
+                    background: active ? 'var(--c-accent-soft)' : 'var(--c-surface)',
                     color: 'var(--c-text-3)',
                     fontSize: '11px', textDecoration: 'none',
                     display: 'inline-flex', alignItems: 'center',
@@ -780,20 +796,20 @@ export default function References() {
             );
           })}
         </div>
-        <div style={{ marginTop: '8px', fontSize: '10.5px', color: 'var(--c-text-4)' }}>
+        <div style={{ marginTop: '8px', fontSize: '10.5px', color: 'var(--c-text-4)', fontWeight: 400 }}>
           Clique no nome pra filtrar referências locais · clique em 🔗 pra abrir a Meta Ad Library buscando aquele serviço
         </div>
       </div>
 
       {/* Barra de busca + filtros */}
-      <div style={{
+      <div className="ccb-card" style={{
         display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center',
-        padding: '10px 12px', marginBottom: '16px',
-        background: 'var(--c-card-bg)', border: '1px solid var(--c-border)', borderRadius: '12px',
+        padding: '12px 14px', marginBottom: '16px',
+        borderRadius: '14px',
       }}>
         <div style={{ position: 'relative', flex: '1 1 220px', minWidth: '180px' }}>
           <span style={{
-            position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)',
+            position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)',
             fontSize: '12px', color: 'var(--c-text-4)', pointerEvents: 'none',
           }}>🔍</span>
           <input
@@ -802,9 +818,9 @@ export default function References() {
             onChange={e => setQuery(e.target.value)}
             placeholder="Buscar por marca, gancho, título..."
             style={{
-              width: '100%', padding: '7px 10px 7px 30px', borderRadius: '7px',
+              width: '100%', padding: '9px 12px 9px 32px', borderRadius: '10px',
               border: '1px solid var(--c-border)', background: 'var(--c-surface)',
-              color: 'var(--c-text-1)', fontSize: '11.5px', fontFamily: 'inherit',
+              color: 'var(--c-text-1)', fontSize: '12px', fontFamily: 'inherit',
               outline: 'none',
             }}
           />
@@ -813,9 +829,9 @@ export default function References() {
           value={format}
           onChange={e => setFormat(e.target.value)}
           style={{
-            padding: '6px 10px', borderRadius: '7px',
+            padding: '8px 12px', borderRadius: '10px',
             border: '1px solid var(--c-border)', background: 'var(--c-surface)',
-            color: 'var(--c-text-2)', fontSize: '11.5px', fontFamily: 'inherit', cursor: 'pointer',
+            color: 'var(--c-text-2)', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer',
           }}
         >
           {REFERENCE_FILTERS.format.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
@@ -824,9 +840,9 @@ export default function References() {
           value={objective}
           onChange={e => setObjective(e.target.value)}
           style={{
-            padding: '6px 10px', borderRadius: '7px',
+            padding: '8px 12px', borderRadius: '10px',
             border: '1px solid var(--c-border)', background: 'var(--c-surface)',
-            color: 'var(--c-text-2)', fontSize: '11.5px', fontFamily: 'inherit', cursor: 'pointer',
+            color: 'var(--c-text-2)', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer',
           }}
         >
           {REFERENCE_FILTERS.objective.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
@@ -835,44 +851,47 @@ export default function References() {
           value={sortBy}
           onChange={e => setSortBy(e.target.value)}
           style={{
-            padding: '6px 10px', borderRadius: '7px',
+            padding: '8px 12px', borderRadius: '10px',
             border: '1px solid var(--c-border)', background: 'var(--c-surface)',
-            color: 'var(--c-text-2)', fontSize: '11.5px', fontFamily: 'inherit', cursor: 'pointer',
+            color: 'var(--c-text-2)', fontSize: '12px', fontFamily: 'inherit', cursor: 'pointer',
           }}
         >
           {SORT_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
         </select>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: 'var(--c-text-2)', cursor: 'pointer' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: 'var(--c-text-2)', cursor: 'pointer', fontWeight: 400 }}>
           <input
             type="checkbox"
             checked={onlyCris}
             onChange={e => setOnlyCris(e.target.checked)}
-            style={{ cursor: 'pointer' }}
+            style={{ cursor: 'pointer', accentColor: 'var(--c-accent)' }}
           />
           Relevantes p/ Cris
         </label>
-        <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--c-text-4)' }}>
+        <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--c-text-4)', fontFeatureSettings: "'tnum'", fontWeight: 400 }}>
           {filtered.length} referência{filtered.length !== 1 ? 's' : ''}
         </span>
       </div>
 
       {/* Grid de cards */}
       {filtered.length === 0 ? (
-        <div style={{
+        <div className="ccb-card" style={{
           padding: '60px 20px', textAlign: 'center',
-          background: 'var(--c-card-bg)', border: '1px dashed var(--c-border)',
-          borderRadius: '14px',
+          border: '1px dashed var(--c-border)',
+          borderRadius: '18px',
         }}>
           <div style={{ fontSize: '34px', marginBottom: '8px', opacity: .6 }}>🔍</div>
-          <div style={{ fontSize: '13px', color: 'var(--c-text-3)', fontWeight: 600, marginBottom: '12px' }}>
+          <div style={{ fontSize: '13px', color: 'var(--c-text-3)', fontWeight: 400, marginBottom: '12px' }}>
             Nenhuma referência com esses filtros.
           </div>
           <button
             onClick={resetFilters}
             style={{
-              padding: '8px 16px', borderRadius: '8px',
-              border: '1.5px solid var(--c-accent)', background: 'transparent',
-              color: 'var(--c-accent)', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+              padding: '11px 18px', borderRadius: '11px',
+              background: 'rgba(193,53,132,.10)',
+              border: '1.5px solid rgba(193,53,132,.65)',
+              color: 'var(--c-accent)', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer',
+              textShadow: '0 0 12px rgba(193,53,132,.4)',
+              boxShadow: '0 0 22px rgba(193,53,132,.18), inset 0 0 14px rgba(193,53,132,.08)',
             }}
           >
             🧹 Limpar filtros
@@ -901,9 +920,10 @@ export default function References() {
               <button
                 onClick={() => setVisibleCount(c => c + 10)}
                 style={{
-                  padding: '9px 18px', borderRadius: '9px',
-                  border: '1.5px solid var(--c-border)', background: 'var(--c-card-bg)',
-                  color: 'var(--c-text-2)', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+                  padding: '11px 18px', borderRadius: '11px',
+                  border: '1px solid var(--c-border)', background: 'var(--c-surface)',
+                  color: 'var(--c-text-2)', fontSize: '12.5px', fontWeight: 600, cursor: 'pointer',
+                  fontFeatureSettings: "'tnum'",
                 }}
               >
                 Carregar mais ({filtered.length - visible.length} restantes)

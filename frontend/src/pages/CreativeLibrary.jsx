@@ -61,10 +61,8 @@ function emptyCreative() {
 function CreativeCard({ creative, onRemove, onCopy, onReuseQuick, onReuseAdjust }) {
   return (
     <div className="ccb-card" style={{
-      background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',
-      borderRadius: '14px', overflow: 'hidden',
-      boxShadow: '0 2px 8px var(--c-shadow)',
-      display: 'flex', flexDirection: 'column',
+      borderRadius: '18px', overflow: 'hidden',
+      display: 'flex', flexDirection: 'column', padding: 0,
     }}>
       <div style={{
         height: '160px',
@@ -77,8 +75,9 @@ function CreativeCard({ creative, onRemove, onCopy, onReuseQuick, onReuseAdjust 
           <div style={{
             position: 'absolute', top: '10px', right: '10px',
             background: 'rgba(0,0,0,.55)', color: '#fff',
-            padding: '3px 9px', borderRadius: '20px',
-            fontSize: '10px', fontWeight: 700,
+            padding: '4px 9px', borderRadius: '999px',
+            fontSize: '10.5px', fontWeight: 700,
+            fontFeatureSettings: "'tnum'",
           }}>
             Usado {creative.usedCount}×
           </div>
@@ -91,7 +90,7 @@ function CreativeCard({ creative, onRemove, onCopy, onReuseQuick, onReuseAdjust 
         </div>
         {creative.primaryText && (
           <div style={{
-            fontSize: '11px', color: 'var(--c-text-3)', lineHeight: 1.5,
+            fontSize: '11.5px', color: 'var(--c-text-3)', lineHeight: 1.5, fontWeight: 400,
             display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
           }}>
@@ -102,7 +101,9 @@ function CreativeCard({ creative, onRemove, onCopy, onReuseQuick, onReuseAdjust 
           <div style={{
             fontSize: '11px', fontWeight: 600,
             color: 'var(--c-accent)', padding: '5px 10px',
-            background: 'var(--c-active-bg)', borderRadius: '6px',
+            background: 'var(--c-accent-soft)',
+            border: '1px solid rgba(193,53,132,.3)',
+            borderRadius: '999px',
             alignSelf: 'flex-start',
           }}>
             🎯 {creative.headline}
@@ -115,11 +116,13 @@ function CreativeCard({ creative, onRemove, onCopy, onReuseQuick, onReuseAdjust 
               onClick={() => onReuseQuick(creative)}
               title="Abre a criação direto na revisão, com público e orçamento padrão"
               style={{
-                flex: 1, padding: '8px 10px',
-                background: 'var(--c-accent)', color: '#fff',
-                border: 'none', borderRadius: '8px',
+                flex: 1, padding: '10px 12px',
+                background: 'linear-gradient(135deg, var(--c-accent), var(--c-accent-dk))',
+                color: '#fff',
+                border: 0, borderRadius: '10px',
                 fontSize: '12px', fontWeight: 700, cursor: 'pointer',
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                boxShadow: '0 6px 18px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)',
               }}
             >
               🚀 Publicar rápido
@@ -128,9 +131,9 @@ function CreativeCard({ creative, onRemove, onCopy, onReuseQuick, onReuseAdjust 
               onClick={() => onReuseAdjust(creative)}
               title="Abre a criação com este texto preenchido e o passo a passo completo"
               style={{
-                flex: 1, padding: '8px 10px',
+                flex: 1, padding: '10px 12px',
                 background: 'var(--c-surface)', color: 'var(--c-text-2)',
-                border: '1.5px solid var(--c-border)', borderRadius: '8px',
+                border: '1px solid var(--c-border)', borderRadius: '10px',
                 fontSize: '12px', fontWeight: 600, cursor: 'pointer',
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
               }}
@@ -142,7 +145,7 @@ function CreativeCard({ creative, onRemove, onCopy, onReuseQuick, onReuseAdjust 
             <button onClick={() => onCopy(creative)} style={{ ...actionBtn, flex: 1 }} title="Copiar texto">
               <IconCopy /> Copiar texto
             </button>
-            <button onClick={() => onRemove(creative.id)} style={{ ...actionBtn, color: '#DC2626' }} title="Remover">
+            <button onClick={() => onRemove(creative.id)} style={{ ...actionBtn, color: '#F87171' }} title="Remover">
               <IconTrash />
             </button>
           </div>
@@ -163,10 +166,11 @@ function CreativeForm({ onSave, onCancel }) {
   }
 
   return (
-    <div style={{
-      background: 'var(--c-card-bg)', border: '1.5px solid var(--c-accent)',
-      borderRadius: '16px', padding: '22px',
+    <div className="ccb-card" style={{
+      borderRadius: '18px', padding: '22px',
       display: 'flex', flexDirection: 'column', gap: '14px',
+      borderColor: 'rgba(193,53,132,.55)',
+      boxShadow: '0 8px 30px rgba(0,0,0,.4), 0 0 36px rgba(193,53,132,.16), inset 0 1px 0 rgba(255,194,228,.18), inset 0 0 18px rgba(193,53,132,.08)',
     }}>
       <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--c-text-1)', margin: 0 }}>
         Novo criativo
@@ -298,10 +302,10 @@ export default function CreativeLibrary() {
     <div className="page-container">
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '18px', gap: '16px', flexWrap: 'wrap' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '4px', letterSpacing: '-0.01em' }}>
             Biblioteca de criativos
           </h1>
-          <p style={{ fontSize: '13px', color: 'var(--c-text-3)', margin: 0, maxWidth: '640px' }}>
+          <p style={{ fontSize: '13px', color: 'var(--c-text-3)', margin: 0, maxWidth: '640px', fontWeight: 400 }}>
             {headerCopy}
           </p>
         </div>
@@ -366,34 +370,38 @@ export default function CreativeLibrary() {
 }
 
 const inputStyle = {
-  width: '100%', padding: '10px 14px', fontSize: '13px',
-  border: '1.5px solid var(--c-border)', borderRadius: '10px',
+  width: '100%', padding: '11px 14px', fontSize: '13px',
+  border: '1px solid var(--c-border)', borderRadius: '10px',
   background: 'var(--c-surface)', color: 'var(--c-text-1)',
   outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
 };
 const labelStyle = {
-  display: 'block', fontSize: '11px', fontWeight: 700,
+  display: 'block', fontSize: '10.5px', fontWeight: 500,
   color: 'var(--c-text-3)', marginBottom: '6px',
-  textTransform: 'uppercase', letterSpacing: '.4px',
+  textTransform: 'uppercase', letterSpacing: '1.2px',
 };
 const btnPrimary = {
   flex: 1, padding: '12px', fontSize: '13px', fontWeight: 700,
-  background: 'var(--c-accent)', color: '#fff',
-  border: 'none', borderRadius: '10px', cursor: 'pointer',
+  background: 'linear-gradient(135deg, var(--c-accent), var(--c-accent-dk))',
+  color: '#fff',
+  border: 0, borderRadius: '12px', cursor: 'pointer',
+  boxShadow: '0 8px 24px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)',
 };
 const btnPrimaryInline = {
-  padding: '10px 16px', fontSize: '12px', fontWeight: 700,
-  background: 'var(--c-accent)', color: '#fff',
-  border: 'none', borderRadius: '10px', cursor: 'pointer',
-  display: 'inline-flex', alignItems: 'center', gap: '6px',
+  padding: '11px 18px', fontSize: '13px', fontWeight: 700,
+  background: 'linear-gradient(135deg, var(--c-accent), var(--c-accent-dk))',
+  color: '#fff',
+  border: 0, borderRadius: '12px', cursor: 'pointer',
+  display: 'inline-flex', alignItems: 'center', gap: '8px',
+  boxShadow: '0 8px 24px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)',
 };
 const btnGhost = {
-  padding: '12px 18px', fontSize: '13px', fontWeight: 600,
-  background: 'var(--c-surface)', color: 'var(--c-text-3)',
-  border: '1.5px solid var(--c-border)', borderRadius: '10px', cursor: 'pointer',
+  padding: '11px 18px', fontSize: '13px', fontWeight: 600,
+  background: 'var(--c-surface)', color: 'var(--c-text-2)',
+  border: '1px solid var(--c-border)', borderRadius: '10px', cursor: 'pointer',
 };
 const actionBtn = {
-  padding: '7px 10px', fontSize: '11px', fontWeight: 600,
+  padding: '8px 10px', fontSize: '11px', fontWeight: 600,
   background: 'var(--c-surface)', color: 'var(--c-text-2)',
   border: '1px solid var(--c-border)', borderRadius: '8px',
   cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px',
@@ -403,6 +411,8 @@ const emptyState = {
   background: 'var(--c-card-bg)', border: '1px dashed var(--c-border)',
   borderRadius: '18px', padding: '56px 24px', textAlign: 'center',
   color: 'var(--c-text-3)',
+  backdropFilter: 'blur(28px)',
+  WebkitBackdropFilter: 'blur(28px)',
 };
 
 function TabBtn({ active, onClick, children }) {
@@ -415,11 +425,13 @@ function TabBtn({ active, onClick, children }) {
         fontWeight: active ? 700 : 600,
         background: 'transparent',
         color: active ? 'var(--c-accent)' : 'var(--c-text-3)',
-        border: 'none',
+        border: 0,
         borderBottom: active ? '2px solid var(--c-accent)' : '2px solid transparent',
         marginBottom: '-1px',
         cursor: 'pointer',
         display: 'inline-flex', alignItems: 'center', gap: '6px',
+        textShadow: active ? '0 0 12px rgba(193,53,132,.4)' : 'none',
+        transition: 'color .2s, text-shadow .2s',
       }}
     >
       {children}

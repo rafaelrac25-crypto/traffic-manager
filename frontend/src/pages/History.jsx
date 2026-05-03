@@ -2,33 +2,33 @@ import React, { useMemo, useState } from 'react';
 import { useAppState } from '../contexts/AppStateContext';
 
 const TYPE_META = {
-  'commercial-dismissed': { icon: '📅', label: 'Data dispensada', color: '#8B5CF6' },
-  'ad-removed':           { icon: '🗑',  label: 'Anúncio removido', color: '#EF4444' },
-  'ad-created':           { icon: '＋',  label: 'Anúncio criado',   color: '#16A34A' },
-  'ad-updated':           { icon: '✎',  label: 'Anúncio editado',  color: '#3B82F6' },
-  'ad-paused':            { icon: '⏸',  label: 'Anúncio pausado',  color: '#EA580C' },
-  'ad-activated':         { icon: '▶',  label: 'Anúncio ativado',  color: '#16A34A' },
-  'ad-duplicated':        { icon: '⎘',  label: 'Anúncio duplicado',color: '#0EA5E9' },
-  'ad-published':         { icon: '🚀', label: 'Anúncio publicado',color: '#22C55E' },
-  'ad-corrected':         { icon: '✅', label: 'Correção publicada',color: '#22C55E' },
-  'audience-created':     { icon: '＋',  label: 'Público criado',   color: '#16A34A' },
-  'audience-removed':     { icon: '🗑',  label: 'Público removido', color: '#EF4444' },
-  'audience-updated':     { icon: '✎',  label: 'Público editado',  color: '#3B82F6' },
-  'creative-created':     { icon: '＋',  label: 'Criativo criado',  color: '#16A34A' },
-  'creative-removed':     { icon: '🗑',  label: 'Criativo removido',color: '#EF4444' },
-  'creative-used':        { icon: '♻',  label: 'Criativo reusado', color: '#0EA5E9' },
-  'funds-added':          { icon: '💰', label: 'Saldo adicionado', color: '#16A34A' },
-  'platform-connected':   { icon: '🔗', label: 'Plataforma conectada', color: '#16A34A' },
-  'platform-disconnected':{ icon: '⛓',  label: 'Plataforma desconectada', color: '#EA580C' },
-  'payment-updated':      { icon: '💳', label: 'Pagamento atualizado', color: '#3B82F6' },
+  'commercial-dismissed': { icon: '📅', label: 'Data dispensada', color: '#A78BFA' },
+  'ad-removed':           { icon: '🗑',  label: 'Anúncio removido', color: '#F87171' },
+  'ad-created':           { icon: '＋',  label: 'Anúncio criado',   color: '#34D399' },
+  'ad-updated':           { icon: '✎',  label: 'Anúncio editado',  color: '#60A5FA' },
+  'ad-paused':            { icon: '⏸',  label: 'Anúncio pausado',  color: '#FBBF24' },
+  'ad-activated':         { icon: '▶',  label: 'Anúncio ativado',  color: '#34D399' },
+  'ad-duplicated':        { icon: '⎘',  label: 'Anúncio duplicado',color: '#60A5FA' },
+  'ad-published':         { icon: '🚀', label: 'Anúncio publicado',color: '#34D399' },
+  'ad-corrected':         { icon: '✅', label: 'Correção publicada',color: '#34D399' },
+  'audience-created':     { icon: '＋',  label: 'Público criado',   color: '#34D399' },
+  'audience-removed':     { icon: '🗑',  label: 'Público removido', color: '#F87171' },
+  'audience-updated':     { icon: '✎',  label: 'Público editado',  color: '#60A5FA' },
+  'creative-created':     { icon: '＋',  label: 'Criativo criado',  color: '#34D399' },
+  'creative-removed':     { icon: '🗑',  label: 'Criativo removido',color: '#F87171' },
+  'creative-used':        { icon: '♻',  label: 'Criativo reusado', color: '#60A5FA' },
+  'funds-added':          { icon: '💰', label: 'Saldo adicionado', color: '#34D399' },
+  'platform-connected':   { icon: '🔗', label: 'Plataforma conectada', color: '#34D399' },
+  'platform-disconnected':{ icon: '⛓',  label: 'Plataforma desconectada', color: '#FBBF24' },
+  'payment-updated':      { icon: '💳', label: 'Pagamento atualizado', color: '#60A5FA' },
   /* Erros e avisos do sino espelhados no histórico pra log de auditoria */
-  'notif-publish-failed':      { icon: '⚠', label: 'Erro ao publicar',       color: '#EF4444' },
-  'notif-rejected':            { icon: '❌', label: 'Anúncio reprovado',     color: '#EF4444' },
-  'notif-meta-sync-error':     { icon: '⚠', label: 'Erro de sincronização', color: '#EA580C' },
-  'notif-reconnect-required':  { icon: '🔐', label: 'Reconexão necessária',  color: '#EA580C' },
-  'notif-warning':             { icon: '⚠', label: 'Aviso',                 color: '#EAB308' },
-  'notif-insight-high-performer': { icon: '🔥', label: 'Oportunidade detectada', color: '#22C55E' },
-  'notif-insight-low-performer':  { icon: '📉', label: 'Baixa performance',  color: '#EA580C' },
+  'notif-publish-failed':      { icon: '⚠', label: 'Erro ao publicar',       color: '#F87171' },
+  'notif-rejected':            { icon: '❌', label: 'Anúncio reprovado',     color: '#F87171' },
+  'notif-meta-sync-error':     { icon: '⚠', label: 'Erro de sincronização', color: '#FBBF24' },
+  'notif-reconnect-required':  { icon: '🔐', label: 'Reconexão necessária',  color: '#FBBF24' },
+  'notif-warning':             { icon: '⚠', label: 'Aviso',                 color: '#FBBF24' },
+  'notif-insight-high-performer': { icon: '🔥', label: 'Oportunidade detectada', color: '#34D399' },
+  'notif-insight-low-performer':  { icon: '📉', label: 'Baixa performance',  color: '#FBBF24' },
 };
 
 function groupKey(iso) {
@@ -58,14 +58,14 @@ function DayGroup({ label, entries, onRestore, onRemove }) {
   return (
     <div>
       <div style={{
-        fontSize: '10.5px', fontWeight: 700, color: 'var(--c-text-4)',
-        textTransform: 'uppercase', letterSpacing: '.7px',
+        fontSize: '10.5px', fontWeight: 400, color: 'var(--c-text-3)',
+        textTransform: 'uppercase', letterSpacing: '1.2px',
         padding: '0 12px', marginBottom: '4px',
         display: 'flex', alignItems: 'center', gap: '8px',
       }}>
         <span>{label}</span>
-        <span style={{ flex: 1, height: '1px', background: 'var(--c-border-lt)' }} />
-        <span style={{ color: 'var(--c-text-4)', fontWeight: 500 }}>{entries.length}</span>
+        <span style={{ flex: 1, height: '1px', background: 'var(--c-border)' }} />
+        <span style={{ color: 'var(--c-text-4)', fontWeight: 400, fontFeatureSettings: "'tnum'" }}>{entries.length}</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         {visible.map(h => (
@@ -116,7 +116,8 @@ function LogRow({ entry, onRestore, onRemove }) {
     >
       <span style={{
         fontVariantNumeric: 'tabular-nums',
-        fontSize: '11px', color: 'var(--c-text-4)', fontWeight: 600,
+        fontFeatureSettings: "'tnum'",
+        fontSize: '11px', color: 'var(--c-text-4)', fontWeight: 400,
       }}>
         {formatTime(entry.createdAt)}
       </span>
@@ -132,8 +133,11 @@ function LogRow({ entry, onRestore, onRemove }) {
         )}
         {entry.restored && (
           <span style={{
-            marginLeft: '8px', fontSize: '10px', fontWeight: 700, color: '#16A34A',
-            background: '#DCFCE7', padding: '1px 6px', borderRadius: '999px',
+            marginLeft: '8px', fontSize: '10.5px', fontWeight: 700, letterSpacing: '.3px',
+            color: '#34D399',
+            background: 'rgba(52,211,153,.16)',
+            border: '1px solid rgba(52,211,153,.3)',
+            padding: '4px 9px', borderRadius: '999px',
           }}>
             restaurado
           </span>
@@ -145,8 +149,10 @@ function LogRow({ entry, onRestore, onRemove }) {
             onClick={() => onRestore(entry.id)}
             title="Restaurar"
             style={{
-              background: 'var(--c-accent)', color: '#fff', border: 'none',
-              borderRadius: '6px', padding: '3px 8px', fontSize: '10.5px', fontWeight: 700, cursor: 'pointer',
+              background: 'linear-gradient(135deg, var(--c-accent), var(--c-accent-dk))',
+              color: '#fff', border: 'none',
+              borderRadius: '8px', padding: '4px 10px', fontSize: '10.5px', fontWeight: 700, cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(193,53,132,.35), inset 0 1px 0 rgba(255,255,255,.18)',
             }}
           >
             ↶
@@ -156,9 +162,9 @@ function LogRow({ entry, onRestore, onRemove }) {
           onClick={() => onRemove(entry.id)}
           title="Remover do log"
           style={{
-            background: 'transparent', color: 'var(--c-text-4)',
+            background: 'var(--c-surface)', color: 'var(--c-text-3)',
             border: '1px solid var(--c-border)',
-            borderRadius: '6px', padding: '3px 7px', fontSize: '10.5px', cursor: 'pointer',
+            borderRadius: '8px', padding: '3px 8px', fontSize: '10.5px', cursor: 'pointer',
           }}
         >
           ✕
@@ -216,79 +222,90 @@ export default function History() {
 
       {feedback && (
         <div style={{
-          padding: '8px 12px', borderRadius: '8px', marginBottom: '12px', fontSize: '12px', fontWeight: 600,
-          background: feedback.kind === 'ok' ? '#DCFCE7' : '#FEE2E2',
-          color: feedback.kind === 'ok' ? '#166534' : '#991B1B',
-          border: `1px solid ${feedback.kind === 'ok' ? '#86EFAC' : '#FCA5A5'}`,
+          padding: '8px 12px', borderRadius: '999px', marginBottom: '12px',
+          fontSize: '10.5px', fontWeight: 700, letterSpacing: '.3px',
+          display: 'inline-block',
+          background: feedback.kind === 'ok' ? 'rgba(52,211,153,.16)' : 'rgba(248,113,113,.16)',
+          color: feedback.kind === 'ok' ? '#34D399' : '#F87171',
+          border: `1px solid ${feedback.kind === 'ok' ? 'rgba(52,211,153,.3)' : 'rgba(248,113,113,.3)'}`,
         }}>
           {feedback.text}
         </div>
       )}
 
-      {/* Filtros em barra simples */}
-      <div style={{
-        display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid var(--c-border-lt)',
-      }}>
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-          {[
-            { id: 'all',        label: `Todas (${history.length})` },
-            { id: 'restorable', label: `Restauráveis (${restorableCount})` },
-            { id: 'ad-published', label: 'Publicações' },
-            { id: 'ad-updated',   label: 'Edições' },
-            { id: 'ad-removed',   label: 'Remoções' },
-            { id: 'commercial-dismissed', label: 'Datas' },
-          ].map(f => (
+      <div className="ccb-card" style={{ padding: '18px 20px', borderRadius: '18px' }}>
+        {/* Filtros em barra simples */}
+        <div style={{
+          display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between',
+          marginBottom: '14px', paddingBottom: '12px', borderBottom: '1px solid var(--c-border)',
+        }}>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            {[
+              { id: 'all',        label: `Todas (${history.length})` },
+              { id: 'restorable', label: `Restauráveis (${restorableCount})` },
+              { id: 'ad-published', label: 'Publicações' },
+              { id: 'ad-updated',   label: 'Edições' },
+              { id: 'ad-removed',   label: 'Remoções' },
+              { id: 'commercial-dismissed', label: 'Datas' },
+            ].map(f => {
+              const active = filter === f.id;
+              return (
+                <button
+                  key={f.id}
+                  onClick={() => setFilter(f.id)}
+                  style={{
+                    padding: '6px 12px', borderRadius: '999px', fontSize: '11px',
+                    fontWeight: active ? 700 : 500, letterSpacing: active ? '.3px' : 0,
+                    cursor: 'pointer',
+                    background: active ? 'var(--c-accent-soft)' : 'var(--c-surface)',
+                    color: active ? 'var(--c-accent)' : 'var(--c-text-3)',
+                    border: `1px solid ${active ? 'rgba(193,53,132,.4)' : 'var(--c-border)'}`,
+                    transition: 'all .15s',
+                  }}
+                >
+                  {f.label}
+                </button>
+              );
+            })}
+          </div>
+          {history.length > 0 && (
             <button
-              key={f.id}
-              onClick={() => setFilter(f.id)}
+              onClick={handleClearAll}
               style={{
-                padding: '5px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 600,
+                background: 'var(--c-surface)',
+                border: '1px solid var(--c-border)',
+                color: 'var(--c-text-3)',
+                padding: '6px 12px', fontSize: '11px', fontWeight: 600, borderRadius: '8px',
                 cursor: 'pointer',
-                background: filter === f.id ? 'var(--c-accent)' : 'transparent',
-                color:      filter === f.id ? '#fff' : 'var(--c-text-3)',
-                border: `1px solid ${filter === f.id ? 'var(--c-accent)' : 'var(--c-border)'}`,
               }}
             >
-              {f.label}
+              Limpar tudo
             </button>
-          ))}
+          )}
         </div>
-        {history.length > 0 && (
-          <button
-            onClick={handleClearAll}
-            style={{
-              background: 'transparent', border: 'none',
-              color: 'var(--c-text-4)',
-              padding: '5px 8px', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
-            }}
-          >
-            Limpar tudo
-          </button>
+
+        {filtered.length === 0 ? (
+          <div style={{
+            padding: '60px 20px', textAlign: 'center',
+            color: 'var(--c-text-4)', fontSize: '13px',
+          }}>
+            <div style={{ fontSize: '32px', marginBottom: '8px', opacity: 0.5 }}>📭</div>
+            Nenhuma ação registrada.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {Object.entries(grouped).map(([groupLabel, entries]) => (
+              <DayGroup
+                key={groupLabel}
+                label={groupLabel}
+                entries={entries}
+                onRestore={handleRestore}
+                onRemove={removeHistoryEntry}
+              />
+            ))}
+          </div>
         )}
       </div>
-
-      {filtered.length === 0 ? (
-        <div style={{
-          padding: '60px 20px', textAlign: 'center',
-          color: 'var(--c-text-4)', fontSize: '13px',
-        }}>
-          <div style={{ fontSize: '32px', marginBottom: '8px', opacity: 0.5 }}>📭</div>
-          Nenhuma ação registrada.
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {Object.entries(grouped).map(([groupLabel, entries]) => (
-            <DayGroup
-              key={groupLabel}
-              label={groupLabel}
-              entries={entries}
-              onRestore={handleRestore}
-              onRemove={removeHistoryEntry}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 }

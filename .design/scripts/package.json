@@ -1,0 +1,8 @@
+{
+  "name": "design-scripts",
+  "private": true,
+  "description": "Scripts auxiliares de design (capturas, análise) — não vai pra produção",
+  "dependencies": {
+    "playwright": "^1.59.1"
+  }
+}

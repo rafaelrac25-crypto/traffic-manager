@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Mockup · Criativos · Espionar Concorrente · AdManager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --c-accent:        #C13584;
+    --c-accent-2:      #7D4A5E;
+    --c-accent-soft:   rgba(193,53,132,.18);
+    --c-accent-glow:   rgba(193,53,132,.55);
+    --c-accent-vibe:   rgba(193,53,132,.7);
+
+    --c-page-bg:       #06080B;
+    --c-text-1:        #F2F2F2;
+    --c-text-2:        #C2C2C2;
+    --c-text-3:        #8A8A8A;
+    --c-text-4:        #595959;
+
+    --c-glass-bg:      rgba(255,255,255,.055);
+    --c-glass-bg-2:    rgba(255,255,255,.085);
+    --c-glass-border:  rgba(255,255,255,.11);
+    --c-glass-border-2:rgba(255,255,255,.16);
+    --c-glass-shine:   rgba(255,255,255,.10);
+
+    --c-success:       #34D399;
+    --c-warn:          #FBBF24;
+
+    --blur-strong:     blur(28px);
+    --blur-soft:       blur(14px);
+    --r-md:            14px;
+    --r-lg:            18px;
+    --ease:            cubic-bezier(.22,1,.36,1);
+  }
+
+  *,*::before,*::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--c-text-1);
+    background: var(--c-page-bg);
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    padding-top: 28px;
+  }
+
+  /* Background tech: SVG pattern */
+  .bg-tech {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='800' viewBox='0 0 800 800'>\
+<defs><radialGradient id='node' cx='50%25' cy='50%25' r='50%25'>\
+<stop offset='0%25' stop-color='%23C13584' stop-opacity='1'/>\
+<stop offset='60%25' stop-color='%23C13584' stop-opacity='.4'/>\
+<stop offset='100%25' stop-color='%23C13584' stop-opacity='0'/>\
+</radialGradient></defs>\
+<g stroke='%23ffffff' stroke-opacity='0.07' stroke-width='1' fill='none'>\
+<path d='M0,180 L220,180 L260,140 L460,140 L500,200 L800,200'/>\
+<path d='M0,520 L160,520 L200,560 L380,560 L420,500 L640,500 L680,560 L800,560'/>\
+<path d='M120,0 L120,80 L80,120 L80,260'/>\
+<path d='M620,0 L620,40 L660,80 L660,200 L620,240 L620,420'/>\
+<path d='M0,360 Q200,300 400,360 T800,360' stroke-opacity='0.05'/>\
+<path d='M0,640 Q200,700 400,640 T800,640' stroke-opacity='0.05'/>\
+<path d='M280,800 L280,720 L320,680 L520,680 L560,640' stroke-opacity='0.06'/>\
+</g>\
+<g fill='url(%23node)'>\
+<circle cx='220' cy='180' r='3.5'/><circle cx='460' cy='140' r='3.5'/>\
+<circle cx='500' cy='200' r='3.5'/><circle cx='160' cy='520' r='3.5'/>\
+<circle cx='420' cy='500' r='3.5'/><circle cx='680' cy='560' r='3.5'/>\
+<circle cx='80' cy='260' r='3.5'/><circle cx='620' cy='420' r='3.5'/>\
+<circle cx='320' cy='680' r='3.5'/></g></svg>");
+    background-size: 800px 800px;
+    background-position: center;
+    background-repeat: repeat;
+    mask-image: radial-gradient(ellipse 90% 80% at center, rgba(0,0,0,.85), transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 90% 80% at center, rgba(0,0,0,.85), transparent 75%);
+    opacity: .9;
+  }
+
+  /* Glows */
+  body::before, body::after {
+    content: ''; position: fixed; z-index: 0;
+    border-radius: 50%; filter: blur(120px); pointer-events: none;
+  }
+  body::before {
+    width: 540px; height: 540px;
+    background: var(--c-accent-glow);
+    top: -200px; right: -150px;
+    animation: glowFloatA 14s var(--ease) infinite alternate;
+  }
+  body::after {
+    width: 460px; height: 460px;
+    background: rgba(125,74,94,.45);
+    bottom: -150px; left: -80px;
+    animation: glowFloatB 16s var(--ease) infinite alternate;
+  }
+  @keyframes glowFloatA { 0%{transform:translate(0,0) scale(1);} 100%{transform:translate(-60px,80px) scale(1.1);} }
+  @keyframes glowFloatB { 0%{transform:translate(0,0) scale(1);} 100%{transform:translate(70px,-50px) scale(1.08);} }
+  @media (prefers-reduced-motion: reduce) { body::before, body::after { animation: none; } }
+
+  .mockup-banner {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+    background: rgba(193,53,132,.92);
+    color: #fff; text-align: center; font-size: 11px; font-weight: 700;
+    letter-spacing: 1.4px; text-transform: uppercase; padding: 6px;
+    backdrop-filter: blur(10px);
+  }
+
+  /* Layout */
+  .shell {
+    position: relative; z-index: 1;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    grid-template-rows: 60px 1fr;
+    grid-template-areas: 'sidebar topbar' 'sidebar main';
+    min-height: calc(100vh - 28px);
+  }
+
+  /* Sidebar — sem divisórias */
+  .sidebar {
+    grid-area: sidebar;
+    background: rgba(20,20,28,.42);
+    backdrop-filter: var(--blur-strong);
+    -webkit-backdrop-filter: var(--blur-strong);
+    padding: 18px 14px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .brand { display:flex; align-items:center; gap:10px; padding:8px 8px 18px; }
+  .brand-dot { width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--c-accent),var(--c-accent-2));display:grid;place-items:center;font-weight:800;color:#fff;box-shadow:0 0 22px var(--c-accent-glow), inset 0 1px 0 rgba(255,255,255,.25);font-size:13px; }
+  .brand-text strong { display:block;font-size:13px; }
+  .brand-text span { font-size:9.5px; color:var(--c-text-4); letter-spacing:1.4px; text-transform:uppercase; }
+  .nav-item { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:10px; color:var(--c-text-3); font-size:13px; font-weight:500; cursor:pointer; position:relative; transition:all .2s var(--ease); }
+  .nav-item:hover { background:rgba(255,255,255,.06); color:var(--c-text-1); }
+  .nav-item.active { color:var(--c-text-1); background:linear-gradient(90deg,var(--c-accent-soft),rgba(193,53,132,0)); box-shadow:inset 0 0 28px rgba(193,53,132,.18); }
+  .nav-item.active::before { content:''; position:absolute; left:0; top:8px; bottom:8px; width:3px; border-radius:0 3px 3px 0; background:var(--c-accent); box-shadow:0 0 12px var(--c-accent), 0 0 4px #fff; }
+  .nav-section { font-size:10px; color:var(--c-text-4); text-transform:uppercase; letter-spacing:1.4px; padding:14px 12px 6px; }
+
+  /* Topbar — sem linha embaixo */
+  .topbar {
+    grid-area: topbar;
+    background: rgba(8,11,14,.4);
+    backdrop-filter: var(--blur-soft);
+    -webkit-backdrop-filter: var(--blur-soft);
+    display: flex; align-items: center; gap: 14px;
+    padding: 0 22px;
+  }
+  .search { flex:1; max-width:460px; display:flex; align-items:center; gap:10px; padding:9px 14px; background:var(--c-glass-bg); border:1px solid var(--c-glass-border); border-radius:999px; color:var(--c-text-2); font-size:13px; }
+  .search input { flex:1; background:transparent; border:0; outline:0; color:var(--c-text-1); font-family:inherit; font-size:13px; }
+  .top-spacer { flex:1; }
+  .icon-btn { width:38px; height:38px; border-radius:50%; border:1px solid var(--c-glass-border); background:var(--c-glass-bg); color:var(--c-text-2); cursor:pointer; display:grid; place-items:center; }
+
+  /* Main */
+  .main {
+    grid-area: main;
+    padding: 24px 32px 60px;
+    display: flex; flex-direction: column; gap: 18px;
+  }
+  .page-head { display:flex; align-items:flex-end; justify-content:space-between; gap:18px; flex-wrap:wrap; }
+  .page-head h1 { margin:0; font-size:22px; font-weight:800; }
+  .page-head p { margin:4px 0 0; color:var(--c-text-3); font-size:13px; max-width:640px; }
+
+  /* Tabs */
+  .tabs {
+    display: flex; gap: 6px;
+    border-bottom: 1px solid var(--c-glass-border);
+    margin-bottom: 6px;
+  }
+  .tab {
+    padding: 10px 16px;
+    font-size: 13px; font-weight: 600;
+    color: var(--c-text-3);
+    background: transparent; border: 0;
+    border-bottom: 2px solid transparent;
+    cursor: pointer; margin-bottom: -1px;
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: inherit;
+    transition: color .2s var(--ease);
+  }
+  .tab.active {
+    color: var(--c-accent);
+    border-bottom-color: var(--c-accent);
+    font-weight: 700;
+    text-shadow: 0 0 12px var(--c-accent-glow);
+  }
+
+  /* Glass card ULTRA-VIBRANTE */
+  .card {
+    background: var(--c-glass-bg);
+    backdrop-filter: var(--blur-strong);
+    -webkit-backdrop-filter: var(--blur-strong);
+    border: 1px solid var(--c-glass-border);
+    border-radius: var(--r-lg);
+    padding: 18px 20px;
+    box-shadow:
+      0 8px 24px rgba(0,0,0,.35),
+      inset 0 1px 0 var(--c-glass-shine);
+    position: relative; overflow: hidden;
+  }
+  .card::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,.08) 0%, transparent 30%);
+    pointer-events: none; border-radius: inherit;
+  }
+  .card::after {
+    content: ''; position: absolute; inset: -1px;
+    background: linear-gradient(135deg, rgba(255,255,255,.10), transparent 45%);
+    pointer-events: none; border-radius: inherit;
+    mix-blend-mode: overlay; opacity: .9;
+  }
+
+  .step-label { font-size:10.5px; font-weight:800; color:var(--c-text-3); text-transform:uppercase; letter-spacing:1.4px; margin-bottom:12px; }
+
+  /* Form row */
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .field label { display:block; font-size:11px; font-weight:700; color:var(--c-text-3); text-transform:uppercase; letter-spacing:.6px; margin-bottom:6px; }
+  .field input, .field textarea {
+    width: 100%; padding: 11px 14px;
+    background: var(--c-glass-bg-2);
+    border: 1px solid var(--c-glass-border);
+    border-radius: 10px;
+    color: var(--c-text-1); font-family: inherit; font-size: 13px;
+    outline: none;
+    transition: border-color .2s var(--ease), box-shadow .2s var(--ease);
+  }
+  .field input:focus, .field textarea:focus {
+    border-color: var(--c-accent);
+    box-shadow: 0 0 0 3px var(--c-accent-soft);
+  }
+  .field textarea { resize: vertical; min-height: 70px; font-family: inherit; }
+
+  .open-ads {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 16px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--c-accent), var(--c-accent-2));
+    color: #fff; font-weight: 700; font-size: 12.5px;
+    text-decoration: none;
+    box-shadow: 0 8px 24px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18);
+    cursor: pointer; border: 0; font-family: inherit;
+  }
+
+  /* Drop zone */
+  .dropzone {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 30px;
+    border-radius: 12px;
+    border: 2px dashed var(--c-glass-border-2);
+    background: var(--c-glass-bg);
+    text-align: center; cursor: pointer;
+    transition: all .2s var(--ease);
+  }
+  .dropzone:hover { border-color: var(--c-accent); background: var(--c-accent-soft); }
+  .dropzone .ico { font-size: 26px; }
+  .dropzone .t1 { font-size: 13.5px; font-weight: 700; }
+  .dropzone .t2 { font-size: 11.5px; color: var(--c-text-3); }
+
+  /* Items grid */
+  .items {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+  }
+  .item {
+    aspect-ratio: 1;
+    border-radius: 11px;
+    background: var(--c-glass-bg-2);
+    border: 1px solid var(--c-glass-border);
+    display: grid; place-items: center;
+    color: var(--c-text-3); font-size: 11px;
+    text-align: center; padding: 10px;
+    position: relative; overflow: hidden;
+  }
+  .item.image {
+    background: linear-gradient(135deg, var(--c-accent-soft), rgba(125,74,94,.2));
+    color: var(--c-text-1);
+    border-color: rgba(193,53,132,.35);
+  }
+  .item .x {
+    position: absolute; top: 5px; right: 5px;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(0,0,0,.65); color: #fff;
+    font-size: 14px; line-height: 1; cursor: pointer;
+    display: grid; place-items: center;
+    border: 0;
+  }
+  .item .label { display: block; font-weight: 600; font-size: 12px; }
+  .item .badge { font-size: 10px; padding: 2px 7px; border-radius: 999px; background: var(--c-accent-soft); color: var(--c-accent); margin-top: 4px; }
+
+  .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .btn-primary {
+    padding: 12px 22px; border-radius: 12px; border: 0;
+    background: linear-gradient(135deg, var(--c-accent), var(--c-accent-2));
+    color: #fff; font-weight: 700; font-size: 13px;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+    box-shadow: 0 8px 24px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18);
+    font-family: inherit;
+  }
+  .btn-ghost {
+    padding: 11px 18px; border-radius: 12px;
+    background: var(--c-glass-bg-2);
+    border: 1px solid var(--c-glass-border);
+    color: var(--c-text-2); font-weight: 600; font-size: 12.5px;
+    cursor: pointer; font-family: inherit;
+  }
+
+  /* Relatório — borda rosa VIBRANTE proporcional ao glass branco */
+  .report {
+    border-color: rgba(193,53,132,.6);
+    box-shadow:
+      0 8px 30px rgba(0,0,0,.4),
+      0 0 36px rgba(193,53,132,.16),
+      inset 0 1px 0 rgba(255,194,228,.18),
+      inset 0 0 18px rgba(193,53,132,.08);
+  }
+  .report::after {
+    background: linear-gradient(135deg, rgba(255,194,228,.14), transparent 45%);
+  }
+  .report-head { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; gap:12px; }
+  .report-head .badge-rep {
+    font-size: 10.5px; font-weight: 800; color: var(--c-accent);
+    text-transform: uppercase; letter-spacing: 1.5px;
+    text-shadow: 0 0 12px var(--c-accent-glow);
+  }
+  .report-head h3 { margin: 4px 0 0; font-size: 18px; font-weight: 800; }
+  .report-head a { font-size: 11.5px; color: var(--c-accent); text-decoration: none; word-break: break-all; }
+  .section-title { font-size:10.5px; font-weight:800; color:var(--c-text-3); text-transform:uppercase; letter-spacing:1.4px; margin: 14px 0 8px; }
+  .section-text { font-size: 13px; color: var(--c-text-2); line-height: 1.6; margin: 0; }
+  .bullets { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 5px; }
+  .bullets li { font-size: 12.8px; color: var(--c-text-2); line-height: 1.55; }
+  .bullets.accent li { color: var(--c-text-1); }
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill {
+    font-size: 11.5px; font-weight: 600;
+    padding: 5px 11px; border-radius: 999px;
+    background: var(--c-accent-soft);
+    color: var(--c-accent);
+    border: 1px solid rgba(193,53,132,.4);
+    box-shadow: 0 0 12px rgba(193,53,132,.12);
+  }
+
+  /* Histórico */
+  .hist-row {
+    display: grid; grid-template-columns: 1fr auto auto;
+    gap: 10px; align-items: center;
+    padding: 11px 14px; border-radius: 10px;
+    background: var(--c-glass-bg-2);
+    border: 1px solid var(--c-glass-border);
+    margin-bottom: 8px;
+  }
+  .hist-row strong { font-size: 13px; }
+  .hist-row small { display: block; font-size: 11px; color: var(--c-text-3); margin-top: 2px; }
+  .small-btn {
+    padding: 6px 12px; border-radius: 8px;
+    background: var(--c-glass-bg);
+    border: 1px solid var(--c-glass-border);
+    color: var(--c-text-2); font-weight: 700; font-size: 11px;
+    cursor: pointer; font-family: inherit;
+  }
+
+  @media (max-width: 1024px) {
+    .shell { grid-template-columns: 1fr; grid-template-areas: 'topbar' 'main'; }
+    .sidebar { display: none; }
+  }
+  @media (max-width: 768px) {
+    .main { padding: 18px 16px 40px; }
+    .row-2 { grid-template-columns: 1fr; }
+    .card { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+    body::before, body::after { animation: none; opacity: .55; }
+  }
+</style>
+</head>
+<body>
+<div class="mockup-banner">⚠ MOCKUP — não é o sistema real · pra aprovação visual</div>
+<div class="bg-tech"></div>
+
+<div class="shell">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-dot">CC</div>
+      <div class="brand-text"><strong>Cris Costa</strong><span>AdManager</span></div>
+    </div>
+    <div class="nav-section">Operação</div>
+    <div class="nav-item">📊 Dashboard</div>
+    <div class="nav-item">📷 Anúncios</div>
+    <div class="nav-item">📅 Calendário</div>
+    <div class="nav-item">👥 Públicos</div>
+    <div class="nav-item active">🎨 Criativos</div>
+    <div class="nav-section">Análise</div>
+    <div class="nav-item">📈 Relatórios</div>
+    <div class="nav-item">💳 Investimento</div>
+    <div class="nav-item">🕓 Histórico</div>
+  </aside>
+
+  <header class="topbar">
+    <div class="search">
+      <span style="font-size:13px;">🔍</span>
+      <input placeholder="Buscar anúncio, público, relatório…" />
+    </div>
+    <div class="top-spacer"></div>
+    <button class="icon-btn">🌗</button>
+    <button class="icon-btn">🔔</button>
+  </header>
+
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <h1>Biblioteca de criativos</h1>
+        <p>Cole prints e textos da Facebook Ads Library de um concorrente — a IA lê tudo e devolve padrões, ganchos e recomendações.</p>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab">🎨 Meus criativos</button>
+      <button class="tab active">🔍 Espionar concorrente</button>
+    </div>
+
+    <div class="card">
+      <div class="row-2">
+        <div class="field">
+          <label>Nome do concorrente *</label>
+          <input value="Studio Renata Souza" />
+        </div>
+        <div class="field">
+          <label>URL da Ads Library (opcional)</label>
+          <input placeholder="https://www.facebook.com/ads/library/?id=..." />
+        </div>
+      </div>
+      <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+        <button class="open-ads">🔍 Abrir Ads Library do concorrente</button>
+        <span style="font-size:11.5px; color:var(--c-text-3);">Tire prints dos anúncios e arraste aqui embaixo, ou copie o texto e cole.</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="step-label">1. Adicione prints / imagens</div>
+      <div class="dropzone">
+        <div class="ico">🖼️</div>
+        <div class="t1">Arraste imagens aqui ou clique para selecionar</div>
+        <div class="t2">Aceita prints da Ads Library (JPG, PNG, WebP)</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="step-label">2. Cole textos (hook, copy, CTA)</div>
+      <div class="field">
+        <textarea placeholder="Cole aqui o gancho, copy do anúncio, CTA, observações sobre estilo...">Última semana com 30% off em micropigmentação labial · agende já pelo direct</textarea>
+      </div>
+      <button class="btn-ghost" style="margin-top:8px;">+ Adicionar texto</button>
+    </div>
+
+    <div class="card">
+      <div class="step-label">3. Itens coletados (5)</div>
+      <div class="items">
+        <div class="item image"><span style="font-size:22px;">📷</span><span class="label">print-1.jpg</span><span class="badge">imagem</span></div>
+        <div class="item image"><span style="font-size:22px;">🎬</span><span class="label">print-2.jpg</span><span class="badge">imagem</span></div>
+        <div class="item image"><span style="font-size:22px;">📷</span><span class="label">print-3.jpg</span><span class="badge">imagem</span></div>
+        <div class="item">"Última semana com 30% off…"<span class="badge" style="margin-top:6px;">texto</span></div>
+        <div class="item image"><span style="font-size:22px;">🎬</span><span class="label">video.mp4</span><span class="badge">imagem</span></div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn-primary">🤖 Analisar concorrente</button>
+      <button class="btn-ghost">Limpar</button>
+      <span style="font-size:12px; color:var(--c-text-3);">Lendo criativos com IA — 3/5</span>
+    </div>
+
+    <!-- Relatório -->
+    <div class="card report">
+      <div class="report-head">
+        <div>
+          <div class="badge-rep">Relatório de espionagem</div>
+          <h3>Studio Renata Souza</h3>
+          <a href="#">https://www.facebook.com/ads/library/?id=987654</a>
+        </div>
+        <button class="small-btn">Fechar</button>
+      </div>
+
+      <div class="section-title">Resumo</div>
+      <p class="section-text">Concorrente aposta em prova social (antes/depois) com oferta de R$ 99 fixos e tom de urgência ("últimas vagas"). Usa carrossel mostrando transformação real de cliente, paleta rosê com fundo branco, e direciona sempre pra WhatsApp. Volume de criativos alto (12 ativos), rotaciona muito.</p>
+
+      <div class="section-title">Padrões detectados</div>
+      <ul class="bullets">
+        <li>Sempre usa 3 imagens em carrossel: antes / durante / depois</li>
+        <li>Modelo loira com pele clara, fonte serifada elegante, fundo branco</li>
+        <li>Preço sempre em destaque visual — círculo amarelo "R$ 99"</li>
+        <li>Frase curta com gatilho de urgência sempre presente</li>
+      </ul>
+
+      <div class="section-title">Ganchos vencedores</div>
+      <ul class="bullets accent">
+        <li>"Você merece se sentir linda novamente"</li>
+        <li>"Última semana com 30% off"</li>
+        <li>"Resultado que dura 1 ano e meio"</li>
+        <li>"Mais de 800 clientes satisfeitas em Joinville"</li>
+      </ul>
+
+      <div class="section-title">CTAs observados</div>
+      <div class="pills">
+        <span class="pill">Agendar pelo WhatsApp</span>
+        <span class="pill">Saiba mais</span>
+        <span class="pill">Enviar mensagem</span>
+        <span class="pill">Reservar vaga</span>
+      </div>
+
+      <div class="section-title">Formatos de criativo</div>
+      <div class="pills">
+        <span class="pill">Carrossel antes/depois</span>
+        <span class="pill">Vídeo de procedimento</span>
+        <span class="pill">Depoimento texto</span>
+        <span class="pill">Oferta com preço</span>
+      </div>
+
+      <div class="section-title">Recomendações para Cris Costa Beauty</div>
+      <ul class="bullets accent">
+        <li>Testar carrossel "antes/durante/depois" da micropigmentação labial — copia o formato vencedor</li>
+        <li>Adicionar selo de prova social ("+ de N clientes em Joinville") nos próximos 3 anúncios</li>
+        <li>Experimentar gatilho de urgência específico: "agendas de maio fechando"</li>
+        <li>Trocar 1 dos criativos atuais por vídeo curto mostrando procedimento real</li>
+      </ul>
+    </div>
+
+    <!-- Histórico -->
+    <div class="card">
+      <h3 style="margin:0 0 10px; font-size:14px;">Análises anteriores</h3>
+      <div class="hist-row">
+        <div><strong>Studio Renata Souza</strong><small>Aposta em prova social com antes/depois e oferta R$ 99 · 02/05/2026 14:48</small></div>
+        <button class="small-btn">Abrir</button>
+        <button class="small-btn" style="color:#F87171;">×</button>
+      </div>
+      <div class="hist-row">
+        <div><strong>Bella Rosa Estética</strong><small>Foco em micropigmentação capilar, CTA "Agende já" · 01/05/2026 19:22</small></div>
+        <button class="small-btn">Abrir</button>
+        <button class="small-btn" style="color:#F87171;">×</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+</body>
+</html>

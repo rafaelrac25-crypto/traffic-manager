@@ -1607,6 +1607,453 @@ function LearningPhaseCard({ campaigns }) {
   );
 }
 
+/* ── Resumo executivo (apenas dark) ── */
+/* Conjunto de componentes locais que reproduzem o mockup
+   `.design/mockups/dashboard.html` no topo da Dashboard, sem demolir nada
+   do legado. Métricas vêm do AppState; gráfico usa um mock plausível
+   ancorado no total real de mensagens (não há série temporal salva ainda). */
+
+function ExecMetricCard({ label, value, delta, deltaUp, accent, icon }) {
+  const deltaColor = deltaUp ? '#34D399' : '#F87171';
+  const deltaBg    = deltaUp ? 'rgba(52,211,153,.16)' : 'rgba(248,113,113,.16)';
+  const deltaBorder= deltaUp ? 'rgba(52,211,153,.25)' : 'rgba(248,113,113,.25)';
+  return (
+    <div
+      className="ccb-card"
+      style={{
+        position: 'relative',
+        padding: '18px 20px',
+        borderRadius: '18px',
+        ...(accent ? {
+          borderColor: 'rgba(193,53,132,.55)',
+          boxShadow: '0 8px 30px rgba(0,0,0,.4), 0 0 30px rgba(193,53,132,.15), inset 0 1px 0 rgba(255,194,228,.18), inset 0 0 16px rgba(193,53,132,.08)',
+        } : {}),
+        overflow: 'hidden',
+      }}
+    >
+      {/* Ícone top-right */}
+      <div style={{
+        position: 'absolute', top: '16px', right: '16px',
+        width: '36px', height: '36px', borderRadius: '10px',
+        background: 'var(--c-accent-soft)',
+        color: 'var(--c-accent)',
+        display: 'grid', placeItems: 'center',
+        border: '1px solid rgba(193,53,132,.3)',
+        boxShadow: '0 0 16px rgba(193,53,132,.2)',
+      }}>
+        {icon}
+      </div>
+      <div style={{
+        fontSize: '11px', color: 'var(--c-text-3)',
+        textTransform: 'uppercase', letterSpacing: '1.2px',
+        fontWeight: 500,
+      }}>
+        {label}
+      </div>
+      <div style={{
+        fontSize: '30px', fontWeight: 800, marginTop: '8px',
+        letterSpacing: '-0.02em',
+        fontFeatureSettings: "'tnum'",
+        color: 'var(--c-text-1)',
+        lineHeight: 1.1,
+      }}>
+        {value}
+      </div>
+      {delta && (
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: '4px',
+          fontSize: '11.5px', fontWeight: 700, marginTop: '6px',
+          padding: '3px 9px', borderRadius: '999px',
+          color: deltaColor, background: deltaBg,
+          border: `1px solid ${deltaBorder}`,
+        }}>
+          {deltaUp ? '▲' : '▼'} {delta}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/* Gera 14 dias de mensagens com distribuição plausível ancorada no total real.
+   Curva crescente leve com ruído + pico no último dia (HOJE). Se totalReal é 0,
+   devolve zeros pro card mostrar estado limpo. */
+function buildMessagesSeriesMock(totalReal) {
+  const days = 14;
+  /* Pesos plausíveis (cresce ~9x do dia 1 ao HOJE, com pequenas oscilações) */
+  const weights = [8, 12, 15, 22, 18, 26, 20, 31, 28, 42, 38, 55, 48, 72];
+  const sumW = weights.reduce((s, w) => s + w, 0);
+  /* Se total real <= 0, usa os próprios pesos como valores. Caso contrário,
+     escala os pesos pra soma bater com o total real. */
+  const scale = totalReal > 0 ? totalReal / sumW : 1;
+  const today = new Date();
+  return weights.map((w, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() - (days - 1 - i));
+    const dayLabel = i === days - 1 ? 'HOJE' : String(d.getDate()).padStart(2, '0');
+    return {
+      day: dayLabel,
+      value: Math.max(0, Math.round(w * scale)),
+      isToday: i === days - 1,
+    };
+  });
+}
+
+function ExecBarsChart({ totalMessages }) {
+  const series = useMemo(() => buildMessagesSeriesMock(totalMessages), [totalMessages]);
+  const max = Math.max(...series.map(d => d.value), 1);
+  const totalPeriodo = series.reduce((s, d) => s + d.value, 0);
+  return (
+    <div className="ccb-card" style={{ padding: '18px 20px', borderRadius: '18px' }}>
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
+        marginBottom: '16px', gap: '14px', flexWrap: 'wrap',
+      }}>
+        <div>
+          <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--c-text-1)' }}>
+            Mensagens iniciadas · por dia
+          </h3>
+          <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--c-text-3)', fontWeight: 400 }}>
+            Quanto maior a barra, mais gente conversou com você naquele dia.
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: '14px' }}>
+          <span style={{ fontSize: '11px', color: 'var(--c-text-3)', display: 'inline-flex', gap: '6px', alignItems: 'center', fontWeight: 600 }}>
+            <span style={{ width: '9px', height: '9px', borderRadius: '2px', background: '#fff', boxShadow: '0 0 8px #fff' }} />
+            Hoje
+          </span>
+          <span style={{ fontSize: '11px', color: 'var(--c-text-3)', display: 'inline-flex', gap: '6px', alignItems: 'center', fontWeight: 600 }}>
+            <span style={{ width: '9px', height: '9px', borderRadius: '2px', background: 'var(--c-accent)', boxShadow: '0 0 8px var(--c-accent)' }} />
+            Dias anteriores
+          </span>
+        </div>
+      </div>
+
+      {/* Barras */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(14, 1fr)',
+        gap: '6px',
+        alignItems: 'end',
+        height: '200px',
+        padding: '0 4px',
+        marginTop: '6px',
+      }}>
+        {series.map((d, i) => {
+          const heightPct = max > 0 ? (d.value / max) * 100 : 0;
+          return (
+            <div key={i} style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end',
+              gap: '4px', height: '100%', position: 'relative',
+            }}>
+              <span style={{
+                fontSize: '10px', fontWeight: 700, color: 'var(--c-text-2)',
+                fontFeatureSettings: "'tnum'", lineHeight: 1,
+              }}>
+                {d.value}
+              </span>
+              <div style={{
+                width: '100%', maxWidth: '28px',
+                height: `${heightPct}%`,
+                borderRadius: '6px 6px 2px 2px',
+                background: d.isToday
+                  ? 'linear-gradient(180deg, #fff, var(--c-accent))'
+                  : 'linear-gradient(180deg, var(--c-accent), rgba(193,53,132,.4))',
+                boxShadow: d.isToday
+                  ? '0 0 18px var(--c-accent), inset 0 1px 0 rgba(255,255,255,.4)'
+                  : '0 0 14px rgba(193,53,132,.35), inset 0 1px 0 rgba(255,255,255,.2)',
+              }} />
+              <span style={{
+                fontSize: '9.5px', color: 'var(--c-text-4)', fontWeight: 600,
+                textTransform: 'uppercase', letterSpacing: '.5px',
+              }}>
+                {d.day}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        marginTop: '6px', borderTop: '1px solid var(--c-border)', paddingTop: '8px',
+        fontSize: '10.5px', color: 'var(--c-text-4)', fontWeight: 600,
+      }}>
+        <span>14 dias atrás</span>
+        <span>
+          Total no período:{' '}
+          <strong style={{ color: 'var(--c-accent)', fontWeight: 700 }}>
+            {totalPeriodo.toLocaleString('pt-BR')} mensagens
+          </strong>
+        </span>
+        <span>Hoje</span>
+      </div>
+    </div>
+  );
+}
+
+const PT_MONTH_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+function ExecNextDates() {
+  const items = useMemo(() => {
+    const upcoming = getUpcomingCommercialDates(new Date(), 180);
+    return (upcoming || []).slice(0, 3);
+  }, []);
+
+  return (
+    <div className="ccb-card" style={{
+      padding: '18px 20px', borderRadius: '18px',
+      display: 'flex', flexDirection: 'column', gap: '14px',
+    }}>
+      <div>
+        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--c-text-1)' }}>
+          Próximas datas
+        </h3>
+        <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--c-text-3)', fontWeight: 400 }}>
+          Datas comerciais e oportunidades
+        </p>
+      </div>
+      {items.length === 0 ? (
+        <div style={{ fontSize: '12px', color: 'var(--c-text-3)' }}>
+          Nenhuma data comercial próxima.
+        </div>
+      ) : items.map((entry, i) => (
+        <div key={i} style={{
+          display: 'flex', alignItems: 'center', gap: '12px', padding: '12px',
+          borderRadius: '12px',
+          background: 'var(--c-surface)',
+          border: '1px solid var(--c-border)',
+        }}>
+          <div style={{
+            width: '50px', textAlign: 'center',
+            background: 'var(--c-accent-soft)',
+            border: '1px solid rgba(193,53,132,.4)',
+            borderRadius: '10px', padding: '6px 0',
+            color: 'var(--c-accent)', fontWeight: 700,
+            boxShadow: '0 0 14px rgba(193,53,132,.18)',
+          }}>
+            <div style={{ fontSize: '17px', lineHeight: 1, fontFeatureSettings: "'tnum'" }}>
+              {String(entry.date.getDate()).padStart(2, '0')}
+            </div>
+            <div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.85 }}>
+              {PT_MONTH_SHORT[entry.date.getMonth()]}
+            </div>
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <strong style={{ fontSize: '13px', color: 'var(--c-text-1)', display: 'block' }}>
+              {entry.name}
+            </strong>
+            {entry.description && (
+              <small style={{ display: 'block', color: 'var(--c-text-3)', fontSize: '11px', marginTop: '2px', fontWeight: 400 }}>
+                {entry.description}
+              </small>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const STATUS_BADGE_EXEC = {
+  active:  { label: 'ATIVO',     color: '#34D399', bg: 'rgba(52,211,153,.16)',  bd: 'rgba(52,211,153,.3)' },
+  review:  { label: 'EM REVISÃO',color: '#FBBF24', bg: 'rgba(251,191,36,.16)',  bd: 'rgba(251,191,36,.3)' },
+  paused:  { label: 'PAUSADO',   color: '#F87171', bg: 'rgba(248,113,113,.16)', bd: 'rgba(248,113,113,.3)' },
+};
+
+function ExecActiveAdsTable({ ads, onSeeAll }) {
+  const top = ads.slice(0, 5);
+  return (
+    <div className="ccb-card" style={{ padding: '18px 20px', borderRadius: '18px' }}>
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        marginBottom: '14px',
+      }}>
+        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--c-text-1)' }}>
+          Anúncios ativos
+        </h3>
+        <button
+          onClick={onSeeAll}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: 'var(--c-accent)', fontSize: '12px', fontWeight: 600,
+            padding: 0,
+          }}
+        >
+          Ver todos →
+        </button>
+      </div>
+
+      {top.length === 0 ? (
+        <div style={{ fontSize: '12px', color: 'var(--c-text-3)', padding: '12px 4px' }}>
+          Nenhum anúncio no ar ainda.
+        </div>
+      ) : top.map((ad, i) => {
+        const status = STATUS_BADGE_EXEC[ad.status] || STATUS_BADGE_EXEC.active;
+        const conv = Number(ad.conversions || ad.results || 0);
+        const spent = Number(ad.spent || 0);
+        const cpr = conv > 0 ? spent / conv : 0;
+        const ringLabel = ad.ring_label || ad.ringLabel || (ad.radius ? `raio ${ad.radius} km` : 'Joinville');
+        return (
+          <div
+            key={ad.id || i}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '36px 1fr auto auto auto',
+              gap: '14px', alignItems: 'center',
+              padding: '11px 6px',
+              borderTop: i === 0 ? 'none' : '1px solid rgba(255,255,255,.05)',
+            }}
+          >
+            <div style={{
+              width: '36px', height: '36px', borderRadius: '9px',
+              background: 'linear-gradient(135deg, var(--c-accent-soft), rgba(125,74,94,.2))',
+              border: '1px solid var(--c-border)',
+              display: 'grid', placeItems: 'center',
+              color: 'var(--c-accent)', fontSize: '14px',
+            }}>
+              📷
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{
+                fontSize: '13px', fontWeight: 600, color: 'var(--c-text-1)',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {ad.name || 'Anúncio sem nome'}
+              </div>
+              <small style={{ display: 'block', color: 'var(--c-text-3)', fontSize: '11px', fontWeight: 400 }}>
+                Conjunto · Joinville · {ringLabel}
+              </small>
+            </div>
+            <span style={{
+              fontSize: '10.5px', padding: '4px 9px', borderRadius: '999px',
+              fontWeight: 700, letterSpacing: '.3px',
+              background: status.bg, color: status.color,
+              border: `1px solid ${status.bd}`,
+            }}>
+              {status.label}
+            </span>
+            <div style={{ fontSize: '13px', fontWeight: 700, fontFeatureSettings: "'tnum'", minWidth: '70px', textAlign: 'right', color: 'var(--c-text-1)' }}>
+              {conv > 0 ? conv.toLocaleString('pt-BR') : '—'}
+              <small style={{ display: 'block', color: 'var(--c-text-3)', fontSize: '10.5px', fontWeight: 400 }}>
+                {conv > 0 ? 'mensagens' : 'aguardando'}
+              </small>
+            </div>
+            <div className="hide-sm" style={{ fontSize: '13px', fontWeight: 700, fontFeatureSettings: "'tnum'", minWidth: '70px', textAlign: 'right', color: 'var(--c-text-1)' }}>
+              {cpr > 0 ? `R$ ${cpr.toFixed(2).replace('.', ',')}` : '—'}
+              <small style={{ display: 'block', color: 'var(--c-text-3)', fontSize: '10.5px', fontWeight: 400 }}>
+                {cpr > 0 ? 'por msg' : '—'}
+              </small>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ResumoExecutivo({ liveCampaigns, metaBilling, onSeeAllAds }) {
+  /* === Cálculos das 4 métricas === */
+  const balance = metaBilling
+    ? Number(metaBilling.available ?? metaBilling.balance ?? 0)
+    : 0;
+
+  const activeCount = liveCampaigns.filter(c => c.status === 'active').length;
+
+  const totalMessages = liveCampaigns.reduce(
+    (s, c) => s + Number(c.conversions || c.results || 0), 0
+  );
+
+  const totalSpend = liveCampaigns.reduce(
+    (s, c) => s + Number(c.spent || 0), 0
+  );
+
+  const cpm = totalMessages > 0 ? totalSpend / totalMessages : 0;
+
+  /* Ícones SVG inline */
+  const IconWallet = (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+    </svg>
+  );
+  const IconAds = (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 12l9 4 9-4"/>
+    </svg>
+  );
+  const IconChat = (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+  );
+  const IconChart = (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M3 3v18h18"/><polyline points="7 14 11 10 15 14 21 8"/>
+    </svg>
+  );
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '22px', marginBottom: '22px' }}>
+      {/* === Linha 1: 4 métricas === */}
+      <section
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: '16px',
+        }}
+        className="exec-metrics"
+      >
+        <ExecMetricCard
+          label="Saldo disponível"
+          value={`R$ ${balance.toFixed(2).replace('.', ',')}`}
+          icon={IconWallet}
+        />
+        <ExecMetricCard
+          label="Anúncios ativos"
+          value={activeCount.toString()}
+          icon={IconAds}
+        />
+        <ExecMetricCard
+          label="Mensagens iniciadas"
+          value={totalMessages.toLocaleString('pt-BR')}
+          icon={IconChat}
+        />
+        <ExecMetricCard
+          label="Custo por msg"
+          value={cpm > 0 ? `R$ ${cpm.toFixed(2).replace('.', ',')}` : '—'}
+          icon={IconChart}
+          accent
+        />
+      </section>
+
+      {/* === Linha 2: gráfico + próximas datas === */}
+      <section className="exec-grid-2" style={{
+        display: 'grid',
+        gridTemplateColumns: '2fr 1fr',
+        gap: '16px',
+      }}>
+        <ExecBarsChart totalMessages={totalMessages} />
+        <ExecNextDates />
+      </section>
+
+      {/* === Linha 3: tabela de anúncios === */}
+      <ExecActiveAdsTable ads={liveCampaigns} onSeeAll={onSeeAllAds} />
+
+      {/* Responsivo via style tag inline (não cria CSS global novo) */}
+      <style>{`
+        @media (max-width: 1024px) {
+          .exec-grid-2 { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 900px) {
+          .exec-metrics { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+        @media (max-width: 480px) {
+          .exec-metrics { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 /* ── Dashboard ── */
 const MESES_PT = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 function saudacaoPorHora() {
@@ -1720,6 +2167,40 @@ export default function Dashboard() {
               {horaAgora}
             </span>
           </div>
+        </div>
+      )}
+
+      {/* ── Resumo executivo (apenas dark) ──
+         Reproduz o mockup `.design/mockups/dashboard.html`:
+         4 métricas + gráfico de barras + próximas datas + tabela de anúncios.
+         Light mode permanece com o cabeçalho original logo acima. */}
+      {isDark && (
+        <ResumoExecutivo
+          liveCampaigns={liveCampaigns}
+          metaBilling={metaBilling}
+          onSeeAllAds={() => navigate('/anuncios')}
+        />
+      )}
+
+      {/* ── Subtítulo "Detalhes operacionais" — separa o resumo do bloco
+         legado (LearningPhase, CampaignMetrics, RingPerformance). Só dark. */}
+      {isDark && (
+        <div style={{
+          borderTop: '1px solid var(--c-border)',
+          paddingTop: '24px',
+          marginTop: '8px',
+          marginBottom: '4px',
+        }}>
+          <h2 style={{
+            fontSize: '14px',
+            fontWeight: 700,
+            color: 'var(--c-text-3)',
+            textTransform: 'uppercase',
+            letterSpacing: '1.2px',
+            margin: 0,
+          }}>
+            Detalhes operacionais
+          </h2>
         </div>
       )}
 

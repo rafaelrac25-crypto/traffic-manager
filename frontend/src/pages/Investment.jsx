@@ -3,7 +3,7 @@ import { useAppState } from '../contexts/AppStateContext';
 import api from '../services/api';
 
 function formatBRL(v) {
-  return `R$\u00A0${Number(v || 0).toFixed(2).replace('.', ',')}`;
+  return `R$ ${Number(v || 0).toFixed(2).replace('.', ',')}`;
 }
 
 export default function Investment() {
@@ -79,10 +79,10 @@ export default function Investment() {
   return (
     <div className="page-container">
       <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
+        <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '4px', letterSpacing: '-0.01em' }}>
           Investimento
         </h1>
-        <p style={{ fontSize: '13px', color: 'var(--c-text-3)' }}>
+        <p style={{ fontSize: '13px', color: 'var(--c-text-3)', fontWeight: 400 }}>
           Saldo, integração Meta e rastreamento de conversões.
         </p>
       </div>
@@ -90,17 +90,17 @@ export default function Investment() {
       {/* ── Saldo real da conta Meta ── */}
       {metaStatus?.connected && (
         <div className="ccb-card" style={{
-          background: 'linear-gradient(135deg, rgba(214,141,143,.08), rgba(125,74,94,.05))',
-          border: '1.5px solid var(--c-border)',
           borderRadius: '18px', padding: '24px 28px', marginBottom: '20px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px',
+          borderColor: 'rgba(193,53,132,.55)',
+          boxShadow: '0 8px 30px rgba(0,0,0,.4), 0 0 36px rgba(193,53,132,.16), inset 0 1px 0 rgba(255,194,228,.18), inset 0 0 18px rgba(193,53,132,.08)',
         }}>
           <div>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-text-3)', marginBottom: '6px', letterSpacing: '.5px', textTransform: 'uppercase' }}>
+            <div style={{ fontSize: '11px', fontWeight: 500, color: 'var(--c-text-3)', marginBottom: '6px', letterSpacing: '1.2px', textTransform: 'uppercase' }}>
               Saldo disponível (Meta Ads)
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ fontSize: '36px', fontWeight: 700, color: 'var(--c-accent)', lineHeight: 1 }}>
+              <div style={{ fontSize: '32px', fontWeight: 800, color: 'var(--c-text-1)', lineHeight: 1, fontFeatureSettings: "'tnum'", letterSpacing: '-0.02em' }}>
                 {metaBilling ? formatBRL(metaBilling.available ?? metaBilling.balance) : '—'}
               </div>
               <button
@@ -110,15 +110,15 @@ export default function Investment() {
                 aria-label="Atualizar saldo"
                 style={{
                   width: '34px', height: '34px', borderRadius: '50%',
-                  border: '1.5px solid var(--c-border)',
-                  background: 'var(--c-card-bg)',
+                  border: '1px solid var(--c-border)',
+                  background: 'var(--c-surface)',
                   color: 'var(--c-accent)', fontSize: '16px', lineHeight: 1,
                   cursor: metaBillingLoading ? 'wait' : 'pointer',
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   transition: 'transform .18s ease, background .18s ease',
                 }}
                 onMouseEnter={e => { if (!metaBillingLoading) e.currentTarget.style.background = 'var(--c-hover)'; }}
-                onMouseLeave={e => e.currentTarget.style.background = 'var(--c-card-bg)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'var(--c-surface)'}
               >
                 <span style={{
                   display: 'inline-block',
@@ -126,9 +126,9 @@ export default function Investment() {
                 }}>↻</span>
               </button>
             </div>
-            <div style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '8px' }}>
+            <div style={{ fontSize: '11.5px', color: 'var(--c-text-3)', marginTop: '8px', fontWeight: 400 }}>
               {metaBilling
-                ? <>Gasto total: {formatBRL(metaBilling.amount_spent)}{metaBilling.spend_cap ? ` · Limite: ${formatBRL(metaBilling.spend_cap)}` : ''} · Atualizado {formatRelativeTime(metaBillingLastUpdate)}<br/><span style={{ fontSize: '10px', color: 'var(--c-text-4)', opacity: 0.8 }}>Pode variar alguns centavos do Meta por créditos promocionais</span></>
+                ? <>Gasto total: {formatBRL(metaBilling.amount_spent)}{metaBilling.spend_cap ? ` · Limite: ${formatBRL(metaBilling.spend_cap)}` : ''} · Atualizado {formatRelativeTime(metaBillingLastUpdate)}<br/><span style={{ fontSize: '10.5px', color: 'var(--c-text-4)', opacity: 0.85 }}>Pode variar alguns centavos do Meta por créditos promocionais</span></>
                 : (metaBillingLoading ? 'Carregando saldo da conta de anúncios…' : 'Clique em ↻ para carregar o saldo')}
             </div>
           </div>
@@ -137,10 +137,13 @@ export default function Investment() {
             target="_blank"
             rel="noopener noreferrer"
             style={{
-              padding: '12px 20px', borderRadius: '10px',
-              background: 'var(--c-accent)', color: '#fff',
+              padding: '11px 18px', borderRadius: '12px',
+              border: 0,
+              background: 'linear-gradient(135deg, var(--c-accent), var(--c-accent-dk))',
+              color: '#fff',
               fontSize: '13px', fontWeight: 700, textDecoration: 'none',
               display: 'inline-flex', alignItems: 'center', gap: '8px',
+              boxShadow: '0 8px 24px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)',
             }}
           >
             💳 Adicionar crédito no Meta
@@ -150,8 +153,7 @@ export default function Investment() {
 
       {/* ── Integração Meta (Facebook + Instagram Ads) ── */}
       <div className="ccb-card" style={{
-        background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',
-        borderRadius: '16px', padding: '22px', boxShadow: '0 2px 8px var(--c-shadow)',
+        borderRadius: '18px', padding: '22px',
         marginBottom: '20px',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
@@ -161,22 +163,24 @@ export default function Investment() {
               <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--c-text-1)' }}>
                 Facebook / Instagram Ads
               </div>
-              <div style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '2px' }}>
+              <div style={{ fontSize: '11.5px', color: 'var(--c-text-3)', marginTop: '2px', fontWeight: 400 }}>
                 Conecte a conta de anúncios da Meta para publicar direto do painel.
               </div>
             </div>
           </div>
           {metaStatus?.connected ? (
             <span style={{
-              padding: '4px 10px', fontSize: '10px', fontWeight: 700,
-              background: '#DCFCE7', color: '#16A34A',
-              borderRadius: '6px', letterSpacing: '.3px',
+              padding: '4px 9px', fontSize: '10.5px', fontWeight: 700,
+              background: 'rgba(52,211,153,.16)', color: '#34D399',
+              border: '1px solid rgba(52,211,153,.3)',
+              borderRadius: '999px', letterSpacing: '.3px',
             }}>CONECTADO</span>
           ) : (
             <span style={{
-              padding: '4px 10px', fontSize: '10px', fontWeight: 700,
-              background: '#FEF3C7', color: '#B45309',
-              borderRadius: '6px', letterSpacing: '.3px',
+              padding: '4px 9px', fontSize: '10.5px', fontWeight: 700,
+              background: 'rgba(251,191,36,.16)', color: '#FBBF24',
+              border: '1px solid rgba(251,191,36,.3)',
+              borderRadius: '999px', letterSpacing: '.3px',
             }}>DESCONECTADO</span>
           )}
         </div>
@@ -202,11 +206,13 @@ export default function Investment() {
                 onClick={syncMeta}
                 disabled={metaSyncing}
                 style={{
-                  padding: '10px 16px', borderRadius: '10px',
-                  border: 'none', background: 'var(--c-accent)',
-                  color: '#fff', fontSize: '12px', fontWeight: 700,
+                  padding: '11px 18px', borderRadius: '12px',
+                  border: 0,
+                  background: 'linear-gradient(135deg, var(--c-accent), var(--c-accent-dk))',
+                  color: '#fff', fontSize: '13px', fontWeight: 700,
                   cursor: metaSyncing ? 'wait' : 'pointer',
                   display: 'inline-flex', alignItems: 'center', gap: '6px',
+                  boxShadow: '0 8px 24px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)',
                 }}
               >
                 {metaSyncing ? '⏳ Sincronizando…' : '🔄 Sincronizar agora'}
@@ -215,9 +221,10 @@ export default function Investment() {
                 onClick={disconnectMeta}
                 disabled={metaLoading}
                 style={{
-                  padding: '10px 16px', borderRadius: '10px',
-                  border: '1.5px solid #FCA5A5', background: '#FEF2F2',
-                  color: '#DC2626', fontSize: '12px', fontWeight: 700,
+                  padding: '10px 14px', borderRadius: '10px',
+                  border: '1px solid rgba(248,113,113,.3)',
+                  background: 'rgba(248,113,113,.10)',
+                  color: '#F87171', fontSize: '12.5px', fontWeight: 700,
                   cursor: metaLoading ? 'wait' : 'pointer',
                 }}
               >
@@ -229,10 +236,11 @@ export default function Investment() {
           <button
             onClick={connectMeta}
             style={{
-              padding: '12px 18px', borderRadius: '10px',
+              padding: '12px 18px', borderRadius: '12px',
               border: 'none', background: '#1877F2',
               color: '#fff', fontSize: '13px', fontWeight: 700,
               cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px',
+              boxShadow: '0 6px 18px rgba(24,119,242,.35)',
             }}
           >
             <span style={{ fontSize: '16px' }}>🅕</span> Conectar Facebook
@@ -242,10 +250,10 @@ export default function Investment() {
         {metaFeedback && (
           <div style={{
             marginTop: '14px', padding: '10px 14px',
-            background: metaFeedback.type === 'ok' ? 'rgba(34,197,94,.08)' : 'rgba(220,38,38,.08)',
-            border: `1px solid ${metaFeedback.type === 'ok' ? 'rgba(34,197,94,.3)' : 'rgba(220,38,38,.3)'}`,
-            borderRadius: '10px', fontSize: '12px',
-            color: metaFeedback.type === 'ok' ? '#16A34A' : '#DC2626', fontWeight: 600,
+            background: metaFeedback.type === 'ok' ? 'rgba(52,211,153,.10)' : 'rgba(248,113,113,.10)',
+            border: `1px solid ${metaFeedback.type === 'ok' ? 'rgba(52,211,153,.3)' : 'rgba(248,113,113,.3)'}`,
+            borderRadius: '10px', fontSize: '12.5px',
+            color: metaFeedback.type === 'ok' ? '#34D399' : '#F87171', fontWeight: 600,
           }}>
             {metaFeedback.text}
           </div>
@@ -254,8 +262,7 @@ export default function Investment() {
 
       {/* ── Pixel / Rastreamento de conversão (minimizado por padrão) ── */}
       <div className="ccb-card" style={{
-        background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',
-        borderRadius: '16px', boxShadow: '0 2px 8px var(--c-shadow)', overflow: 'hidden',
+        borderRadius: '18px', overflow: 'hidden',
       }}>
         <button
           type="button"
@@ -277,13 +284,14 @@ export default function Investment() {
             </span>
             {pixel?.enabled && (
               <span style={{
-                padding: '2px 8px', fontSize: '10px', fontWeight: 700,
-                background: '#DCFCE7', color: '#16A34A',
-                borderRadius: '6px', letterSpacing: '.3px',
+                padding: '4px 9px', fontSize: '10.5px', fontWeight: 700,
+                background: 'rgba(52,211,153,.16)', color: '#34D399',
+                border: '1px solid rgba(52,211,153,.3)',
+                borderRadius: '999px', letterSpacing: '.3px',
               }}>ATIVO</span>
             )}
             {!pixelOpen && !pixel?.enabled && (
-              <span style={{ fontSize: '11px', color: 'var(--c-text-4)', fontWeight: 500 }}>
+              <span style={{ fontSize: '11.5px', color: 'var(--c-text-3)', fontWeight: 400 }}>
                 — opcional, use apenas se tiver site/LP
               </span>
             )}
@@ -292,11 +300,11 @@ export default function Investment() {
 
         {pixelOpen && (
           <div style={{ padding: '4px 22px 22px' }}>
-            <p style={{ fontSize: '12px', color: 'var(--c-text-3)', margin: '0 0 14px', maxWidth: '560px', lineHeight: 1.5 }}>
+            <p style={{ fontSize: '12.5px', color: 'var(--c-text-3)', margin: '0 0 14px', maxWidth: '560px', lineHeight: 1.5, fontWeight: 400 }}>
               Rastreie conversões (agendamentos, contatos, compras) no seu site ou landing page para otimizar seus anúncios.
             </p>
             <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginBottom: '4px' }}>
-              <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-text-3)' }}>
+              <span style={{ fontSize: '12.5px', fontWeight: 500, color: 'var(--c-text-3)' }}>
                 {pixel?.enabled ? 'Ativado' : 'Desativado'}
               </span>
               <div
@@ -305,6 +313,7 @@ export default function Investment() {
                   width: '38px', height: '22px', borderRadius: '22px',
                   background: pixel?.enabled ? 'var(--c-accent)' : 'var(--c-border)',
                   position: 'relative', transition: 'background .2s',
+                  boxShadow: pixel?.enabled ? '0 0 12px rgba(193,53,132,.35)' : 'none',
                 }}
               >
                 <div style={{
@@ -321,9 +330,9 @@ export default function Investment() {
               <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
                   <label style={{
-                    display: 'block', fontSize: '11px', fontWeight: 700,
+                    display: 'block', fontSize: '11px', fontWeight: 500,
                     color: 'var(--c-text-3)', marginBottom: '6px',
-                    textTransform: 'uppercase', letterSpacing: '.4px',
+                    textTransform: 'uppercase', letterSpacing: '1.2px',
                   }}>
                     ID do Pixel Meta
                   </label>
@@ -350,10 +359,10 @@ function InfoCell({ label, value }) {
       padding: '10px 12px', background: 'var(--c-surface)',
       border: '1px solid var(--c-border)', borderRadius: '10px',
     }}>
-      <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--c-text-4)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: '3px' }}>
+      <div style={{ fontSize: '10.5px', fontWeight: 500, color: 'var(--c-text-3)', textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: '3px' }}>
         {label}
       </div>
-      <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-text-1)', wordBreak: 'break-all' }}>
+      <div style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--c-text-1)', wordBreak: 'break-all', fontFeatureSettings: "'tnum'" }}>
         {value}
       </div>
     </div>
@@ -361,8 +370,8 @@ function InfoCell({ label, value }) {
 }
 
 const inputStyle = {
-  width: '100%', padding: '10px 14px', fontSize: '13px',
-  border: '1.5px solid var(--c-border)', borderRadius: '10px',
+  width: '100%', padding: '11px 14px', fontSize: '13px',
+  border: '1px solid var(--c-border)', borderRadius: '10px',
   background: 'var(--c-surface)', color: 'var(--c-text-1)',
   outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
 };

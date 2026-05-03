@@ -104,7 +104,7 @@ const META_OBJECTIVES = [
   },
   {
     category: 'Conversão',
-    color: '#d68d8f',
+    color: 'var(--c-accent)',
     items: [
       { id: 'sales',         label: 'Vendas',              icon: '🛍️', desc: 'Encontre pessoas com maior probabilidade de comprar.' },
       { id: 'store_traffic', label: 'Tráfego para loja',   icon: '🏪', desc: 'Atraia visitantes para seu estabelecimento físico.' },
@@ -191,8 +191,8 @@ function RadioCard({ selected, onClick, children, style = {} }) {
     <div
       onClick={onClick}
       style={{
-        border: `2px solid ${selected ? 'var(--c-accent)' : 'var(--c-border)'}`,
-        background: selected ? 'rgba(214,141,143,.07)' : 'var(--c-card-bg)',
+        border: `1.5px solid ${selected ? 'var(--c-accent)' : 'var(--c-border)'}`,
+        background: selected ? 'var(--c-accent-soft)' : 'var(--c-surface)',
         borderRadius: '12px', padding: '14px', cursor: 'pointer',
         transition: 'all .15s', ...style,
       }}
@@ -205,10 +205,10 @@ function Pill({ selected, onClick, children }) {
     <div
       onClick={onClick}
       style={{
-        padding: '6px 14px', borderRadius: '20px', cursor: 'pointer',
-        fontSize: '12px', fontWeight: selected ? 600 : 400,
-        border: `1.5px solid ${selected ? 'var(--c-accent)' : 'var(--c-border)'}`,
-        background: selected ? 'rgba(214,141,143,.08)' : 'var(--c-surface)',
+        padding: '6px 14px', borderRadius: '999px', cursor: 'pointer',
+        fontSize: '12px', fontWeight: selected ? 700 : 500,
+        border: `1px solid ${selected ? 'rgba(193,53,132,.4)' : 'var(--c-border)'}`,
+        background: selected ? 'var(--c-accent-soft)' : 'var(--c-surface)',
         color: selected ? 'var(--c-accent)' : 'var(--c-text-3)',
         transition: 'all .15s', userSelect: 'none',
       }}
@@ -220,7 +220,7 @@ function SectionLabel({ children, sub }) {
   return (
     <div style={{ marginBottom: '10px' }}>
       <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--c-text-2)' }}>{children}</div>
-      {sub && <div style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '2px' }}>{sub}</div>}
+      {sub && <div style={{ fontSize: '11.5px', color: 'var(--c-text-3)', marginTop: '2px', fontWeight: 400 }}>{sub}</div>}
     </div>
   );
 }
@@ -240,11 +240,16 @@ function StepIndicator({ steps, current }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
               <div style={{
                 width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
-                background: done ? '#22C55E' : active ? 'var(--c-accent)' : 'var(--c-surface)',
-                border: `2px solid ${done ? '#22C55E' : active ? 'var(--c-accent)' : 'var(--c-border)'}`,
+                background: done
+                  ? 'rgba(52,211,153,.18)'
+                  : active
+                    ? 'linear-gradient(135deg, var(--c-accent), var(--c-accent-dk))'
+                    : 'var(--c-surface)',
+                border: `1.5px solid ${done ? 'rgba(52,211,153,.45)' : active ? 'var(--c-accent)' : 'var(--c-border)'}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: '11px', fontWeight: 700,
-                color: done || active ? '#fff' : 'var(--c-text-4)',
+                color: done ? '#34D399' : active ? '#fff' : 'var(--c-text-4)',
+                boxShadow: active ? '0 0 18px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)' : 'none',
                 transition: 'background .2s, border-color .2s',
               }}>
                 {done ? '✓' : i + 1}
@@ -252,13 +257,13 @@ function StepIndicator({ steps, current }) {
               <span style={{
                 fontSize: '12px', whiteSpace: 'nowrap',
                 fontWeight: active ? 600 : 400,
-                color: active ? 'var(--c-text-1)' : done ? '#16A34A' : 'var(--c-text-4)',
+                color: active ? 'var(--c-text-1)' : done ? '#34D399' : 'var(--c-text-3)',
               }}>{s}</span>
             </div>
             {i < steps.length - 1 && (
               <div style={{
                 flex: 1, height: '1px', minWidth: '10px', maxWidth: '36px', margin: '0 6px',
-                background: i < current ? '#22C55E' : 'var(--c-border)',
+                background: i < current ? 'rgba(52,211,153,.45)' : 'var(--c-border)',
                 transition: 'background .2s',
               }} />
             )}
@@ -395,8 +400,8 @@ function Step1Objective({ objective, setObjective, errors = {} }) {
                     <span
                       title="Preferido da Cris"
                       style={{
-                        fontSize: '10px', fontWeight: 800, color: '#A16207',
-                        background: '#FEF3C7', padding: '1px 6px', borderRadius: '8px',
+                        fontSize: '10px', fontWeight: 800, color: '#FBBF24',
+                        background: 'rgba(251,191,36,.16)', padding: '1px 6px', borderRadius: '8px',
                         flexShrink: 0,
                       }}
                     >
@@ -425,7 +430,7 @@ function Step1Objective({ objective, setObjective, errors = {} }) {
       )}
 
       {errors.objective && (
-        <p style={{ fontSize: '13px', color: '#EF4444', fontWeight: 600, marginTop: '8px' }}>⚠ {errors.objective}</p>
+        <p style={{ fontSize: '13px', color: '#F87171', fontWeight: 600, marginTop: '8px' }}>⚠ {errors.objective}</p>
       )}
     </div>
   );
@@ -680,7 +685,7 @@ function LocationPresetBar({ locations, setLocations, ringsMode, setRingsMode })
                     style={{
                       padding: '5px 9px', fontSize: '11px',
                       background: 'var(--c-card-bg)', border: '1px solid var(--c-border)', borderRadius: '7px',
-                      color: '#EF4444', cursor: 'pointer',
+                      color: '#F87171', cursor: 'pointer',
                     }}
                     title="Excluir"
                   >🗑️</button>
@@ -862,8 +867,8 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
         {locationError && (
           <div role="alert" style={{
             padding: '10px 12px', marginBottom: '10px', borderRadius: '10px',
-            background: 'rgba(220, 38, 38, 0.08)', border: '1px solid rgba(220, 38, 38, 0.3)',
-            color: '#B91C1C', fontSize: '12px', fontWeight: 600,
+            background: 'rgba(248,113,113,.12)', border: '1px solid rgba(248,113,113,.3)',
+            color: '#F87171', fontSize: '12px', fontWeight: 600,
             display: 'flex', alignItems: 'center', gap: '8px',
           }}>
             🚫 {locationError}
@@ -961,7 +966,7 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
         {locations.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' }}>
             {locations.map(loc => (
-              <div key={loc.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 12px', background: 'rgba(214,141,143,.08)', border: '1px solid rgba(214,141,143,.25)', borderRadius: '10px', flexWrap: 'wrap' }}>
+              <div key={loc.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 12px', background: 'rgba(193,53,132,.08)', border: '1px solid rgba(193,53,132,.25)', borderRadius: '10px', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '12px', color: 'var(--c-accent)', fontWeight: 600, flex: 1, minWidth: '100px' }}>📍 {loc.name}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>Raio:</span>
@@ -1023,13 +1028,13 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
             <Circle
               center={[HOME_COORDS.lat, HOME_COORDS.lng]}
               radius={5000}
-              pathOptions={{ color: '#16A34A', fillColor: '#16A34A', fillOpacity: 0.05, weight: 1, dashArray: '4 6' }}
+              pathOptions={{ color: '#34D399', fillColor: '#34D399', fillOpacity: 0.05, weight: 1, dashArray: '4 6' }}
             />
             {/* Ponto da clínica */}
             <Circle
               center={[HOME_COORDS.lat, HOME_COORDS.lng]}
               radius={120}
-              pathOptions={{ color: '#d68d8f', fillColor: '#d68d8f', fillOpacity: 1, weight: 2 }}
+              pathOptions={{ color: 'var(--c-accent)', fillColor: 'var(--c-accent)', fillOpacity: 1, weight: 2 }}
             />
 
             {locations.map(loc => (
@@ -1037,7 +1042,7 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
                 key={loc.id}
                 center={[loc.lat, loc.lng]}
                 radius={loc.radius * 1000}
-                pathOptions={{ color: '#d68d8f', fillColor: '#d68d8f', fillOpacity: 0.18, weight: 2 }}
+                pathOptions={{ color: 'var(--c-accent)', fillColor: 'var(--c-accent)', fillOpacity: 0.18, weight: 2 }}
               />
             ))}
           </MapContainer>
@@ -1141,7 +1146,7 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
         {interests.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
             {interests.map(i => (
-              <div key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', background: 'rgba(214,141,143,.08)', border: '1px solid rgba(214,141,143,.25)', borderRadius: '20px', fontSize: '12px', color: 'var(--c-accent)', fontWeight: 600 }}>
+              <div key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', background: 'rgba(193,53,132,.08)', border: '1px solid rgba(193,53,132,.25)', borderRadius: '20px', fontSize: '12px', color: 'var(--c-accent)', fontWeight: 600 }}>
                 {i}
                 <span onClick={() => setInterests(prev => prev.filter(x => x !== i))} style={{ cursor: 'pointer', fontWeight: 700 }}>×</span>
               </div>
@@ -1280,7 +1285,7 @@ function RingBudgetSplit({ locations, budgetValue, budgetType, split, setSplit, 
         border: '1px dashed var(--c-accent)',
         borderRadius: '12px',
         padding: '14px 16px',
-        background: 'rgba(214,141,143,.05)',
+        background: 'rgba(193,53,132,.05)',
         fontSize: '12px', color: 'var(--c-text-2)', lineHeight: 1.55,
       }}>
         <strong style={{ color: 'var(--c-accent)' }}>🎯 Split por anel pronto</strong> — suas localizações cobrem {activeKeys.length} anéis.
@@ -1295,7 +1300,7 @@ function RingBudgetSplit({ locations, budgetValue, budgetType, split, setSplit, 
   const value = Number(budgetValue) || 0;
 
   const RINGS = [
-    { key: 'primario', label: 'Anel interno (0–5 km)', color: '#16A34A' },
+    { key: 'primario', label: 'Anel interno (0–5 km)', color: '#34D399' },
     { key: 'medio',    label: 'Anel médio (5–7 km)',   color: '#F59E0B' },
     { key: 'externo',  label: 'Anel externo (7–8 km)', color: '#D97706' },
   ];
@@ -1316,11 +1321,9 @@ function RingBudgetSplit({ locations, budgetValue, budgetType, split, setSplit, 
   }
 
   return (
-    <div style={{
-      border: '1.5px solid var(--c-border)',
-      borderRadius: '12px',
+    <div className="ccb-card" style={{
+      borderRadius: '14px',
       padding: '16px 18px',
-      background: 'var(--c-surface)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
         <div>
@@ -1394,10 +1397,10 @@ function RingBudgetSplit({ locations, budgetValue, budgetType, split, setSplit, 
 
       <div style={{
         marginTop: '12px', padding: '8px 12px', borderRadius: '8px',
-        background: balanced ? 'rgba(22,163,74,.08)' : 'rgba(239,68,68,.07)',
-        border: `1px solid ${balanced ? 'rgba(22,163,74,.3)' : 'rgba(239,68,68,.3)'}`,
+        background: balanced ? 'rgba(52,211,153,.16)' : 'rgba(248,113,113,.12)',
+        border: `1px solid ${balanced ? 'rgba(52,211,153,.3)' : 'rgba(248,113,113,.3)'}`,
         fontSize: '11.5px', fontWeight: 700,
-        color: balanced ? '#16A34A' : '#DC2626',
+        color: balanced ? '#34D399' : '#F87171',
         textAlign: 'center',
       }}>
         {balanced ? `✅ Total: 100% · R$\u00A0${value.toFixed(2).replace('.', ',')} distribuídos` : `⚠️ Total: ${total}% — ajuste para fechar 100%`}
@@ -1412,9 +1415,9 @@ function RingBudgetSplit({ locations, budgetValue, budgetType, split, setSplit, 
         return (
           <div style={{
             marginTop: '10px', padding: '10px 12px', borderRadius: '8px',
-            background: 'rgba(239,68,68,.08)',
-            border: '1px solid rgba(239,68,68,.3)',
-            fontSize: '11px', lineHeight: 1.5, color: '#DC2626',
+            background: 'rgba(248,113,113,.12)',
+            border: '1px solid rgba(248,113,113,.3)',
+            fontSize: '11px', lineHeight: 1.5, color: '#F87171',
           }}>
             <strong>⚠ Cada anel precisa de R$ 7/dia no mínimo.</strong> Seu split
             atual deixa {lowRings.length === 1 ? 'um anel' : `${lowRings.length} anéis`} abaixo
@@ -1483,7 +1486,7 @@ function BudgetSummaryPanel({ budgetValue, budgetType, startDate, endDate, locat
   const normalized = normalizeSplit(budgetRingSplit, activeKeys);
 
   const RING_LABELS = {
-    primario: { label: 'Interno', color: '#16A34A' },
+    primario: { label: 'Interno', color: '#34D399' },
     medio:    { label: 'Médio',   color: '#F59E0B' },
     externo:  { label: 'Externo', color: '#D97706' },
   };
@@ -1556,11 +1559,9 @@ function BudgetSummaryPanel({ budgetValue, budgetType, startDate, endDate, locat
   if (!(dailyBudget > 0)) return null;
 
   return (
-    <div style={{
-      border: '1.5px solid var(--c-border)',
-      borderRadius: '12px',
+    <div className="ccb-card" style={{
+      borderRadius: '14px',
       padding: '14px 18px',
-      background: 'var(--c-surface)',
       display: 'flex', flexDirection: 'column', gap: '12px',
     }}>
       <div>
@@ -1614,7 +1615,7 @@ function BudgetSummaryPanel({ budgetValue, budgetType, startDate, endDate, locat
                     <span style={{ color: 'var(--c-text-1)', fontWeight: 600, minWidth: '70px' }}>{r.label}</span>
                     <span style={{ color: 'var(--c-text-4)' }}>({r.pct}%)</span>
                     <span style={{ flex: 1 }} />
-                    <span style={{ fontWeight: 700, color: ok ? '#16A34A' : '#DC2626' }}>
+                    <span style={{ fontWeight: 700, color: ok ? '#34D399' : '#F87171' }}>
                       {fmtBRL(r.daily)}/dia
                     </span>
                     <span style={{ fontSize: '14px' }}>{ok ? '✅' : '❌'}</span>
@@ -1629,7 +1630,7 @@ function BudgetSummaryPanel({ budgetValue, budgetType, startDate, endDate, locat
             })}
           </div>
           {underMin.length > 0 && (
-            <div style={{ marginTop: '8px', padding: '8px 10px', borderRadius: '6px', background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.3)', fontSize: '11px', color: '#DC2626', lineHeight: 1.5 }}>
+            <div style={{ marginTop: '8px', padding: '8px 10px', borderRadius: '6px', background: 'rgba(248,113,113,.12)', border: '1px solid rgba(248,113,113,.3)', fontSize: '11px', color: '#F87171', lineHeight: 1.5 }}>
               <strong>Abaixo do mínimo.</strong>{' '}
               {activeKeys.length === 1
                 ? `Meta exige no mínimo ${fmtBRL(MIN_DAILY_PER_RING)}/dia. Aumente o valor diário.`
@@ -1689,7 +1690,7 @@ function BudgetSummaryPanel({ budgetValue, budgetType, startDate, endDate, locat
             🔎 Consultando saldo no Meta…
           </div>
         ) : balanceState.error ? (
-          <div style={{ padding: '10px 12px', borderRadius: '8px', background: 'rgba(245,158,11,.08)', border: '1px solid rgba(245,158,11,.3)', fontSize: '11.5px', color: '#B45309', lineHeight: 1.5 }}>
+          <div style={{ padding: '10px 12px', borderRadius: '8px', background: 'rgba(251,191,36,.16)', border: '1px solid rgba(251,191,36,.3)', fontSize: '11.5px', color: '#FBBF24', lineHeight: 1.5 }}>
             ⚠ Não consegui checar o saldo: {balanceState.error}. Verifique na etapa de revisão.
           </div>
         ) : balanceState.data ? (
@@ -1707,9 +1708,9 @@ function BudgetSummaryPanel({ budgetValue, budgetType, startDate, endDate, locat
             if (avail < est) { status = 'red'; title = 'Não cabe no saldo'; icon = '❌'; }
             else if (avail < need) { status = 'yellow'; title = 'Cabe, mas sem folga de 20%'; icon = '⚠'; }
             const palette = {
-              green:  { bg: 'rgba(22,163,74,.08)',  bd: 'rgba(22,163,74,.3)',  fg: '#16A34A' },
-              yellow: { bg: 'rgba(245,158,11,.08)', bd: 'rgba(245,158,11,.3)', fg: '#B45309' },
-              red:    { bg: 'rgba(239,68,68,.08)',  bd: 'rgba(239,68,68,.3)',  fg: '#DC2626' },
+              green:  { bg: 'rgba(52,211,153,.16)', bd: 'rgba(52,211,153,.3)', fg: '#34D399' },
+              yellow: { bg: 'rgba(251,191,36,.16)', bd: 'rgba(251,191,36,.3)', fg: '#FBBF24' },
+              red:    { bg: 'rgba(248,113,113,.16)', bd: 'rgba(248,113,113,.3)', fg: '#F87171' },
             }[status];
             return (
               <div style={{ padding: '10px 12px', borderRadius: '8px', background: palette.bg, border: `1px solid ${palette.bd}` }}>
@@ -1719,9 +1720,9 @@ function BudgetSummaryPanel({ budgetValue, budgetType, startDate, endDate, locat
                 <div style={{ fontSize: '11.5px', color: 'var(--c-text-2)', lineHeight: 1.6 }}>
                   Saldo disponível no Meta: <strong>{fmtBRL(avail)}</strong><br />
                   Gasto previsto: <strong>{fmtBRL(est)}</strong> · Com folga 20%: <strong>{fmtBRL(need)}</strong><br />
-                  {status === 'green' && <span style={{ color: '#16A34A' }}>Sobra {fmtBRL(marginVsNeed)} de segurança.</span>}
-                  {status === 'yellow' && <span style={{ color: '#B45309' }}>Faltam {fmtBRL(need - avail)} pra ter a folga recomendada.</span>}
-                  {status === 'red' && <span style={{ color: '#DC2626' }}>Faltam {fmtBRL(est - avail)} só pra cobrir o gasto bruto.</span>}
+                  {status === 'green' && <span style={{ color: '#34D399' }}>Sobra {fmtBRL(marginVsNeed)} de segurança.</span>}
+                  {status === 'yellow' && <span style={{ color: '#FBBF24' }}>Faltam {fmtBRL(need - avail)} pra ter a folga recomendada.</span>}
+                  {status === 'red' && <span style={{ color: '#F87171' }}>Faltam {fmtBRL(est - avail)} só pra cobrir o gasto bruto.</span>}
                 </div>
                 {status !== 'green' && (
                   <div style={{ fontSize: '11px', color: palette.fg, marginTop: '6px' }}>
@@ -1786,11 +1787,10 @@ function BusinessHoursPicker({ value, onChange, budgetType, error }) {
   const lifetimeRequired = budgetType !== 'total';
 
   return (
-    <div style={{
-      border: `1.5px solid ${error ? '#EF4444' : 'var(--c-border)'}`,
-      borderRadius: '12px',
+    <div className="ccb-card" style={{
+      borderRadius: '14px',
       padding: '14px 18px',
-      background: 'var(--c-surface)',
+      borderColor: error ? '#F87171' : undefined,
     }}>
       <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
         <input
@@ -1924,8 +1924,8 @@ function BusinessHoursPicker({ value, onChange, budgetType, error }) {
             <div style={{
               marginTop: '10px',
               padding: '10px 12px',
-              background: 'rgba(245, 158, 11, .08)',
-              border: '1px solid rgba(245, 158, 11, .35)',
+              background: 'rgba(251,191,36,.16)',
+              border: '1px solid rgba(251,191,36,.35)',
               borderLeft: '3px solid #F59E0B',
               borderRadius: '8px',
               fontSize: '11.5px', color: 'var(--c-text-2)', lineHeight: 1.5,
@@ -1939,7 +1939,7 @@ function BusinessHoursPicker({ value, onChange, budgetType, error }) {
       {error && (
         <div style={{
           marginTop: '10px',
-          fontSize: '12px', color: '#EF4444', fontWeight: 600,
+          fontSize: '12px', color: '#F87171', fontWeight: 600,
         }}>⚠ {error}</div>
       )}
     </div>
@@ -1976,7 +1976,7 @@ function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, s
       {/* Valor */}
       <div>
         <SectionLabel>{{ daily: 'Orçamento diário', weekly: 'Orçamento semanal', total: 'Orçamento total da campanha' }[budgetType]}</SectionLabel>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--c-surface)', border: `1.5px solid ${errors.budgetValue ? '#EF4444' : 'var(--c-border)'}`, borderRadius: '10px', padding: '0 16px' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--c-surface)', border: `1.5px solid ${errors.budgetValue ? '#F87171' : 'var(--c-border)'}`, borderRadius: '10px', padding: '0 16px' }}>
           <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--c-accent)' }}>R$</span>
           <input
             type="number"
@@ -1988,7 +1988,7 @@ function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, s
             style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '20px', fontWeight: 700, color: 'var(--c-text-1)', fontFamily: 'inherit', padding: '10px 0', width: '120px' }}
           />
         </div>
-        {errors.budgetValue && <p style={{ fontSize: '12px', color: '#EF4444', fontWeight: 600, marginTop: '6px' }}>⚠ {errors.budgetValue}</p>}
+        {errors.budgetValue && <p style={{ fontSize: '12px', color: '#F87171', fontWeight: 600, marginTop: '6px' }}>⚠ {errors.budgetValue}</p>}
         {budgetValue && budgetType === 'daily' && (
           <p style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '6px' }}>
             Estimativa semanal: <b>R$ {(Number(budgetValue) * 7).toFixed(2).replace('.', ',')}</b>
@@ -2004,10 +2004,8 @@ function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, s
       </div>
 
       {/* Modelo de orçamento — ABO (manual por anel) ou CBO (Meta otimiza) */}
-      <div style={{
-        border: '1.5px solid var(--c-border)',
-        borderRadius: '12px', padding: '14px 18px',
-        background: 'var(--c-surface)',
+      <div className="ccb-card" style={{
+        borderRadius: '14px', padding: '14px 18px',
       }}>
         <div style={{ marginBottom: '10px' }}>
           <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '2px' }}>
@@ -2070,10 +2068,8 @@ function Step4Budget({ budgetType, setBudgetType, budgetValue, setBudgetValue, s
           { v: '3',    l: '3 anéis',    d: 'Divide em 3 grupos por distância', disabled: validCount < 3, equiv: autoRings === 3 },
         ];
         return (
-          <div style={{
-            border: '1.5px solid var(--c-border)',
-            borderRadius: '12px', padding: '14px 18px',
-            background: 'var(--c-surface)',
+          <div className="ccb-card" style={{
+            borderRadius: '14px', padding: '14px 18px',
           }}>
             <div style={{ marginBottom: '10px' }}>
               <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '2px' }}>
@@ -2208,7 +2204,7 @@ function AdMockFeed({ mediaFiles, primaryText, headline, destUrl, ctaButton, sca
   return (
     <div style={{ width: 320 * scale, border: '1px solid var(--c-border)', borderRadius: 12 * scale, overflow: 'hidden', background: 'var(--c-card-bg)', fontSize: scale }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 * scale, padding: `${10 * scale}px ${12 * scale}px`, borderBottom: '1px solid var(--c-border-lt)' }}>
-        <div style={{ width: 32 * scale, height: 32 * scale, borderRadius: '50%', background: 'linear-gradient(135deg,#E8A4C8,#d68d8f)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11 * scale, fontWeight: 700, flexShrink: 0 }}>CC</div>
+        <div style={{ width: 32 * scale, height: 32 * scale, borderRadius: '50%', background: 'linear-gradient(135deg,#E8A4C8,var(--c-accent))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11 * scale, fontWeight: 700, flexShrink: 0 }}>CC</div>
         <div>
           <div style={{ fontSize: 12 * scale, fontWeight: 600, color: 'var(--c-text-1)' }}>Cris Costa Beauty</div>
           <div style={{ fontSize: 10 * scale, color: 'var(--c-text-4)' }}>Patrocinado · 🌐</div>
@@ -2249,10 +2245,10 @@ function AdMockStories({ mediaFiles, primaryText, headline, ctaButton, scale = 1
           ? <video src={media.url} autoPlay muted loop style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
           : <img src={media.url} alt="stories" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
       ) : (
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg,#3a1a2e,#d68d8f)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg,#3a1a2e,var(--c-accent))' }} />
       )}
       <div style={{ position: 'relative', zIndex: 2, padding: `${10 * scale}px ${10 * scale}px 0`, display: 'flex', alignItems: 'center', gap: 6 * scale }}>
-        <div style={{ width: 26 * scale, height: 26 * scale, borderRadius: '50%', background: 'linear-gradient(135deg,#E8A4C8,#d68d8f)', border: `2px solid #fff`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 8 * scale, fontWeight: 700 }}>CC</div>
+        <div style={{ width: 26 * scale, height: 26 * scale, borderRadius: '50%', background: 'linear-gradient(135deg,#E8A4C8,var(--c-accent))', border: `2px solid #fff`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 8 * scale, fontWeight: 700 }}>CC</div>
         <div>
           <div style={{ fontSize: 9 * scale, fontWeight: 600, color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,.6)' }}>Cris Costa Beauty</div>
           <div style={{ fontSize: 8 * scale, color: 'rgba(255,255,255,.7)' }}>Patrocinado</div>
@@ -2275,7 +2271,7 @@ function AdMockCarousel({ mediaFiles, headline, destUrl, ctaButton, scale = 1 })
   return (
     <div style={{ width: 320 * scale, border: '1px solid var(--c-border)', borderRadius: 12 * scale, overflow: 'hidden', background: 'var(--c-card-bg)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 * scale, padding: `${10 * scale}px ${12 * scale}px`, borderBottom: '1px solid var(--c-border-lt)' }}>
-        <div style={{ width: 32 * scale, height: 32 * scale, borderRadius: '50%', background: 'linear-gradient(135deg,#E8A4C8,#d68d8f)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11 * scale, fontWeight: 700, flexShrink: 0 }}>CC</div>
+        <div style={{ width: 32 * scale, height: 32 * scale, borderRadius: '50%', background: 'linear-gradient(135deg,#E8A4C8,var(--c-accent))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11 * scale, fontWeight: 700, flexShrink: 0 }}>CC</div>
         <div>
           <div style={{ fontSize: 12 * scale, fontWeight: 600, color: 'var(--c-text-1)' }}>Cris Costa Beauty</div>
           <div style={{ fontSize: 10 * scale, color: 'var(--c-text-4)' }}>Patrocinado · 🌐</div>
@@ -2466,7 +2462,7 @@ function VideoCoverPicker({ videoFile, thumbnail, setThumbnail }) {
       </div>
 
       {err && (
-        <div style={{ marginTop: '8px', fontSize: '11px', color: '#B91C1C', fontWeight: 600 }}>🚫 {err}</div>
+        <div style={{ marginTop: '8px', fontSize: '11px', color: '#F87171', fontWeight: 600 }}>🚫 {err}</div>
       )}
     </div>
   );
@@ -2660,13 +2656,13 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
         {uploadError && (
           <div style={{
             padding: '10px 14px', marginBottom: '8px',
-            background: 'rgba(220, 38, 38, 0.08)', border: '1px solid rgba(220, 38, 38, 0.35)',
-            borderRadius: '10px', fontSize: '12px', color: '#B91C1C', fontWeight: 600, lineHeight: 1.5,
+            background: 'rgba(248,113,113,.12)', border: '1px solid rgba(248,113,113,.35)',
+            borderRadius: '10px', fontSize: '12px', color: '#F87171', fontWeight: 600, lineHeight: 1.5,
           }}>
             🚫 {uploadError}
             {uploadIsHevc && (
-              <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(220, 38, 38, 0.2)' }}>
-                <div style={{ fontWeight: 700, marginBottom: '6px', color: '#B91C1C' }}>
+              <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(248,113,113,.2)' }}>
+                <div style={{ fontWeight: 700, marginBottom: '6px', color: '#F87171' }}>
                   Converter para MP4 num site grátis (escolha um):
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
@@ -2682,8 +2678,8 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
                       rel="noopener noreferrer"
                       style={{
                         display: 'inline-flex', flexDirection: 'column', alignItems: 'center',
-                        padding: '8px 14px', background: '#fff', border: '1.5px solid #B91C1C',
-                        borderRadius: '8px', textDecoration: 'none', color: '#B91C1C',
+                        padding: '8px 14px', background: 'var(--c-surface)', border: '1px solid rgba(248,113,113,.3)',
+                        borderRadius: '8px', textDecoration: 'none', color: '#F87171',
                         fontSize: '12px', fontWeight: 700, lineHeight: 1.3,
                       }}
                     >
@@ -2692,7 +2688,7 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
                     </a>
                   ))}
                 </div>
-                <div style={{ marginTop: '8px', fontSize: '11px', fontWeight: 500, color: '#7F1D1D' }}>
+                <div style={{ marginTop: '8px', fontSize: '11px', fontWeight: 500, color: '#F87171' }}>
                   Suba o arquivo lá, escolha <strong>MP4</strong>, baixe o resultado e tente subir aqui de novo.
                 </div>
               </div>
@@ -2739,9 +2735,9 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
           onChange={e => setPrimaryText(e.target.value)}
           maxLength={125}
           rows={3}
-          style={{ width: '100%', padding: '10px 14px', border: `1.5px solid ${errors.primaryText ? '#EF4444' : 'var(--c-border)'}`, borderRadius: '10px', background: 'var(--c-surface)', color: 'var(--c-text-1)', fontSize: '13px', fontFamily: 'inherit', outline: 'none', resize: 'vertical', lineHeight: 1.5, boxSizing: 'border-box' }}
+          style={{ width: '100%', padding: '10px 14px', border: `1.5px solid ${errors.primaryText ? '#F87171' : 'var(--c-border)'}`, borderRadius: '10px', background: 'var(--c-surface)', color: 'var(--c-text-1)', fontSize: '13px', fontFamily: 'inherit', outline: 'none', resize: 'vertical', lineHeight: 1.5, boxSizing: 'border-box' }}
         />
-        {errors.primaryText && <p style={{ fontSize: '12px', color: '#EF4444', fontWeight: 600, marginTop: '4px' }}>⚠ {errors.primaryText}</p>}
+        {errors.primaryText && <p style={{ fontSize: '12px', color: '#F87171', fontWeight: 600, marginTop: '4px' }}>⚠ {errors.primaryText}</p>}
       </div>
 
       {/* Título */}
@@ -2780,7 +2776,7 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
             ou cole um link personalizado abaixo
           </span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--c-surface)', border: `1.5px solid ${(errors.destUrl || (destUrl && !destUrl.startsWith('http'))) ? '#EF4444' : 'var(--c-border)'}`, borderRadius: '10px', padding: '0 14px', transition: 'border-color .15s' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--c-surface)', border: `1.5px solid ${(errors.destUrl || (destUrl && !destUrl.startsWith('http'))) ? '#F87171' : 'var(--c-border)'}`, borderRadius: '10px', padding: '0 14px', transition: 'border-color .15s' }}>
           <span style={{ fontSize: '13px', color: 'var(--c-text-4)', flexShrink: 0 }}>🔗</span>
           <input
             type="url"
@@ -2789,10 +2785,10 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
             onChange={e => setDestUrl(e.target.value)}
             style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '13px', color: 'var(--c-text-1)', fontFamily: 'inherit', padding: '10px 0', width: '100%' }}
           />
-          {destUrl && destUrl.startsWith('http') && <span style={{ color: '#22C55E', fontSize: '14px' }}>✓</span>}
+          {destUrl && destUrl.startsWith('http') && <span style={{ color: '#34D399', fontSize: '14px' }}>✓</span>}
         </div>
         {(errors.destUrl || (destUrl && !destUrl.startsWith('http'))) && (
-          <p style={{ fontSize: '12px', color: '#EF4444', fontWeight: 600, marginTop: '4px' }}>⚠ {errors.destUrl || 'URL deve começar com https://'}</p>
+          <p style={{ fontSize: '12px', color: '#F87171', fontWeight: 600, marginTop: '4px' }}>⚠ {errors.destUrl || 'URL deve começar com https://'}</p>
         )}
       </div>
 
@@ -2828,7 +2824,7 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
               style={{ width: '100%', padding: '10px 14px', border: '1.5px solid var(--c-border)', borderRadius: '10px', background: 'var(--c-surface)', color: 'var(--c-text-1)', fontSize: '13px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
             />
             <div style={{ marginTop: '8px', padding: '8px 12px', background: '#25D36612', border: '1px solid #25D36633', borderRadius: '8px' }}>
-              <div style={{ fontSize: '10px', fontWeight: 700, color: '#0F8A49', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: '4px' }}>Link final que vai pro Meta</div>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: '#34D399', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: '4px' }}>Link final que vai pro Meta</div>
               <div style={{ fontSize: '11px', color: 'var(--c-text-2)', wordBreak: 'break-all', fontFamily: 'ui-monospace, SFMono-Regular, monospace', lineHeight: 1.5 }}>{previewUrl}</div>
             </div>
           </div>
@@ -2929,7 +2925,7 @@ function Step6Review({ data, onGoTo }) {
       </div>
 
       {sections.map(s => (
-        <div key={s.label} style={{ background: 'var(--c-card-bg)', border: '1px solid var(--c-border)', borderRadius: '12px', overflow: 'hidden' }}>
+        <div key={s.label} className="ccb-card" style={{ borderRadius: '14px', overflow: 'hidden' }}>
           <div style={{ padding: '10px 16px', background: 'var(--c-surface)', borderBottom: '1px solid var(--c-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--c-text-3)' }}>{s.label}</span>
             <button
@@ -2955,12 +2951,12 @@ function Step6Review({ data, onGoTo }) {
         const value = Number(data.budgetValue) || 0;
         const unit = { daily: '/dia', weekly: '/sem', total: ' total' }[data.budgetType] || '';
         const RING_META = {
-          primario: { label: 'Anel interno (0-5 km)',  color: '#16A34A' },
+          primario: { label: 'Anel interno (0-5 km)',  color: '#34D399' },
           medio:    { label: 'Anel médio (5-7 km)',     color: '#F59E0B' },
           externo:  { label: 'Anel externo (7-8 km)',   color: '#D97706' },
         };
         return (
-          <div style={{ background: 'var(--c-card-bg)', border: '1px solid var(--c-border)', borderRadius: '12px', overflow: 'hidden' }}>
+          <div className="ccb-card" style={{ borderRadius: '14px', overflow: 'hidden' }}>
             <div style={{ padding: '10px 16px', background: 'var(--c-surface)', borderBottom: '1px solid var(--c-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--c-text-3)' }}>
                 {activeKeys.length} conjuntos de anúncios serão criados
@@ -3001,7 +2997,7 @@ function Step6Review({ data, onGoTo }) {
                 );
               })}
               {total !== 100 && (
-                <div style={{ fontSize: '11.5px', fontWeight: 700, color: '#DC2626' }}>
+                <div style={{ fontSize: '11.5px', fontWeight: 700, color: '#F87171' }}>
                   ⚠️ Split está em {total}% — ajuste para 100% no passo Orçamento.
                 </div>
               )}
@@ -3018,11 +3014,11 @@ function Step6Review({ data, onGoTo }) {
         ];
         if (!warns.length) return null;
         return (
-          <div style={{ padding: '14px 16px', background: 'rgba(239,68,68,.06)', border: '1px solid rgba(239,68,68,.25)', borderRadius: '12px' }}>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: '#DC2626', marginBottom: '8px' }}>🔤 Atenção — possíveis erros de texto:</div>
+          <div style={{ padding: '14px 16px', background: 'rgba(248,113,113,.1)', border: '1px solid rgba(248,113,113,.3)', borderRadius: '12px' }}>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: '#F87171', marginBottom: '8px' }}>🔤 Atenção — possíveis erros de texto:</div>
             <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
               {warns.map((w, i) => (
-                <li key={i} style={{ fontSize: '12px', color: '#B91C1C', lineHeight: 1.5 }}>{w}</li>
+                <li key={i} style={{ fontSize: '12px', color: '#F87171', lineHeight: 1.5 }}>{w}</li>
               ))}
             </ul>
             <p style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '8px', marginBottom: 0 }}>Corrija no passo Criativo antes de publicar, se necessário.</p>
@@ -3031,8 +3027,8 @@ function Step6Review({ data, onGoTo }) {
       })()}
 
       {/* Aviso de revisão */}
-      <div style={{ padding: '14px 16px', background: 'rgba(245,158,11,.07)', border: '1px solid rgba(245,158,11,.25)', borderRadius: '12px', fontSize: '12px', color: 'var(--c-text-2)', lineHeight: 1.6 }}>
-        <span style={{ fontWeight: 700, color: '#B45309' }}>⚠️ Revisão do Meta:</span> Após a publicação, o anúncio passa por análise automática. O processo geralmente ocorre em menos de 24 horas. Certifique-se de que o criativo segue as <a href="https://www.facebook.com/policies/ads/" target="_blank" rel="noreferrer" style={{ color: 'var(--c-accent)' }}>Políticas de Publicidade do Meta</a>.
+      <div style={{ padding: '14px 16px', background: 'rgba(251,191,36,.12)', border: '1px solid rgba(251,191,36,.3)', borderRadius: '12px', fontSize: '12px', color: 'var(--c-text-2)', lineHeight: 1.6 }}>
+        <span style={{ fontWeight: 700, color: '#FBBF24' }}>⚠️ Revisão do Meta:</span> Após a publicação, o anúncio passa por análise automática. O processo geralmente ocorre em menos de 24 horas. Certifique-se de que o criativo segue as <a href="https://www.facebook.com/policies/ads/" target="_blank" rel="noreferrer" style={{ color: 'var(--c-accent)' }}>Políticas de Publicidade do Meta</a>.
       </div>
 
       {/* Preflight check — consulta Meta em tempo real */}
@@ -3093,15 +3089,15 @@ function PreflightCheckPanel({ data }) {
 
   if (state.error) {
     return (
-      <div style={{ ...box, borderColor: 'rgba(239,68,68,.35)', background: 'rgba(239,68,68,.05)' }}>
-        <div style={{ fontSize: '13px', fontWeight: 700, color: '#DC2626' }}>Não consegui verificar: {state.error}</div>
+      <div style={{ ...box, borderColor: 'rgba(248,113,113,.35)', background: 'rgba(248,113,113,.1)' }}>
+        <div style={{ fontSize: '13px', fontWeight: 700, color: '#F87171' }}>Não consegui verificar: {state.error}</div>
       </div>
     );
   }
 
-  const borderColor = state.ok_overall ? 'rgba(22,163,74,.35)' : 'rgba(239,68,68,.35)';
-  const bgColor = state.ok_overall ? 'rgba(22,163,74,.05)' : 'rgba(239,68,68,.05)';
-  const headerColor = state.ok_overall ? '#15803D' : '#DC2626';
+  const borderColor = state.ok_overall ? 'rgba(52,211,153,.35)' : 'rgba(248,113,113,.35)';
+  const bgColor = state.ok_overall ? 'rgba(52,211,153,.1)' : 'rgba(248,113,113,.1)';
+  const headerColor = state.ok_overall ? '#34D399' : '#F87171';
   const headerIcon = state.ok_overall ? '✅' : '❌';
   const headerText = state.ok_overall ? 'Tudo certo pra publicar' : 'Corrija antes de publicar';
 
@@ -3113,7 +3109,7 @@ function PreflightCheckPanel({ data }) {
       <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '6px' }}>
         {state.checks.map(c => {
           const icon = c.ok ? '✅' : (c.severity === 'warn' ? '⚠️' : '❌');
-          const color = c.ok ? 'var(--c-text-2)' : (c.severity === 'warn' ? '#B45309' : '#DC2626');
+          const color = c.ok ? 'var(--c-text-2)' : (c.severity === 'warn' ? '#FBBF24' : '#F87171');
           return (
             <li key={c.key} style={{ fontSize: '12px', color, lineHeight: 1.5 }}>
               <span style={{ marginRight: '6px' }}>{icon}</span>
@@ -3136,7 +3132,7 @@ function SummaryPanel({ step, objective, locations, budgetType, budgetValue, adF
   const progress = Math.round(((step + 1) / STEPS.length) * 100);
 
   return (
-    <div className="wizard-summary-panel" style={{ background: 'var(--c-card-bg)', border: '1px solid var(--c-border)', borderRadius: '14px', padding: '18px' }}>
+    <div className="wizard-summary-panel ccb-card" style={{ borderRadius: '18px', padding: '18px 20px' }}>
       <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--c-text-4)', marginBottom: '14px' }}>Resumo</div>
 
       {/* ── Mini tracker de etapas ── */}
@@ -3149,11 +3145,16 @@ function SummaryPanel({ step, objective, locations, budgetType, budgetValue, adF
               {/* Círculo numerado */}
               <div style={{
                 width: '20px', height: '20px', borderRadius: '50%', flexShrink: 0,
-                background: done ? '#22C55E' : active ? 'var(--c-accent)' : 'var(--c-surface)',
-                border: `2px solid ${done ? '#22C55E' : active ? 'var(--c-accent)' : 'var(--c-border)'}`,
+                background: done
+                  ? 'rgba(52,211,153,.18)'
+                  : active
+                    ? 'linear-gradient(135deg, var(--c-accent), var(--c-accent-dk))'
+                    : 'var(--c-surface)',
+                border: `1.5px solid ${done ? 'rgba(52,211,153,.45)' : active ? 'var(--c-accent)' : 'var(--c-border)'}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: '9px', fontWeight: 700,
-                color: done || active ? '#fff' : 'var(--c-text-4)',
+                color: done ? '#34D399' : active ? '#fff' : 'var(--c-text-4)',
+                boxShadow: active ? '0 0 14px rgba(193,53,132,.35)' : 'none',
                 transition: 'background .2s, border-color .2s',
               }}>
                 {done ? '✓' : i + 1}
@@ -3162,17 +3163,23 @@ function SummaryPanel({ step, objective, locations, budgetType, budgetValue, adF
               <span style={{
                 fontSize: '11px',
                 fontWeight: active ? 600 : 400,
-                color: done ? '#16A34A' : active ? 'var(--c-text-1)' : 'var(--c-text-4)',
+                color: done ? '#34D399' : active ? 'var(--c-text-1)' : 'var(--c-text-3)',
                 transition: 'color .2s',
               }}>{s}</span>
               {/* Badge "atual" */}
               {active && (
-                <span style={{ marginLeft: 'auto', fontSize: '9px', fontWeight: 700, color: 'var(--c-accent)', background: 'rgba(214,141,143,.1)', borderRadius: '6px', padding: '1px 5px', whiteSpace: 'nowrap' }}>
+                <span style={{
+                  marginLeft: 'auto', fontSize: '10px', fontWeight: 700, letterSpacing: '.3px',
+                  color: 'var(--c-accent)',
+                  background: 'var(--c-accent-soft)',
+                  border: '1px solid rgba(193,53,132,.4)',
+                  borderRadius: '999px', padding: '2px 8px', whiteSpace: 'nowrap',
+                }}>
                   atual
                 </span>
               )}
               {done && (
-                <span style={{ marginLeft: 'auto', fontSize: '9px', color: '#16A34A' }}>✓</span>
+                <span style={{ marginLeft: 'auto', fontSize: '9px', color: '#34D399' }}>✓</span>
               )}
             </div>
           );
@@ -3242,24 +3249,31 @@ function SummaryPanel({ step, objective, locations, budgetType, budgetValue, adF
 function PublishModal({ onClose, scheduled, startDate }) {
   const dateLabel = startDate ? new Date(startDate + 'T12:00:00').toLocaleDateString('pt-BR') : '';
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-      <div style={{ background: 'var(--c-card-bg)', border: '1px solid var(--c-border)', borderRadius: '20px', padding: '40px 36px', maxWidth: '440px', width: '100%', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,.3)', animation: 'fadeIn .25s ease' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.65)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+      <div className="ccb-card" style={{ padding: '40px 36px', maxWidth: '440px', width: '100%', textAlign: 'center', borderRadius: '20px' }}>
         <div style={{ fontSize: '54px', marginBottom: '16px' }}>{scheduled ? '📅' : '🎉'}</div>
-        <h2 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '10px' }}>
+        <h2 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '10px' }}>
           {scheduled ? 'Campanha agendada!' : 'Anúncio enviado para revisão!'}
         </h2>
         <p style={{ fontSize: '14px', color: 'var(--c-text-2)', lineHeight: 1.7, marginBottom: '10px' }}>
           Seu anúncio foi enviado para <strong>revisão do Meta Ads</strong>. Se estiver nas conformidades, será {scheduled ? `publicado automaticamente em ${dateLabel}` : 'publicado em breve'}.
         </p>
-        <p style={{ fontSize: '13px', color: 'var(--c-text-3)', lineHeight: 1.6, marginBottom: '20px' }}>
+        <p style={{ fontSize: '13px', color: 'var(--c-text-3)', lineHeight: 1.6, marginBottom: '20px', fontWeight: 400 }}>
           Você receberá uma notificação no sino quando o Meta aprovar ou reprovar. Se for reprovado, aparecerá na sessão <strong>Reprovados</strong> com o motivo e orientação.
         </p>
-        <div style={{ padding: '12px 16px', background: 'rgba(214,141,143,.07)', border: '1px solid rgba(214,141,143,.2)', borderRadius: '10px', fontSize: '12px', color: 'var(--c-text-3)', marginBottom: '24px', lineHeight: 1.5 }}>
+        <div style={{ padding: '12px 16px', background: 'var(--c-accent-soft)', border: '1px solid rgba(193,53,132,.4)', borderRadius: '12px', fontSize: '12px', color: 'var(--c-text-3)', marginBottom: '24px', lineHeight: 1.5 }}>
           📋 Status atual: <strong style={{ color: 'var(--c-accent)' }}>{scheduled ? `Agendado para ${dateLabel} · Em revisão` : 'Em revisão pelo Meta'}</strong>
         </div>
         <button
           onClick={onClose}
-          style={{ padding: '13px 32px', background: 'linear-gradient(135deg,#E8A9AB,#d68d8f)', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 16px rgba(214,141,143,.35)', width: '100%' }}
+          style={{
+            padding: '13px 32px',
+            background: 'linear-gradient(135deg, var(--c-accent), var(--c-accent-dk))',
+            color: '#fff', border: 'none', borderRadius: '12px',
+            fontSize: '14px', fontWeight: 700, cursor: 'pointer',
+            boxShadow: '0 8px 24px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)',
+            width: '100%',
+          }}
         >
           Ver meus anúncios →
         </button>
@@ -3813,7 +3827,7 @@ export default function CreateAd() {
         </div>
         <button
           onClick={handleCancel}
-          style={{ padding: '8px 16px', border: '1.5px solid var(--c-border)', background: 'var(--c-surface)', color: 'var(--c-text-3)', borderRadius: '10px', fontSize: '13px', cursor: 'pointer', flexShrink: 0 }}
+          style={{ padding: '8px 14px', border: '1px solid var(--c-border)', background: 'var(--c-surface)', color: 'var(--c-text-2)', borderRadius: '10px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
         >
           Cancelar
         </button>
@@ -3825,23 +3839,23 @@ export default function CreateAd() {
       {/* ── Layout wizard ── */}
       <div className="wizard-layout">
         {/* Conteúdo do passo */}
-        <div style={{ background: 'var(--c-card-bg)', border: '1px solid var(--c-border)', borderRadius: '16px', padding: '28px', animation: 'fadeIn .2s ease' }}>
+        <div className="ccb-card" style={{ padding: '28px', borderRadius: '18px' }}>
           {fixMode && rejectionInfo && (
             <div style={{
               padding: '14px 16px',
-              background: 'rgba(239,68,68,.07)',
-              border: '1px solid rgba(239,68,68,.25)',
+              background: 'rgba(248,113,113,.12)',
+              border: '1px solid rgba(248,113,113,.3)',
               borderLeft: '4px solid #EF4444',
               borderRadius: '10px',
               marginBottom: '22px',
             }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: '#DC2626', letterSpacing: '.5px', marginBottom: '6px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#F87171', letterSpacing: '.5px', marginBottom: '6px' }}>
                 ⚠️ MOTIVO DA REPROVAÇÃO
               </div>
               <p style={{ fontSize: '13px', color: 'var(--c-text-2)', margin: '0 0 10px 0', lineHeight: 1.6 }}>
                 <strong>{rejectedAd.reason}</strong>{rejectedAd.details ? ` — ${rejectedAd.details}` : ''}
               </p>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: '#16A34A', letterSpacing: '.5px', marginBottom: '4px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#34D399', letterSpacing: '.5px', marginBottom: '4px' }}>
                 💡 COMO CORRIGIR
               </div>
               <p style={{ fontSize: '12px', color: 'var(--c-text-2)', margin: 0, lineHeight: 1.6 }}>
@@ -3865,7 +3879,7 @@ export default function CreateAd() {
           {quickFill && canReview && step === 4 && (
             <div style={{
               padding: '14px 16px',
-              background: 'linear-gradient(135deg, rgba(214,141,143,.09), rgba(125,74,94,.04))',
+              background: 'linear-gradient(135deg, rgba(193,53,132,.12), rgba(125,74,94,.04))',
               border: '1px solid var(--c-border)',
               borderLeft: '4px solid var(--c-accent)',
               borderRadius: '10px',
@@ -3917,10 +3931,10 @@ export default function CreateAd() {
           {stepComponents[step]}
 
           {/* Navegação */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '36px', paddingTop: '20px', borderTop: '1px solid var(--c-border-lt)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '36px', paddingTop: '20px', borderTop: '1px solid var(--c-border)' }}>
             <button
               onClick={() => { setErrors({}); step > 0 ? setStep(s => s - 1) : handleCancel(); }}
-              style={{ padding: '10px 20px', border: '1.5px solid var(--c-border)', background: 'var(--c-surface)', color: 'var(--c-text-2)', borderRadius: '10px', fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}
+              style={{ padding: '8px 16px', border: '1px solid var(--c-border)', background: 'var(--c-surface)', color: 'var(--c-text-2)', borderRadius: '10px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
             >
               {step === 0 ? 'Cancelar' : '← Voltar'}
             </button>
@@ -3939,7 +3953,13 @@ export default function CreateAd() {
                     setStep(s => s + 1);
                   }
                 }}
-                style={{ padding: '10px 26px', background: 'var(--c-accent)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+                style={{
+                  padding: '11px 24px',
+                  background: 'linear-gradient(135deg, var(--c-accent), var(--c-accent-dk))',
+                  color: '#fff', border: 'none', borderRadius: '12px',
+                  fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+                  boxShadow: '0 8px 24px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)',
+                }}
               >
                 {canReview ? '✓ Atualizar e voltar à revisão' : 'Próximo →'}
               </button>
@@ -3955,14 +3975,16 @@ export default function CreateAd() {
                 style={{
                   padding: '11px 28px',
                   background: fixMode
-                    ? 'linear-gradient(135deg,#22C55E,#16A34A)'
-                    : 'linear-gradient(135deg,#E8A9AB,#d68d8f)',
-                  color: '#fff', border: 'none', borderRadius: '10px',
+                    ? 'linear-gradient(135deg, #34D399, #10B981)'
+                    : 'linear-gradient(135deg, var(--c-accent), var(--c-accent-dk))',
+                  color: '#fff', border: 'none', borderRadius: '12px',
                   fontSize: '14px', fontWeight: 700,
                   cursor: publishing ? 'not-allowed' : 'pointer',
                   opacity: publishing ? 0.6 : 1,
                   pointerEvents: publishing ? 'none' : 'auto',
-                  boxShadow: fixMode ? '0 4px 16px rgba(22,163,74,.35)' : '0 4px 16px rgba(214,141,143,.35)',
+                  boxShadow: fixMode
+                    ? '0 8px 24px rgba(52,211,153,.4), inset 0 1px 0 rgba(255,255,255,.18)'
+                    : '0 8px 24px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)',
                   transition: 'opacity .15s',
                 }}
               >
@@ -3982,7 +4004,7 @@ export default function CreateAd() {
                 <div style={{
                   height: '100%',
                   width: `${uploadProgress.pct || 0}%`,
-                  background: 'linear-gradient(90deg,#E8A9AB,#d68d8f)',
+                  background: 'linear-gradient(90deg, var(--c-accent), var(--c-accent-dk))',
                   transition: 'width .3s ease',
                 }} />
               </div>

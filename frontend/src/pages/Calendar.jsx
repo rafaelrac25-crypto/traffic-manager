@@ -37,23 +37,23 @@ function BudgetPicker({ entry, dailyBudget, setDailyBudget, period, setPeriod })
   return (
     <div style={{
       padding: '14px 16px',
-      background: 'linear-gradient(135deg, rgba(214,141,143,.08), rgba(125,74,94,.04))',
-      border: '1px solid var(--c-border)',
+      background: 'linear-gradient(135deg, rgba(193,53,132,.10), rgba(125,74,94,.04))',
+      border: '1px solid rgba(193,53,132,.4)',
       borderRadius: '12px',
       display: 'flex', flexDirection: 'column', gap: '12px',
     }}>
       {/* Toggle de período */}
-      <div style={{ display: 'flex', gap: '4px', background: 'var(--c-surface)', padding: '3px', borderRadius: '9px', width: 'fit-content' }}>
+      <div style={{ display: 'flex', gap: '4px', background: 'var(--c-surface)', padding: '3px', borderRadius: '9px', width: 'fit-content', border: '1px solid var(--c-border)' }}>
         {[['daily','Diário'], ['weekly','Semanal'], ['monthly','Mensal']].map(([k, label]) => (
           <button
             key={k}
             onClick={() => setPeriod(k)}
             style={{
               padding: '6px 12px', borderRadius: '7px', border: 'none',
-              background: period === k ? 'var(--c-card-bg)' : 'transparent',
+              background: period === k ? 'rgba(193,53,132,.18)' : 'transparent',
               color: period === k ? 'var(--c-accent)' : 'var(--c-text-3)',
-              fontSize: '11px', fontWeight: 700, cursor: 'pointer',
-              boxShadow: period === k ? '0 1px 3px rgba(0,0,0,.06)' : 'none',
+              fontSize: '11.5px', fontWeight: 700, cursor: 'pointer',
+              boxShadow: period === k ? 'inset 0 0 0 1px rgba(193,53,132,.4)' : 'none',
             }}
           >
             {label}
@@ -65,13 +65,14 @@ function BudgetPicker({ entry, dailyBudget, setDailyBudget, period, setPeriod })
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
         <div style={{
           padding: '14px 18px',
-          background: 'var(--c-card-bg)',
+          background: 'var(--c-surface)',
           border: '2px solid var(--c-accent)',
           borderRadius: '12px',
           minWidth: '200px',
           flex: '1 1 200px',
+          boxShadow: '0 0 18px rgba(193,53,132,.18)',
         }}>
-          <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--c-text-4)', letterSpacing: '.6px', marginBottom: '4px' }}>
+          <div style={{ fontSize: '10.5px', fontWeight: 500, color: 'var(--c-text-3)', letterSpacing: '1.2px', marginBottom: '4px' }}>
             {periodShort}
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
@@ -83,30 +84,31 @@ function BudgetPicker({ entry, dailyBudget, setDailyBudget, period, setPeriod })
               onChange={e => handleInput(e.target.value)}
               style={{
                 width: '140px', border: 'none', outline: 'none',
-                background: 'transparent', fontSize: '28px', fontWeight: 700,
+                background: 'transparent', fontSize: '28px', fontWeight: 800,
                 color: 'var(--c-accent)', fontFamily: 'inherit', padding: 0,
+                fontFeatureSettings: "'tnum'", letterSpacing: '-0.02em',
               }}
             />
           </div>
         </div>
-        <div style={{ fontSize: '11.5px', color: 'var(--c-text-3)', lineHeight: 1.5 }}>
-          <div>Sugerido: <strong style={{ color: 'var(--c-text-1)' }}>R$ {suggested}/dia</strong></div>
-          <div style={{ color: diffFromSuggested < 0 ? '#16A34A' : diffFromSuggested > 0 ? '#EA580C' : 'var(--c-text-4)' }}>
+        <div style={{ fontSize: '11.5px', color: 'var(--c-text-3)', lineHeight: 1.5, fontWeight: 400 }}>
+          <div>Sugerido: <strong style={{ color: 'var(--c-text-1)', fontFeatureSettings: "'tnum'" }}>R$ {suggested}/dia</strong></div>
+          <div style={{ color: diffFromSuggested < 0 ? '#34D399' : diffFromSuggested > 0 ? '#FBBF24' : 'var(--c-text-4)' }}>
             {diffFromSuggested === 0
               ? '= sugestão'
               : diffFromSuggested < 0
-                ? `↓ R$\u00A0${Math.abs(diffFromSuggested)}/dia abaixo`
-                : `↑ R$\u00A0${diffFromSuggested}/dia acima`}
+                ? `↓ R$ ${Math.abs(diffFromSuggested)}/dia abaixo`
+                : `↑ R$ ${diffFromSuggested}/dia acima`}
           </div>
         </div>
       </div>
 
       {/* Resumo */}
-      <div style={{ fontSize: '11.5px', color: 'var(--c-text-2)', lineHeight: 1.6, borderTop: '1px dashed var(--c-border)', paddingTop: '10px' }}>
+      <div style={{ fontSize: '11.5px', color: 'var(--c-text-2)', lineHeight: 1.6, borderTop: '1px dashed var(--c-border)', paddingTop: '10px', fontWeight: 400 }}>
         <div>
-          Campanha de <strong>{campaignDays} dia{campaignDays > 1 ? 's' : ''}</strong>: investimento total{' '}
-          <strong style={{ color: 'var(--c-accent)' }}>R$ {totalCampaign}</strong>
-          {' '}(R$ {dailyBudget} {periodLabel === 'por dia' ? 'por dia' : `· equivalente a R$\u00A0${displayedValue} ${periodLabel}`})
+          Campanha de <strong style={{ fontWeight: 700 }}>{campaignDays} dia{campaignDays > 1 ? 's' : ''}</strong>: investimento total{' '}
+          <strong style={{ color: 'var(--c-accent)', fontWeight: 700, fontFeatureSettings: "'tnum'" }}>R$ {totalCampaign}</strong>
+          {' '}(R$ {dailyBudget} {periodLabel === 'por dia' ? 'por dia' : `· equivalente a R$ ${displayedValue} ${periodLabel}`})
         </div>
         <div style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '4px' }}>
           {entry.suggestedBudget.reason}
@@ -129,18 +131,18 @@ function CommercialDateModal({ entry, onClose, onCreateAd }) {
     <div
       onClick={onClose}
       style={{
-        position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)',
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,.65)',
+        backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         zIndex: 200, padding: '20px',
       }}
     >
       <div
+        className="ccb-card"
         onClick={e => e.stopPropagation()}
         style={{
-          background: 'var(--c-card-bg)',
           borderRadius: '18px',
-          border: '1px solid var(--c-border)',
-          boxShadow: '0 20px 60px rgba(0,0,0,.4)',
+          padding: 0,
           width: '100%', maxWidth: '620px',
           maxHeight: '88vh', overflow: 'auto',
         }}
@@ -152,16 +154,19 @@ function CommercialDateModal({ entry, onClose, onCreateAd }) {
         }}>
           <div style={{
             width: '48px', height: '48px', borderRadius: '12px',
-            background: 'var(--c-active-bg)', flexShrink: 0,
+            background: 'var(--c-active-bg)',
+            border: '1px solid rgba(193,53,132,.4)',
+            flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '24px',
+            boxShadow: '0 0 14px rgba(193,53,132,.18)',
           }}>{entry.emoji}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
+            <div style={{ fontSize: '17px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '4px', letterSpacing: '-0.005em' }}>
               {entry.name}
             </div>
-            <div style={{ fontSize: '12px', color: 'var(--c-text-3)' }}>
-              {formatDateLong(entry.date)} · poste com <strong style={{ color: 'var(--c-accent)' }}>{entry.daysBefore} dias</strong> de antecedência
+            <div style={{ fontSize: '12px', color: 'var(--c-text-3)', fontWeight: 400 }}>
+              {formatDateLong(entry.date)} · poste com <strong style={{ color: 'var(--c-accent)', fontWeight: 700 }}>{entry.daysBefore} dias</strong> de antecedência
             </div>
           </div>
           <button
@@ -176,7 +181,7 @@ function CommercialDateModal({ entry, onClose, onCreateAd }) {
 
         <div style={{ padding: '20px 24px' }}>
           <Section title="Por que é importante para a Cris Costa Beauty">
-            <p style={{ fontSize: '13px', color: 'var(--c-text-2)', lineHeight: 1.65, margin: 0 }}>
+            <p style={{ fontSize: '13px', color: 'var(--c-text-2)', lineHeight: 1.65, margin: 0, fontWeight: 400 }}>
               {entry.whyImportant}
             </p>
           </Section>
@@ -187,7 +192,8 @@ function CommercialDateModal({ entry, onClose, onCreateAd }) {
                 <li key={i} style={{
                   fontSize: '12.5px', color: 'var(--c-text-2)', lineHeight: 1.55,
                   padding: '9px 12px', borderRadius: '10px',
-                  background: 'var(--c-surface)', border: '1px solid var(--c-border-lt)',
+                  background: 'var(--c-surface)', border: '1px solid var(--c-border)',
+                  fontWeight: 400,
                 }}>
                   <span style={{ color: 'var(--c-accent)', marginRight: '8px', fontWeight: 700 }}>→</span>
                   {a}
@@ -211,7 +217,7 @@ function CommercialDateModal({ entry, onClose, onCreateAd }) {
           <Section title="Diretrizes de comunicação">
             <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {entry.communication.map((c, i) => (
-                <li key={i} style={{ fontSize: '12px', color: 'var(--c-text-3)', lineHeight: 1.55, display: 'flex', gap: '8px' }}>
+                <li key={i} style={{ fontSize: '12px', color: 'var(--c-text-3)', lineHeight: 1.55, display: 'flex', gap: '8px', fontWeight: 400 }}>
                   <span style={{ color: 'var(--c-accent)' }}>✓</span>
                   <span>{c}</span>
                 </li>
@@ -219,10 +225,10 @@ function CommercialDateModal({ entry, onClose, onCreateAd }) {
             </ul>
             <div style={{
               marginTop: '10px', padding: '10px 12px',
-              background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '10px',
-              fontSize: '11.5px', color: '#991B1B', lineHeight: 1.55,
+              background: 'rgba(248,113,113,.10)', border: '1px solid rgba(248,113,113,.3)', borderRadius: '10px',
+              fontSize: '11.5px', color: '#F87171', lineHeight: 1.55, fontWeight: 400,
             }}>
-              <strong>Evite:</strong> "promoção", "desconto", "liquidação". Use "condição especial", "oportunidade", "poucas vagas", "exclusivo".
+              <strong style={{ fontWeight: 700 }}>Evite:</strong> "promoção", "desconto", "liquidação". Use "condição especial", "oportunidade", "poucas vagas", "exclusivo".
             </div>
           </Section>
         </div>
@@ -236,18 +242,20 @@ function CommercialDateModal({ entry, onClose, onCreateAd }) {
           <button
             onClick={onClose}
             style={{
-              padding: '10px 16px', borderRadius: '10px',
-              border: '1.5px solid var(--c-border)', background: 'var(--c-card-bg)',
-              fontSize: '12px', fontWeight: 600, color: 'var(--c-text-2)', cursor: 'pointer',
+              padding: '8px 14px', borderRadius: '10px',
+              border: '1px solid var(--c-border)', background: 'var(--c-surface)',
+              fontSize: '13px', fontWeight: 600, color: 'var(--c-text-2)', cursor: 'pointer',
             }}
           >Fechar</button>
           <button
             onClick={() => onCreateAd(entry, { dailyBudget })}
             style={{
-              padding: '10px 18px', borderRadius: '10px',
-              border: 'none', background: 'var(--c-accent)',
-              fontSize: '12px', fontWeight: 700, color: '#fff', cursor: 'pointer',
+              padding: '11px 18px', borderRadius: '12px',
+              border: 0,
+              background: 'linear-gradient(135deg, var(--c-accent), var(--c-accent-dk))',
+              fontSize: '13px', fontWeight: 700, color: '#fff', cursor: 'pointer',
               display: 'flex', alignItems: 'center', gap: '6px',
+              boxShadow: '0 8px 24px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)',
             }}
           >
             <PlusIcon /> Criar anúncio · R$ {dailyBudget}/dia
@@ -268,18 +276,18 @@ function DayDetailsModal({ dateStr, events, commercial, onClose, onOpenCommercia
     <div
       onClick={onClose}
       style={{
-        position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)',
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,.65)',
+        backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         zIndex: 200, padding: '20px',
       }}
     >
       <div
+        className="ccb-card"
         onClick={e => e.stopPropagation()}
         style={{
-          background: 'var(--c-card-bg)',
-          borderRadius: '16px',
-          border: '1px solid var(--c-border)',
-          boxShadow: '0 20px 60px rgba(0,0,0,.4)',
+          borderRadius: '18px',
+          padding: 0,
           width: '100%', maxWidth: '480px',
           maxHeight: '85vh', overflow: 'auto',
         }}
@@ -290,10 +298,10 @@ function DayDetailsModal({ dateStr, events, commercial, onClose, onOpenCommercia
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px',
         }}>
           <div>
-            <div style={{ fontSize: '10.5px', fontWeight: 700, color: 'var(--c-text-4)', letterSpacing: '.6px', textTransform: 'uppercase', marginBottom: '2px' }}>
+            <div style={{ fontSize: '10.5px', fontWeight: 500, color: 'var(--c-text-3)', letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: '2px' }}>
               Detalhes do dia
             </div>
-            <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--c-text-1)' }}>
+            <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--c-text-1)', letterSpacing: '-0.005em' }}>
               {title}
             </div>
           </div>
@@ -311,12 +319,13 @@ function DayDetailsModal({ dateStr, events, commercial, onClose, onOpenCommercia
 
           {commercial && (
             <div style={{
-              background: 'linear-gradient(135deg, rgba(214,141,143,.10), rgba(125,74,94,.04))',
-              border: '1px solid var(--c-accent)',
+              background: 'linear-gradient(135deg, rgba(193,53,132,.16), rgba(125,74,94,.06))',
+              border: '1px solid rgba(193,53,132,.55)',
               borderRadius: '12px',
               padding: '12px 14px',
+              boxShadow: '0 0 18px rgba(193,53,132,.16), inset 0 1px 0 rgba(255,194,228,.18)',
             }}>
-              <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--c-accent)', textTransform: 'uppercase', letterSpacing: '.6px', marginBottom: '6px' }}>
+              <div style={{ fontSize: '10.5px', fontWeight: 700, color: 'var(--c-accent)', textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: '6px' }}>
                 Data comercial
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
@@ -325,17 +334,19 @@ function DayDetailsModal({ dateStr, events, commercial, onClose, onOpenCommercia
                   <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-1)', lineHeight: 1.3 }}>
                     {commercial.name}
                   </div>
-                  <div style={{ fontSize: '11px', color: 'var(--c-text-3)', marginTop: '2px' }}>
-                    Postar com <strong style={{ color: 'var(--c-accent)' }}>{commercial.daysBefore} dias</strong> de antecedência
+                  <div style={{ fontSize: '11.5px', color: 'var(--c-text-3)', marginTop: '2px', fontWeight: 400 }}>
+                    Postar com <strong style={{ color: 'var(--c-accent)', fontWeight: 700 }}>{commercial.daysBefore} dias</strong> de antecedência
                   </div>
                 </div>
               </div>
               <button
                 onClick={() => onOpenCommercial(commercial)}
                 style={{
-                  padding: '8px 12px', borderRadius: '8px',
-                  background: 'var(--c-accent)', color: '#fff',
-                  border: 'none', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer',
+                  padding: '9px 14px', borderRadius: '10px',
+                  background: 'linear-gradient(135deg, var(--c-accent), var(--c-accent-dk))',
+                  color: '#fff',
+                  border: 'none', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                  boxShadow: '0 6px 18px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)',
                 }}
               >
                 Ver estratégia completa →
@@ -354,7 +365,7 @@ function DayDetailsModal({ dateStr, events, commercial, onClose, onOpenCommercia
               <div style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
                 Dia livre
               </div>
-              <div style={{ fontSize: '11px', color: 'var(--c-text-3)', lineHeight: 1.5 }}>
+              <div style={{ fontSize: '11.5px', color: 'var(--c-text-3)', lineHeight: 1.5, fontWeight: 400 }}>
                 Nenhum anúncio agendado nem data comercial. Use o botão abaixo para criar um anúncio para este dia.
               </div>
             </div>
@@ -362,7 +373,7 @@ function DayDetailsModal({ dateStr, events, commercial, onClose, onOpenCommercia
 
           {events.length > 0 && (
             <div>
-              <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--c-text-4)', textTransform: 'uppercase', letterSpacing: '.6px', marginBottom: '8px' }}>
+              <div style={{ fontSize: '10.5px', fontWeight: 500, color: 'var(--c-text-3)', textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: '8px' }}>
                 Anúncios agendados ({events.length})
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -373,7 +384,7 @@ function DayDetailsModal({ dateStr, events, commercial, onClose, onOpenCommercia
                       display: 'flex', alignItems: 'center', gap: '10px',
                       padding: '10px 12px', borderRadius: '10px',
                       background: 'var(--c-surface)',
-                      border: '1px solid var(--c-border-lt)',
+                      border: '1px solid var(--c-border)',
                       borderLeft: `3px solid ${PLAT_DOT[ev.platform]}`,
                     }}>
                       <div style={{
@@ -381,7 +392,7 @@ function DayDetailsModal({ dateStr, events, commercial, onClose, onOpenCommercia
                         background: ev.thumb, flexShrink: 0,
                       }} />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', marginBottom: '1px' }}>
+                        <div style={{ fontSize: '10.5px', color: 'var(--c-text-3)', marginBottom: '1px', fontWeight: 400 }}>
                           {ev.time}
                         </div>
                         <div style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--c-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -389,10 +400,11 @@ function DayDetailsModal({ dateStr, events, commercial, onClose, onOpenCommercia
                         </div>
                       </div>
                       <span style={{
-                        fontSize: '10px', fontWeight: 600,
+                        fontSize: '10.5px', fontWeight: 700,
                         background: badge.bg, color: badge.color,
-                        padding: '2px 8px', borderRadius: '20px',
-                        flexShrink: 0,
+                        border: `1px solid ${badge.border}`,
+                        padding: '4px 9px', borderRadius: '999px',
+                        flexShrink: 0, letterSpacing: '.3px',
                       }}>{badge.label}</span>
                     </div>
                   );
@@ -411,18 +423,20 @@ function DayDetailsModal({ dateStr, events, commercial, onClose, onOpenCommercia
           <button
             onClick={onClose}
             style={{
-              padding: '9px 14px', borderRadius: '9px',
-              border: '1.5px solid var(--c-border)', background: 'var(--c-card-bg)',
-              fontSize: '12px', fontWeight: 600, color: 'var(--c-text-2)', cursor: 'pointer',
+              padding: '8px 14px', borderRadius: '10px',
+              border: '1px solid var(--c-border)', background: 'var(--c-surface)',
+              fontSize: '13px', fontWeight: 600, color: 'var(--c-text-2)', cursor: 'pointer',
             }}
           >Fechar</button>
           <button
             onClick={() => onCreateForDate(dateStr)}
             style={{
-              padding: '9px 16px', borderRadius: '9px',
-              border: 'none', background: 'var(--c-accent)',
-              fontSize: '12px', fontWeight: 700, color: '#fff', cursor: 'pointer',
+              padding: '11px 18px', borderRadius: '12px',
+              border: 0,
+              background: 'linear-gradient(135deg, var(--c-accent), var(--c-accent-dk))',
+              fontSize: '13px', fontWeight: 700, color: '#fff', cursor: 'pointer',
               display: 'flex', alignItems: 'center', gap: '6px',
+              boxShadow: '0 8px 24px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)',
             }}
           >
             <PlusIcon /> Agendar para este dia
@@ -437,8 +451,8 @@ function Section({ title, children }) {
   return (
     <div style={{ marginBottom: '18px' }}>
       <div style={{
-        fontSize: '11px', fontWeight: 700, letterSpacing: '.8px',
-        color: 'var(--c-text-4)', textTransform: 'uppercase', marginBottom: '8px',
+        fontSize: '11px', fontWeight: 500, letterSpacing: '1.2px',
+        color: 'var(--c-text-3)', textTransform: 'uppercase', marginBottom: '8px',
       }}>{title}</div>
       {children}
     </div>
@@ -462,17 +476,17 @@ const UPCOMING = [
 ];
 
 const PLAT_BADGE = {
-  instagram: { label: 'Instagram', bg: '#FDF0F8', color: '#d68d8f' },
-  google:    { label: 'Google Ads', bg: '#FEF9C3', color: '#CA8A04' },
-  meta:      { label: 'Meta Ads',  bg: '#EFF6FF', color: '#1877F2' },
-  review:    { label: 'Em revisão', bg: '#F5F3FF', color: '#7C3AED' },
+  instagram: { label: 'Instagram',  bg: 'rgba(193,53,132,.18)', border: 'rgba(193,53,132,.4)', color: 'var(--c-accent)' },
+  google:    { label: 'Google Ads', bg: 'rgba(251,191,36,.16)', border: 'rgba(251,191,36,.3)', color: '#FBBF24' },
+  meta:      { label: 'Meta Ads',   bg: 'rgba(96,165,250,.16)', border: 'rgba(96,165,250,.3)', color: '#60A5FA' },
+  review:    { label: 'Em revisão', bg: 'rgba(167,139,250,.16)',border: 'rgba(167,139,250,.3)',color: '#A78BFA' },
 };
 
 const PLAT_DOT = {
-  instagram: '#d68d8f',
-  google:    '#F97316',
-  meta:      '#1877F2',
-  review:    '#8B5CF6',
+  instagram: 'var(--c-accent)',
+  google:    '#FBBF24',
+  meta:      '#60A5FA',
+  review:    '#A78BFA',
 };
 
 /* ── Ícones ── */
@@ -553,8 +567,8 @@ export default function Calendar() {
 
       {/* ── Cabeçalho ── */}
       <div style={{ marginBottom: '22px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>Calendário</h1>
-        <p style={{ fontSize: '13px', color: 'var(--c-text-3)' }}>
+        <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--c-text-1)', marginBottom: '4px', letterSpacing: '-0.01em' }}>Calendário</h1>
+        <p style={{ fontSize: '13px', color: 'var(--c-text-3)', fontWeight: 400 }}>
           Visualize e <span style={{ color: 'var(--c-accent)', fontWeight: 600 }}>planeje</span> suas campanhas.
         </p>
       </div>
@@ -564,10 +578,8 @@ export default function Calendar() {
 
         {/* ── Calendário principal ── */}
         <div className="ccb-card" style={{
-          background: 'var(--c-card-bg)',
-          borderRadius: '16px',
-          border: '1px solid var(--c-border)',
-          boxShadow: '0 2px 8px var(--c-shadow)',
+          borderRadius: '18px',
+          padding: 0,
           overflow: 'hidden',
         }}>
           {/* Nav do mês */}
@@ -577,20 +589,20 @@ export default function Calendar() {
           }}>
             <button
               onClick={prevMonth}
-              style={{ width: '32px', height: '32px', border: '1.5px solid var(--c-border)', background: 'var(--c-surface)', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--c-text-3)' }}
+              style={{ width: '32px', height: '32px', border: '1px solid var(--c-border)', background: 'var(--c-surface)', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--c-text-2)' }}
             ><ChevLeft /></button>
-            <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--c-text-1)' }}>
+            <span style={{ fontSize: '16px', fontWeight: 800, color: 'var(--c-text-1)', letterSpacing: '-0.005em' }}>
               {MONTHS[month]} {year}
             </span>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               <button
                 onClick={nextMonth}
-                style={{ width: '32px', height: '32px', border: '1.5px solid var(--c-border)', background: 'var(--c-surface)', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--c-text-3)' }}
+                style={{ width: '32px', height: '32px', border: '1px solid var(--c-border)', background: 'var(--c-surface)', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--c-text-2)' }}
               ><ChevRight /></button>
               <button style={{
-                padding: '6px 14px', borderRadius: '8px',
-                border: '1.5px solid var(--c-border)', background: 'var(--c-surface)',
-                fontSize: '12px', fontWeight: 500, color: 'var(--c-text-2)', cursor: 'pointer',
+                padding: '8px 14px', borderRadius: '10px',
+                border: '1px solid var(--c-border)', background: 'var(--c-surface)',
+                fontSize: '12.5px', fontWeight: 600, color: 'var(--c-text-2)', cursor: 'pointer',
               }}>Hoje</button>
             </div>
           </div>
@@ -600,8 +612,8 @@ export default function Calendar() {
             {WEEK_DAYS.map(d => (
               <div key={d} style={{
                 padding: '10px 0', textAlign: 'center',
-                fontSize: '10px', fontWeight: 700,
-                color: 'var(--c-text-4)', letterSpacing: '.7px',
+                fontSize: '10.5px', fontWeight: 500,
+                color: 'var(--c-text-3)', letterSpacing: '1.2px',
               }}>{d}</div>
             ))}
           </div>
@@ -630,12 +642,12 @@ export default function Calendar() {
                     position: 'relative',
                     borderRight: (idx + 1) % 7 !== 0 ? '1px solid var(--c-border-lt)' : 'none',
                     borderBottom: !isLastRow ? '1px solid var(--c-border-lt)' : 'none',
-                    background: !cell.current ? 'var(--c-surface)' : isToday ? 'var(--c-active-bg)' : 'var(--c-card-bg)',
+                    background: !cell.current ? 'rgba(0,0,0,.18)' : isToday ? 'var(--c-active-bg)' : 'transparent',
                     cursor: isClickable ? 'pointer' : 'default',
                     transition: 'background .12s',
                   }}
                   onMouseEnter={e => { if (isClickable && !isToday) e.currentTarget.style.background = 'var(--c-hover)'; }}
-                  onMouseLeave={e => { if (isClickable && !isToday) e.currentTarget.style.background = 'var(--c-card-bg)'; }}
+                  onMouseLeave={e => { if (isClickable && !isToday) e.currentTarget.style.background = 'transparent'; }}
                 >
                   {/* Número do dia */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
@@ -643,9 +655,11 @@ export default function Calendar() {
                       width: '26px', height: '26px', borderRadius: '50%',
                       background: isToday ? 'var(--c-accent)' : 'transparent',
                       color: !cell.current ? 'var(--c-text-4)' : isToday ? '#fff' : 'var(--c-text-2)',
-                      fontSize: '12px', fontWeight: isToday ? 800 : cell.current ? 500 : 400,
+                      fontSize: '12.5px', fontWeight: isToday ? 800 : 500,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       opacity: !cell.current ? 0.4 : 1,
+                      fontFeatureSettings: "'tnum'",
+                      boxShadow: isToday ? '0 0 14px rgba(193,53,132,.5)' : 'none',
                     }}>
                       {cell.day}
                     </div>
@@ -661,24 +675,24 @@ export default function Calendar() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                     {commercial && (
                       <div style={{
-                        fontSize: '9px', fontWeight: 700,
-                        color: '#d68d8f',
-                        borderLeft: '2px solid #d68d8f',
+                        fontSize: '9.5px', fontWeight: 700,
+                        color: 'var(--c-accent)',
+                        borderLeft: '2px solid var(--c-accent)',
                         borderRadius: '0 4px 4px 0',
                         padding: '2px 5px',
-                        background: '#d68d8f18',
+                        background: 'rgba(193,53,132,.18)',
                         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                         maxWidth: '100%',
                       }}>{commercial.name}</div>
                     )}
                     {events.map(ev => (
                       <div key={ev.id} style={{
-                        fontSize: '9px', fontWeight: 600,
+                        fontSize: '9.5px', fontWeight: 600,
                         color: PLAT_DOT[ev.platform],
                         borderLeft: `2px solid ${PLAT_DOT[ev.platform]}`,
                         borderRadius: '0 4px 4px 0',
                         padding: '2px 5px',
-                        background: `${PLAT_DOT[ev.platform]}18`,
+                        background: `${PLAT_DOT[ev.platform]}24`,
                         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                         maxWidth: '100%',
                       }}>
@@ -699,10 +713,10 @@ export default function Calendar() {
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px',
           }}>
             <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-              {[['#d68d8f','Instagram'], ['#F97316','Google Ads'], ['#8B5CF6','Em revisão']].map(([color, label]) => (
+              {[['var(--c-accent)','Instagram'], ['#FBBF24','Google Ads'], ['#A78BFA','Em revisão']].map(([color, label]) => (
                 <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: color }} />
-                  <span style={{ fontSize: '11px', color: 'var(--c-text-3)' }}>{label}</span>
+                  <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: color, boxShadow: `0 0 8px ${color}` }} />
+                  <span style={{ fontSize: '11.5px', color: 'var(--c-text-3)', fontWeight: 400 }}>{label}</span>
                 </div>
               ))}
             </div>
@@ -710,13 +724,17 @@ export default function Calendar() {
               onClick={() => navigate('/criar-anuncio')}
               style={{
                 display: 'flex', alignItems: 'center', gap: '7px',
-                background: 'var(--c-accent)', color: '#fff',
-                border: 'none', borderRadius: '10px',
-                padding: '9px 16px', fontSize: '12px', fontWeight: 700,
-                cursor: 'pointer', transition: 'background .15s',
+                padding: '11px 18px', borderRadius: '12px',
+                border: 0,
+                background: 'linear-gradient(135deg, var(--c-accent), var(--c-accent-dk))',
+                color: '#fff',
+                fontSize: '13px', fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: '0 8px 24px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)',
+                transition: 'transform .15s ease',
               }}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--c-accent-dk)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'var(--c-accent)'}
+              onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+              onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
             >
               <PlusIcon />
               Criar anúncio
@@ -728,12 +746,9 @@ export default function Calendar() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
           {/* Próximos anúncios */}
-          <div style={{
-            background: 'var(--c-card-bg)',
-            borderRadius: '16px',
-            border: '1px solid var(--c-border)',
-            padding: '18px',
-            boxShadow: '0 2px 8px var(--c-shadow)',
+          <div className="ccb-card" style={{
+            borderRadius: '18px',
+            padding: '18px 20px',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
               <CalSmall />
@@ -749,46 +764,50 @@ export default function Calendar() {
                   <div key={item.id} style={{
                     display: 'flex', alignItems: 'flex-start', gap: '12px',
                     padding: '10px',
-                    borderRadius: '10px',
+                    borderRadius: '12px',
                     background: 'var(--c-surface)',
-                    border: '1px solid var(--c-border-lt)',
+                    border: '1px solid var(--c-border)',
                     cursor: 'pointer',
                     transition: 'all .12s',
                   }}
-                    onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--c-border)'}
-                    onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--c-border-lt)'}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--c-glass-border-2)'}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--c-border)'}
                   >
                     {/* Data */}
                     <div style={{
                       background: 'var(--c-active-bg)',
-                      borderRadius: '8px', padding: '6px 8px',
+                      border: '1px solid rgba(193,53,132,.4)',
+                      borderRadius: '10px', padding: '6px 8px',
                       textAlign: 'center', flexShrink: 0,
                       minWidth: '44px',
+                      boxShadow: '0 0 14px rgba(193,53,132,.18)',
                     }}>
-                      <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--c-accent)', lineHeight: 1 }}>{item.day}</div>
-                      <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--c-text-4)', letterSpacing: '1px' }}>{item.month}</div>
+                      <div style={{ fontSize: '17px', fontWeight: 800, color: 'var(--c-accent)', lineHeight: 1, fontFeatureSettings: "'tnum'" }}>{item.day}</div>
+                      <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--c-accent)', letterSpacing: '1px', opacity: 0.85 }}>{item.month}</div>
                     </div>
 
                     {/* Thumbnail */}
                     <div style={{
                       width: '44px', height: '44px', borderRadius: '8px',
                       background: item.thumb, flexShrink: 0,
+                      border: '1px solid var(--c-border)',
                     }} />
 
                     {/* Info */}
                     <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                         <span style={{
-                          fontSize: '10px', fontWeight: 700,
+                          fontSize: '10.5px', fontWeight: 700,
                           background: badge.bg, color: badge.color,
-                          padding: '2px 8px', borderRadius: '20px',
-                          whiteSpace: 'nowrap',
+                          border: `1px solid ${badge.border}`,
+                          padding: '4px 9px', borderRadius: '999px',
+                          whiteSpace: 'nowrap', letterSpacing: '.3px',
                         }}>
                           {badge.label}
                         </span>
-                        <span style={{ fontSize: '11px', color: 'var(--c-text-4)', fontWeight: 500 }}>{item.time}</span>
+                        <span style={{ fontSize: '11px', color: 'var(--c-text-4)', fontWeight: 400 }}>{item.time}</span>
                       </div>
-                      <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--c-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {item.name}
                       </div>
                     </div>
@@ -799,12 +818,9 @@ export default function Calendar() {
           </div>
 
           {/* Datas comerciais BR — 45 dias à frente */}
-          <div style={{
-            background: 'var(--c-card-bg)',
-            borderRadius: '16px',
-            border: '1px solid var(--c-border)',
-            padding: '18px',
-            boxShadow: '0 2px 8px var(--c-shadow)',
+          <div className="ccb-card" style={{
+            borderRadius: '18px',
+            padding: '18px 20px',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
               <span style={{ fontSize: '16px' }}>🗓️</span>
@@ -812,12 +828,12 @@ export default function Calendar() {
                 Datas comerciais
               </span>
             </div>
-            <p style={{ fontSize: '11px', color: 'var(--c-text-3)', lineHeight: 1.5, marginBottom: '14px' }}>
+            <p style={{ fontSize: '11.5px', color: 'var(--c-text-3)', lineHeight: 1.5, marginBottom: '14px', fontWeight: 400 }}>
               Próximos 45 dias. Clique para ver estratégia e criar anúncio.
             </p>
 
             {upcomingCommercial.length === 0 ? (
-              <div style={{ fontSize: '11.5px', color: 'var(--c-text-4)', padding: '8px 0' }}>
+              <div style={{ fontSize: '11.5px', color: 'var(--c-text-4)', padding: '8px 0', fontWeight: 400 }}>
                 Nenhuma data comercial relevante nos próximos 45 dias.
               </div>
             ) : (
@@ -828,39 +844,41 @@ export default function Calendar() {
                     onClick={() => openCommercialModal(entry)}
                     style={{
                       display: 'flex', alignItems: 'center', gap: '10px',
-                      padding: '9px 10px', borderRadius: '10px',
+                      padding: '9px 10px', borderRadius: '12px',
                       background: 'var(--c-surface)',
-                      border: '1px solid var(--c-border-lt)',
+                      border: '1px solid var(--c-border)',
                       cursor: 'pointer', textAlign: 'left',
                       transition: 'all .12s',
                       width: '100%',
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--c-accent)'; e.currentTarget.style.background = 'var(--c-hover)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--c-border-lt)'; e.currentTarget.style.background = 'var(--c-surface)'; }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(193,53,132,.55)'; e.currentTarget.style.background = 'var(--c-hover)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--c-border)'; e.currentTarget.style.background = 'var(--c-surface)'; }}
                   >
                     <div style={{
                       background: 'var(--c-active-bg)',
-                      borderRadius: '8px', padding: '5px 6px',
+                      border: '1px solid rgba(193,53,132,.4)',
+                      borderRadius: '10px', padding: '5px 6px',
                       textAlign: 'center', flexShrink: 0,
                       minWidth: '40px',
+                      boxShadow: '0 0 14px rgba(193,53,132,.18)',
                     }}>
-                      <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-accent)', lineHeight: 1 }}>
+                      <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--c-accent)', lineHeight: 1, fontFeatureSettings: "'tnum'" }}>
                         {String(entry.date.getDate()).padStart(2, '0')}
                       </div>
-                      <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--c-text-4)', letterSpacing: '1px' }}>
+                      <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--c-accent)', letterSpacing: '1px', opacity: 0.85 }}>
                         {MONTHS_ABBR[entry.date.getMonth()]}
                       </div>
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{
-                        fontSize: '12px', fontWeight: 700, color: 'var(--c-text-1)',
+                        fontSize: '12.5px', fontWeight: 700, color: 'var(--c-text-1)',
                         marginBottom: '2px',
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       }}>
                         <span style={{ marginRight: '5px' }}>{entry.emoji}</span>
                         {entry.name}
                       </div>
-                      <div style={{ fontSize: '10px', color: 'var(--c-text-3)' }}>
+                      <div style={{ fontSize: '10.5px', color: 'var(--c-text-3)', fontWeight: 400 }}>
                         {entry.daysUntil === 0 ? 'hoje' : entry.daysUntil === 1 ? 'amanhã' : `em ${entry.daysUntil} dias`}
                         {' · '}
                         <span style={{ color: 'var(--c-accent)', fontWeight: 600 }}>

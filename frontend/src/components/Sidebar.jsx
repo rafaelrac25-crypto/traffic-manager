@@ -193,39 +193,62 @@ export default function Sidebar({ open = false, isMobile = false }) {
           {PRIMARY_NAV.map(({ to, label }) => {
             const active   = isActive(to);
             const isCreate = to === '/criar-anuncio';
+            /* Dark + Criar campanha: botão glass rosa com glow forte (paridade com mockup).
+               Light: visual original (borda accent simples). */
+            const darkCreate = isDark && isCreate;
+            const darkDashboard = isDark && !isCreate;
             return (
               <div
                 key={to}
                 onClick={() => navigate(to)}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '7px 14px',
-                  height: '36px',
-                  borderRadius: '10px',
+                  padding: darkCreate ? '11px 14px' : '7px 14px',
+                  height: darkCreate ? 'auto' : '36px',
+                  borderRadius: darkCreate ? '11px' : '10px',
                   cursor: 'pointer',
                   fontSize: '13px', fontWeight: 700,
-                  letterSpacing: '-0.1px',
-                  /* Só anima transform e box-shadow (efeitos de hover/click).
-                     Background e border MUDAM instantaneamente quando o active
-                     state muda — sem isso, ao clicar num botão o anterior
-                     "desbota" suavemente fazendo parecer que ambos animam. */
-                  transition: 'transform .15s var(--ease-out-soft), box-shadow .15s var(--ease-out-soft)',
-                  background: active ? 'var(--c-active-bg)' : 'transparent',
+                  letterSpacing: darkCreate ? '.2px' : '-0.1px',
+                  transition: 'transform .15s var(--ease-out-soft), box-shadow .15s var(--ease-out-soft), background .2s ease, border-color .2s ease',
+                  background: darkCreate
+                    ? 'rgba(193,53,132,.10)'
+                    : darkDashboard
+                      ? (active ? 'var(--c-active-bg)' : 'transparent')
+                      : (active ? 'var(--c-active-bg)' : 'transparent'),
                   color: 'var(--c-accent)',
-                  border: '1.5px solid var(--c-accent)',
-                  boxShadow: 'none',
+                  border: darkCreate
+                    ? '1.5px solid rgba(193,53,132,.65)'
+                    : darkDashboard
+                      ? '1.5px solid transparent'
+                      : '1.5px solid var(--c-accent)',
+                  boxShadow: darkCreate
+                    ? '0 0 22px rgba(193,53,132,.18), inset 0 0 14px rgba(193,53,132,.08)'
+                    : 'none',
+                  textShadow: darkCreate ? '0 0 12px rgba(193,53,132,.4)' : 'none',
                 }}
                 onMouseEnter={e => {
                   e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(193,53,132,.22)';
+                  if (darkCreate) {
+                    e.currentTarget.style.background = 'rgba(193,53,132,.16)';
+                    e.currentTarget.style.borderColor = 'rgba(193,53,132,.85)';
+                    e.currentTarget.style.boxShadow = '0 0 30px rgba(193,53,132,.32), inset 0 0 16px rgba(193,53,132,.12)';
+                  } else {
+                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(193,53,132,.22)';
+                  }
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = 'none';
+                  if (darkCreate) {
+                    e.currentTarget.style.background = 'rgba(193,53,132,.10)';
+                    e.currentTarget.style.borderColor = 'rgba(193,53,132,.65)';
+                    e.currentTarget.style.boxShadow = '0 0 22px rgba(193,53,132,.18), inset 0 0 14px rgba(193,53,132,.08)';
+                  } else {
+                    e.currentTarget.style.boxShadow = 'none';
+                  }
                 }}
               >
                 <span>{label}</span>
-                {isCreate && (
+                {isCreate && !darkCreate && (
                   <span style={{
                     fontSize: '9px', fontWeight: 700, color: '#fff',
                     background: 'var(--c-accent)',

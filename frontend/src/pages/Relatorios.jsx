@@ -10,8 +10,8 @@ const KINDS = {
     label: 'Sua campanha',
     description: 'Como sua campanha está performando — gasto, cliques, mensagens.',
     emoji: '📊',
-    color: '#D68D8F',
-    bg: '#FDF2F2',
+    color: 'var(--c-accent)',
+    bg: 'var(--c-accent-soft)',
   },
   system: {
     label: 'Sistema',
@@ -55,14 +55,13 @@ function ReportCard({ report, expanded, onToggle, onMarkRead, onDelete }) {
 
   return (
     <div
+      className="ccb-card"
       style={{
-        background: 'var(--c-card-bg)',
-        border: `1px solid ${isUnread ? kind.color : 'var(--c-border-lt)'}`,
         borderLeft: `4px solid ${kind.color}`,
-        borderRadius: '12px',
+        borderRadius: '14px',
         padding: '16px 18px',
         marginBottom: '12px',
-        boxShadow: isUnread ? '0 2px 8px rgba(214,141,143,.08)' : 'none',
+        boxShadow: isUnread ? '0 2px 14px rgba(193,53,132,.14)' : undefined,
         transition: 'all .18s ease',
       }}
     >
@@ -81,7 +80,7 @@ function ReportCard({ report, expanded, onToggle, onMarkRead, onDelete }) {
             <span style={{
               fontSize: '10px', fontWeight: 700,
               color: sev.color, background: sev.bg,
-              padding: '2px 8px', borderRadius: '8px',
+              padding: '2px 8px', borderRadius: '999px',
               textTransform: 'uppercase', letterSpacing: '.4px',
               whiteSpace: 'nowrap',
             }}>
@@ -92,10 +91,11 @@ function ReportCard({ report, expanded, onToggle, onMarkRead, onDelete }) {
                 width: '8px', height: '8px',
                 background: kind.color,
                 borderRadius: '50%', flexShrink: 0,
+                boxShadow: kind.color === 'var(--c-accent)' ? '0 0 8px var(--c-accent-glow)' : 'none',
               }} />
             )}
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--c-text-4)', marginTop: '3px' }}>
+          <div style={{ fontSize: '11.5px', color: 'var(--c-text-3)', marginTop: '3px', fontWeight: 400 }}>
             {fmtDate(report.created_at)} · {kind.label}
           </div>
         </div>
@@ -156,8 +156,8 @@ function ReportCard({ report, expanded, onToggle, onMarkRead, onDelete }) {
             <pre style={{
               marginTop: '10px', padding: '12px 14px',
               background: 'var(--c-surface)',
-              border: '1px solid var(--c-border-lt)',
-              borderRadius: '8px',
+              border: '1px solid var(--c-border)',
+              borderRadius: '10px',
               fontSize: '12px',
               color: 'var(--c-text-2)',
               fontFamily: 'inherit',
@@ -278,6 +278,9 @@ export default function Relatorios() {
   function RefreshButton({ kind, label, color }) {
     const isLoading = refreshing === kind;
     const isAnyLoading = refreshing !== null;
+    const isAccent = color === 'var(--c-accent)';
+    /* Hover bg — pra accent usa accent-soft via token; pra cores semânticas, gera 20% da cor literal */
+    const hoverBg = isAccent ? 'var(--c-accent-soft)' : (typeof color === 'string' && color.startsWith('#') ? color + '20' : 'rgba(255,255,255,.06)');
     return (
       <button
         onClick={() => generateNow(kind)}
@@ -285,17 +288,25 @@ export default function Relatorios() {
         style={{
           display: 'inline-flex', alignItems: 'center', gap: '6px',
           padding: '7px 12px',
-          background: isLoading ? color : 'transparent',
+          background: isLoading
+            ? (isAccent ? 'var(--c-accent)' : color)
+            : (isAccent ? 'rgba(193,53,132,.10)' : 'transparent'),
           color: isLoading ? '#fff' : color,
-          border: `1.5px solid ${color}`,
-          borderRadius: '8px',
-          fontSize: '12px', fontWeight: 600,
+          border: `1.5px solid ${isAccent ? 'rgba(193,53,132,.65)' : color}`,
+          borderRadius: '10px',
+          fontSize: '12px', fontWeight: 700,
           cursor: isAnyLoading ? 'not-allowed' : 'pointer',
           opacity: isAnyLoading && !isLoading ? 0.45 : 1,
           transition: 'all .15s',
+          boxShadow: isAccent && !isLoading
+            ? '0 0 18px rgba(193,53,132,.16), inset 0 0 12px rgba(193,53,132,.06)'
+            : undefined,
+          textShadow: isAccent && !isLoading ? '0 0 12px rgba(193,53,132,.35)' : undefined,
         }}
-        onMouseEnter={e => { if (!isAnyLoading) e.currentTarget.style.background = color + '20'; }}
-        onMouseLeave={e => { if (!isAnyLoading) e.currentTarget.style.background = 'transparent'; }}
+        onMouseEnter={e => { if (!isAnyLoading) e.currentTarget.style.background = hoverBg; }}
+        onMouseLeave={e => {
+          if (!isAnyLoading) e.currentTarget.style.background = isAccent ? 'rgba(193,53,132,.10)' : 'transparent';
+        }}
       >
         <span style={{
           display: 'inline-block',
@@ -311,7 +322,7 @@ export default function Relatorios() {
       {/* ── Cabeçalho ── */}
       <div style={{ marginBottom: '24px' }}>
         <h1 style={{
-          fontSize: '24px', fontWeight: 700,
+          fontSize: '24px', fontWeight: 800, letterSpacing: '-0.01em',
           color: 'var(--c-text-1)', margin: 0,
           display: 'flex', alignItems: 'center', gap: '10px',
         }}>
@@ -319,8 +330,11 @@ export default function Relatorios() {
           {unreadCount > 0 && (
             <span style={{
               fontSize: '11px', fontWeight: 700,
-              color: '#fff', background: 'var(--c-accent)',
+              color: 'var(--c-accent)',
+              background: 'var(--c-accent-soft)',
+              border: '1px solid rgba(193,53,132,.4)',
               padding: '3px 10px', borderRadius: '999px',
+              boxShadow: '0 0 14px rgba(193,53,132,.22)',
             }}>
               {unreadCount} não lido{unreadCount > 1 ? 's' : ''}
             </span>
@@ -328,7 +342,7 @@ export default function Relatorios() {
         </h1>
         <p style={{
           fontSize: '13px', color: 'var(--c-text-3)',
-          margin: '6px 0 0', lineHeight: 1.55,
+          margin: '6px 0 0', lineHeight: 1.55, fontWeight: 400,
         }}>
           Resumos automáticos do que está acontecendo: como sua campanha vai,
           se o sistema está saudável, e lembretes que você marcou.
@@ -336,16 +350,14 @@ export default function Relatorios() {
       </div>
 
       {/* ── Barra de atualização manual ── */}
-      <div style={{
+      <div className="ccb-card" style={{
         display: 'flex', gap: '10px', flexWrap: 'wrap',
         alignItems: 'center', marginBottom: '14px',
         padding: '12px 14px',
-        background: 'var(--c-surface)',
-        border: '1px dashed var(--c-border-lt)',
-        borderRadius: '12px',
+        borderRadius: '14px',
       }}>
         <div style={{
-          fontSize: '12px', color: 'var(--c-text-3)', fontWeight: 500,
+          fontSize: '12px', color: 'var(--c-text-3)', fontWeight: 400,
           marginRight: '4px',
         }}>
           ⚡ Gerar relatório agora:
@@ -357,12 +369,12 @@ export default function Relatorios() {
           <RefreshButton kind="system" label="Sistema" color={KINDS.system.color} />
         )}
         {filter === 'reminder' && (
-          <span style={{ fontSize: '12px', color: 'var(--c-text-4)', fontStyle: 'italic' }}>
+          <span style={{ fontSize: '12px', color: 'var(--c-text-4)', fontStyle: 'italic', fontWeight: 400 }}>
             Lembretes são pontuais — disparados pela rotina que você programou.
           </span>
         )}
         <span style={{ flex: 1 }} />
-        <span style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>
+        <span style={{ fontSize: '11px', color: 'var(--c-text-4)', fontWeight: 400 }}>
           Atualização automática: semanal · sem custo de IA
         </span>
       </div>
@@ -380,6 +392,20 @@ export default function Relatorios() {
         ].map(tab => {
           const active = filter === tab.id;
           const count = counts[tab.id] ?? 0;
+          const isAccent = tab.color === KINDS.campaign.color; // var(--c-accent)
+          /* Estilo do active depende se é tab accent (gradient rosa) ou semântico (cor literal). */
+          let activeBg, activeBorder, activeShadow;
+          if (active) {
+            if (isAccent) {
+              activeBg = 'linear-gradient(135deg, var(--c-accent), var(--c-accent-dk))';
+              activeBorder = 'rgba(193,53,132,.65)';
+              activeShadow = '0 6px 18px rgba(193,53,132,.35), inset 0 1px 0 rgba(255,255,255,.18)';
+            } else {
+              activeBg = tab.color;
+              activeBorder = tab.color;
+              activeShadow = 'none';
+            }
+          }
           return (
             <button
               key={tab.id}
@@ -387,13 +413,14 @@ export default function Relatorios() {
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: '6px',
                 padding: '8px 14px',
-                background: active ? tab.color : 'var(--c-surface)',
+                background: active ? activeBg : 'var(--c-surface)',
                 color: active ? '#fff' : 'var(--c-text-2)',
-                border: `1.5px solid ${active ? tab.color : 'var(--c-border)'}`,
+                border: `1.5px solid ${active ? activeBorder : 'var(--c-border)'}`,
                 borderRadius: '999px',
-                fontSize: '12.5px', fontWeight: 600,
+                fontSize: '12.5px', fontWeight: 700,
                 cursor: 'pointer',
                 transition: 'all .15s',
+                boxShadow: activeShadow,
               }}
             >
               <span>{tab.emoji}</span>
@@ -401,6 +428,7 @@ export default function Relatorios() {
               <span style={{
                 fontSize: '11px', fontWeight: 700,
                 opacity: active ? 0.85 : 0.65,
+                fontFeatureSettings: "'tnum'",
               }}>
                 {count}
               </span>
@@ -427,17 +455,15 @@ export default function Relatorios() {
       )}
 
       {!loading && !error && filtered.length === 0 && (
-        <div style={{
+        <div className="ccb-card" style={{
           padding: '48px 24px', textAlign: 'center',
-          background: 'var(--c-card-bg)',
-          border: '1px dashed var(--c-border)',
-          borderRadius: '14px',
+          borderRadius: '18px',
         }}>
           <div style={{ fontSize: '40px', marginBottom: '10px' }}>📭</div>
-          <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--c-text-2)', marginBottom: '4px' }}>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-2)', marginBottom: '4px' }}>
             Nenhum relatório por aqui ainda
           </div>
-          <div style={{ fontSize: '12.5px', color: 'var(--c-text-4)', lineHeight: 1.55, maxWidth: '460px', margin: '0 auto' }}>
+          <div style={{ fontSize: '12.5px', color: 'var(--c-text-3)', lineHeight: 1.55, maxWidth: '460px', margin: '0 auto', fontWeight: 400 }}>
             Os relatórios aparecem automaticamente quando seu sistema gera análises
             sobre as campanhas, verifica a saúde da plataforma ou dispara lembretes
             que você programou.

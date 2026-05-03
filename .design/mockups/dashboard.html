@@ -1,0 +1,804 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Mockup · Dashboard · AdManager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  /* ====== Tokens (apenas dark) ====== */
+  :root {
+    --c-accent:        #C13584;
+    --c-accent-2:      #7D4A5E;
+    --c-accent-soft:   rgba(193,53,132,.18);
+    --c-accent-glow:   rgba(193,53,132,.55);
+    --c-accent-vibe:   rgba(193,53,132,.7);
+
+    --c-page-bg:       #06080B;
+    --c-text-1:        #F2F2F2;
+    --c-text-2:        #C2C2C2;
+    --c-text-3:        #8A8A8A;
+    --c-text-4:        #595959;
+
+    /* Glass DARK FUMÊ (estilo AgentOS) — fundo escuro translúcido */
+    --c-glass-bg:      rgba(18,24,30,.45);
+    --c-glass-bg-2:    rgba(28,34,42,.55);
+    --c-glass-border:  rgba(255,255,255,.09);
+    --c-glass-border-2:rgba(255,255,255,.16);
+    --c-glass-shine:   rgba(255,255,255,.07);
+
+    --c-success:       #34D399;
+    --c-warn:          #FBBF24;
+    --c-danger:        #F87171;
+    --c-info:          #60A5FA;
+
+    --blur-strong:     blur(28px);
+    --blur-soft:       blur(14px);
+    --r-md:            14px;
+    --r-lg:            18px;
+    --ease:            cubic-bezier(.22,1,.36,1);
+  }
+
+  *,*::before,*::after { box-sizing: border-box; }
+  html, body { margin:0; padding:0; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--c-text-1);
+    background: var(--c-page-bg);
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: 'cv11','ss01','tnum';
+    padding-top: 28px;
+  }
+
+  /* ====== Noise / textura sutil ====== */
+  .bg-noise {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.6 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    background-size: 240px 240px;
+    opacity: .28;
+    mix-blend-mode: overlay;
+  }
+
+  /* ====== Background tech: SVG pattern fixo (linhas + nodes + fluxos) ====== */
+  .bg-tech {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='800' viewBox='0 0 800 800'>\
+<defs>\
+<radialGradient id='node' cx='50%25' cy='50%25' r='50%25'>\
+<stop offset='0%25' stop-color='%23C13584' stop-opacity='1'/>\
+<stop offset='60%25' stop-color='%23C13584' stop-opacity='.4'/>\
+<stop offset='100%25' stop-color='%23C13584' stop-opacity='0'/>\
+</radialGradient>\
+</defs>\
+<g stroke='%23ffffff' stroke-opacity='0.16' stroke-width='1' fill='none'>\
+<path d='M0,180 L220,180 L260,140 L460,140 L500,200 L800,200'/>\
+<path d='M0,520 L160,520 L200,560 L380,560 L420,500 L640,500 L680,560 L800,560'/>\
+<path d='M120,0 L120,80 L80,120 L80,260'/>\
+<path d='M620,0 L620,40 L660,80 L660,200 L620,240 L620,420'/>\
+<path d='M0,360 Q200,300 400,360 T800,360' stroke-opacity='0.11'/>\
+<path d='M0,640 Q200,700 400,640 T800,640' stroke-opacity='0.11'/>\
+<path d='M280,800 L280,720 L320,680 L520,680 L560,640' stroke-opacity='0.13'/>\
+<path d='M40,40 L100,40' stroke-opacity='0.10'/>\
+<path d='M700,760 L760,760' stroke-opacity='0.10'/>\
+</g>\
+<g fill='url(%23node)'>\
+<circle cx='220' cy='180' r='3.5'/>\
+<circle cx='460' cy='140' r='3.5'/>\
+<circle cx='500' cy='200' r='3.5'/>\
+<circle cx='160' cy='520' r='3.5'/>\
+<circle cx='420' cy='500' r='3.5'/>\
+<circle cx='680' cy='560' r='3.5'/>\
+<circle cx='80' cy='260' r='3.5'/>\
+<circle cx='620' cy='420' r='3.5'/>\
+<circle cx='320' cy='680' r='3.5'/>\
+</g>\
+<g fill='%23ffffff' fill-opacity='0.06'>\
+<circle cx='120' cy='80' r='2'/>\
+<circle cx='620' cy='40' r='2'/>\
+<circle cx='660' cy='80' r='2'/>\
+<circle cx='80' cy='120' r='2'/>\
+<circle cx='280' cy='720' r='2'/>\
+<circle cx='560' cy='640' r='2'/>\
+</g>\
+</svg>");
+    background-size: 800px 800px;
+    background-position: center;
+    background-repeat: repeat;
+    mask-image: radial-gradient(ellipse 90% 80% at center, rgba(0,0,0,.85), transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 90% 80% at center, rgba(0,0,0,.85), transparent 75%);
+    opacity: .9;
+  }
+
+  /* ====== Spotlight central + glows ambientes (estilo AgentOS) ====== */
+  /* Spotlight central radial — luz iluminando o conteúdo do alto/centro */
+  .bg-spotlight {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse 90% 60% at 50% -10%, rgba(193,53,132,.22), transparent 70%),
+      radial-gradient(ellipse 120% 80% at 50% 50%, rgba(255,255,255,.04), transparent 60%);
+  }
+  body::before, body::after {
+    content: '';
+    position: fixed; z-index: 0;
+    border-radius: 50%;
+    filter: blur(140px);
+    pointer-events: none;
+  }
+  body::before {
+    width: 720px; height: 720px;
+    background: var(--c-accent-glow);
+    top: -260px; left: -200px;
+    animation: glowFloatA 14s var(--ease) infinite alternate;
+  }
+  body::after {
+    width: 640px; height: 640px;
+    background: rgba(125,74,94,.5);
+    bottom: -200px; right: -160px;
+    animation: glowFloatB 16s var(--ease) infinite alternate;
+  }
+  @keyframes glowFloatA { 0%{transform:translate(0,0) scale(1);} 100%{transform:translate(60px,80px) scale(1.1);} }
+  @keyframes glowFloatB { 0%{transform:translate(0,0) scale(1);} 100%{transform:translate(-70px,-50px) scale(1.08);} }
+  @media (prefers-reduced-motion: reduce) {
+    body::before, body::after { animation: none; }
+  }
+
+  /* Mockup banner */
+  .mockup-banner {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+    background: rgba(193,53,132,.92);
+    color: #fff; text-align: center; font-size: 11px; font-weight: 700;
+    letter-spacing: 1.4px; text-transform: uppercase; padding: 6px;
+    backdrop-filter: blur(10px);
+  }
+
+  /* ====== Layout shell — header dividido em 2 áreas (brand | topbar), depois sidebar+main ====== */
+  .shell {
+    position: relative; z-index: 1;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    grid-template-rows: 84px 1fr;
+    grid-template-areas: 'brand topbar' 'sidebar main';
+    min-height: calc(100vh - 28px);
+    padding: 16px;
+    column-gap: 16px;
+  }
+  /* Linha degradê DENTRO da topbar — começa em "Boa tarde" e termina no sino */
+  /* Área da brand (logo) — col 1, row 1 */
+  .brand-area {
+    grid-area: brand;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 12px;
+  }
+
+  /* ====== Sidebar AgentOS-style — ilha flutuante com cantos arredondados ====== */
+  .sidebar {
+    grid-area: sidebar;
+    background: rgba(14,18,24,.78);
+    backdrop-filter: var(--blur-strong);
+    -webkit-backdrop-filter: var(--blur-strong);
+    border: 1px solid var(--c-glass-border);
+    border-radius: 18px;
+    padding: 18px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    box-shadow: 0 12px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  /* Brand agora vive no topbar-left, à esquerda do greeting */
+  .brand {
+    display: flex; align-items: center;
+    flex-shrink: 0;
+  }
+  .brand-logo {
+    height: 44px;
+    width: auto; max-width: 100%;
+    filter: brightness(1.85) saturate(.55) drop-shadow(0 0 12px rgba(255,194,228,.28));
+  }
+  .topbar-left {
+    display: flex; align-items: center; gap: 18px;
+    min-width: 0;
+  }
+  /* Botão "Criar campanha" — glass rosa com stroke vibrante */
+  .btn-create {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 11px 14px;
+    border-radius: 11px;
+    background: rgba(193,53,132,.10);
+    border: 1.5px solid rgba(193,53,132,.65);
+    color: var(--c-accent);
+    font-weight: 700; font-size: 13px;
+    letter-spacing: .2px;
+    cursor: pointer; font-family: inherit;
+    text-shadow: 0 0 12px rgba(193,53,132,.4);
+    box-shadow: 0 0 22px rgba(193,53,132,.18), inset 0 0 14px rgba(193,53,132,.08);
+    margin-bottom: 10px;
+    transition: background .2s var(--ease), border-color .2s var(--ease), box-shadow .2s var(--ease);
+  }
+  .btn-create:hover {
+    background: rgba(193,53,132,.16);
+    border-color: rgba(193,53,132,.85);
+    box-shadow: 0 0 30px rgba(193,53,132,.32), inset 0 0 16px rgba(193,53,132,.12);
+  }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+    border-radius: 9px;
+    color: var(--c-text-3);
+    font-size: 13px; font-weight: 500;
+    cursor: pointer; user-select: none;
+    transition: background .2s var(--ease), color .2s var(--ease);
+    position: relative;
+    border: 1px solid transparent;
+  }
+  .nav-item svg { flex-shrink: 0; opacity: .8; }
+  .nav-item:hover { background: rgba(255,255,255,.04); color: var(--c-text-1); }
+  /* Item ativo = card individual estilo AgentOS */
+  .nav-item.active {
+    color: var(--c-text-1);
+    background: rgba(255,255,255,.05);
+    border-color: rgba(255,255,255,.10);
+    box-shadow: 0 1px 0 rgba(255,255,255,.04) inset;
+  }
+  .nav-item.active svg { stroke: var(--c-accent); opacity: 1; }
+  .nav-section { display: none; }
+
+  .sidebar-foot {
+    margin-top: auto;
+    padding: 14px 8px 4px;
+    display: flex; align-items: center; gap: 10px;
+    border-top: 1px solid var(--c-glass-border);
+  }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--c-accent), var(--c-accent-2));
+    display:grid; place-items:center; color:#fff; font-weight:700; font-size:11px;
+    box-shadow: 0 0 14px rgba(193,53,132,.35);
+  }
+  .sidebar-foot .who { font-size:11.5px; color:var(--c-text-2); font-weight:600; }
+  .sidebar-foot .who small { display:block; color:var(--c-text-4); font-weight:500; }
+
+  /* ====== Topbar 100% transparente — grid 3 colunas (greeting | search | actions) ====== */
+  .topbar {
+    grid-area: topbar;
+    background: transparent;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 16px;
+    padding: 0 32px;
+    position: relative;
+  }
+  /* Linha degradê dentro da topbar — começa onde começa "Boa tarde" e vai até o sino */
+  .topbar::after {
+    content: '';
+    position: absolute;
+    left: 32px; right: 32px; bottom: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(255,255,255,.18) 8%,
+      rgba(255,255,255,.18) 92%,
+      transparent 100%);
+    pointer-events: none;
+  }
+  /* Bloco de saudação na topbar (substitui h1 do main) */
+  .greeting { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .greeting .hi {
+    font-size: 16px; font-weight: 800; letter-spacing: -0.005em;
+    display: inline-flex; align-items: center; gap: 8px;
+    color: var(--c-text-1);
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+  .greeting .hi .tag {
+    font-size: 10px; padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--c-accent-soft);
+    color: var(--c-accent);
+    font-weight: 700;
+    border: 1px solid rgba(193,53,132,.4);
+    box-shadow: 0 0 12px rgba(193,53,132,.22);
+  }
+  .greeting .sub {
+    font-size: 11.5px; color: var(--c-text-3); font-weight: 400;
+    white-space: nowrap; line-height: 1.3;
+    letter-spacing: .1px;
+  }
+  /* Botão criar pequeno no topbar */
+  .btn-primary-sm {
+    padding: 9px 14px; border-radius: 10px; border: 0;
+    background: linear-gradient(135deg, var(--c-accent), var(--c-accent-2));
+    color: #fff; font-weight: 700; font-size: 12.5px;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    box-shadow: 0 6px 18px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18);
+    font-family: inherit;
+    flex-shrink: 0;
+  }
+  .search {
+    width: clamp(280px, 36vw, 460px);
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 14px;
+    background: var(--c-glass-bg);
+    border: 1px solid var(--c-glass-border);
+    border-radius: 999px;
+    color: var(--c-text-2);
+    font-size: 13px;
+  }
+  .search input {
+    flex: 1; background: transparent; border: 0; outline: 0;
+    color: var(--c-text-1); font-family: inherit; font-size: 13px;
+  }
+  .top-actions {
+    display: flex; align-items: center; gap: 10px;
+    justify-self: end;
+  }
+  .icon-btn {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    border: 1px solid var(--c-glass-border);
+    background: var(--c-glass-bg);
+    color: var(--c-text-2);
+    cursor: pointer;
+    display:grid; place-items:center;
+    transition: background .2s var(--ease), color .2s var(--ease), border-color .2s var(--ease);
+  }
+  .icon-btn:hover { background: var(--c-glass-bg-2); color: var(--c-text-1); border-color: var(--c-glass-border-2); }
+
+  /* ====== Main ====== */
+  .main {
+    grid-area: main;
+    /* padding-top: 24px = mesmo respiro que existe entre o greeting e a linha da topbar (equilibrado) */
+    padding: 24px 32px 60px;
+    display: flex; flex-direction: column; gap: 22px;
+  }
+  .page-head {
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 18px;
+    flex-wrap: wrap;
+  }
+  .page-head h1 {
+    margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.01em;
+  }
+  .page-head h1 .tag {
+    font-size: 11px; padding: 3px 10px; vertical-align: middle;
+    border-radius: 999px;
+    background: var(--c-accent-soft);
+    color: var(--c-accent);
+    margin-left: 10px; font-weight: 700;
+    border: 1px solid rgba(193,53,132,.4);
+    box-shadow: 0 0 14px rgba(193,53,132,.25);
+  }
+  .page-head p { margin: 4px 0 0; color: var(--c-text-3); font-size: 13px; }
+
+  .btn-primary {
+    padding: 11px 18px; border-radius: 12px; border: 0;
+    background: linear-gradient(135deg, var(--c-accent), var(--c-accent-2));
+    color: #fff; font-weight: 700; font-size: 13px;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+    box-shadow: 0 8px 24px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18);
+    transition: transform .2s var(--ease), box-shadow .2s var(--ease);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 14px 30px rgba(193,53,132,.5); }
+
+  /* ====== Cards / glass ULTRA-VIBRANTE ====== */
+  .card {
+    background: var(--c-glass-bg);
+    backdrop-filter: var(--blur-strong);
+    -webkit-backdrop-filter: var(--blur-strong);
+    border: 1px solid var(--c-glass-border);
+    border-radius: var(--r-lg);
+    padding: 18px 20px;
+    box-shadow:
+      0 8px 24px rgba(0,0,0,.35),
+      inset 0 1px 0 var(--c-glass-shine),
+      inset 0 0 0 1px rgba(255,255,255,.02);
+    position: relative;
+    overflow: hidden;
+  }
+  /* Reflexo top + diagonal shimmer */
+  .card::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,.08) 0%, transparent 30%);
+    pointer-events: none; border-radius: inherit;
+  }
+  .card::after {
+    content: ''; position: absolute; inset: -1px;
+    background: linear-gradient(135deg, rgba(255,255,255,.10), transparent 45%);
+    pointer-events: none; border-radius: inherit;
+    mix-blend-mode: overlay; opacity: .9;
+  }
+
+  /* Card com accent rosa — borda vibrante na mesma intensidade */
+  .card.accent-card {
+    border-color: rgba(193,53,132,.55);
+    box-shadow:
+      0 8px 30px rgba(0,0,0,.4),
+      0 0 30px rgba(193,53,132,.15),
+      inset 0 1px 0 rgba(255,194,228,.18),
+      inset 0 0 16px rgba(193,53,132,.08);
+  }
+  .card.accent-card::after {
+    background: linear-gradient(135deg, rgba(255,194,228,.14), transparent 45%);
+  }
+
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  .metric .label { font-size: 11px; color: var(--c-text-3); text-transform: uppercase; letter-spacing: 1.2px; font-weight: 500; }
+  .metric .value { font-size: 30px; font-weight: 800; margin-top: 8px; letter-spacing: -0.02em; font-feature-settings: 'tnum'; }
+  .metric .delta { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 700; margin-top: 6px; padding: 3px 9px; border-radius: 999px; }
+  .delta.up   { color: var(--c-success); background: rgba(52,211,153,.16); border: 1px solid rgba(52,211,153,.25); }
+  .delta.down { color: var(--c-danger);  background: rgba(248,113,113,.16); border: 1px solid rgba(248,113,113,.25); }
+  .metric .icon {
+    position: absolute; top: 16px; right: 16px;
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--c-accent-soft); color: var(--c-accent);
+    display: grid; place-items: center;
+    border: 1px solid rgba(193,53,132,.3);
+    box-shadow: 0 0 16px rgba(193,53,132,.2);
+  }
+
+  /* ====== Layout dois cards ====== */
+  .grid-2 {
+    display: grid; grid-template-columns: 2fr 1fr; gap: 16px;
+  }
+
+  .chart-card .head { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 16px; gap: 14px; flex-wrap: wrap; }
+  .chart-card h3 { margin: 0; font-size: 15px; font-weight: 700; }
+  .chart-card .subtitle { font-size: 12px; color: var(--c-text-3); margin: 4px 0 0; font-weight: 400; }
+  .chart-card .legend { display: flex; gap: 14px; }
+  .legend-item { font-size: 11px; color: var(--c-text-3); display: inline-flex; gap: 6px; align-items: center; font-weight: 600; }
+  .legend-dot { width: 9px; height: 9px; border-radius: 2px; box-shadow: 0 0 8px currentColor; }
+
+  /* ===== Gráfico de BARRAS (mais legível) ===== */
+  .bars-chart {
+    display: grid;
+    grid-template-columns: repeat(14, 1fr);
+    gap: 6px;
+    align-items: end;
+    height: 200px;
+    padding: 0 4px;
+    margin-top: 6px;
+  }
+  .bar-col {
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+    gap: 4px; height: 100%; position: relative;
+  }
+  .bar-val {
+    font-size: 10px; font-weight: 700; color: var(--c-text-2);
+    font-feature-settings: 'tnum'; line-height: 1;
+  }
+  .bar {
+    width: 100%; max-width: 28px;
+    border-radius: 6px 6px 2px 2px;
+    background: linear-gradient(180deg, var(--c-accent), rgba(193,53,132,.4));
+    box-shadow: 0 0 14px rgba(193,53,132,.35), inset 0 1px 0 rgba(255,255,255,.2);
+    transition: transform .2s var(--ease), box-shadow .2s var(--ease);
+    cursor: pointer;
+    position: relative;
+  }
+  .bar:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 22px rgba(193,53,132,.55), inset 0 1px 0 rgba(255,255,255,.3);
+  }
+  .bar.today {
+    background: linear-gradient(180deg, #fff, var(--c-accent));
+    box-shadow: 0 0 18px var(--c-accent), inset 0 1px 0 rgba(255,255,255,.4);
+  }
+  .bar-day {
+    font-size: 9.5px; color: var(--c-text-4); font-weight: 600;
+    text-transform: uppercase; letter-spacing: .5px;
+  }
+  .chart-axis {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 6px;
+    border-top: 1px solid var(--c-glass-border);
+    padding-top: 8px;
+    font-size: 10.5px; color: var(--c-text-4); font-weight: 600;
+  }
+  .chart-axis strong { color: var(--c-accent); font-weight: 700; }
+
+  /* ====== Side card ====== */
+  .next-event { display: flex; flex-direction: column; gap: 14px; }
+  .event-pill {
+    display: flex; align-items: center; gap: 12px; padding: 12px;
+    border-radius: 12px;
+    background: var(--c-glass-bg-2);
+    border: 1px solid var(--c-glass-border);
+  }
+  .event-day {
+    width: 50px; text-align: center;
+    background: var(--c-accent-soft);
+    border: 1px solid rgba(193,53,132,.4);
+    border-radius: 10px; padding: 6px 0;
+    color: var(--c-accent); font-weight: 700;
+    box-shadow: 0 0 14px rgba(193,53,132,.18);
+  }
+  .event-day .num { font-size: 17px; line-height: 1; }
+  .event-day .mon { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; opacity: .85; }
+  .event-info { flex: 1; }
+  .event-info strong { font-size: 13px; }
+  .event-info small { display: block; color: var(--c-text-3); font-size: 11px; margin-top: 2px; font-weight: 400; }
+
+  /* ====== Tabela / lista ====== */
+  .table-card .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .table-card h3 { margin: 0; font-size: 15px; font-weight: 700; }
+  .table-card .head a { color: var(--c-accent); font-size: 12px; font-weight: 600; text-decoration: none; }
+  .ad-row {
+    display: grid; grid-template-columns: 36px 1fr auto auto auto; gap: 14px; align-items: center;
+    padding: 11px 6px;
+  }
+  .ad-row + .ad-row {
+    border-top: 1px solid rgba(255,255,255,.05);
+  }
+  .ad-thumb {
+    width: 36px; height: 36px; border-radius: 9px;
+    background: linear-gradient(135deg, var(--c-accent-soft), rgba(125,74,94,.2));
+    border: 1px solid var(--c-glass-border);
+    display: grid; place-items: center; color: var(--c-accent);
+  }
+  .ad-name { font-size: 13px; font-weight: 600; }
+  .ad-name small { display: block; color: var(--c-text-3); font-size: 11px; font-weight: 400; }
+  .badge { font-size: 10.5px; padding: 4px 9px; border-radius: 999px; font-weight: 700; letter-spacing:.3px; }
+  .badge.ok    { background: rgba(52,211,153,.16); color: var(--c-success); border: 1px solid rgba(52,211,153,.3); }
+  .badge.pend  { background: rgba(251,191,36,.16); color: var(--c-warn);    border: 1px solid rgba(251,191,36,.3); }
+  .badge.bad   { background: rgba(248,113,113,.16); color: var(--c-danger); border: 1px solid rgba(248,113,113,.3); }
+  .ad-num { font-size: 13px; font-weight: 700; font-feature-settings: 'tnum'; min-width: 70px; text-align: right; }
+  .ad-num small { display: block; color: var(--c-text-3); font-size: 10.5px; font-weight: 400; }
+
+  /* ====== Mobile responsivo ====== */
+  @media (max-width: 1024px) {
+    .shell { grid-template-columns: 1fr; grid-template-areas: 'topbar' 'main'; }
+    .sidebar { display: none; }
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 1100px) {
+    .greeting .sub { display: none; } /* data some quando tela estreita */
+  }
+  @media (max-width: 920px) {
+    .btn-primary-sm span, .btn-primary-sm { /* só ícone */ }
+    .btn-primary-sm { padding: 9px 11px; font-size: 0; gap: 0; }
+    .btn-primary-sm svg { width: 15px; height: 15px; }
+  }
+  @media (max-width: 768px) {
+    .main { padding: 20px 16px 40px; }
+    .metrics { grid-template-columns: 1fr 1fr; gap: 12px; }
+    .ad-row { grid-template-columns: 32px 1fr auto; }
+    .ad-row .ad-num.hide-sm, .ad-row .badge.hide-sm { display: none; }
+    .card { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+    body::before, body::after { animation: none; opacity: .55; }
+    .bars-chart { grid-template-columns: repeat(7, 1fr); }
+    .bar-col:nth-child(odd) { display: none; }
+    .topbar { padding: 0 16px; gap: 10px; }
+    .greeting .hi { font-size: 14px; }
+    .greeting .hi .tag { display: none; }
+    .search { font-size: 12px; }
+  }
+  @media (max-width: 480px) {
+    .metrics { grid-template-columns: 1fr; }
+    .page-head h1 { font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+<div class="mockup-banner">⚠ MOCKUP — não é o sistema real · pra aprovação visual</div>
+<div class="bg-spotlight"></div>
+<div class="bg-tech"></div>
+<div class="bg-noise"></div>
+
+<div class="shell">
+
+  <!-- ===== Sidebar ===== -->
+  <aside class="sidebar">
+    <button class="btn-create" title="Criar campanha">Criar campanha</button>
+
+    <div class="nav-section">Operação</div>
+    <div class="nav-item active">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 13h8V3H3zM13 21h8V11h-8zM13 3v6h8V3zM3 21h8v-6H3z"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 12l9 4 9-4"/><path d="M3 17l9 4 9-4"/></svg>
+      Anúncios
+    </div>
+    <div class="nav-item">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      Calendário
+    </div>
+    <div class="nav-item">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Públicos
+    </div>
+    <div class="nav-item">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      Criativos
+    </div>
+
+    <div class="nav-section">Análise</div>
+    <div class="nav-item">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
+      Relatórios
+    </div>
+    <div class="nav-item">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      Investimento
+    </div>
+    <div class="nav-item">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      Histórico
+    </div>
+
+    <div class="sidebar-foot">
+      <div class="avatar">CB</div>
+      <div class="who">Cris Beauty<small>Conta ativa</small></div>
+    </div>
+  </aside>
+
+  <!-- ===== Brand area (logo na col 1, row 1 — acima da sidebar) ===== -->
+  <div class="brand-area">
+    <img src="marca-colorida.png" alt="Cris Costa Beauty" class="brand-logo" />
+  </div>
+
+  <!-- ===== Topbar (saudação + busca + ações) ===== -->
+  <header class="topbar">
+    <div class="greeting">
+      <span class="hi">Boa tarde, Cris <span class="tag">PRO</span></span>
+      <span class="sub">Resumo das suas campanhas Meta · sex, 02 mai 2026</span>
+    </div>
+    <div class="search">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input placeholder="Buscar anúncio, público, relatório…" />
+      <span style="font-size:10px; color:var(--c-text-4); border:1px solid var(--c-glass-border); padding:2px 7px; border-radius:6px;">⌘K</span>
+    </div>
+    <div class="top-actions">
+      <button class="icon-btn" title="Tema">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+      <button class="icon-btn" title="Notificações" style="position:relative;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span style="position:absolute; top:7px; right:7px; width:7px; height:7px; background:var(--c-accent); border-radius:50%; box-shadow:0 0 10px var(--c-accent);"></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ===== Main ===== -->
+  <main class="main">
+
+    <!-- Métricas -->
+    <section class="metrics">
+      <div class="card metric">
+        <div class="icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <div class="label">Saldo disponível</div>
+        <div class="value">R$ 412,80</div>
+        <span class="delta up">▲ 24%</span>
+      </div>
+      <div class="card metric">
+        <div class="icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 12l9 4 9-4"/></svg>
+        </div>
+        <div class="label">Anúncios ativos</div>
+        <div class="value">7</div>
+        <span class="delta up">▲ 2</span>
+      </div>
+      <div class="card metric">
+        <div class="icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <div class="label">Mensagens iniciadas</div>
+        <div class="value">277</div>
+        <span class="delta up">▲ 18%</span>
+      </div>
+      <div class="card metric accent-card">
+        <div class="icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><polyline points="7 14 11 10 15 14 21 8"/></svg>
+        </div>
+        <div class="label">Custo por msg</div>
+        <div class="value">R$ 0,20</div>
+        <span class="delta down">▼ R$ 0,18</span>
+      </div>
+    </section>
+
+    <!-- Chart + side -->
+    <section class="grid-2">
+      <div class="card chart-card">
+        <div class="head">
+          <div>
+            <h3>Mensagens iniciadas · por dia</h3>
+            <p class="subtitle">Quanto maior a barra, mais gente conversou com você naquele dia.</p>
+          </div>
+          <div class="legend">
+            <span class="legend-item"><span class="legend-dot" style="background:#fff; box-shadow:0 0 8px #fff;"></span>Hoje</span>
+            <span class="legend-item"><span class="legend-dot" style="background:var(--c-accent); color:var(--c-accent);"></span>Dias anteriores</span>
+          </div>
+        </div>
+        <div class="bars-chart">
+          <!-- 14 barras com valores reais -->
+          <div class="bar-col"><span class="bar-val">8</span> <div class="bar" style="height:11%"></div> <span class="bar-day">19</span></div>
+          <div class="bar-col"><span class="bar-val">12</span><div class="bar" style="height:17%"></div><span class="bar-day">20</span></div>
+          <div class="bar-col"><span class="bar-val">15</span><div class="bar" style="height:21%"></div><span class="bar-day">21</span></div>
+          <div class="bar-col"><span class="bar-val">22</span><div class="bar" style="height:31%"></div><span class="bar-day">22</span></div>
+          <div class="bar-col"><span class="bar-val">18</span><div class="bar" style="height:25%"></div><span class="bar-day">23</span></div>
+          <div class="bar-col"><span class="bar-val">26</span><div class="bar" style="height:36%"></div><span class="bar-day">24</span></div>
+          <div class="bar-col"><span class="bar-val">20</span><div class="bar" style="height:28%"></div><span class="bar-day">25</span></div>
+          <div class="bar-col"><span class="bar-val">31</span><div class="bar" style="height:43%"></div><span class="bar-day">26</span></div>
+          <div class="bar-col"><span class="bar-val">28</span><div class="bar" style="height:40%"></div><span class="bar-day">27</span></div>
+          <div class="bar-col"><span class="bar-val">42</span><div class="bar" style="height:58%"></div><span class="bar-day">28</span></div>
+          <div class="bar-col"><span class="bar-val">38</span><div class="bar" style="height:53%"></div><span class="bar-day">29</span></div>
+          <div class="bar-col"><span class="bar-val">55</span><div class="bar" style="height:76%"></div><span class="bar-day">30</span></div>
+          <div class="bar-col"><span class="bar-val">48</span><div class="bar" style="height:67%"></div><span class="bar-day">01</span></div>
+          <div class="bar-col"><span class="bar-val">72</span><div class="bar today" style="height:100%"></div><span class="bar-day">HOJE</span></div>
+        </div>
+        <div class="chart-axis">
+          <span>14 dias atrás</span>
+          <span>Total no período: <strong>435 mensagens</strong></span>
+          <span>Hoje</span>
+        </div>
+      </div>
+
+      <div class="card next-event">
+        <h3 style="margin:0 0 6px; font-size:15px;">Próximas datas</h3>
+        <p style="margin:0 0 6px; font-size:12px; color:var(--c-text-3)">Datas comerciais e oportunidades</p>
+        <div class="event-pill">
+          <div class="event-day"><div class="num">12</div><div class="mon">Mai</div></div>
+          <div class="event-info"><strong>Dia das Mães</strong><small>Pico de buscas em estética</small></div>
+        </div>
+        <div class="event-pill">
+          <div class="event-day"><div class="num">13</div><div class="mon">Jun</div></div>
+          <div class="event-info"><strong>Dia dos Namorados</strong><small>Promo glow lips · prepara criativo</small></div>
+        </div>
+        <div class="event-pill">
+          <div class="event-day"><div class="num">15</div><div class="mon">Ago</div></div>
+          <div class="event-info"><strong>Dia da Mulher Brasileira</strong><small>Tema autoestima funciona bem</small></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tabela -->
+    <section class="card table-card">
+      <div class="head">
+        <h3>Anúncios ativos</h3>
+        <a href="#">Ver todos →</a>
+      </div>
+      <div class="ad-row">
+        <div class="ad-thumb">📷</div>
+        <div class="ad-name">Limpeza de pele · maio · Cravos<small>Conjunto · Joinville · raio 8 km</small></div>
+        <span class="badge ok">ATIVO</span>
+        <div class="ad-num">277<small>mensagens</small></div>
+        <div class="ad-num hide-sm">R$ 0,20<small>por msg</small></div>
+      </div>
+      <div class="ad-row">
+        <div class="ad-thumb">📷</div>
+        <div class="ad-name">Microagulhamento · Nano<small>Conjunto · Joinville · raio 8 km</small></div>
+        <span class="badge ok">ATIVO</span>
+        <div class="ad-num">163<small>mensagens</small></div>
+        <div class="ad-num hide-sm">R$ 0,42<small>por msg</small></div>
+      </div>
+      <div class="ad-row">
+        <div class="ad-thumb">📷</div>
+        <div class="ad-name">Brow lamination · maio<small>Conjunto · Joinville Centro</small></div>
+        <span class="badge pend">EM REVISÃO</span>
+        <div class="ad-num">—<small>aguardando</small></div>
+        <div class="ad-num hide-sm">—<small>—</small></div>
+      </div>
+      <div class="ad-row">
+        <div class="ad-thumb">📷</div>
+        <div class="ad-name">Lash lifting · oferta<small>Conjunto · Joinville · raio 12 km</small></div>
+        <span class="badge bad">PAUSADO</span>
+        <div class="ad-num">42<small>mensagens</small></div>
+        <div class="ad-num hide-sm">R$ 0,71<small>por msg</small></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+</body>
+</html>

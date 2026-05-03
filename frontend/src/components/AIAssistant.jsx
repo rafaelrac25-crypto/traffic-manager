@@ -7,9 +7,9 @@ const RobotIcon = ({ size = 24 }) => (
     <line x1="12" y1="1.5" x2="12" y2="5" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
     <circle cx="12" cy="1.5" r="1.3" fill="white"/>
     <rect x="3" y="5" width="18" height="13" rx="3" fill="white"/>
-    <circle cx="9" cy="11" r="2" fill="#d68d8f"/>
-    <circle cx="15" cy="11" r="2" fill="#d68d8f"/>
-    <rect x="7.5" y="14.2" width="9" height="1.5" rx="0.75" fill="#d68d8f"/>
+    <circle cx="9" cy="11" r="2" fill="var(--c-accent)"/>
+    <circle cx="15" cy="11" r="2" fill="var(--c-accent)"/>
+    <rect x="7.5" y="14.2" width="9" height="1.5" rx="0.75" fill="var(--c-accent)"/>
   </svg>
 );
 
@@ -166,7 +166,7 @@ export default function AIAssistant() {
         style={{
           position: 'fixed', bottom: '28px', right: '28px', zIndex: 500,
           width: '52px', height: '52px', borderRadius: '50%',
-          background: 'linear-gradient(135deg, #d68d8f, #7D4A5E)',
+          background: 'linear-gradient(135deg, var(--c-accent), #7D4A5E)',
           border: 'none', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           boxShadow: '0 4px 16px rgba(214,141,143,.4)',
@@ -192,7 +192,7 @@ export default function AIAssistant() {
         }}>
 
           {/* Header */}
-          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--c-border)', background: 'linear-gradient(135deg, #d68d8f 0%, #7D4A5E 100%)', color: '#fff' }}>
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--c-border)', background: 'linear-gradient(135deg, var(--c-accent) 0%, #7D4A5E 100%)', color: '#fff' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <RobotIcon size={20} />
@@ -216,7 +216,7 @@ export default function AIAssistant() {
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <div style={{ textAlign: 'center', marginBottom: '14px' }}>
                   <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'center' }}>
-                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #d68d8f, #7D4A5E)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--c-accent), #7D4A5E)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <RobotIcon size={28} />
                     </div>
                   </div>
@@ -242,7 +242,7 @@ export default function AIAssistant() {
                 <div style={{
                   maxWidth: '85%', padding: '9px 12px',
                   borderRadius: m.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
-                  background: m.role === 'user' ? 'linear-gradient(135deg, #d68d8f, #7D4A5E)' : m.error ? '#FDEAED' : 'var(--c-surface)',
+                  background: m.role === 'user' ? 'linear-gradient(135deg, var(--c-accent), #7D4A5E)' : m.error ? '#FDEAED' : 'var(--c-surface)',
                   color: m.role === 'user' ? '#fff' : m.error ? '#E74C3C' : 'var(--c-text-1)',
                   fontSize: '12px', lineHeight: 1.5,
                   border: m.role === 'assistant' ? '1px solid var(--c-border)' : 'none',
@@ -264,7 +264,7 @@ export default function AIAssistant() {
               <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
                 <div style={{ background: 'var(--c-surface)', border: '1px solid var(--c-border)', borderRadius: '14px 14px 14px 4px', padding: '9px 14px', display: 'flex', gap: '4px', alignItems: 'center' }}>
                   {[0, 1, 2].map(i => (
-                    <div key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#d68d8f', animation: `bounce 1s ${i * .2}s infinite` }} />
+                    <div key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--c-accent)', animation: `bounce 1s ${i * .2}s infinite` }} />
                   ))}
                 </div>
               </div>
@@ -303,8 +303,8 @@ export default function AIAssistant() {
               title="Anexar imagem de referência"
               style={{
                 width: '34px', height: '34px', borderRadius: '10px',
-                border: `1.5px solid ${imagePreview ? '#d68d8f' : 'var(--c-border)'}`,
-                background: imagePreview ? 'linear-gradient(135deg, #d68d8f, #7D4A5E)' : 'var(--c-surface)',
+                border: `1.5px solid ${imagePreview ? 'var(--c-accent)' : 'var(--c-border)'}`,
+                background: imagePreview ? 'linear-gradient(135deg, var(--c-accent), #7D4A5E)' : 'var(--c-surface)',
                 color: imagePreview ? '#fff' : 'var(--c-text-3)',
                 cursor: 'pointer', fontSize: '15px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -331,7 +331,7 @@ export default function AIAssistant() {
               disabled={!canSend}
               style={{
                 width: '34px', height: '34px', borderRadius: '10px', border: 'none',
-                background: canSend ? 'linear-gradient(135deg, #d68d8f, #7D4A5E)' : 'var(--c-border)',
+                background: canSend ? 'linear-gradient(135deg, var(--c-accent), #7D4A5E)' : 'var(--c-border)',
                 color: '#fff', cursor: canSend ? 'pointer' : 'not-allowed',
                 fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 transition: 'all .15s', flexShrink: 0,
