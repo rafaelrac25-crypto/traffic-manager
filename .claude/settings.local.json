@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/Rafa/cris-costa-criativos/briefs//**)",
+      "Read(//c/Users/Rafa/cris-costa-criativos/**)",
+      "Bash(grep -E '\\\\.html$')"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "meta-ads"
+  ],
+  "enableAllProjectMcpServers": true
+}

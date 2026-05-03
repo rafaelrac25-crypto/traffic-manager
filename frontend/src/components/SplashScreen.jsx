@@ -57,23 +57,99 @@ export default function SplashScreen({ onDone }) {
           0%, 100% { transform: scale(1);   opacity: .55; }
           50%      { transform: scale(1.4); opacity: 1;   }
         }
+        @keyframes splashMeshFlow {
+          0%   { background-position: 0 0, 0 0; }
+          100% { background-position: 60px 60px, 60px 60px; }
+        }
+        @keyframes splashMeshFlowReverse {
+          0%   { background-position: 0 0, 0 0; }
+          100% { background-position: -120px -120px, -120px -120px; }
+        }
+        @keyframes splashMeshPulse {
+          0%, 100% { opacity: .55; }
+          50%      { opacity: 1;   }
+        }
+        @keyframes splashMeshBreath {
+          0%, 100% { opacity: .35; }
+          50%      { opacity: .85; }
+        }
+        @keyframes splashScanLine {
+          0%   { top: -8%;  opacity: 0; }
+          12%  { opacity: 1; }
+          88%  { opacity: 1; }
+          100% { top: 108%; opacity: 0; }
+        }
+        @keyframes splashNodePulse {
+          0%, 100% { transform: scale(1);   opacity: .3; }
+          50%      { transform: scale(1.8); opacity: 1;  }
+        }
         @media (prefers-reduced-motion: reduce) {
-          .splash-blob, .splash-ring { animation: none !important; }
+          .splash-blob, .splash-ring, .splash-mesh-1, .splash-mesh-2, .splash-scan, .splash-node {
+            animation: none !important;
+          }
         }
       `}</style>
 
-      {/* ── Grid sutil de fundo (mascarado por radial) ── */}
-      <div style={{
+      {/* ── Malha tecnológica viva — camada 1: branca grande, fluxo diagonal ── */}
+      <div className="splash-mesh-1" style={{
         position: 'absolute',
         inset: 0,
         backgroundImage:
-          'linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),' +
-          'linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px)',
-        backgroundSize: '60px 60px',
-        WebkitMaskImage: 'radial-gradient(ellipse 80% 70% at center, rgba(0,0,0,.7), transparent 70%)',
-        maskImage:       'radial-gradient(ellipse 80% 70% at center, rgba(0,0,0,.7), transparent 70%)',
+          'linear-gradient(rgba(255,255,255,.07) 1px, transparent 1px),' +
+          'linear-gradient(90deg, rgba(255,255,255,.07) 1px, transparent 1px)',
+        backgroundSize: '60px 60px, 60px 60px',
+        animation: 'splashMeshFlow 6s linear infinite, splashMeshPulse 5s ease-in-out infinite',
+        WebkitMaskImage: 'radial-gradient(ellipse 90% 80% at center, rgba(0,0,0,.9), transparent 75%)',
+        maskImage:       'radial-gradient(ellipse 90% 80% at center, rgba(0,0,0,.9), transparent 75%)',
         zIndex: 0,
       }} />
+
+      {/* ── Malha tecnológica viva — camada 2: rosa accent, contra-fluxo, sutil ── */}
+      <div className="splash-mesh-2" style={{
+        position: 'absolute',
+        inset: 0,
+        backgroundImage:
+          'linear-gradient(rgba(193,53,132,.10) 1px, transparent 1px),' +
+          'linear-gradient(90deg, rgba(193,53,132,.10) 1px, transparent 1px)',
+        backgroundSize: '120px 120px, 120px 120px',
+        animation: 'splashMeshFlowReverse 14s linear infinite, splashMeshBreath 7s ease-in-out infinite',
+        WebkitMaskImage: 'radial-gradient(ellipse 70% 60% at center, rgba(0,0,0,.8), transparent 70%)',
+        maskImage:       'radial-gradient(ellipse 70% 60% at center, rgba(0,0,0,.8), transparent 70%)',
+        zIndex: 0,
+      }} />
+
+      {/* ── Scan line horizontal (varredura tech) ── */}
+      <div className="splash-scan" style={{
+        position: 'absolute',
+        left: 0, right: 0,
+        top: 0,
+        height: '2px',
+        background: 'linear-gradient(90deg, transparent 0%, rgba(193,53,132,.0) 10%, rgba(193,53,132,.55) 50%, rgba(193,53,132,.0) 90%, transparent 100%)',
+        boxShadow: '0 0 12px rgba(193,53,132,.5)',
+        animation: 'splashScanLine 4.5s linear infinite',
+        zIndex: 1,
+        pointerEvents: 'none',
+      }} />
+
+      {/* ── Nodes brilhantes em intersecções (5 pontos pulsando em delays diferentes) ── */}
+      {[
+        { top: '22%', left: '18%', delay: '0s'   },
+        { top: '70%', left: '12%', delay: '1.2s' },
+        { top: '32%', left: '82%', delay: '2.1s' },
+        { top: '78%', left: '88%', delay: '0.6s' },
+        { top: '54%', left: '50%', delay: '1.6s' },
+      ].map((n, i) => (
+        <div key={i} className="splash-node" style={{
+          position: 'absolute',
+          top: n.top, left: n.left,
+          width: '4px', height: '4px',
+          borderRadius: '50%',
+          background: '#C13584',
+          boxShadow: '0 0 10px rgba(193,53,132,.7), 0 0 20px rgba(193,53,132,.35)',
+          animation: `splashNodePulse 2.4s ${n.delay} ease-in-out infinite`,
+          zIndex: 1,
+        }} />
+      ))}
 
       {/* ── Blob 1 (rosa accent — topo esquerda) ── */}
       <div style={{
@@ -216,70 +292,6 @@ export default function SplashScreen({ onDone }) {
             lineHeight:    1,
           }}>Tráfego</span>
         </div>
-      </div>
-
-      {/* ── Barra de progresso "leitura tech" ── */}
-      <style>{`
-        @keyframes splashProgressPercent {
-          0%   { content: '0%';   --p: 0; }
-          25%  { content: '24%';  --p: 24; }
-          50%  { content: '47%';  --p: 47; }
-          75%  { content: '78%';  --p: 78; }
-          100% { content: '100%'; --p: 100; }
-        }
-        @keyframes splashCounterTick {
-          0%   { content: 'Conectando ao sistema'; }
-          30%  { content: 'Verificando integrações Meta'; }
-          55%  { content: 'Sincronizando campanhas'; }
-          80%  { content: 'Carregando IA'; }
-          100% { content: 'Pronto'; }
-        }
-        .splash-counter::before {
-          content: '0%';
-          font-feature-settings: 'tnum';
-          animation: splashProgressPercent ${HOLD_MS}ms steps(100, end) forwards;
-        }
-        .splash-counter-label::before {
-          content: 'Conectando ao sistema';
-          animation: splashCounterTick ${HOLD_MS}ms steps(5, end) forwards;
-        }
-      `}</style>
-      <div style={{
-        position: 'absolute', bottom: '60px', left: '50%', transform: 'translateX(-50%)',
-        display: 'flex', alignItems: 'center', gap: '12px',
-        zIndex: 3,
-        opacity: 0,
-        animation: 'splashTagIn .4s .6s ease forwards',
-      }}>
-        <span className="splash-counter-label" style={{
-          fontSize: '10.5px', color: 'rgba(255,255,255,.55)', fontWeight: 500,
-          letterSpacing: '1.2px', textTransform: 'uppercase',
-          minWidth: '210px', textAlign: 'right',
-        }} />
-        <span className="splash-counter" style={{
-          fontSize: '11px', color: '#C13584', fontWeight: 800,
-          letterSpacing: '1.4px',
-          textShadow: '0 0 12px rgba(193,53,132,.6)',
-          minWidth: '38px',
-        }} />
-      </div>
-
-      {/* ── Barra de progresso (gradient accent + brilho central) ── */}
-      <div style={{
-        position:  'absolute',
-        bottom:    0, left: 0, right: 0,
-        height:    '3px',
-        background:'rgba(193,53,132,.12)',
-        overflow:  'hidden',
-        zIndex:    3,
-      }}>
-        <div style={{
-          height:    '100%',
-          background:'linear-gradient(90deg, transparent, #C13584, #fff, #C13584, transparent)',
-          boxShadow: '0 0 14px rgba(193,53,132,.6)',
-          animation: `splashProgress ${HOLD_MS}ms linear forwards`,
-          width:     '0%',
-        }} />
       </div>
 
       {/* ── Pontos pulsantes ── */}
