@@ -228,7 +228,7 @@ export default function AIAssistant() {
                     <button
                       key={i}
                       onClick={() => send(p)}
-                      style={{ background: 'var(--c-surface)', border: '1px solid var(--c-border)', borderRadius: '10px', padding: '7px 10px', fontSize: '11px', color: 'var(--c-text-2)', cursor: 'pointer', textAlign: 'left', transition: 'all .15s', fontFamily: 'Inter, sans-serif' }}
+                      style={{ background: 'var(--c-surface)', border: '1px solid var(--c-border)', borderRadius: '10px', padding: '7px 10px', fontSize: '11px', color: 'var(--c-text-2)', cursor: 'pointer', textAlign: 'left', transition: 'all .15s', fontFamily: "'Open Sans', sans-serif" }}
                       onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--c-accent)'; e.currentTarget.style.color = 'var(--c-accent)'; }}
                       onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--c-border)'; e.currentTarget.style.color = 'var(--c-text-2)'; }}
                     >{p}</button>
@@ -322,7 +322,7 @@ export default function AIAssistant() {
                 flex: 1, padding: '8px 11px', fontSize: '12px',
                 border: '1.5px solid var(--c-border)', borderRadius: '10px',
                 background: 'var(--c-surface)', color: 'var(--c-text-1)',
-                outline: 'none', resize: 'none', fontFamily: 'Inter, sans-serif',
+                outline: 'none', resize: 'none', fontFamily: "'Open Sans', sans-serif",
                 lineHeight: 1.4, maxHeight: '80px', overflowY: 'auto',
               }}
             />
