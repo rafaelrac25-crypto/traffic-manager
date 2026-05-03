@@ -43,18 +43,34 @@ function computeCampaignMetrics(ad) {
   const cpr = conversions > 0 ? spent / conversions : 0;
   /* CTR em % com 2 casas. Estética facial: <0,8% fraco, 1-2% médio, >2% bom. */
   const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
+  /* CPC implícito — usado pra alertar contra benchmark estética facial 1,20. */
+  const cpc = clicks > 0 ? spent / clicks : 0;
+
+  /* Thresholds de alerta — orçamento Cris R$ 15-20/dia, contexto estética facial:
+     - Custo por resultado > R$ 30 = caro pro orçamento dela
+     - CTR < 1% (com >100 impressões pra evitar falso positivo) = criativo fraco
+     - Frequência > 2,5 = público saturado
+     - CPC implícito > R$ 1,20 (benchmark) = clique caro */
+  const cprAlert  = conversions > 0 && cpr > 30;
+  const ctrAlert  = impressions > 100 && ctr < 1;
+  const freqAlert = frequency > 2.5;
+  const cpcAlert  = clicks > 5 && cpc > 1.20;
 
   const metrics = [
     { label: 'Investimento',        value: fmtBRL(spent),                       icon: <WalletIcon />, iconBg: '#FDF0F8', iconColor: 'var(--c-accent)',
       hint: 'Quanto já foi gasto desta campanha.' },
     { label: 'Cliques',             value: clicks.toLocaleString('pt-BR'),      icon: <CursorIcon />, iconBg: '#EFF6FF', iconColor: '#3B82F6',
-      hint: 'Total de cliques no anúncio (qualquer área).' },
+      hint: 'Total de cliques no anúncio (qualquer área).',
+      alert: cpcAlert,
+      alertReason: cpcAlert ? `CPC implícito de ${fmtBRL(cpc)} acima do benchmark de R$ 1,20 — clique caro.` : null },
     { label: 'Cliques no link',     value: linkClicks.toLocaleString('pt-BR'),  icon: <CursorIcon />, iconBg: '#ECFEFF', iconColor: '#0891B2',
       hint: 'Só cliques no botão/link (CTA). Mais relevante pra tráfego: filtra likes e follows.' },
     { label: 'Resultados',          value: conversions.toLocaleString('pt-BR'), icon: <ResultIcon />, iconBg: '#F0FDF4', iconColor: '#22C55E',
       hint: 'Mensagens recebidas (objetivo da campanha).' },
     { label: 'Custo por resultado', value: conversions > 0 ? fmtBRL(cpr) : '—', icon: <DollarIcon />, iconBg: '#FFF7ED', iconColor: '#F97316',
-      hint: 'Quanto cada mensagem está custando.' },
+      hint: 'Quanto cada mensagem está custando.',
+      alert: cprAlert,
+      alertReason: cprAlert ? `${fmtBRL(cpr)} por mensagem está acima do limite saudável de R$ 30 pro orçamento da Cris (R$ 15-20/dia).` : null },
   ];
 
   if (impressions > 0) {
@@ -63,11 +79,12 @@ function computeCampaignMetrics(ad) {
       value: `${ctr.toFixed(2).replace('.', ',')}%`,
       icon: <CursorIcon />, iconBg: '#EEF2FF', iconColor: '#6366F1',
       hint: 'De cada 100 que viram, quantas clicaram. >1% bom, >2% ótimo.',
+      alert: ctrAlert,
+      alertReason: ctrAlert ? `CTR de ${ctr.toFixed(2).replace('.', ',')}% abaixo de 1% — criativo não está engajando.` : null,
     });
   }
 
   if (frequency > 0) {
-    const freqAlert = frequency > 2.5;
     metrics.push({
       label: 'Frequência',
       value: frequency.toFixed(2).replace('.', ','),
@@ -75,6 +92,8 @@ function computeCampaignMetrics(ad) {
       hint: freqAlert
         ? 'Cada pessoa viu mais de 2,5x — público começando a cansar. Considere novo criativo.'
         : 'Quantas vezes em média a mesma pessoa viu o anúncio.',
+      alert: freqAlert,
+      alertReason: freqAlert ? `Frequência ${frequency.toFixed(2).replace('.', ',')} acima de 2,5 — público saturado, hora de trocar criativo.` : null,
     });
   }
 
@@ -708,87 +727,96 @@ function MiniCalendar({ onViewFull, onPickCommercialDate }) {
 }
 
 /* ── Card de métrica (compacto — visão geral) ── */
-function MetricCard({ label, value, trend, trendUp, sub, icon, iconBg, iconColor, hint }) {
+function MetricCard({ label, value, trend, trendUp, sub, icon, iconBg, iconColor, hint, alert, alertReason }) {
   const { isDark } = useTheme();
 
-  /* Dark mode: layout estilo ExecMetricCard (mockup) — ícone top-right
-     absoluto, label uppercase letter-spacing 1.2px peso 500, valor 28px
-     tnum, delta como pill semântico. Light mode: layout horizontal compacto
-     original (intacto). */
+  /* Dark mode: layout horizontal — ícone à esquerda, label ao lado, valor
+     abaixo (entrelinha reduzida). Quando `alert=true`, stroke vermelho
+     vibrante + halo sutil pra chamar atenção. Light mode: layout original. */
   if (isDark) {
     return (
       <div className="ccb-card" style={{
         borderRadius: '14px',
-        padding: '14px 18px',
+        padding: '13px 16px',
         position: 'relative',
         overflow: 'hidden',
         cursor: 'default',
-        minHeight: '92px',
+        minHeight: '84px',
+        border: alert ? '1.5px solid #EF4444' : undefined,
+        boxShadow: alert
+          ? '0 0 0 3px rgba(239,68,68,.12), 0 0 18px rgba(239,68,68,.18)'
+          : undefined,
       }}>
-        {/* Ícone top-right rosa-soft */}
-        <div style={{
-          position: 'absolute', top: '14px', right: '14px',
-          width: '34px', height: '34px', borderRadius: '10px',
-          background: 'var(--c-accent-soft)',
-          color: 'var(--c-accent)',
-          border: '1px solid rgba(193,53,132,.3)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          {React.cloneElement(icon, { width: 16, height: 16 })}
+        {/* Header row: ícone à esquerda + label ao lado */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{
+            width: '34px', height: '34px', borderRadius: '10px',
+            background: alert ? 'rgba(239,68,68,.14)' : 'var(--c-accent-soft)',
+            color: alert ? '#EF4444' : 'var(--c-accent)',
+            border: alert ? '1px solid rgba(239,68,68,.4)' : '1px solid rgba(193,53,132,.3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            {React.cloneElement(icon, { width: 16, height: 16 })}
+          </div>
+          <div style={{
+            fontSize: '11px', color: 'var(--c-text-3)',
+            textTransform: 'uppercase', letterSpacing: '1.2px', fontWeight: 500,
+            display: 'flex', alignItems: 'center', gap: '5px',
+            minWidth: 0, flex: 1,
+          }}>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+            {(hint || alertReason) && (
+              <span title={alert && alertReason ? alertReason : hint} style={{
+                cursor: 'help',
+                width: '13px', height: '13px',
+                borderRadius: '50%',
+                border: `1px solid ${alert ? '#EF4444' : 'var(--c-text-4)'}`,
+                color: alert ? '#EF4444' : 'var(--c-text-4)',
+                fontSize: '9px', fontWeight: 700,
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                lineHeight: 1, opacity: alert ? 1 : 0.7,
+                flexShrink: 0,
+              }}>{alert ? '!' : '?'}</span>
+            )}
+          </div>
         </div>
 
-        {/* Label uppercase + hint */}
+        {/* Valor — entrelinha reduzida (4px), alinhado com label (paddingLeft 44px = 34 ícone + 10 gap) */}
         <div style={{
-          fontSize: '11px', color: 'var(--c-text-3)',
-          textTransform: 'uppercase', letterSpacing: '1.2px', fontWeight: 500,
-          display: 'flex', alignItems: 'center', gap: '5px',
-          paddingRight: '46px', /* não sobreposto pelo ícone */
-        }}>
-          {label}
-          {hint && (
-            <span title={hint} style={{
-              cursor: 'help',
-              width: '13px', height: '13px',
-              borderRadius: '50%',
-              border: '1px solid var(--c-text-4)',
-              color: 'var(--c-text-4)',
-              fontSize: '9px', fontWeight: 700,
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              lineHeight: 1, opacity: 0.7,
-            }}>?</span>
-          )}
-        </div>
-
-        {/* Valor 28px tnum */}
-        <div style={{
-          fontSize: '28px', fontWeight: 800,
-          color: 'var(--c-text-1)', letterSpacing: '-0.02em',
+          fontSize: '26px', fontWeight: 800,
+          color: alert ? '#EF4444' : 'var(--c-text-1)', letterSpacing: '-0.02em',
           fontFeatureSettings: "'tnum'",
-          marginTop: '8px', lineHeight: 1.05,
+          marginTop: '4px', lineHeight: 1.05,
+          paddingLeft: '44px',
         }}>
           {value}
         </div>
 
-        {/* Delta pill + sub */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '6px' }}>
-          {trend && (
-            <span style={{
-              fontSize: '11px', fontWeight: 700,
-              padding: '2px 8px', borderRadius: '999px',
-              background: trendUp ? 'rgba(52,211,153,.16)' : 'rgba(248,113,113,.16)',
-              border: `1px solid ${trendUp ? 'rgba(52,211,153,.3)' : 'rgba(248,113,113,.3)'}`,
-              color: trendUp ? '#34D399' : '#F87171',
-              display: 'inline-flex', alignItems: 'center', gap: '3px',
-            }}>
-              {trendUp ? '▲' : '▼'} {trend}
-            </span>
-          )}
-          {sub && (
-            <span style={{ fontSize: '11px', color: 'var(--c-text-3)', fontWeight: 400 }}>
-              {sub}
-            </span>
-          )}
-        </div>
+        {(trend || sub) && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap',
+            marginTop: '4px', paddingLeft: '44px',
+          }}>
+            {trend && (
+              <span style={{
+                fontSize: '11px', fontWeight: 700,
+                padding: '2px 8px', borderRadius: '999px',
+                background: trendUp ? 'rgba(52,211,153,.16)' : 'rgba(248,113,113,.16)',
+                border: `1px solid ${trendUp ? 'rgba(52,211,153,.3)' : 'rgba(248,113,113,.3)'}`,
+                color: trendUp ? '#34D399' : '#F87171',
+                display: 'inline-flex', alignItems: 'center', gap: '3px',
+              }}>
+                {trendUp ? '▲' : '▼'} {trend}
+              </span>
+            )}
+            {sub && (
+              <span style={{ fontSize: '11px', color: 'var(--c-text-3)', fontWeight: 400 }}>
+                {sub}
+              </span>
+            )}
+          </div>
+        )}
       </div>
     );
   }

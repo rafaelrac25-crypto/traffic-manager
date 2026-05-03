@@ -809,6 +809,31 @@ input[type="range"] { accent-color: var(--c-accent); }
   transform-origin: top center;
 }
 
+/* Pulse contínuo do sino quando há notificações não lidas — para quando lidas */
+@keyframes bellButtonPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(193,53,132, 0), 0 0 0 0 rgba(193,53,132, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(193,53,132, .18), 0 0 16px rgba(193,53,132, .55);
+  }
+}
+.bell-button-pulse {
+  animation: bellButtonPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes bellIconPulse {
+  0%, 100% { transform: scale(1)   rotate(0); }
+  20%      { transform: scale(1.18) rotate(-8deg); }
+  40%      { transform: scale(1.18) rotate(8deg); }
+  60%      { transform: scale(1.1)  rotate(-4deg); }
+  80%      { transform: scale(1.1)  rotate(4deg); }
+}
+.bell-pulse-icon {
+  animation: bellIconPulse 1.6s ease-in-out infinite;
+  transform-origin: top center;
+}
+
 /* Hover lift universal em cards comuns do sistema (via page-container) */
 .page-container .ccb-card,
 .page-container [data-lift="true"] {

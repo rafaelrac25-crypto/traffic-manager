@@ -58,18 +58,26 @@ const SunIcon = () => (
 
 function ThemeToggleButton() {
   const { isDark, toggle } = useTheme();
+  /* Ícone "aceso" indica o tema ativo:
+     - dark ativo  → SunIcon dourado com glow âmbar (clicando vai pro claro)
+     - light ativo → MoonIcon rosa accent com glow (clicando vai pro escuro) */
+  const activeColor = isDark ? '#F5C447' : 'var(--c-accent)';
+  const activeGlow  = isDark ? 'rgba(245,196,71,.55)' : 'rgba(193,53,132,.5)';
   return (
     <button
       onClick={toggle}
       title={isDark ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
       aria-label="Alternar tema"
       style={{
-        cursor: 'pointer', color: 'var(--c-text-2)',
+        cursor: 'pointer',
+        color: activeColor,
         background: 'var(--c-surface)',
-        border: '1.5px solid var(--c-border)',
+        border: `1.5px solid ${activeColor}`,
         width: '40px', height: '40px', borderRadius: '12px',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         flexShrink: 0, transition: 'all .18s',
+        boxShadow: `0 0 0 3px ${activeGlow.replace(/[\d.]+\)$/, '.14)')}, 0 0 12px ${activeGlow}`,
+        filter: `drop-shadow(0 0 6px ${activeGlow})`,
       }}
       onMouseEnter={e => e.currentTarget.style.background = 'var(--c-active-bg)'}
       onMouseLeave={e => e.currentTarget.style.background = 'var(--c-surface)'}
@@ -487,16 +495,18 @@ function Layout() {
               <button
                 onClick={() => setBellOpen(o => !o)}
                 title="Notificações"
+                className={unreadCount > 0 && !bellOpen ? 'bell-button-pulse' : ''}
                 style={{
-                  position: 'relative', cursor: 'pointer', color: 'var(--c-text-2)',
+                  position: 'relative', cursor: 'pointer',
+                  color: unreadCount > 0 && !bellOpen ? 'var(--c-accent)' : 'var(--c-text-2)',
                   background: bellOpen ? 'var(--c-active-bg)' : 'var(--c-surface)',
-                  border: '1.5px solid var(--c-border)',
+                  border: `1.5px solid ${unreadCount > 0 && !bellOpen ? 'var(--c-accent)' : 'var(--c-border)'}`,
                   width: '40px', height: '40px', borderRadius: '12px',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   transition: 'all .15s',
                 }}
               >
-                <span className={unreadCount > 0 && !bellOpen ? 'bell-shake' : ''} style={{ display: 'flex' }}>
+                <span className={unreadCount > 0 && !bellOpen ? 'bell-pulse-icon' : ''} style={{ display: 'flex' }}>
                   <BellIcon />
                 </span>
                 {unreadCount > 0 && (
