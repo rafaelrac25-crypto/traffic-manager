@@ -1,5 +1,146 @@
 # CRITICAL_STATE — traffic-manager
 
+## Sessão 2026-05-03 — Onda 7 (refinamentos completos pós-redesign)
+
+### Commits da sessão (ordem)
+- `d72b556` splash: malha tech viva, remove counter de loading
+- `cbe7549` Dashboard MetricCard horizontal + alertas + tema button aceso + sino pulsa
+- `3e4c17b` light replica estrutura dark + bg-tech sem ondas + searchbar 2x
+- `28b6b12` topbar 96→116px (base "Resumo Meta" alinha com BEAUTY)
+- `5616eec` feature: foto perfil IG Business no avatar da sidebar
+- `1956d68` fix display name (não usa descrição IG, mantém "Cris Costa")
+- `4bca334` revert splash: volta ao mock — 2 orbit-dots (rosa/azul) que se cruzam
+- `b345aa7` topbar mais larga (840→1100), altura 116→132, gap greeting 1→5px
+- `a6ce9b4` theme button: sol amarelo (light) / lua apagada (dark)
+- `8c62d30` fonte global Inter → Open Sans (300-800 + italics)
+- `43fa0af` sidebar light = dark estrutura (ilha flutuante + criar igual)
+- `da11f65` searchbar full width (1500px) — não era o pedido
+- `4093194` searchbar metade centralizada (750px)
+- `cae9bd3` MetricCard proporções da print antiga (ícone esq + setinha)
+- `2c94844` sidebar destaques unificados + bg-tech mais sutil (light .55 / dark .60)
+- `14aba8a` chatbot animado: flutuando + olhos piscando + balão "Oi, como posso te ajudar?"
+- `de62dbb` chatbot flutuação mais expressiva
+- `daf3829` searchbar 2x (não funcionou — width ignorado por grid auto)
+- `2d05a9d` linha separadora topbar bottom: 0 → 14px
+- `eae87fb` chatbot amplitude reduzida (12→6px, ±3°→±2°)
+- `738edd7` **FIX searchbar largura real** (era ignorado por grid `auto`)
+- `8f79c46` searchbar 500px com clamp(240, calc(100vw-600px), 500) — responsivo
+- `bd15971` saudação fixa "Olá, Cris" (era Bom dia/Boa tarde/Boa noite)
+
+### Splash — sem loading, com malha tech
+- Removidos: counter 0→100% + labels ("Conectando…/Pronto") + barrinha 3px na base
+- Malha de 2 camadas animadas: branca 60px (fluxo diagonal 6s) + rosa 120px (contra-fluxo 14s) com pulse
+- Scan line horizontal varrendo 4.5s + 5 nodes pulsando em delays escalonados
+- Mantido: blobs animados, deco-rings, logo branca, 3 dots base
+
+### Dashboard MetricCard com alertas
+- Layout: ícone esquerda + label ao lado + valor abaixo (entrelinha 4px). minHeight 84px.
+- Prop nova `alert` → stroke vermelho `#EF4444` 1.5px + halo 3px + glow + valor vermelho
+- `alertReason` vai pro tooltip do "!" no header
+- Thresholds plugados em `computeCampaignMetrics`:
+  - Custo/resultado > R$ 30 (orçamento Cris R$ 15-20/dia)
+  - CTR < 1% com >100 impressões
+  - Frequência > 2,5
+  - CPC implícito > R$ 1,20 com >5 cliques
+
+### Sino de notificações pulsa rosa
+- Botão pulsa box-shadow accent (1.6s loop) + ícone com scale+rotate sutil
+- Cor + border do botão viram accent quando unread > 0
+- Para automaticamente quando bellOpen=true OU unreadCount=0 (lê = marca read)
+
+### Botão tema (refinado)
+- **Estado atual** (após pedido do Rafa): ícone representa o estado ATUAL, não pra onde vai
+- Light ativo → SunIcon **amarelo `#F5C447`** aceso (só ícone, sem glow/halo/border colorido)
+- Dark ativo → MoonIcon **cinza neutro** `var(--c-text-3)` (apagado)
+- Border permanece `var(--c-border)` (sem cor temática). Visual sóbrio.
+
+### Sidebar (paridade light = dark)
+- **Estrutura unificada:** ilha flutuante (top/left/bottom 16px, borderRadius 18, border + box-shadow) em ambos os temas. Box-shadow só muda a cor (preto dark, rosa sutil light).
+- **Destaques unificados:** "Dashboard" e "Criar anúncio" agora idênticos (ambos com padding 7×14, height 36px, border-radius 10, hover lift + sombra rosa). Removida toda lógica `darkCreate` (glow forte + glass especial).
+- **Gap** entre Dashboard e Criar: 14px → **6px**
+- **Badge "NOVO"** removido (só aparecia no light antes; pra paridade some)
+- Logo continua trocando: `marca-branca.png` no dark, `marca-colorida.png` no light
+
+### Background tech (linhas e nodes)
+- Linhas mais transparentes em ambos:
+  - Light: stroke 0.13 → **0.06**, opacity geral .85 → **.55**
+  - Dark:  stroke 0.22 → **0.10**, opacity geral .95 → **.60**
+- Mask radial mais agressivo: 0.85 → 0.7 (fade mais forte nas bordas)
+- Nodes radial gradient também mais discretos (light)
+
+### Splash (final state — replicado do mock)
+- Voltou ao mock original `.design/mockups/splash.html`
+- 3 blobs animados (rosa/vinho/azul) + 2 deco-rings (branco 720 contra-rotação 60s + rosa 540 36s)
+- **2 orbit-dots:** rosa accent (raio 270px, 12s) + azul `#60A5FA` (raio 360px, 22s reverso) — se cruzam
+- Logo branca + divider gradient + tagline "Gestor de Tráfego"
+- 3 dots rosa pulsantes na base
+- **SEM:** counter %, malha viva, scan line, nodes pulsantes, barra de progresso
+- Duração: 4s (HOLD_MS=3400 + EXIT_MS=600)
+- Anti-flash rosa pré-React: body bg `#06080B` + script inline aplicando `data-theme` antes do bundle
+
+### Fonte global
+- Inter → **Open Sans** (300-800 + italics 400/600/700)
+- Aplicado em `index.css` (@import + body) e `AIAssistant.jsx` (inline)
+
+### MetricCard (Dashboard) — proporções da print antiga
+- **Layout final:** ícone 40×40 à esquerda, alignSelf center; coluna direita com label uppercase em cima + valor 20px com setinha delta embaixo (sem pill, só ▲/▼ colorido)
+- minHeight 72px, padding 14×18, gap 14
+- **Alertas:** prop `alert` mantida — stroke vermelho `#EF4444` 1.5px + halo + glow + valor vermelho + tooltip via "!"
+- **Thresholds em `computeCampaignMetrics`:**
+  - Custo/resultado > R$ 30
+  - CTR < 1% (com >100 impressões)
+  - Frequência > 2,5
+  - CPC implícito > R$ 1,20 (com >5 cliques)
+
+### 🤖 Chatbot animado (AIAssistant.jsx)
+- **Botão flutua suave:** translateY 0 → -6px, rotate ±2°, loop 2.6s
+- **Glow pulsando** em paralelo (16px → 30px com extra rosa)
+- **Olhos piscam:** scaleY 1 → .08, loop 4.5s, leve dessincronia entre olhos (transform-origin no centro de cada `<circle>`, transform-box: fill-box)
+- **Balão de fala** "Oi, como posso te ajudar?" à esquerda do botão (right: 92px) com setinha apontando, fade-in .4s. Some quando chat abre. pointer-events: none.
+- prefers-reduced-motion respeitado em todas as animações
+
+### Sino pulsa rosa (ainda ativo)
+- Botão pulsa box-shadow accent (1.6s loop) + ícone scale+rotate sutil
+- Cor + border do botão viram accent quando unread > 0
+- Para automaticamente quando bellOpen=true OU unreadCount=0 (lê = marca read)
+
+### Light replica estrutura do dark
+- `[data-theme="light"] .app-wrapper { background: transparent }` (deixa bg-tech aparecer)
+- Topbar grid 116px aplicada nos dois temas (era só dark)
+- bg-tech: removidas 2 curvas Bezier de "onda" (paths 5 e 6 do SVG)
+- Opacidade linhas: dark 0.16→0.22, light 0.07→0.13. Opacity geral: dark .9→.95, light .7→.85
+- Linha degradê topbar: rgba(0,0,0,.14) no light, rgba(255,255,255,.18) no dark
+- App.jsx topbar unificada (removidas todas as bifurcações `isDark ? ... : ...`)
+
+### SearchBar 2x mais larga
+- maxWidth 420px → 840px (também no dropdown de matches)
+- Placeholder com opacity .45 via `.topbar-search-input::placeholder`
+
+### Topbar — altura, saudação, separador
+- Altura: 96 → 116 → **132px** (subiu pra alinhar e folgar o conjunto)
+- Saudação fixa: **"Olá, Cris"** (removido `greeting()` Bom dia/tarde/noite)
+- Gap entre `Olá, Cris` e subtítulo: 1px → **5px** (leve respiro)
+- Linha separadora: `bottom: 0` → **`bottom: 14px`** (sobe pra dentro)
+
+### SearchBar — gotcha estrutural importante
+- **Causa raiz descoberta no commit `738edd7`:** a coluna central do `.topbar-grid` é `auto` (encolhe ao conteúdo), então `maxWidth` no `<div>` interno era IGNORADO. Por isso 5 pedidos do Rafa pra "aumentar" não refletiam visualmente.
+- **Fix definitivo:** trocar `width: 100%` + `maxWidth: Xpx` por `width: clamp(240px, calc(100vw - 600px), 500px)`
+- **Estado final:** 500px em desktop, encolhe proporcionalmente em telas menores, mín 240px. Nunca sobrepõe greeting/ícones laterais.
+- **Lição:** em grid com coluna `auto`, `maxWidth` no filho não funciona — precisa `width` fixa real ou mudar grid pra `1fr Npx 1fr` / `minmax()`.
+
+### 🆕 Avatar da sidebar agora puxa foto do IG Business
+- **Backend novo endpoint:** `GET /api/platforms/meta/instagram-profile` (`backend/src/routes/platforms.js`)
+  - Decripta access_token, usa `ig_business_id` já persistido em `platform_credentials`
+  - Chama Graph: `GET /{ig_business_id}?fields=id,username,name,profile_picture_url`
+  - Cache em memória 30 min (CDN do FB rotaciona em horas)
+- **Frontend (`AppStateContext.jsx`):** após hidratar `/api/platforms`, se houver `ig_business_id` busca o endpoint novo e popula:
+  - `metaAccount.avatarUrl` → `<img>` da Sidebar (fallback CC)
+  - `metaAccount.username` → handle (`criscosta.beauty`)
+  - `name` NÃO é sobrescrito (descrição IG é "SOBRANCELHAS / MICROPIGMENTAÇÃO…" — não serve como display). Mantém "Cris Costa"
+- **Validado em prod:** endpoint retorna profile_picture_url da CDN do FB. ig_business_id da Cris: `17841456891955614`. Username: `criscosta.beauty`. Link público: https://www.instagram.com/criscosta.beauty/
+
+---
+
 ## Sessão 2026-05-02/03 — REDESIGN COMPLETO em 4 ondas + light glass
 
 ### Resumo
