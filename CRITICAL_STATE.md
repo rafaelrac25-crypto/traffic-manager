@@ -1,5 +1,18 @@
 # CRITICAL_STATE — traffic-manager
 
+## Sessão 2026-05-03 — Feature: recomendação de investimento por bairro × serviço
+
+### Checkpoint (implementação concluída, build passou)
+- **Feature:** recomendação bairro × serviço implementada em 6 frentes
+- **Arquivos criados:** `frontend/src/data/serviceInsights.js` (algoritmo puro)
+- **Arquivos modificados:**
+  - `frontend/src/pages/CreateAd.jsx` — select de serviço no Step1, banner evoluído no Step2
+  - `frontend/src/pages/Campaigns.jsx` — painel DistrictInsightPanel no AdPreviewModal
+  - `frontend/src/contexts/AppStateContext.jsx` — watcher de insights por serviço (6h, throttle 24h)
+  - `backend/src/routes/campaigns.js` — endpoint GET /analytics/insights-by-service
+- **Build:** passou (869kB — avisos pré-existentes de chunk size, sem erros)
+- **Pendência:** Rafa fará commit/push após validar
+
 ## Sessão 2026-05-03 — Onda 7 (refinamentos completos pós-redesign)
 
 ### Commits da sessão (ordem)

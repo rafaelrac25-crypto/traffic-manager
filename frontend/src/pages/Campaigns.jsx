@@ -10,6 +10,10 @@ import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../contexts/AppStateContext';
 import { updateAdTargeting, searchInterests } from '../services/adsApi';
 import Icon from '../components/Icon';
+import api from '../services/api';
+import { getService } from '../data/services';
+import { topPerformers } from '../data/districtInsights';
+import { hasEnoughData as serviceInsightsEnoughData } from '../data/serviceInsights';
 
 
 /* ── Configurações visuais ── */
@@ -174,6 +178,122 @@ function genderPt(g) {
   if (g === 1 || g === '1' || g === 'men'   || g === 'male')   return 'Homens';
   if (g === 2 || g === '2' || g === 'women' || g === 'female') return 'Mulheres';
   return String(g);
+}
+
+/**
+ * Painel compacto "Top 3 bairros por serviço" exibido dentro do AdPreviewModal.
+ * Silencioso quando não há dados suficientes.
+ */
+function DistrictInsightPanel({ ad, onNavigate }) {
+  const navigate = useNavigate();
+  const [insights, setInsights] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const serviceId = ad?.service;
+  const svc = getService(serviceId);
+
+  useEffect(() => {
+    if (!serviceId) { setLoading(false); return; }
+    let cancelled = false;
+    api.get(`/api/campaigns/analytics/insights-by-service?service=${encodeURIComponent(serviceId)}`)
+      .then(({ data }) => { if (!cancelled) { setInsights(data); setLoading(false); } })
+      .catch(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [serviceId]);
+
+  /* Silêncio enquanto carrega ou quando dados insuficientes */
+  if (loading || !insights || !serviceInsightsEnoughData(insights)) return null;
+
+  const top = topPerformers(insights.districts, 3, 3);
+  if (top.length === 0) return null;
+
+  const totalDelta = top.reduce((s, t) => {
+    const d = insights.avgCPR ? (insights.avgCPR - t.cpr) / insights.avgCPR : 0;
+    return s + Math.max(0, d);
+  }, 0);
+
+  function handleApply() {
+    if (onNavigate) onNavigate();
+    navigate('/criar-anuncio', {
+      state: {
+        prefillLocations: top.map(t => ({ name: t.district })),
+        prefillService: serviceId,
+      },
+    });
+  }
+
+  return (
+    <div style={{
+      marginTop: '16px',
+      background: 'var(--c-surface)',
+      border: '1px solid var(--c-border)',
+      borderRadius: '12px',
+      overflow: 'hidden',
+    }}>
+      {/* Header */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '8px',
+        padding: '10px 14px',
+        background: 'rgba(193,53,132,.05)',
+        borderBottom: '1px solid var(--c-border)',
+      }}>
+        <Icon name="target" size={14} color="accent" />
+        <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--c-text-2)', textTransform: 'uppercase', letterSpacing: '.5px' }}>
+          Top bairros · {svc?.label || serviceId}
+        </span>
+      </div>
+
+      {/* Lista dos top 3 */}
+      <div style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '7px' }}>
+        {top.map((t, i) => {
+          const delta = insights.avgCPR ? (insights.avgCPR - t.cpr) / insights.avgCPR : 0;
+          const pct = Math.round(delta * 100);
+          const barW = totalDelta > 0 ? Math.round((Math.max(0, delta) / totalDelta) * 100) : Math.round(100 / top.length);
+          return (
+            <div key={t.district} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{
+                fontSize: '11px', fontWeight: 800, color: 'var(--c-accent)',
+                width: '16px', flexShrink: 0, textAlign: 'center',
+              }}>{i + 1}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-text-1)' }}>{t.district}</span>
+                  {pct > 0 && (
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#22C55E' }}>
+                      <Icon name="chart-up" size={11} color="success" /> {pct}% abaixo
+                    </span>
+                  )}
+                </div>
+                <div style={{ height: '4px', background: 'var(--c-border)', borderRadius: '4px', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${barW}%`, background: 'linear-gradient(90deg, var(--c-accent), var(--c-accent-dk))', borderRadius: '4px' }} />
+                </div>
+              </div>
+              <span style={{ fontSize: '10.5px', color: 'var(--c-text-4)', fontWeight: 500, flexShrink: 0 }}>
+                CPR R${t.cpr?.toFixed(2) ?? '—'}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Botão aplicar */}
+      <div style={{ padding: '8px 14px 12px' }}>
+        <button
+          onClick={handleApply}
+          style={{
+            width: '100%', padding: '9px 14px',
+            background: 'linear-gradient(135deg, var(--c-accent), var(--c-accent-dk))',
+            color: '#fff', border: 'none', borderRadius: '10px',
+            fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+          }}
+        >
+          <Icon name="target" size={12} />
+          Aplicar sugestão no próximo anúncio
+        </button>
+      </div>
+    </div>
+  );
 }
 
 /* ── Modal de detalhes completos do anúncio ── */
@@ -433,6 +553,9 @@ function AdPreviewModal({ ad, onClose, onDuplicate, onEdit }) {
               </div>
             </>
           )}
+
+          {/* ── Painel Top 3 bairros por serviço ── */}
+          {ad.service && <DistrictInsightPanel ad={ad} onNavigate={onClose} />}
 
           {/* Ações */}
           <div style={{ display: 'flex', gap: '8px', marginTop: '18px', borderTop: '1px solid var(--c-border)', paddingTop: '14px' }}>

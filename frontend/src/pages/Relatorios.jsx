@@ -10,23 +10,23 @@ const KINDS = {
   campaign: {
     label: 'Sua campanha',
     description: 'Como sua campanha está performando — gasto, cliques, mensagens.',
-    emoji: '📊',
+    iconName: 'chart-bar',
     color: 'var(--c-accent)',
     bg: 'var(--c-accent-soft)',
   },
   system: {
     label: 'Sistema',
     description: 'Se tudo está funcionando — Meta conectado, banco ok, robôs rodando.',
-    emoji: '🩺',
-    color: '#10B981',
-    bg: '#ECFDF5',
+    iconName: 'shield',
+    color: 'var(--c-success)',
+    bg: 'rgba(46,187,122,.10)',
   },
   reminder: {
     label: 'Lembretes',
     description: 'Avisos pontuais, datas marcadas e itens pra você revisar.',
-    emoji: '⏰',
-    color: '#F59E0B',
-    bg: '#FFFBEB',
+    iconName: 'clock',
+    color: 'var(--c-warning)',
+    bg: 'rgba(245,166,35,.10)',
   },
 };
 
@@ -68,7 +68,7 @@ function ReportCard({ report, expanded, onToggle, onMarkRead, onDelete }) {
     >
       {/* Cabeçalho */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '8px' }}>
-        <span style={{ fontSize: '22px', lineHeight: 1, flexShrink: 0 }}>{kind.emoji}</span>
+        <span style={{ lineHeight: 1, flexShrink: 0, color: kind.color }}><Icon name={kind.iconName} size={22} /></span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <h3 style={{
@@ -387,9 +387,9 @@ export default function Relatorios() {
       }}>
         {[
           { id: 'all',      label: 'Todos',         emoji: '📋', color: 'var(--c-text-2)' },
-          { id: 'campaign', label: KINDS.campaign.label, emoji: KINDS.campaign.emoji, color: KINDS.campaign.color },
-          { id: 'system',   label: KINDS.system.label,   emoji: KINDS.system.emoji,   color: KINDS.system.color },
-          { id: 'reminder', label: KINDS.reminder.label, emoji: KINDS.reminder.emoji, color: KINDS.reminder.color },
+          { id: 'campaign', label: KINDS.campaign.label, iconName: KINDS.campaign.iconName, color: KINDS.campaign.color },
+          { id: 'system',   label: KINDS.system.label,   iconName: KINDS.system.iconName,   color: KINDS.system.color },
+          { id: 'reminder', label: KINDS.reminder.label, iconName: KINDS.reminder.iconName, color: KINDS.reminder.color },
         ].map(tab => {
           const active = filter === tab.id;
           const count = counts[tab.id] ?? 0;
@@ -424,7 +424,7 @@ export default function Relatorios() {
                 boxShadow: activeShadow,
               }}
             >
-              <span>{tab.emoji}</span>
+              <Icon name={tab.iconName} size={14} color={tab.color} />
               <span>{tab.label}</span>
               <span style={{
                 fontSize: '11px', fontWeight: 700,

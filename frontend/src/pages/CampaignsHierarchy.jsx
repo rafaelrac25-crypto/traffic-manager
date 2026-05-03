@@ -70,7 +70,7 @@ function MetaLinkButton({ campaignId, adsetId, adId, label = 'Abrir no Meta', si
 }
 function statusLabel(s) {
   const map = {
-    ACTIVE: { txt: 'Rodando', color: 'var(--c-success)' },
+    ACTIVE: { txt: 'Ativo', color: 'var(--c-success)' },
     PAUSED: { txt: 'Pausado', color: 'var(--c-warning)' },
     PENDING_REVIEW: { txt: 'Em análise', color: 'var(--c-warning)' },
     DISAPPROVED: { txt: 'Reprovado', color: 'var(--c-attention)' },
@@ -560,10 +560,8 @@ function PlayPauseButton({ status, onToggle, disabled, size = 'sm' }) {
         width: W, height: W,
         borderRadius: '50%',
         border: 'none',
-        background: isActive
-          ? 'linear-gradient(135deg, #34D399, #22C55E)'
-          : 'var(--c-surface)',
-        color: isActive ? '#fff' : 'var(--c-text-3)',
+        background: 'var(--c-surface)',
+        color: isActive ? 'var(--c-warning)' : 'var(--c-success)',
         cursor: disabled ? 'not-allowed' : 'pointer',
         fontSize: FS,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -571,8 +569,8 @@ function PlayPauseButton({ status, onToggle, disabled, size = 'sm' }) {
         opacity: disabled ? 0.6 : 1,
         transition: 'transform .12s, box-shadow .12s, background .15s',
         boxShadow: isActive
-          ? '0 4px 12px rgba(52,211,153,.45), inset 0 1px 0 rgba(255,255,255,.18)'
-          : 'inset 0 0 0 1px var(--c-border)',
+          ? 'inset 0 0 0 1.5px var(--c-warning)'
+          : 'inset 0 0 0 1.5px var(--c-success)',
       }}
       onMouseEnter={e => { if (!disabled) e.currentTarget.style.transform = 'scale(1.08)'; }}
       onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
@@ -695,14 +693,14 @@ function AdSetCard({ adset, campaignLocalId, onAction, onSelect, selected, onSta
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '6px', flexWrap: 'nowrap', alignItems: 'center', overflowX: 'auto' }}>
         <button
           onClick={e => { e.stopPropagation(); onAction('duplicate', adset); }}
           style={{
             background: 'var(--c-surface)', border: '1px solid var(--c-border)',
             color: 'var(--c-text-2)', borderRadius: '8px',
             padding: '6px 10px', fontSize: '11.5px', fontWeight: 600,
-            cursor: 'pointer',
+            cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap',
           }}
           title="Cria um conjunto novo idêntico — bom pra testar outro público"
         >
@@ -714,7 +712,7 @@ function AdSetCard({ adset, campaignLocalId, onAction, onSelect, selected, onSta
             background: 'var(--c-surface)', border: '1px solid var(--c-border)',
             color: 'var(--c-text-2)', borderRadius: '8px',
             padding: '6px 10px', fontSize: '11.5px', fontWeight: 600,
-            cursor: 'pointer',
+            cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap',
           }}
           title="Mude o orçamento até 20% sem resetar aprendizado"
         >
@@ -726,7 +724,7 @@ function AdSetCard({ adset, campaignLocalId, onAction, onSelect, selected, onSta
             background: 'rgba(193,53,132,.10)', border: '1.5px solid rgba(193,53,132,.65)',
             color: 'var(--c-accent)', borderRadius: '8px',
             padding: '6px 10px', fontSize: '11.5px', fontWeight: 700,
-            cursor: 'pointer',
+            cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap',
             textShadow: '0 0 12px rgba(193,53,132,.4)',
             boxShadow: '0 0 14px rgba(193,53,132,.16), inset 0 0 10px rgba(193,53,132,.06)',
           }}
@@ -741,7 +739,7 @@ function AdSetCard({ adset, campaignLocalId, onAction, onSelect, selected, onSta
             background: 'rgba(248,113,113,.08)', border: '1px solid rgba(248,113,113,.4)',
             color: '#F87171', borderRadius: '8px',
             padding: '6px 10px', fontSize: '11.5px', fontWeight: 600,
-            cursor: 'pointer',
+            cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap',
           }}
           title="Excluir este conjunto e seus anúncios"
         >
@@ -1517,7 +1515,7 @@ export default function CampaignsHierarchy() {
                         Objetivo: {hierarchy.campaign?.objective || '—'} · {fmtBRL(hierarchy.campaign?.daily_budget)} /dia
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '8px', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    <div style={{ display: 'flex', gap: '8px', flexShrink: 0, flexWrap: 'nowrap', alignItems: 'center', justifyContent: 'flex-end', overflowX: 'auto' }}>
                       <MetaLinkButton
                         campaignId={hierarchy.campaign?.platform_id}
                         size="lg"
@@ -1533,7 +1531,7 @@ export default function CampaignsHierarchy() {
                             background: 'var(--c-surface)', border: '1px solid var(--c-border)',
                             color: 'var(--c-text-2)', borderRadius: '10px',
                             padding: '8px 14px', fontSize: '12.5px', fontWeight: 600,
-                            cursor: 'pointer',
+                            cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap',
                           }}
                         >
                           <Icon name="money" size={12} /> Editar orçamento
@@ -1546,7 +1544,7 @@ export default function CampaignsHierarchy() {
                           border: 'none',
                           color: '#fff', borderRadius: '10px',
                           padding: '8px 14px', fontSize: '12.5px', fontWeight: 700,
-                          cursor: 'pointer',
+                          cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap',
                           boxShadow: '0 6px 18px rgba(193,53,132,.4), inset 0 1px 0 rgba(255,255,255,.18)',
                         }}
                         title="Cria teste A/B oficial Meta com divisão automática de público"

@@ -3,6 +3,9 @@ import { getRelevantCommercialDatesInWindow } from '../data/commercialDates';
 import { playBell } from '../utils/sounds';
 import * as adsApi from '../services/adsApi';
 import { fetchDistrictInsights, strongInsightAlert } from '../data/districtInsights';
+import { findHighPerformers, findLowPerformers, buildInsightNotification, markInsightNotified } from '../data/serviceInsights';
+import { getService, SERVICES } from '../data/services';
+import api from '../services/api';
 
 /**
  * AppStateContext — estado global do painel.
@@ -462,6 +465,72 @@ export function AppStateProvider({ children }) {
     checkInsights();
     const id = setInterval(checkInsights, 4 * 60 * 60 * 1000);
     return () => { cancelled = true; clearInterval(id); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* ─── Watcher de insights por serviço × bairro.
+     Roda a cada 6h. Para cada serviço que aparece em algum ad publicado,
+     busca insights filtrados e dispara notificação se encontrar high ou low
+     performer significativo. Throttle: 1 notificação por (service, district)
+     por 24h via localStorage (chave ccb_insight_dismissed_*). ─── */
+  useEffect(() => {
+    let cancelled = false;
+    const WATCHER_KEY = 'ccb_svc_insight_checked_at';
+    const COOLDOWN = 6 * 60 * 60 * 1000; /* roda no máx a cada 6h */
+
+    async function checkServiceInsights() {
+      if (cancelled) return;
+      try {
+        const lastAt = Number(localStorage.getItem(WATCHER_KEY) || 0);
+        if (Date.now() - lastAt < COOLDOWN) return;
+        localStorage.setItem(WATCHER_KEY, String(Date.now()));
+
+        /* Coleta serviços únicos dos ads publicados (ignorar drafts/sem serviço) */
+        const publishedAds = (JSON.parse(localStorage.getItem('ccb_ads') || '[]'))
+          .filter(a => a.service && a.status !== 'draft');
+        const uniqueServices = [...new Set(publishedAds.map(a => a.service))];
+        if (uniqueServices.length === 0) return;
+
+        for (const serviceId of uniqueServices) {
+          if (cancelled) return;
+          const svc = getService(serviceId);
+          if (!svc) continue;
+          try {
+            const { data } = await api.get(`/api/campaigns/analytics/insights-by-service?service=${encodeURIComponent(serviceId)}`);
+            if (!data || data.enough_data === false) continue;
+
+            /* High performers */
+            const highs = findHighPerformers(data, serviceId);
+            for (const hp of highs.slice(0, 1)) { /* máx 1 high por serviço por ciclo */
+              const notif = buildInsightNotification(serviceId, svc.label, hp, 'high');
+              if (notif && !cancelled) {
+                const { _throttleKey, ...notifClean } = notif;
+                addNotification({ ...notifClean, silent: false });
+                markInsightNotified(_throttleKey);
+                break;
+              }
+            }
+
+            /* Low performers */
+            const lows = findLowPerformers(data, serviceId);
+            for (const lp of lows.slice(0, 1)) { /* máx 1 low por serviço por ciclo */
+              const notif = buildInsightNotification(serviceId, svc.label, lp, 'low');
+              if (notif && !cancelled) {
+                const { _throttleKey, ...notifClean } = notif;
+                addNotification({ ...notifClean, silent: true }); /* low → sem sino (não acionável imediato) */
+                markInsightNotified(_throttleKey);
+                break;
+              }
+            }
+          } catch { /* erro de rede — ignora silenciosamente */ }
+        }
+      } catch { /* ignora erros globais */ }
+    }
+
+    /* Delay de 10s no mount pra não concorrer com hydratação inicial */
+    const initTimer = setTimeout(checkServiceInsights, 10000);
+    const id = setInterval(checkServiceInsights, 6 * 60 * 60 * 1000);
+    return () => { cancelled = true; clearTimeout(initTimer); clearInterval(id); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

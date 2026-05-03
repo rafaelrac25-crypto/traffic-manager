@@ -1083,6 +1083,162 @@ router.get('/analytics/districts', async (req, res) => {
   }
 });
 
+/* Insights agregados por BAIRRO filtrados por SERVIÇO.
+   Query param: ?service=<id> (ex: micro-sobrancelha)
+   Estratégia: filtra campanhas cujo payload.service === id e agrega métricas
+   por bairro entre elas. Se não houver dado suficiente (< 3 conversões por
+   bairro ou < 5 campanhas com esse serviço), retorna enough_data: false.
+
+   NOTA: este endpoint é um stub inteligente na fase atual.
+   O campo `service` começa a ser gravado no payload a partir desta versão.
+   Campanhas antigas não têm — então o fallback devolve dados globais de
+   districts quando o filtro por serviço não retornar nada. Assim a UI
+   nunca quebra. */
+router.get('/analytics/insights-by-service', async (req, res) => {
+  try {
+    const service = (req.query.service || '').trim();
+    if (!service) {
+      return res.status(400).json({ error: 'Parâmetro service obrigatório', enough_data: false });
+    }
+
+    const sinceIso = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    /* PARTE 1: tenta dado real de insights_by_district filtrado por campanha
+       que tenha payload.service === service. */
+    let realRows = [];
+    try {
+      /* Busca IDs de campanhas com o serviço (campo service no payload JSON).
+         Funciona tanto em SQLite (json_extract) quanto em PostgreSQL (->>) */
+      const campQuery = await db.query(
+        `SELECT id FROM campaigns
+          WHERE (payload->>'service' = ? OR json_extract(payload, '$.service') = ?)`,
+        [service, service]
+      );
+      const campIds = (campQuery.rows || []).map(r => r.id);
+
+      if (campIds.length > 0) {
+        const placeholders = campIds.map(() => '?').join(',');
+        const q = await db.query(
+          `SELECT district,
+                  SUM(spend) AS spend,
+                  SUM(clicks) AS clicks,
+                  SUM(impressions) AS impressions,
+                  SUM(conversions) AS conversions,
+                  COUNT(DISTINCT ad_set_id) AS ad_count
+             FROM insights_by_district
+            WHERE campaign_id IN (${placeholders})
+              AND date_start >= ?
+            GROUP BY district
+           HAVING SUM(spend) > 0 OR SUM(conversions) > 0`,
+          [...campIds, sinceIso]
+        );
+        realRows = q.rows || [];
+      }
+    } catch (e) {
+      /* insights_by_district pode não ter coluna campaign_id em ambientes antigos */
+      console.warn('[insights-by-service] query real falhou:', e.message);
+    }
+
+    /* PARTE 2: fallback — pega todos os districts (sem filtro de serviço) se
+       dados específicos do serviço forem insuficientes. A flag enough_data
+       indica ao frontend se pode confiar na recomendação. */
+    let usedFallback = false;
+    if (realRows.length === 0) {
+      try {
+        const campQuery = await db.query(
+          `SELECT id, spent, clicks, impressions, conversions, payload
+             FROM campaigns
+            WHERE platform = 'meta' AND platform_campaign_id IS NOT NULL`, []
+        );
+        /* Tenta filtrar por serviço; se não encontrar nenhuma, usa todas */
+        let filtered = (campQuery.rows || []).filter(c => {
+          try {
+            const p = c.payload ? JSON.parse(c.payload) : {};
+            return p.service === service;
+          } catch { return false; }
+        });
+        if (filtered.length === 0) {
+          filtered = campQuery.rows || [];
+          usedFallback = true;
+        }
+        const byDistrict = {};
+        for (const c of filtered) {
+          let payload = {};
+          try { payload = c.payload ? JSON.parse(c.payload) : {}; } catch {}
+          const locations = payload?.locations || [];
+          const districtNames = (Array.isArray(locations) ? locations : [])
+            .map(l => l?.name).filter(Boolean);
+          if (districtNames.length === 0) continue;
+          const share = 1 / districtNames.length;
+          districtNames.forEach(name => {
+            if (!byDistrict[name]) byDistrict[name] = { district: name, spend: 0, clicks: 0, impressions: 0, conversions: 0, adCount: 0 };
+            byDistrict[name].spend       += Number(c.spent || 0) * share;
+            byDistrict[name].clicks      += Number(c.clicks || 0) * share;
+            byDistrict[name].impressions += Number(c.impressions || 0) * share;
+            byDistrict[name].conversions += Number(c.conversions || 0) * share;
+            byDistrict[name].adCount++;
+          });
+        }
+        realRows = Object.values(byDistrict).map(b => ({
+          district: b.district,
+          spend: b.spend, clicks: b.clicks, impressions: b.impressions,
+          conversions: b.conversions, ad_count: b.adCount,
+        }));
+      } catch (e) {
+        console.warn('[insights-by-service] fallback falhou:', e.message);
+      }
+    }
+
+    if (realRows.length === 0) {
+      return res.json({ districts: [], avgCPR: null, totalConv: 0, totalSpend: 0, dataQuality: 'insufficient', enough_data: false, service, _diagnostics: { source: 'none', reason: 'sem dados' } });
+    }
+
+    const result = realRows.map(r => {
+      const spend = Number(r.spend || 0);
+      const conversions = Number(r.conversions || 0);
+      const clicks = Number(r.clicks || 0);
+      return {
+        district: r.district,
+        spend: Number(spend.toFixed(2)),
+        clicks: Math.round(clicks),
+        conversions: Math.round(conversions),
+        cpr: conversions > 0 ? Number((spend / conversions).toFixed(2)) : null,
+        cpc: clicks > 0 ? Number((spend / clicks).toFixed(2)) : null,
+      };
+    }).sort((a, b) => {
+      if (a.cpr == null && b.cpr == null) return 0;
+      if (a.cpr == null) return 1;
+      if (b.cpr == null) return -1;
+      return a.cpr - b.cpr;
+    });
+
+    const totalConv = result.reduce((s, r) => s + r.conversions, 0);
+    const totalSpend = result.reduce((s, r) => s + r.spend, 0);
+    const avgCPR = totalConv > 0 ? Number((totalSpend / totalConv).toFixed(2)) : null;
+    /* enough_data: true somente quando não houve fallback E há conversões suficientes */
+    const enoughData = !usedFallback && totalConv >= 10 && result.length >= 2;
+
+    return res.json({
+      districts: result,
+      avgCPR,
+      totalConv,
+      totalSpend: Number(totalSpend.toFixed(2)),
+      dataQuality: enoughData ? 'usable' : 'insufficient',
+      enough_data: enoughData,
+      service,
+      _diagnostics: {
+        source: usedFallback ? 'fallback_all_campaigns' : 'service_filtered',
+        window_days: 30,
+        since: sinceIso,
+        rows_found: realRows.length,
+      },
+    });
+  } catch (err) {
+    console.error('[analytics/insights-by-service]', err);
+    res.status(500).json({ error: err.message, enough_data: false });
+  }
+});
+
 /* Performance agregada por ANEL (primário/médio/externo) — usa dado REAL do
    Meta a partir de `insights_by_district.ring_key`. Sempre retorna 3 entradas
    (preenche zeros se não houver dado pra algum anel) — facilita render do

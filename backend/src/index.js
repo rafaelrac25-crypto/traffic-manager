@@ -64,6 +64,7 @@ app.use('/api/upload', require('./routes/upload'));
 app.use('/api/health', require('./routes/health'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/competitors', require('./routes/competitors'));
+app.use('/api/cron', require('./routes/cron'));
 app.use('/webhooks', require('./routes/webhooks'));
 
 // Servir frontend estático (produção)

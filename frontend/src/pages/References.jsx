@@ -5,9 +5,9 @@ import { SERVICES, inferServiceFromText } from '../data/services';
 import Icon from '../components/Icon';
 
 const FORMAT_META = {
-  reels:    { label: 'Reels',     emoji: '🎬', color: '#E91E63' },
-  carousel: { label: 'Carrossel', emoji: '🔄', color: '#3B82F6' },
-  image:    { label: 'Imagem',    emoji: '🖼️', color: '#16A34A' },
+  reels:    { label: 'Reels',     iconName: 'video',   color: '#E91E63' },
+  carousel: { label: 'Carrossel', iconName: 'refresh', color: '#3B82F6' },
+  image:    { label: 'Imagem',    iconName: 'image',   color: 'var(--c-success)' },
 };
 
 const OBJECTIVE_LABEL = {

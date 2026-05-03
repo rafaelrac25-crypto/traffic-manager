@@ -12,6 +12,9 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useAppState } from '../contexts/AppStateContext';
 import { fetchDistrictInsights, recommendationLine } from '../data/districtInsights';
+import { SERVICES, getService } from '../data/services';
+import { hasEnoughData, buildBannerLine } from '../data/serviceInsights';
+import api from '../services/api';
 import { processMediaFile } from '../utils/mediaProcessor';
 import { INTEREST_PRESETS } from '../data/interestPresets';
 import { getRejectionInfo } from '../data/rejectionRules';
@@ -341,7 +344,7 @@ function MapFlyTo({ center }) {
    PASSO 1 — OBJETIVO
 ══════════════════════════════════════════ */
 
-function Step1Objective({ objective, setObjective, errors = {} }) {
+function Step1Objective({ objective, setObjective, service, setService, errors = {} }) {
   const allItems = META_OBJECTIVES.flatMap((g) => g.items.map((i) => ({ ...i, category: g.category, color: g.color })));
   const selected = allItems.find((i) => i.id === objective);
 
@@ -433,6 +436,46 @@ function Step1Objective({ objective, setObjective, errors = {} }) {
       {errors.objective && (
         <p style={{ fontSize: '13px', color: '#F87171', fontWeight: 600, marginTop: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}><Icon name="alert" size={13} color="danger" /> {errors.objective}</p>
       )}
+
+      {/* ── Serviço promovido (opcional) — alimenta recomendação por bairro ── */}
+      <div style={{ marginTop: '18px' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: 'var(--c-text-2)', marginBottom: '6px' }}>
+          <Icon name="tag" size={13} color="muted" />
+          Serviço promovido
+          <span style={{ fontWeight: 400, color: 'var(--c-text-4)', fontSize: '11px' }}>(opcional — melhora sugestões de bairro)</span>
+        </label>
+        <select
+          value={service || ''}
+          onChange={(e) => setService(e.target.value || undefined)}
+          style={{
+            width: '100%', padding: '9px 12px',
+            border: service ? '1.5px solid var(--c-accent)' : '1px solid var(--c-border)',
+            background: 'var(--c-surface)', color: service ? 'var(--c-text-1)' : 'var(--c-text-4)',
+            borderRadius: '10px', fontSize: '13px',
+            fontFamily: 'inherit', cursor: 'pointer', outline: 'none',
+            appearance: 'none',
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'right 12px center',
+            paddingRight: '32px',
+          }}
+        >
+          <option value="">— Não especificado —</option>
+          {Object.entries(
+            SERVICES.reduce((acc, s) => {
+              if (!acc[s.category]) acc[s.category] = [];
+              acc[s.category].push(s);
+              return acc;
+            }, {})
+          ).map(([cat, items]) => (
+            <optgroup key={cat} label={cat.charAt(0).toUpperCase() + cat.slice(1)}>
+              {items.map(s => (
+                <option key={s.id} value={s.id}>{s.label}</option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+      </div>
     </div>
   );
 }
@@ -708,46 +751,71 @@ function LocationPresetBar({ locations, setLocations, ringsMode, setRingsMode })
 
 /* Banner discreto com recomendação de bairros baseada em dados reais.
    Fica silencioso até a primeira campanha acumular ≥10 conversões. */
-function DistrictInsightsBanner() {
+/**
+ * Banner de insight de bairro.
+ * - Sem service: usa lógica global (média de todos os serviços).
+ * - Com service: busca endpoint específico e mostra recomendação focada.
+ * - Silencioso quando dados insuficientes.
+ */
+function DistrictInsightsBanner({ service }) {
   const [insight, setInsight] = useState(null);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    fetchDistrictInsights().then(data => {
-      if (cancelled) return;
-      const line = recommendationLine(data);
-      if (line) setInsight({ line, top: data.districts.slice(0, 3) });
-    });
+
+    async function load() {
+      if (service) {
+        /* Busca insights filtrados pelo serviço */
+        try {
+          const { data } = await api.get(`/api/campaigns/analytics/insights-by-service?service=${encodeURIComponent(service)}`);
+          if (cancelled) return;
+          if (!hasEnoughData(data)) return; /* silêncio quando sem dados */
+          const svc = getService(service);
+          const line = buildBannerLine(svc?.label || service, data);
+          if (line) setInsight({ line });
+        } catch { /* silêncio em erro de rede */ }
+      } else {
+        /* Fallback global (sem serviço selecionado) */
+        const data = await fetchDistrictInsights();
+        if (cancelled) return;
+        const line = recommendationLine(data);
+        if (line) setInsight({ line });
+      }
+    }
+
+    load();
     return () => { cancelled = true; };
-  }, []);
+  }, [service]);
 
   if (!insight || dismissed) return null;
 
   return (
-    <div style={{
+    <div role="status" style={{
       display: 'flex', alignItems: 'center', gap: '10px',
-      padding: '10px 14px', marginBottom: '10px',
-      background: 'rgba(193, 53, 132, 0.06)',
-      border: '1px solid rgba(193, 53, 132, 0.25)',
+      padding: '9px 13px', marginBottom: '10px',
+      background: 'var(--c-info-soft, rgba(59,130,246,.07))',
+      border: '1px solid var(--c-info-border, rgba(59,130,246,.25))',
       borderRadius: '10px',
       fontSize: '12px', color: 'var(--c-text-2)', lineHeight: 1.5,
     }}>
+      <Icon name="lightbulb" size={14} color="info" style={{ flexShrink: 0 }} />
       <span style={{ flex: 1 }}>{insight.line}</span>
       <button
         onClick={() => setDismissed(true)}
         style={{
           background: 'none', border: 'none', cursor: 'pointer',
           color: 'var(--c-text-4)', fontSize: '14px',
-          padding: '0 4px', lineHeight: 1,
+          padding: '0 4px', lineHeight: 1, flexShrink: 0,
         }}
         title="Fechar"
+        aria-label="Fechar sugestão"
       ><Icon name="x" size={14} /></button>
     </div>
   );
 }
 
-function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender, setGender, interests, setInterests, ringsMode, setRingsMode, advantageAudience = false, setAdvantageAudience = () => {} }) {
+function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender, setGender, interests, setInterests, ringsMode, setRingsMode, advantageAudience = false, setAdvantageAudience = () => {}, service }) {
   const [query, setQuery]           = useState('');
   const [results, setResults]       = useState([]);
   const [searching, setSearching]   = useState(false);
@@ -864,7 +932,7 @@ function Step2Audience({ locations, setLocations, ageRange, setAgeRange, gender,
           setRingsMode={setRingsMode}
         />
 
-        <DistrictInsightsBanner />
+        <DistrictInsightsBanner service={service} />
 
         {locationError && (
           <div role="alert" style={{
@@ -3388,6 +3456,8 @@ export default function CreateAd() {
   /* ── Estado do formulário ── */
   /* Default 'messages' — objetivo preferido da Cris (leads via WhatsApp) */
   const [objective,          setObjective]          = useState(source?.objective || 'messages');
+  /* service: id do serviço promovido — opcional, alimenta recomendação bairro×serviço */
+  const [service,            setService]            = useState(source?.service || undefined);
   const [locations,          setLocations]          = useState(source?.locations || (quickFillAudience ? normalizedAudienceLocations : []));
   const [ageRange,           setAgeRange]           = useState(source?.ageRange || (quickFillAudience ? [quickFillAudience.ageMin, quickFillAudience.ageMax] : [18, 65]));
   const [gender,             setGender]             = useState(source?.gender || (quickFillAudience ? normalizedAudienceGender : 'all'));
@@ -3762,7 +3832,7 @@ export default function CreateAd() {
       advantageAudience,
 
       // Público (local)
-      objective, locations, ageRange, gender, interests,
+      objective, service: service || null, locations, ageRange, gender, interests,
 
       // Criativo (local)
       adFormat, primaryText, headline, destUrl, ctaButton,
@@ -3824,8 +3894,8 @@ export default function CreateAd() {
   const reviewData = { objective, locations, ageRange, gender, interests, budgetType, budgetValue, startDate, endDate, adFormat, mediaFiles, primaryText, headline, destUrl, ctaButton, budgetRingSplit, ringsMode, budgetOptimization, businessHours };
 
   const stepComponents = [
-    <Step1Objective objective={objective} setObjective={setObjective} errors={errors} />,
-    <Step2Audience  locations={locations} setLocations={setLocations} ageRange={ageRange} setAgeRange={setAgeRange} gender={gender} setGender={setGender} interests={interests} setInterests={setInterests} ringsMode={ringsMode} setRingsMode={setRingsMode} advantageAudience={advantageAudience} setAdvantageAudience={setAdvantageAudience} />,
+    <Step1Objective objective={objective} setObjective={setObjective} service={service} setService={setService} errors={errors} />,
+    <Step2Audience  locations={locations} setLocations={setLocations} ageRange={ageRange} setAgeRange={setAgeRange} gender={gender} setGender={setGender} interests={interests} setInterests={setInterests} ringsMode={ringsMode} setRingsMode={setRingsMode} advantageAudience={advantageAudience} setAdvantageAudience={setAdvantageAudience} service={service} />,
     <Step4Budget budgetType={budgetType} setBudgetType={setBudgetType} budgetValue={budgetValue} setBudgetValue={setBudgetValue} startDate={startDate} setStartDate={setStartDate} endDate={endDate} setEndDate={setEndDate} errors={errors} locations={locations} budgetRingSplit={budgetRingSplit} setBudgetRingSplit={setBudgetRingSplit} ringsMode={ringsMode} setRingsMode={setRingsMode} budgetOptimization={budgetOptimization} setBudgetOptimization={setBudgetOptimization} businessHours={businessHours} setBusinessHours={setBusinessHours} />,
     <Step5Creative objective={objective} adFormat={adFormat} setAdFormat={setAdFormat} mediaFiles={mediaFiles} setMediaFiles={setMediaFiles} videoThumbnail={videoThumbnail} setVideoThumbnail={setVideoThumbnail} primaryText={primaryText} setPrimaryText={setPrimaryText} headline={headline} setHeadline={setHeadline} destUrl={destUrl} setDestUrl={setDestUrl} ctaButton={ctaButton} setCtaButton={setCtaButton} whatsappMessage={whatsappMessage} setWhatsappMessage={setWhatsappMessage} errors={errors} />,
     <Step6Review data={reviewData} onGoTo={(s) => { setErrors({}); setStep(s); }} />,
