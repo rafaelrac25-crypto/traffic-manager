@@ -369,15 +369,15 @@ body {
 }
 
 /* ── Topbar grid (ambos os temas) — paridade com mockup dashboard.html.
-   Altura 132px. Grid `auto 1fr auto` deixa a coluna do meio (searchbar)
-   ocupar todo o espaço disponivel entre greeting e icones. ── */
+   Altura 132px. Grid `1fr auto 1fr` centraliza a searchbar; greeting e
+   acoes ficam nos cantos. ── */
 .topbar-grid {
   display: grid !important;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   height: 132px !important;
   padding: 0 32px !important;
-  gap: 24px;
+  gap: 16px;
   position: relative;
 }
 .topbar-grid::after {
