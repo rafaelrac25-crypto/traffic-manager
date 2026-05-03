@@ -2458,6 +2458,7 @@ router.post('/:id/ab-test', async (req, res) => {
     variable, sourceAdSetId, durationDays = 7,
     variantOverrides = {}, splitPercent = 50, name: customName,
     autoPauseLoser = true,
+    variantMedia = null,   /* { type, metaHash?, metaVideoId? } — só quando variable==='creative' */
   } = req.body || {};
 
   if (!['creative', 'audience', 'placement'].includes(variable)) {
@@ -2521,9 +2522,8 @@ router.post('/:id/ab-test', async (req, res) => {
       overrides.targeting = baseTargeting;
     }
     /* Pra variable=creative, NÃO mexemos no targeting do duplicado.
-       O caller depois chamará createAdInExistingAdSet pra trocar o creative
-       no adset duplicado (cell B). Por enquanto, duplicate-adset cria adset
-       igualzinho, e na sequência caller troca creative do ad da cell B. */
+       Se variantMedia vier preenchido, após duplicar o adset, trocamos o
+       creative do ad copiado pela nova mídia usando createAdInExistingAdSet. */
 
     let dupResult;
     try {
@@ -2539,6 +2539,68 @@ router.post('/:id/ab-test', async (req, res) => {
     }
 
     const variantAdSetId = dupResult.new_adset_id;
+
+    /* ── Troca de creative quando variable==='creative' e variantMedia veio ── */
+    if (variable === 'creative' && variantMedia && (variantMedia.metaHash || variantMedia.metaVideoId)) {
+      const { metaGet } = require('../services/metaHttp');
+      const { createAdInExistingAdSet } = require('../services/metaWrite');
+
+      /* Pega o primeiro ad copiado no adset variante pra descobrir o creative base */
+      const copiedAdId = dupResult.copied_ad_ids?.[0] || null;
+      if (!copiedAdId) {
+        /* deepCopy não retornou IDs — busca ao vivo */
+        const adsResp = await metaGet(`/${variantAdSetId}/ads`, {
+          fields: 'id,creative{id}',
+          limit: 1,
+        }, { token }).catch(() => null);
+        const firstAd = adsResp?.data?.[0];
+        if (!firstAd) {
+          console.warn('[ab-test] creative swap: não encontrou ad no adset variante — pulando troca de creative');
+        } else {
+          const baseCreativeId = firstAd.creative?.id || firstAd.creative_id;
+          if (baseCreativeId) {
+            await createAdInExistingAdSet(creds, {
+              adAccountId: creds.account_id,
+              platformAdSetId: variantAdSetId,
+              baseCreativeId,
+              newMedia: variantMedia,
+              newAdName: `Anúncio A/B variante — ${variable}`,
+            });
+            /* Pausa o ad original copiado — o novo ad (com creative novo) fica ativo */
+            try {
+              const { metaPost } = require('../services/metaHttp');
+              await metaPost(`/${firstAd.id}`, { status: 'PAUSED' }, { token });
+            } catch (e) {
+              console.warn('[ab-test] não conseguiu pausar ad original copiado:', e.message);
+            }
+          }
+        }
+      } else {
+        /* ID do ad copiado disponível diretamente */
+        const adResp = await metaGet(`/${copiedAdId}`, {
+          fields: 'id,creative{id}',
+        }, { token }).catch(() => null);
+        const baseCreativeId = adResp?.creative?.id || adResp?.creative_id;
+        if (baseCreativeId) {
+          await createAdInExistingAdSet(creds, {
+            adAccountId: creds.account_id,
+            platformAdSetId: variantAdSetId,
+            baseCreativeId,
+            newMedia: variantMedia,
+            newAdName: `Anúncio A/B variante — ${variable}`,
+          });
+          /* Pausa o ad copiado original — o novo (creative novo) fica ativo */
+          try {
+            const { metaPost } = require('../services/metaHttp');
+            await metaPost(`/${copiedAdId}`, { status: 'PAUSED' }, { token });
+          } catch (e) {
+            console.warn('[ab-test] não conseguiu pausar ad original copiado:', e.message);
+          }
+        } else {
+          console.warn('[ab-test] creative swap: ad copiado não tem creative_id — pulando troca');
+        }
+      }
+    }
 
     /* Garante que adset original (cell A) também está ACTIVE */
     try {

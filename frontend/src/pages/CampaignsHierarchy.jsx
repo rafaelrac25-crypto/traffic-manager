@@ -1014,6 +1014,12 @@ function CreateABTestModal({ open, onClose, campaign, hierarchy, onSaved }) {
   const [loading, setLoading]         = useState(false);
   const [errMsg, setErrMsg]           = useState(null);
 
+  /* ── Estados de mídia (apenas para variable === 'creative') ── */
+  const [mediaFile, setMediaFile]         = useState(null);
+  const [mediaPreview, setMediaPreview]   = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(null);
+  const abFileInputRef = React.useRef(null);
+
   useEffect(() => {
     if (!open) return;
     if (hierarchy?.adsets?.[0]) setSourceAdSet(hierarchy.adsets[0].id);
@@ -1022,13 +1028,118 @@ function CreateABTestModal({ open, onClose, campaign, hierarchy, onSaved }) {
     setDuration(7);
     setSplitA(50);
     setAutoPauseLoser(true);
+    /* Reset mídia ao abrir */
+    setMediaFile(null); setMediaPreview(null); setUploadProgress(null);
+    if (abFileInputRef.current) abFileInputRef.current.value = '';
   }, [open, hierarchy]);
 
   const campaignActive = hierarchy?.campaign?.status === 'ACTIVE';
 
+  /* ── Handlers de mídia (idênticos ao NewAdInAdSetModal) ── */
+  function handleMediaChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const sizeMB = file.size / (1024 * 1024);
+    const isVideo = file.type.startsWith('video/');
+    const isImage = file.type.startsWith('image/');
+    if (!isVideo && !isImage) {
+      setErrMsg('Formato não suportado. Envie uma imagem ou vídeo.');
+      e.target.value = '';
+      return;
+    }
+    if (isImage && sizeMB > 10) {
+      setErrMsg('Imagem muito grande (máx. 10 MB). Reduza o tamanho e tente novamente.');
+      e.target.value = '';
+      return;
+    }
+    if (isVideo && sizeMB > 100) {
+      setErrMsg('Vídeo muito grande (máx. 100 MB).');
+      e.target.value = '';
+      return;
+    }
+    setErrMsg(null);
+    setMediaFile(file);
+    if (isImage) {
+      const reader = new FileReader();
+      reader.onload = ev => setMediaPreview({ type: 'image', src: ev.target.result, name: file.name, sizeMB: sizeMB.toFixed(1) });
+      reader.readAsDataURL(file);
+    } else {
+      const url = URL.createObjectURL(file);
+      const vid = document.createElement('video');
+      vid.src = url; vid.muted = true; vid.currentTime = 0.5;
+      vid.onloadeddata = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 120; canvas.height = 68;
+        canvas.getContext('2d').drawImage(vid, 0, 0, 120, 68);
+        setMediaPreview({ type: 'video', src: canvas.toDataURL('image/jpeg'), name: file.name, sizeMB: sizeMB.toFixed(1) });
+        URL.revokeObjectURL(url);
+      };
+      vid.onerror = () => {
+        setMediaPreview({ type: 'video', src: null, name: file.name, sizeMB: sizeMB.toFixed(1) });
+        URL.revokeObjectURL(url);
+      };
+    }
+  }
+
+  function handleRemoveMedia() {
+    setMediaFile(null); setMediaPreview(null); setUploadProgress(null);
+    if (abFileInputRef.current) abFileInputRef.current.value = '';
+  }
+
+  /* Faz upload da mídia se houver arquivo selecionado.
+     Retorna { type, metaHash?, metaVideoId? } ou null. */
+  async function uploadIfNeeded() {
+    if (!mediaFile) return null;
+    const isVideo = mediaFile.type.startsWith('video/');
+    const sizeMB  = mediaFile.size / (1024 * 1024);
+    const { uploadMedia } = await import('../services/adsApi');
+    if (isVideo) {
+      const { extractVideoThumbnail } = await import('../utils/videoCompressor');
+      const { uploadVideoChunked }    = await import('../utils/metaResumableUploader');
+      setUploadProgress({ pct: 0, label: 'Extraindo capa do vídeo…' });
+      const thumbFile = await extractVideoThumbnail(mediaFile);
+      const [videoResult, thumbResult] = await Promise.all([
+        uploadVideoChunked(mediaFile, { onProgress: (pct, label) => setUploadProgress({ pct, label }) }),
+        uploadMedia(thumbFile),
+      ]);
+      setUploadProgress(null);
+      return { type: 'video', metaVideoId: videoResult.video_id || null, metaHash: thumbResult.hash || null };
+    } else {
+      if (sizeMB > 3.5) {
+        const { uploadImageChunked } = await import('../utils/metaResumableUploader');
+        setUploadProgress({ pct: 0, label: 'Preparando imagem…' });
+        const r = await uploadImageChunked(mediaFile, { onProgress: (pct, label) => setUploadProgress({ pct, label }) });
+        setUploadProgress(null);
+        return { type: 'image', metaHash: r.hash || null };
+      } else {
+        setUploadProgress({ pct: 0, label: 'Enviando imagem…' });
+        const result = await uploadMedia(mediaFile);
+        setUploadProgress(null);
+        return { type: 'image', metaHash: result.hash || null };
+      }
+    }
+  }
+
   async function handleSave() {
-    setLoading(true); setErrMsg(null);
+    /* Validação: quando creative, mídia é obrigatória */
+    if (variable === 'creative' && !mediaFile) {
+      setErrMsg('Selecione a mídia do criativo variante antes de criar o teste.');
+      return;
+    }
+
+    setLoading(true); setErrMsg(null); setUploadProgress(null);
     try {
+      /* 1. Upload de mídia (somente quando variable === 'creative') */
+      let variantMedia = null;
+      if (variable === 'creative') {
+        try {
+          variantMedia = await uploadIfNeeded();
+        } catch (uploadErr) {
+          throw new Error(`Falha no upload da mídia: ${uploadErr.message}`);
+        }
+      }
+
+      /* 2. Monta variantOverrides conforme variável */
       const variantOverrides = {};
       if (variable === 'audience') {
         if (variantAgeMin) variantOverrides.age_min = Number(variantAgeMin);
@@ -1048,6 +1159,7 @@ function CreateABTestModal({ open, onClose, campaign, hierarchy, onSaved }) {
         }
       }
 
+      /* 3. POST pro backend */
       const r = await fetch(`/api/campaigns/${campaign.id}/ab-test`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1058,6 +1170,7 @@ function CreateABTestModal({ open, onClose, campaign, hierarchy, onSaved }) {
           splitPercent: Number(splitA),
           variantOverrides,
           autoPauseLoser,
+          ...(variantMedia ? { variantMedia } : {}),
         }),
       });
       const data = await r.json().catch(() => ({}));
@@ -1068,8 +1181,19 @@ function CreateABTestModal({ open, onClose, campaign, hierarchy, onSaved }) {
       setErrMsg(e.message);
     } finally {
       setLoading(false);
+      setUploadProgress(null);
     }
   }
+
+  const isUploading = loading && uploadProgress !== null;
+  const btnLabel = isUploading
+    ? `${uploadProgress?.label || 'Enviando…'} ${uploadProgress?.pct != null ? `${Math.round(uploadProgress.pct)}%` : ''}`
+    : loading ? 'Criando teste...' : 'Criar teste A/B';
+
+  /* Desabilitar botão se: loading, sem adset, campanha inativa,
+     ou creative sem mídia */
+  const btnDisabled = loading || !sourceAdSetId || !campaignActive
+    || (variable === 'creative' && !mediaFile);
 
   return (
     <Modal
@@ -1079,8 +1203,8 @@ function CreateABTestModal({ open, onClose, campaign, hierarchy, onSaved }) {
       footer={
         <>
           <GhostButton onClick={onClose} disabled={loading}>Cancelar</GhostButton>
-          <PrimaryButton onClick={handleSave} disabled={loading || !sourceAdSetId || !campaignActive}>
-            {loading ? 'Criando teste...' : 'Criar teste A/B'}
+          <PrimaryButton onClick={handleSave} disabled={btnDisabled}>
+            {btnLabel}
           </PrimaryButton>
         </>
       }
@@ -1181,9 +1305,87 @@ function CreateABTestModal({ open, onClose, campaign, hierarchy, onSaved }) {
         )}
 
         {variable === 'creative' && (
-          <Banner kind="info">
-            Sistema vai duplicar o conjunto. Depois de criar o teste, edite o anúncio do conjunto variante pra colocar o criativo novo.
-          </Banner>
+          <>
+            <Field
+              label="Novo criativo (obrigatório)"
+              hint="Envie a foto ou vídeo NOVO que vai no conjunto variante. Sem mídia o teste não pode rodar."
+            >
+              {!mediaFile ? (
+                <label style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '10px 14px',
+                  border: '1.5px dashed rgba(193,53,132,.4)',
+                  borderRadius: '8px', cursor: 'pointer',
+                  color: 'var(--c-text-3)', fontSize: '13px',
+                  background: 'rgba(193,53,132,.04)',
+                  transition: 'border-color .15s',
+                }}>
+                  <span style={{ fontSize: '20px' }}>🖼️</span>
+                  <span>Clique para selecionar imagem ou vídeo</span>
+                  <input
+                    ref={abFileInputRef}
+                    type="file"
+                    accept="image/*,video/*"
+                    style={{ display: 'none' }}
+                    onChange={handleMediaChange}
+                    disabled={loading}
+                  />
+                </label>
+              ) : (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '8px 12px',
+                  border: '1px solid var(--c-border, rgba(255,255,255,.15))',
+                  borderRadius: '8px',
+                  background: 'var(--c-surface-1, rgba(255,255,255,.04))',
+                }}>
+                  {mediaPreview?.src ? (
+                    <img src={mediaPreview.src} alt="preview" style={{ width: 60, height: 34, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} />
+                  ) : (
+                    <div style={{ width: 60, height: 34, borderRadius: 4, background: 'rgba(255,255,255,.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
+                      {mediaPreview?.type === 'video' ? '🎬' : '🖼️'}
+                    </div>
+                  )}
+                  <div style={{ flex: 1, overflow: 'hidden' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 500, color: 'var(--c-text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {mediaPreview?.name || mediaFile.name}
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--c-text-4)' }}>
+                      {mediaPreview?.type === 'video' ? 'Vídeo' : 'Imagem'} · {mediaPreview?.sizeMB} MB
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleRemoveMedia}
+                    disabled={loading}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--c-text-4)', fontSize: '18px', lineHeight: 1, padding: 0 }}
+                    title="Remover mídia"
+                  >×</button>
+                </div>
+              )}
+            </Field>
+
+            {/* Barra de progresso de upload */}
+            {isUploading && uploadProgress?.pct != null && (
+              <div style={{ marginTop: '6px', marginBottom: '8px' }}>
+                <div style={{ fontSize: '11.5px', color: 'var(--c-text-4)', marginBottom: '4px' }}>
+                  {uploadProgress.label} {Math.round(uploadProgress.pct)}%
+                </div>
+                <div style={{ height: 4, background: 'rgba(255,255,255,.1)', borderRadius: 2, overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%', width: `${uploadProgress.pct}%`,
+                    background: 'var(--c-accent, #C13584)', borderRadius: 2,
+                    transition: 'width .3s ease',
+                  }} />
+                </div>
+              </div>
+            )}
+
+            {!mediaFile && (
+              <div style={{ fontSize: '11.5px', color: 'rgba(193,53,132,.8)', marginBottom: '8px', fontWeight: 500 }}>
+                Selecione o criativo variante para habilitar o botão "Criar teste A/B".
+              </div>
+            )}
+          </>
         )}
 
         <Field label={`Duração: ${duration} dias`} hint="Mínimo 4, máximo 30. Recomendado 7-14 pra dar significância estatística.">
