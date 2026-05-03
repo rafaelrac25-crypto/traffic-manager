@@ -96,12 +96,12 @@
 [data-theme="light"] body::before {
   content: '';
   position: fixed; inset: 0; z-index: -2; pointer-events: none;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='800' viewBox='0 0 800 800'><defs><radialGradient id='node' cx='50%25' cy='50%25' r='50%25'><stop offset='0%25' stop-color='%23C13584' stop-opacity='.7'/><stop offset='60%25' stop-color='%23C13584' stop-opacity='.25'/><stop offset='100%25' stop-color='%23C13584' stop-opacity='0'/></radialGradient></defs><g stroke='%23000000' stroke-opacity='0.13' stroke-width='1' fill='none'><path d='M0,180 L220,180 L260,140 L460,140 L500,200 L800,200'/><path d='M0,520 L160,520 L200,560 L380,560 L420,500 L640,500 L680,560 L800,560'/><path d='M120,0 L120,80 L80,120 L80,260'/><path d='M620,0 L620,40 L660,80 L660,200 L620,240 L620,420'/><path d='M280,800 L280,720 L320,680 L520,680 L560,640' stroke-opacity='0.11'/></g><g fill='url(%23node)'><circle cx='220' cy='180' r='3.5'/><circle cx='460' cy='140' r='3.5'/><circle cx='500' cy='200' r='3.5'/><circle cx='160' cy='520' r='3.5'/><circle cx='420' cy='500' r='3.5'/><circle cx='680' cy='560' r='3.5'/><circle cx='80' cy='260' r='3.5'/><circle cx='620' cy='420' r='3.5'/><circle cx='320' cy='680' r='3.5'/></g></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='800' viewBox='0 0 800 800'><defs><radialGradient id='node' cx='50%25' cy='50%25' r='50%25'><stop offset='0%25' stop-color='%23C13584' stop-opacity='.5'/><stop offset='60%25' stop-color='%23C13584' stop-opacity='.18'/><stop offset='100%25' stop-color='%23C13584' stop-opacity='0'/></radialGradient></defs><g stroke='%23000000' stroke-opacity='0.06' stroke-width='1' fill='none'><path d='M0,180 L220,180 L260,140 L460,140 L500,200 L800,200'/><path d='M0,520 L160,520 L200,560 L380,560 L420,500 L640,500 L680,560 L800,560'/><path d='M120,0 L120,80 L80,120 L80,260'/><path d='M620,0 L620,40 L660,80 L660,200 L620,240 L620,420'/><path d='M280,800 L280,720 L320,680 L520,680 L560,640' stroke-opacity='0.05'/></g><g fill='url(%23node)'><circle cx='220' cy='180' r='3.5'/><circle cx='460' cy='140' r='3.5'/><circle cx='500' cy='200' r='3.5'/><circle cx='160' cy='520' r='3.5'/><circle cx='420' cy='500' r='3.5'/><circle cx='680' cy='560' r='3.5'/><circle cx='80' cy='260' r='3.5'/><circle cx='620' cy='420' r='3.5'/><circle cx='320' cy='680' r='3.5'/></g></svg>");
   background-size: 800px 800px;
   background-repeat: repeat;
-  mask-image: radial-gradient(ellipse 90% 80% at center, rgba(0,0,0,.85), transparent 75%);
-  -webkit-mask-image: radial-gradient(ellipse 90% 80% at center, rgba(0,0,0,.85), transparent 75%);
-  opacity: .85;
+  mask-image: radial-gradient(ellipse 90% 80% at center, rgba(0,0,0,.7), transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 90% 80% at center, rgba(0,0,0,.7), transparent 75%);
+  opacity: .55;
 }
 
 /* ── Spotlight + glows pastel (light) ── */
@@ -195,12 +195,12 @@
 [data-theme="dark"] body::before {
   content: '';
   position: fixed; inset: 0; z-index: -2; pointer-events: none;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='800' viewBox='0 0 800 800'><defs><radialGradient id='node' cx='50%25' cy='50%25' r='50%25'><stop offset='0%25' stop-color='%23C13584' stop-opacity='1'/><stop offset='60%25' stop-color='%23C13584' stop-opacity='.4'/><stop offset='100%25' stop-color='%23C13584' stop-opacity='0'/></radialGradient></defs><g stroke='%23ffffff' stroke-opacity='0.22' stroke-width='1' fill='none'><path d='M0,180 L220,180 L260,140 L460,140 L500,200 L800,200'/><path d='M0,520 L160,520 L200,560 L380,560 L420,500 L640,500 L680,560 L800,560'/><path d='M120,0 L120,80 L80,120 L80,260'/><path d='M620,0 L620,40 L660,80 L660,200 L620,240 L620,420'/><path d='M280,800 L280,720 L320,680 L520,680 L560,640' stroke-opacity='0.18'/></g><g fill='url(%23node)'><circle cx='220' cy='180' r='3.5'/><circle cx='460' cy='140' r='3.5'/><circle cx='500' cy='200' r='3.5'/><circle cx='160' cy='520' r='3.5'/><circle cx='420' cy='500' r='3.5'/><circle cx='680' cy='560' r='3.5'/><circle cx='80' cy='260' r='3.5'/><circle cx='620' cy='420' r='3.5'/><circle cx='320' cy='680' r='3.5'/></g></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='800' viewBox='0 0 800 800'><defs><radialGradient id='node' cx='50%25' cy='50%25' r='50%25'><stop offset='0%25' stop-color='%23C13584' stop-opacity='.7'/><stop offset='60%25' stop-color='%23C13584' stop-opacity='.25'/><stop offset='100%25' stop-color='%23C13584' stop-opacity='0'/></radialGradient></defs><g stroke='%23ffffff' stroke-opacity='0.10' stroke-width='1' fill='none'><path d='M0,180 L220,180 L260,140 L460,140 L500,200 L800,200'/><path d='M0,520 L160,520 L200,560 L380,560 L420,500 L640,500 L680,560 L800,560'/><path d='M120,0 L120,80 L80,120 L80,260'/><path d='M620,0 L620,40 L660,80 L660,200 L620,240 L620,420'/><path d='M280,800 L280,720 L320,680 L520,680 L560,640' stroke-opacity='0.07'/></g><g fill='url(%23node)'><circle cx='220' cy='180' r='3.5'/><circle cx='460' cy='140' r='3.5'/><circle cx='500' cy='200' r='3.5'/><circle cx='160' cy='520' r='3.5'/><circle cx='420' cy='500' r='3.5'/><circle cx='680' cy='560' r='3.5'/><circle cx='80' cy='260' r='3.5'/><circle cx='620' cy='420' r='3.5'/><circle cx='320' cy='680' r='3.5'/></g></svg>");
   background-size: 800px 800px;
   background-repeat: repeat;
-  mask-image: radial-gradient(ellipse 90% 80% at center, rgba(0,0,0,.85), transparent 75%);
-  -webkit-mask-image: radial-gradient(ellipse 90% 80% at center, rgba(0,0,0,.85), transparent 75%);
-  opacity: .95;
+  mask-image: radial-gradient(ellipse 90% 80% at center, rgba(0,0,0,.7), transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 90% 80% at center, rgba(0,0,0,.7), transparent 75%);
+  opacity: .60;
 }
 
 /* ── Spotlight central + glows nos cantos (só no dark) ── */

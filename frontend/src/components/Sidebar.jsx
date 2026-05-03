@@ -184,75 +184,38 @@ export default function Sidebar({ open = false, isMobile = false }) {
 
       {/* ── Navegação ── */}
       <nav style={{ flex: 1, overflowY: 'auto', padding: '14px 10px 0' }}>
-        {/* ── Destaques: Dashboard + Criar anúncio (linha única, apenas contorno) ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '14px' }}>
+        {/* ── Destaques: Dashboard + Criar anúncio (mesmo estilo) ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
           {PRIMARY_NAV.map(({ to, label }) => {
-            const active   = isActive(to);
-            const isCreate = to === '/criar-anuncio';
-            /* Criar anúncio: botão glass rosa com glow forte em ambos os temas
-               (paridade com mockup) — só as cores via vars/rgba mudam.
-               `darkCreate` mantido como nome legado mas aplica nos dois modos. */
-            const darkCreate = isCreate;
+            const active = isActive(to);
             return (
               <div
                 key={to}
                 onClick={() => navigate(to)}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: darkCreate ? '11px 14px' : '7px 14px',
-                  height: darkCreate ? 'auto' : '36px',
-                  borderRadius: darkCreate ? '11px' : '10px',
+                  padding: '7px 14px',
+                  height: '36px',
+                  borderRadius: '10px',
                   cursor: 'pointer',
                   fontSize: '13px', fontWeight: 700,
-                  letterSpacing: darkCreate ? '.2px' : '-0.1px',
+                  letterSpacing: '-0.1px',
                   transition: 'transform .15s var(--ease-out-soft), box-shadow .15s var(--ease-out-soft), background .2s ease, border-color .2s ease',
-                  background: darkCreate && active
-                    ? 'rgba(193,53,132,.10)'
-                    : (active ? 'var(--c-active-bg)' : 'transparent'),
+                  background: active ? 'var(--c-active-bg)' : 'transparent',
                   color: active ? 'var(--c-accent)' : 'var(--c-text-3)',
-                  /* Stroke rosa só quando ATIVO. Inativo = sem borda visível
-                     (igual aos demais itens de nav). Aplica em ambos modos. */
-                  border: active
-                    ? (darkCreate
-                        ? '1.5px solid rgba(193,53,132,.65)'
-                        : '1.5px solid var(--c-accent)')
-                    : '1.5px solid transparent',
-                  boxShadow: darkCreate
-                    ? '0 0 22px rgba(193,53,132,.18), inset 0 0 14px rgba(193,53,132,.08)'
-                    : 'none',
-                  textShadow: darkCreate ? '0 0 12px rgba(193,53,132,.4)' : 'none',
+                  border: active ? '1.5px solid var(--c-accent)' : '1.5px solid transparent',
+                  boxShadow: 'none',
                 }}
                 onMouseEnter={e => {
                   e.currentTarget.style.transform = 'translateY(-1px)';
-                  if (darkCreate) {
-                    e.currentTarget.style.background = 'rgba(193,53,132,.16)';
-                    e.currentTarget.style.borderColor = 'rgba(193,53,132,.85)';
-                    e.currentTarget.style.boxShadow = '0 0 30px rgba(193,53,132,.32), inset 0 0 16px rgba(193,53,132,.12)';
-                  } else {
-                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(193,53,132,.22)';
-                  }
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(193,53,132,.22)';
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.transform = 'translateY(0)';
-                  if (darkCreate) {
-                    e.currentTarget.style.background = 'rgba(193,53,132,.10)';
-                    e.currentTarget.style.borderColor = 'rgba(193,53,132,.65)';
-                    e.currentTarget.style.boxShadow = '0 0 22px rgba(193,53,132,.18), inset 0 0 14px rgba(193,53,132,.08)';
-                  } else {
-                    e.currentTarget.style.boxShadow = 'none';
-                  }
+                  e.currentTarget.style.boxShadow = 'none';
                 }}
               >
                 <span>{label}</span>
-                {isCreate && !darkCreate && (
-                  <span style={{
-                    fontSize: '9px', fontWeight: 700, color: '#fff',
-                    background: 'var(--c-accent)',
-                    padding: '2px 7px', borderRadius: '999px', letterSpacing: '.3px',
-                  }}>
-                    NOVO
-                  </span>
-                )}
               </div>
             );
           })}
