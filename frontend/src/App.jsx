@@ -332,7 +332,7 @@ function SearchBar() {
         display: 'flex', alignItems: 'center', gap: '8px',
         background: 'var(--c-surface)', border: '1.5px solid var(--c-border)',
         borderRadius: '10px', padding: '8px 14px',
-        width: '100%', maxWidth: '840px',
+        width: '100%', maxWidth: '1100px',
       }}>
         <span style={{ color: 'var(--c-text-4)', display: 'flex' }}><SearchIcon /></span>
         <input
@@ -353,7 +353,7 @@ function SearchBar() {
         <div style={{
           position: 'absolute', top: 'calc(100% + 6px)',
           left: '50%', transform: 'translateX(-50%)',
-          width: '100%', maxWidth: '840px',
+          width: '100%', maxWidth: '1100px',
           background: 'var(--c-card-bg)', border: '1px solid var(--c-border)',
           borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,.12)',
           zIndex: 1000, overflow: 'hidden',
