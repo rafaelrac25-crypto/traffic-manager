@@ -47,10 +47,10 @@
   --c-text-2:     #5A2A45;
   --c-text-3:     #8C6078;
   --c-text-4:     #B8A0AE;
-  --c-accent:     #d68d8f;
-  --c-accent-dk:  #c27577;
-  --c-shadow:     rgba(214,141,143,.07);
-  --c-shadow-md:  rgba(214,141,143,.12);
+  --c-accent:     #C13584;
+  --c-accent-dk:  #7D4A5E;
+  --c-shadow:     rgba(193,53,132,.07);
+  --c-shadow-md:  rgba(193,53,132,.12);
   /* Tokens semanticos para icones (rosa default = --c-accent) */
   --c-success:    #2EBB7A;
   --c-warning:    #F5A623;
@@ -59,28 +59,29 @@
 }
 
 /* ── Tema claro glass equivalente — Glassmorphism light com accent rosa Cris (#C13584) ── */
+/* Estrutura idêntica ao dark; apenas os valores de cor são invertidos (escuro→claro).   */
 [data-theme="light"] {
-  /* Fundo rosé muito claro com tom quente */
-  --c-page-bg:       #FAF7F8;
-  /* Sidebar como ilha glass clara + topbar transparente */
-  --c-sidebar-bg:    rgba(255,255,255,.78);
+  /* Fundo cinza claríssimo levemente azulado — dark com luzes acesas */
+  --c-page-bg:       #ECEEF1;
+  /* Sidebar como ilha glass branca + topbar transparente */
+  --c-sidebar-bg:    rgba(255,255,255,.85);
   --c-topbar-bg:     transparent;
-  /* Cards: glass branco translúcido (clarinho) */
-  --c-card-bg:       rgba(255,255,255,.65);
-  --c-surface:       rgba(255,255,255,.85);
+  /* Cards: glass branco translúcido */
+  --c-card-bg:       rgba(255,255,255,.70);
+  --c-surface:       rgba(255,255,255,.90);
   /* Modais e popups: bem mais opaco para contraste de leitura */
   --c-modal-bg:      rgba(255,255,255,.96);
   --c-hover:         rgba(0,0,0,.04);
   --c-active-bg:     rgba(193,53,132,.10);
   /* Bordas glass — sutis escuras translúcidas */
-  --c-border:        rgba(0,0,0,.08);
-  --c-border-lt:     rgba(0,0,0,.05);
-  /* Texto */
+  --c-border:        rgba(0,0,0,.10);
+  --c-border-lt:     rgba(0,0,0,.06);
+  /* Texto — preto suave sobre fundo cinza claro */
   --c-text-1:        #1A0A14;
-  --c-text-2:        #5A2A45;
-  --c-text-3:        #8C6078;
+  --c-text-2:        #4A2A3A;
+  --c-text-3:        #7A6070;
   --c-text-4:        #B8A0AE;
-  /* Accent: rosa forte da marca (#C13584) — mesmo do dark */
+  /* Accent: rosa forte da marca (#C13584) — idêntico ao dark */
   --c-accent:        #C13584;
   --c-accent-dk:     #7D4A5E;
   --c-accent-soft:   rgba(193,53,132,.10);
@@ -90,51 +91,52 @@
   --c-warning:       #F5A623;
   --c-info:          #3B9DDB;
   --c-attention:     #FF7849;
-  /* Glass tokens */
-  --c-glass-shine:   rgba(255,255,255,.5);
-  --c-glass-border-2:rgba(0,0,0,.14);
-  /* Sombras */
+  /* Glass tokens — shine branco translúcido, borda escura sutil */
+  --c-glass-shine:   rgba(255,255,255,.60);
+  --c-glass-border-2:rgba(0,0,0,.12);
+  /* Sombras com toque rosa (em vez de preto do dark) */
   --c-shadow:        rgba(193,53,132,.07);
   --c-shadow-md:     rgba(193,53,132,.12);
   --shadow-sm:       0 1px 4px rgba(193,53,132,.08);
   --shadow:          0 4px 16px rgba(193,53,132,.10);
   --shadow-lg:       0 12px 36px rgba(193,53,132,.15);
-  /* Blur amount */
-  --c-blur-strong:   blur(28px);
+  /* Blur amount (mesma estrutura do dark) */
+  --c-blur-strong:   blur(28px) saturate(140%);
   --c-blur-soft:     blur(14px);
 }
 
-/* ── Background tech light — linhas escuras sutis sobre fundo claro ── */
+/* ── Background tech light — mesma estrutura do dark; stroke escuro sutil visível em fundo claro ── */
 [data-theme="light"] body::before {
   content: '';
   position: fixed; inset: 0; z-index: -2; pointer-events: none;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='800' viewBox='0 0 800 800'><defs><radialGradient id='node' cx='50%25' cy='50%25' r='50%25'><stop offset='0%25' stop-color='%23C13584' stop-opacity='.5'/><stop offset='60%25' stop-color='%23C13584' stop-opacity='.18'/><stop offset='100%25' stop-color='%23C13584' stop-opacity='0'/></radialGradient></defs><g stroke='%23000000' stroke-opacity='0.06' stroke-width='1' fill='none'><path d='M0,180 L220,180 L260,140 L460,140 L500,200 L800,200'/><path d='M0,520 L160,520 L200,560 L380,560 L420,500 L640,500 L680,560 L800,560'/><path d='M120,0 L120,80 L80,120 L80,260'/><path d='M620,0 L620,40 L660,80 L660,200 L620,240 L620,420'/><path d='M280,800 L280,720 L320,680 L520,680 L560,640' stroke-opacity='0.05'/></g><g fill='url(%23node)'><circle cx='220' cy='180' r='3.5'/><circle cx='460' cy='140' r='3.5'/><circle cx='500' cy='200' r='3.5'/><circle cx='160' cy='520' r='3.5'/><circle cx='420' cy='500' r='3.5'/><circle cx='680' cy='560' r='3.5'/><circle cx='80' cy='260' r='3.5'/><circle cx='620' cy='420' r='3.5'/><circle cx='320' cy='680' r='3.5'/></g></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='800' viewBox='0 0 800 800'><defs><radialGradient id='node' cx='50%25' cy='50%25' r='50%25'><stop offset='0%25' stop-color='%23C13584' stop-opacity='.5'/><stop offset='60%25' stop-color='%23C13584' stop-opacity='.18'/><stop offset='100%25' stop-color='%23C13584' stop-opacity='0'/></radialGradient></defs><g stroke='%23000000' stroke-opacity='0.07' stroke-width='1' fill='none'><path d='M0,180 L220,180 L260,140 L460,140 L500,200 L800,200'/><path d='M0,520 L160,520 L200,560 L380,560 L420,500 L640,500 L680,560 L800,560'/><path d='M120,0 L120,80 L80,120 L80,260'/><path d='M620,0 L620,40 L660,80 L660,200 L620,240 L620,420'/><path d='M280,800 L280,720 L320,680 L520,680 L560,640' stroke-opacity='0.05'/></g><g fill='url(%23node)'><circle cx='220' cy='180' r='3.5'/><circle cx='460' cy='140' r='3.5'/><circle cx='500' cy='200' r='3.5'/><circle cx='160' cy='520' r='3.5'/><circle cx='420' cy='500' r='3.5'/><circle cx='680' cy='560' r='3.5'/><circle cx='80' cy='260' r='3.5'/><circle cx='620' cy='420' r='3.5'/><circle cx='320' cy='680' r='3.5'/></g></svg>");
   background-size: 800px 800px;
   background-repeat: repeat;
   mask-image: radial-gradient(ellipse 90% 80% at center, rgba(0,0,0,.7), transparent 75%);
   -webkit-mask-image: radial-gradient(ellipse 90% 80% at center, rgba(0,0,0,.7), transparent 75%);
-  opacity: .55;
+  opacity: .60;
 }
 
-/* ── Spotlight + glows pastel (light) ── */
+/* ── Spotlight central + glows nos cantos (light) — mesma estrutura do dark, tons mais suaves ── */
 [data-theme="light"] body::after {
   content: '';
   position: fixed; inset: 0; z-index: -1; pointer-events: none;
   background:
-    radial-gradient(ellipse 90% 60% at 50% -10%, rgba(193,53,132,.12), transparent 70%),
-    radial-gradient(720px 720px at -8% -10%, rgba(193,53,132,.10), transparent 60%),
-    radial-gradient(640px 640px at 108% 108%, rgba(255,194,228,.18), transparent 60%);
+    radial-gradient(ellipse 90% 60% at 50% -10%, rgba(193,53,132,.10), transparent 70%),
+    radial-gradient(720px 720px at -8% -10%, rgba(193,53,132,.08), transparent 60%),
+    radial-gradient(640px 640px at 108% 108%, rgba(125,74,94,.12), transparent 60%);
 }
 
-/* ── Noise sutil light ── */
+/* ── Noise sutil light — mesma estrutura do dark, mas ruído em branco para fundo claro ── */
 [data-theme="light"] body {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.4 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.3 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
   background-size: 240px 240px;
   background-color: var(--c-page-bg);
 }
 
-/* ── Glass dark fumê → glass branco no light (cards) ── */
-[data-theme="light"] .ccb-card {
+/* ── Glass branco nos cards light — estrutura idêntica ao dark, valores de cor invertidos ── */
+[data-theme="light"] .ccb-card,
+[data-theme="light"] .page-container .ccb-card {
   background: var(--c-card-bg);
   backdrop-filter: var(--c-blur-strong);
   -webkit-backdrop-filter: var(--c-blur-strong);
@@ -148,14 +150,14 @@
 [data-theme="light"] .ccb-card::before {
   content: '';
   position: absolute; inset: 0;
-  background: linear-gradient(180deg, rgba(255,255,255,.5) 0%, transparent 30%);
+  background: linear-gradient(180deg, rgba(255,255,255,.55) 0%, transparent 30%);
   pointer-events: none; border-radius: inherit;
 }
 [data-theme="light"] .ccb-card::after {
   content: ''; position: absolute; inset: -1px;
-  background: linear-gradient(135deg, rgba(255,255,255,.6), transparent 45%);
+  background: linear-gradient(135deg, rgba(255,255,255,.65), transparent 45%);
   pointer-events: none; border-radius: inherit;
-  mix-blend-mode: overlay; opacity: .9;
+  opacity: .9;
 }
 [data-theme="light"] .ccb-card:hover {
   border-color: var(--c-glass-border-2);
@@ -239,16 +241,21 @@
   background-color: var(--c-page-bg);
 }
 
-/* Reduz blur em mobile (performance) */
+/* Reduz blur em mobile (performance) — dark e light */
 @media (max-width: 768px) {
   [data-theme="dark"] {
     --c-blur-strong: blur(12px);
     --c-blur-soft:   blur(8px);
   }
+  [data-theme="light"] {
+    --c-blur-strong: blur(12px) saturate(130%);
+    --c-blur-soft:   blur(8px);
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   /* Glows estáticos */
-  [data-theme="dark"] body::after { background-attachment: fixed; }
+  [data-theme="dark"] body::after  { background-attachment: fixed; }
+  [data-theme="light"] body::after { background-attachment: fixed; }
 }
 
 body {
