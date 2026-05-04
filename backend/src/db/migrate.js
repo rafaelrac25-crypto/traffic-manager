@@ -54,6 +54,13 @@ const CREATE_TABLES_EXTRA = [
     processed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`,
   `CREATE INDEX IF NOT EXISTS idx_pwe_processed_at ON processed_webhook_events(processed_at)`,
+  /* Token bucket compartilhado entre instâncias serverless para rate limit
+     da Meta API (180 req/h por chave). Idempotente: IF NOT EXISTS. */
+  `CREATE TABLE IF NOT EXISTS rate_limit_buckets (
+    key TEXT PRIMARY KEY,
+    tokens DOUBLE PRECISION NOT NULL DEFAULT 180,
+    last_refill TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
 ];
 
 async function runMigrations(pool) {

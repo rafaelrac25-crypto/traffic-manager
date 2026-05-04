@@ -203,6 +203,14 @@ db.exec(`
     processed_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
   CREATE INDEX IF NOT EXISTS idx_pwe_processed_at ON processed_webhook_events(processed_at);
+
+  /* Token bucket compartilhado para rate limit da Meta API.
+     REAL equivale a DOUBLE PRECISION do PG. last_refill em TEXT (ISO 8601). */
+  CREATE TABLE IF NOT EXISTS rate_limit_buckets (
+    key TEXT PRIMARY KEY,
+    tokens REAL NOT NULL DEFAULT 180,
+    last_refill TEXT NOT NULL DEFAULT (datetime('now'))
+  );
 `);
 
 const migrations = [
