@@ -117,15 +117,15 @@
   opacity: .60;
 }
 
-/* ── Spotlight central + glows nos cantos (light) — mesma estrutura do dark com tons rosa BEM visíveis em fundo branco ── */
+/* ── Spotlight central + glows nos cantos (light) — rosa intenso, criando o degrade que o Rafa pediu ── */
 [data-theme="light"] body::after {
   content: '';
   position: fixed; inset: 0; z-index: -1; pointer-events: none;
   background:
-    radial-gradient(ellipse 110% 70% at 50% -10%, rgba(193,53,132,.28), transparent 70%),
-    radial-gradient(820px 820px at -8% -10%, rgba(193,53,132,.22), transparent 60%),
-    radial-gradient(740px 740px at 108% 108%, rgba(125,74,94,.26), transparent 60%),
-    radial-gradient(ellipse 80% 60% at 50% 100%, rgba(193,53,132,.18), transparent 70%);
+    radial-gradient(ellipse 130% 80% at 50% -15%, rgba(193,53,132,.42), transparent 70%),
+    radial-gradient(900px 900px at -10% -10%, rgba(193,53,132,.35), transparent 60%),
+    radial-gradient(820px 820px at 110% 110%, rgba(125,74,94,.40), transparent 60%),
+    radial-gradient(ellipse 90% 70% at 50% 105%, rgba(193,53,132,.30), transparent 70%);
 }
 
 /* ── Light: SEM noise — fundo branco limpo + spotlight rosa cria a profundidade ── */
@@ -422,8 +422,8 @@ body {
 [data-theme="light"] .topbar-grid::after {
   background: linear-gradient(90deg,
     transparent 0%,
-    rgba(0,0,0,.14) 12%,
-    rgba(0,0,0,.14) 88%,
+    rgba(193,53,132,.28) 12%,
+    rgba(193,53,132,.28) 88%,
     transparent 100%);
 }
 

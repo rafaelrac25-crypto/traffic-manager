@@ -2181,40 +2181,7 @@ export default function Dashboard() {
   return (
     <div className="page-container">
 
-      {/* ── Cabeçalho — oculto no dark (saudação migrou pra topbar) ── */}
-      {!isDark && (
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
-          <div>
-            <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
-              {saudacao} <Icon name="sparkles" color="warning" size={18} />
-            </h1>
-            <p style={{ fontSize: '13px', color: 'var(--c-text-3)' }}>
-              {liveCampaigns.length === 1
-                ? 'Aqui está o desempenho do seu anúncio hoje.'
-                : 'Aqui está o desempenho dos seus anúncios hoje.'}
-            </p>
-          </div>
-          <div className="hide-mobile" style={{
-            display: 'flex', alignItems: 'center',
-            padding: '8px 14px', borderRadius: '10px',
-            border: '1.5px solid var(--c-border)', background: 'var(--c-card-bg)',
-            fontSize: '12px', fontWeight: 500, color: 'var(--c-text-2)',
-          }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-              <CalendarIcon2 />
-              {labelHoje}
-            </span>
-            <span style={{
-              width: '1px', height: '14px', background: 'var(--c-border)',
-              margin: '0 12px',
-            }} />
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontVariantNumeric: 'tabular-nums' }}>
-              <ClockIcon />
-              {horaAgora}
-            </span>
-          </div>
-        </div>
-      )}
+      {/* Cabecalho duplicado removido — saudacao "Ola, Cris" ja aparece na topbar em ambos temas */}
 
       {/* Onda 6.1: ResumoExecutivo removido — Dashboard começa direto pelos
          "detalhes operacionais". Definições de Exec* permanecem no arquivo
