@@ -117,15 +117,13 @@
   opacity: .60;
 }
 
-/* ── Spotlight central + glows nos cantos (light) — rosa intenso, criando o degrade que o Rafa pediu ── */
+/* ── Spotlight light — sutil, só nos cantos. Page-bg #FFF0F7 já dá o tom rosa base. ── */
 [data-theme="light"] body::after {
   content: '';
   position: fixed; inset: 0; z-index: -1; pointer-events: none;
   background:
-    radial-gradient(ellipse 130% 80% at 50% -15%, rgba(193,53,132,.42), transparent 70%),
-    radial-gradient(900px 900px at -10% -10%, rgba(193,53,132,.35), transparent 60%),
-    radial-gradient(820px 820px at 110% 110%, rgba(125,74,94,.40), transparent 60%),
-    radial-gradient(ellipse 90% 70% at 50% 105%, rgba(193,53,132,.30), transparent 70%);
+    radial-gradient(900px 900px at -10% -10%, rgba(193,53,132,.10), transparent 60%),
+    radial-gradient(820px 820px at 110% 110%, rgba(125,74,94,.12), transparent 60%);
 }
 
 /* ── Light: SEM noise — fundo branco limpo + spotlight rosa cria a profundidade ── */
