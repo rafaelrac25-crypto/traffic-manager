@@ -1,0 +1,1 @@
+import{i as e}from"./index-CPiN7he9.js";export{e as compressImage};

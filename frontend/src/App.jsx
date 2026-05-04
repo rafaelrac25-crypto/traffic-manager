@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, lazy, Suspense } from 'react';
 import Icon from './components/Icon';
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
@@ -14,6 +14,9 @@ import CreativeLibrary from './pages/CreativeLibrary';
 import References from './pages/References';
 import History from './pages/History';
 import Relatorios from './pages/Relatorios';
+/* Lazy: rota /agencia é showcase pessoal (Game Boy Agency); só carrega
+   quando visitada — zero impacto no bundle principal. */
+const Agency = lazy(() => import('./pages/Agency'));
 import AIAssistant from './components/AIAssistant';
 import SplashScreen from './components/SplashScreen';
 import { useTheme } from './contexts/ThemeContext';
@@ -497,6 +500,7 @@ function Layout() {
             <Route path="/referencias"   element={<References />} />
             <Route path="/criar-anuncio" element={<CreateAd />} />
             <Route path="/historico"     element={<History />} />
+            <Route path="/agencia"       element={<Suspense fallback={<div style={{padding:'40px',color:'var(--c-text-3)'}}>carregando agência…</div>}><Agency /></Suspense>} />
             {/* HeatMap removido — Meta não diferencia performance entre bairros do mesmo anel.
                 Métricas por anel ficam no Dashboard (RingPerformanceCard). */}
             <Route path="/mapa-de-calor" element={<Navigate to="/" replace />} />
