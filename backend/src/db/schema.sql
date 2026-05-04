@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS campaigns (
   budget DECIMAL(10,2),
   spent DECIMAL(10,2) DEFAULT 0,
   clicks INTEGER DEFAULT 0,
+  link_clicks INTEGER DEFAULT 0,
   impressions INTEGER DEFAULT 0,
   conversions INTEGER DEFAULT 0,
   start_date DATE,
@@ -224,3 +225,14 @@ CREATE TABLE IF NOT EXISTS competitor_analyses (
   created_at TIMESTAMP DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_competitor_analyses_created ON competitor_analyses(created_at DESC);
+
+/* Dedup de eventos webhook — replay guard contra reentregas do Meta.
+   Meta pode reentregar o mesmo evento se nossa resposta demorar >20s.
+   O agente 2 usa esta tabela em routes/webhooks.js para checar/registrar
+   event_id antes de processar, tornando o handler idempotente. */
+CREATE TABLE IF NOT EXISTS processed_webhook_events (
+  event_id TEXT PRIMARY KEY,
+  source TEXT NOT NULL DEFAULT 'meta',
+  processed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_pwe_processed_at ON processed_webhook_events(processed_at);

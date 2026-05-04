@@ -5,6 +5,7 @@ const dbPath = path.join(__dirname, '../../dev.db');
 const db = new Database(dbPath);
 
 db.pragma('journal_mode = WAL');
+db.exec('PRAGMA foreign_keys = ON');
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
@@ -24,6 +25,7 @@ db.exec(`
     budget REAL,
     spent REAL DEFAULT 0,
     clicks INTEGER DEFAULT 0,
+    link_clicks INTEGER DEFAULT 0,
     impressions INTEGER DEFAULT 0,
     conversions INTEGER DEFAULT 0,
     start_date TEXT,
@@ -65,7 +67,7 @@ db.exec(`
 
   CREATE TABLE IF NOT EXISTS ad_sets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    campaign_id INTEGER,
+    campaign_id INTEGER REFERENCES campaigns(id) ON DELETE CASCADE,
     platform_ad_set_id TEXT UNIQUE,
     name TEXT,
     status TEXT,
@@ -99,8 +101,8 @@ db.exec(`
 
   CREATE TABLE IF NOT EXISTS ads (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    ad_set_id INTEGER,
-    creative_id INTEGER,
+    ad_set_id INTEGER REFERENCES ad_sets(id) ON DELETE CASCADE,
+    creative_id INTEGER REFERENCES creatives(id) ON DELETE SET NULL,
     platform_ad_id TEXT UNIQUE,
     name TEXT,
     status TEXT,
@@ -127,9 +129,9 @@ db.exec(`
 
   CREATE TABLE IF NOT EXISTS insights (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    ad_id INTEGER,
-    ad_set_id INTEGER,
-    campaign_id INTEGER,
+    ad_id INTEGER REFERENCES ads(id) ON DELETE CASCADE,
+    ad_set_id INTEGER REFERENCES ad_sets(id) ON DELETE CASCADE,
+    campaign_id INTEGER REFERENCES campaigns(id) ON DELETE CASCADE,
     date_start TEXT NOT NULL,
     date_stop TEXT NOT NULL,
     spend REAL DEFAULT 0,
@@ -148,8 +150,8 @@ db.exec(`
 
   CREATE TABLE IF NOT EXISTS insights_by_district (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    ad_id INTEGER,
-    campaign_id INTEGER,
+    ad_id INTEGER REFERENCES ads(id) ON DELETE CASCADE,
+    campaign_id INTEGER REFERENCES campaigns(id) ON DELETE CASCADE,
     district TEXT NOT NULL,
     service TEXT,
     date_start TEXT NOT NULL,
@@ -191,6 +193,16 @@ db.exec(`
     created_at TEXT DEFAULT (datetime('now'))
   );
   CREATE INDEX IF NOT EXISTS idx_competitor_analyses_created ON competitor_analyses(created_at DESC);
+
+  /* Dedup de eventos webhook — replay guard contra reentregas do Meta.
+     processed_at usa TEXT/CURRENT_TIMESTAMP (sem fuso) pois SQLite não tem
+     tipo TIMESTAMPTZ nativo; equivale ao TIMESTAMPTZ do schema PG. */
+  CREATE TABLE IF NOT EXISTS processed_webhook_events (
+    event_id TEXT PRIMARY KEY,
+    source TEXT NOT NULL DEFAULT 'meta',
+    processed_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_pwe_processed_at ON processed_webhook_events(processed_at);
 `);
 
 const migrations = [

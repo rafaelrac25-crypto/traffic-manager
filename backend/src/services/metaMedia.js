@@ -132,12 +132,18 @@ async function waitForVideoReady(creds, videoId, { maxWaitMs = 60000, pollEveryM
   const token = getToken(creds);
   const deadline = Date.now() + maxWaitMs;
   while (Date.now() < deadline) {
-    const url = `https://${GRAPH_HOST}/${API_VERSION}/${videoId}?fields=status&access_token=${encodeURIComponent(token)}`;
+    /* Token no header Authorization em vez de query string — evita vazamento
+       em logs de acesso (access_log, Vercel request logs, etc.) que registram
+       a URL completa. Comportamento idêntico ao Bearer do metaHttp.js. */
+    const url = `https://${GRAPH_HOST}/${API_VERSION}/${videoId}?fields=status`;
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 10000);
     let json;
     try {
-      const res = await fetch(url, { signal: ctrl.signal });
+      const res = await fetch(url, {
+        signal: ctrl.signal,
+        headers: { Authorization: `Bearer ${token}` },
+      });
       json = await res.json();
     } catch (e) {
       /* Falha transiente de rede — tenta de novo na próxima iteração */

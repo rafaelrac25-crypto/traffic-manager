@@ -38,8 +38,22 @@ const ADD_COLUMNS = [
   'ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS effective_status TEXT',
   'ALTER TABLE ad_sets ADD COLUMN IF NOT EXISTS effective_status TEXT',
   'ALTER TABLE ads ADD COLUMN IF NOT EXISTS effective_status TEXT',
-  /* link_clicks: Meta inline_link_clicks (cliques no CTA/link, exclui likes/follows) */
+  /* link_clicks: Meta inline_link_clicks (cliques no CTA/link, exclui likes/follows).
+     Mantido aqui mesmo com a coluna já no CREATE TABLE original — ADD COLUMN IF NOT EXISTS
+     é idempotente em PG; o try/catch do loop cobre DBs antigos sem a coluna. */
   'ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS link_clicks INTEGER DEFAULT 0',
+];
+
+/* Tabelas adicionadas após o schema.sql original — criadas aqui pra garantir
+   que instâncias de prod com schema antigo recebam a tabela sem recriar o DB.
+   Idempotente: IF NOT EXISTS + try/catch no loop de runMigrations. */
+const CREATE_TABLES_EXTRA = [
+  `CREATE TABLE IF NOT EXISTS processed_webhook_events (
+    event_id TEXT PRIMARY KEY,
+    source TEXT NOT NULL DEFAULT 'meta',
+    processed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_pwe_processed_at ON processed_webhook_events(processed_at)`,
 ];
 
 async function runMigrations(pool) {
@@ -53,6 +67,10 @@ async function runMigrations(pool) {
     for (const s of CREATE_TABLES) {
       try { await pool.query(s); }
       catch (e) { console.warn('[migrate] skip table:', e.message.slice(0, 120)); }
+    }
+    for (const s of CREATE_TABLES_EXTRA) {
+      try { await pool.query(s); }
+      catch (e) { console.warn('[migrate] skip table extra:', e.message.slice(0, 120)); }
     }
     for (const s of ADD_COLUMNS) {
       try { await pool.query(s); }
