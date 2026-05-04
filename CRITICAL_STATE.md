@@ -1,5 +1,72 @@
 # CRITICAL_STATE — traffic-manager
 
+## Sessão 2026-05-04 (parte 3) — Auditoria profunda 2 varreduras + 17 fixes em 4 commits
+
+### Veredicto da auditoria
+2 agentes Sonnet em paralelo (Varredura 1: features novas; Varredura 2: sistema base). Sem sobreposição. Achados consolidados: 3 CRITICAL, 5 HIGH, 6 MEDIUM, vários LOW. Confirmado limpo: gender em metaNormalize (1=homens, 2=mulheres — bug histórico não regrediu), webhook HMAC, OAuth CSRF, AES-256-GCM, cleanup transacional do publishCampaign, AbortController da vista hierárquica.
+
+### Fixes aplicados (3 agentes Sonnet em paralelo, escopos disjuntos)
+
+**Commit b4e93c8 — CRITICAL (segurança/integridade):**
+- `metaMedia.js`: token Meta via `Authorization: Bearer` em vez de query string (não vaza pra logs Vercel/CDN)
+- `schema.sql`: `link_clicks` no CREATE TABLE original (antes só ALTER em migrate.js — risco de crash em sync.js)
+- `schema.sql`: tabela `processed_webhook_events` para dedup
+- `sqlite.js`: `PRAGMA foreign_keys=ON` + REFERENCES (paridade dev↔prod)
+- `migrate.js`: cria processed_webhook_events idempotentemente
+
+**Commit e5206fb — HIGH:**
+- `webhooks.js`: replay guard via `event_id = entry.id:entry.time` com ON CONFLICT DO NOTHING
+- `ai.js`: limites 50 mensagens + 5MB por imageBase64 (custo Groq + OOM)
+- `googleAds.js`: timeout 15s no https.request (antes podia pendurar function 300s)
+- `useCampaignsHierarchy.js`: mountedRef previne setState pós-desmonte; purge IDs removidos
+
+**Commit 90389df — MEDIUM:**
+- `CampaignsHierarchy.jsx`: clearTimeout pendente, catch{} → console.warn, guard null em fetched_at
+- `Relatorios.jsx`: bloco morto `filter==='reminder'` removido
+- `sounds.js`: AudioContext recria se closed; closeAudioCtx() exposto
+- `History.jsx`: funde activity_log do backend com history local
+- `metaWrite.js`: `waitForVideoReady` 50s → 40s (margem de 20s pra cleanupOrphans)
+- `middleware/auth.js` + `metaRateLimit.js`: comentários documentais
+
+**Commit 8400e8b — LOW:**
+- `ThemeContext.jsx` + `Sidebar.jsx`: toggle noop removido
+- `CreativeLibrary.jsx`: campo description removido (regra IG/mobile)
+- `metaErrors.js`: código 200 vira `reconnect:false` (era falso positivo)
+- `platforms.js`: `safeDecrypt` em instagram-profile e campaign-status
+
+### Pendências derivadas
+- Joinville districts: 18/43 bairros oficiais. LOW — Rafa decide se vale completar via Nominatim.
+- Rate limit Meta em memória ainda é per-instance (comentado, não fixado — espera Redis/KV no futuro).
+- History merge: shape exato de `/api/history` não validado em runtime — se backend retornar formato diferente, dedup cai pra `id` apenas.
+
+---
+
+## Sessão 2026-05-04 (parte 2) — Otimização global Claude Code (não-projeto, mas relevante)
+
+Mudanças GLOBAIS (não específicas do traffic-manager) aplicadas em paralelo:
+- **Profile GSD:** `~/.gsd/defaults.json` criado com `{"model_profile": "balanced"}` — subagents gsd-* automaticamente Sonnet pra execução, Haiku pra mapeamento/audit, Opus só pra planning/debug.
+- **Regra de modelo por subagente:** adicionada em `~/CLAUDE.md` — toda chamada `Agent` precisa passar `model:` explícito (Haiku pra Explore, Sonnet pra general-purpose/Plan).
+- **Vercel via MCP:** regra em `~/CLAUDE.md` pra usar `mcp__plugin_vercel-plugin_vercel__*` em vez de pedir Vercel CLI (Rafa não tem instalado).
+- **Memory atualizada:** `feedback_model_selection.md` virou OBRIGATÓRIO; `feedback_vercel_mcp_default.md` criado; MEMORY.md index atualizado.
+- **Sessão principal:** continua Opus 4.7 1M (`~/.claude/settings.json`). Rafa pode trocar com `/model` quando quiser baixar pra Sonnet em tarefas leves.
+
+Efeito esperado: economia de token e velocidade em sessões longas, principalmente as que envolvem exploração de código (Explore agents agora rodam Haiku).
+
+## Sessão 2026-05-04 — Vista hierárquica em /anuncios + Dashboard com pai
+
+### Checkpoint (implementação concluída, build + push)
+- **Commit:** `98740b2` feat(/anuncios): vista hierárquica Campanha → Conjunto → Anúncio com métrica viva por ad
+- **O que mudou:**
+  - `/anuncios` agora abre por padrão em vista "Por campanha" — agrupa cada userAd como campanha, expande conjuntos dentro, e mostra métricas individuais (gasto, impressões, cliques, CTR, mensagens, custo/msg) de **cada anúncio** dentro do conjunto. Toggle "Lista" mantém tabela plana.
+  - Dashboard `ExecActiveAdsTable`: subtítulo agora mostra nome do conjunto + objetivo + raio (em vez de só "Conjunto · Joinville · raio X").
+- **Arquivos criados:** `frontend/src/hooks/useCampaignsHierarchy.js` (busca paralela com cache TTL 60s + AbortController)
+- **Arquivos modificados:**
+  - `frontend/src/pages/Campaigns.jsx` — +600 linhas: HierarchyAdsSection, CampaignGroupCard, HierarchicalAdSetBlock, HierarchicalAdRow, MetricPill, helpers aggregateInsights/summarizeAdSetTargeting; toggle viewMode no header de filtros; ramificação no render
+  - `frontend/src/pages/Dashboard.jsx` — subtítulo da linha de ad com nome do adset
+- **Endpoint reaproveitado:** `/api/campaigns/:id/hierarchy` (já existente — usado pelo CampaignsHierarchy.jsx). Retorna campaign → adsets → ads com `ad.insights` (spend, clicks, link_clicks, impressions, reach, ctr, cpc, messages).
+- **Pendência:** Relatorios.jsx tem 1 alteração não commitada (não é desta feature) — ficou na working tree pra Rafa decidir.
+- **Build:** passou (1.37s, 891kB — avisos pré-existentes)
+
 ## Sessão 2026-05-03 — Feature: recomendação de investimento por bairro × serviço
 
 ### Checkpoint (implementação concluída, build passou)
