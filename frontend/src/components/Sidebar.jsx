@@ -367,45 +367,7 @@ export default function Sidebar({ open = false, isMobile = false }) {
       {/* ── Status do sistema (linha acima do tema escuro) ── */}
       <SystemStatus />
 
-      {/* ── Tema escuro ── */}
-      <div style={{ padding: '8px 10px', borderTop: '1px solid var(--c-border-lt)' }}>
-        <div
-          onClick={toggle}
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '9px 12px', borderRadius: '10px', cursor: 'pointer',
-            transition: 'background .15s',
-          }}
-          onMouseEnter={e => e.currentTarget.style.background = 'var(--c-hover)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '9px', color: 'var(--c-text-3)' }}>
-            {isDark ? <IconSun /> : <IconMoon />}
-            <span style={{ fontSize: '12px', fontWeight: 500 }}>
-              {isDark ? 'Tema claro' : 'Tema escuro'}
-            </span>
-          </div>
-          <div style={{
-            width: '36px', height: '20px',
-            borderRadius: '20px',
-            background: isDark ? 'var(--c-accent)' : 'var(--c-border)',
-            position: 'relative',
-            transition: 'background .2s',
-            flexShrink: 0,
-          }}>
-            <div style={{
-              position: 'absolute',
-              width: '14px', height: '14px',
-              background: '#fff',
-              borderRadius: '50%',
-              top: '3px',
-              left: isDark ? '19px' : '3px',
-              transition: 'left .2s',
-              boxShadow: '0 1px 4px rgba(0,0,0,.2)',
-            }} />
-          </div>
-        </div>
-      </div>
+      {/* Toggle "Tema escuro" removido — sistema fica so no dark */}
 
       {/* ── Perfil (foto sincronizada Meta quando conectado) ── */}
       <div style={{ padding: '8px 10px 14px', borderTop: '1px solid var(--c-border-lt)' }}>

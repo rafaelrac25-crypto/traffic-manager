@@ -45,45 +45,7 @@ const BellIcon = () => (
   </svg>
 );
 
-const MoonIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-  </svg>
-);
-const SunIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="4"/>
-    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
-  </svg>
-);
-
-function ThemeToggleButton() {
-  const { isDark, toggle } = useTheme();
-  /* Ícone representa o estado atual:
-     - Light ativo → SunIcon amarelo aceso (#F5C447), só o ícone
-     - Dark ativo  → MoonIcon desligado (cinza neutro, sem glow) */
-  const iconColor = isDark ? 'var(--c-text-3)' : '#F5C447';
-  return (
-    <button
-      onClick={toggle}
-      title={isDark ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
-      aria-label="Alternar tema"
-      style={{
-        cursor: 'pointer',
-        color: iconColor,
-        background: 'var(--c-surface)',
-        border: '1.5px solid var(--c-border)',
-        width: '40px', height: '40px', borderRadius: '12px',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        flexShrink: 0, transition: 'all .18s',
-      }}
-      onMouseEnter={e => e.currentTarget.style.background = 'var(--c-active-bg)'}
-      onMouseLeave={e => e.currentTarget.style.background = 'var(--c-surface)'}
-    >
-      {isDark ? <MoonIcon /> : <SunIcon />}
-    </button>
-  );
-}
+/* ThemeToggleButton + SunIcon/MoonIcon removidos — sistema fica so no dark */
 
 const HamburgerIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -478,10 +440,8 @@ function Layout() {
 
           <SearchBar />
 
-          {/* Bloco direita: theme + sino */}
+          {/* Bloco direita: sino */}
           <div className="topbar-actions">
-            <ThemeToggleButton />
-
             {/* Sino de notificações */}
             <div style={{ position: 'relative', flexShrink: 0 }}>
               <button

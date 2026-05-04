@@ -1,29 +1,21 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
 
-const ThemeContext = createContext({ isDark: false, toggle: () => {} });
+/* Tema fixo em dark — o modo light foi removido por decisao do Rafa.
+   Mantemos useTheme() retornando { isDark: true, toggle: noop } pra
+   nao quebrar nenhum componente existente que importa esse hook. */
+
+const ThemeContext = createContext({ isDark: true, toggle: () => {} });
 
 export function ThemeProvider({ children }) {
-  const [isDark, setIsDark] = useState(() => {
-    try {
-      /* Migração one-shot da chave antiga sem prefixo */
-      const legacy = localStorage.getItem('theme');
-      if (legacy != null && localStorage.getItem('ccb_theme') == null) {
-        localStorage.setItem('ccb_theme', legacy);
-        localStorage.removeItem('theme');
-      }
-      return localStorage.getItem('ccb_theme') === 'dark';
-    } catch { return false; }
-  });
-
   useEffect(() => {
     try {
-      document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
-      localStorage.setItem('ccb_theme', isDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', 'dark');
+      localStorage.setItem('ccb_theme', 'dark');
     } catch {}
-  }, [isDark]);
+  }, []);
 
   return (
-    <ThemeContext.Provider value={{ isDark, toggle: () => setIsDark(d => !d) }}>
+    <ThemeContext.Provider value={{ isDark: true, toggle: () => {} }}>
       {children}
     </ThemeContext.Provider>
   );
@@ -31,5 +23,5 @@ export function ThemeProvider({ children }) {
 
 export function useTheme() {
   const ctx = useContext(ThemeContext);
-  return ctx || { isDark: false, toggle: () => {} };
+  return ctx || { isDark: true, toggle: () => {} };
 }
