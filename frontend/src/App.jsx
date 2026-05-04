@@ -374,7 +374,7 @@ function Layout() {
     return 'Boa noite';
   }
   function dateLabel() {
-    const dias = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+    const dias = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
     const meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
     const d = new Date();
     return `${dias[d.getDay()]}, ${String(d.getDate()).padStart(2, '0')} ${meses[d.getMonth()]} ${d.getFullYear()}`;
@@ -433,7 +433,7 @@ function Layout() {
                 <span className="tag">PRO</span>
               </span>
               <span className="sub">
-                Resumo das suas campanhas Meta · {dateLabel()}
+                {dateLabel()}
               </span>
             </div>
           </div>
