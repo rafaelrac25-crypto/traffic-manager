@@ -1667,3 +1667,40 @@ AbortController do post().
 
 Nota: hook so dispara em sessoes do CLI iniciadas APOS o fix. A sessao
 atual nao roda esse hook ate Rafa reiniciar o CLI.
+
+---
+
+## Game Boy Agency — Fase 2 deployada (2026-05-04 19:33 BRT)
+
+Cena pixel-art DMG always-visible em criscosta.vercel.app/agencia.
+Commit fe82197 (range fase 2: cb29c5f → fe82197). Deploy READY ~21s,
+chunk Agency-DwmVcTIy.js = 15.4kB em prod, paleta verde DMG + labels
+de agente confirmados via curl --compressed.
+
+Arquivos novos:
+- frontend/src/utils/agencyArt.js (paleta, drawScene, drawAgent, FONT_3x5)
+- frontend/src/pages/AgencyScene.jsx (Canvas 320x180 escalado, rAF loop)
+
+Edição: frontend/src/pages/Agency.jsx — importa AgencyScene e renderiza
+acima do feed de texto (que vira log abaixo).
+
+Visual: escritório retrô — janela com sol/nuvens, parede com quadro de
+notas + relógio + estante + planta, chão de madeira, café, 8 mesas em
+2 fileiras (4 trás compactas + 4 frente maiores, mesa central de
+Claude Code com 2 monitores). 8 personagens com silhueta diferenciada
+por acessório (coroa Claude, cartola Opus, lupa Explore, beanie test,
+etc). Labels pixel 3x5 embaixo de cada personagem.
+
+Animação: 4fps em 4 frames. Idle ambient = blink aleatório + braços ao
+lado. Ativação por evento = 4s "aceso" com balão de fala pulsando + braços
+digitando. Mapping agente é fuzzy (resolveAgent) — eventos com nomes
+variados caem nos 8 slots fixos.
+
+Pendente:
+- Rafa abrir /agencia e validar visualmente (1 evento por agente já
+  semeado em prod pra cena ficar visualmente populada)
+- Reiniciar CLI pra hook PostToolUse alimentar a cena com eventos reais
+  da próxima sessão (fix do hook foi commitado em sessão anterior)
+- Fase 3 (futuro): se Rafa pedir, evoluir pra Spline 3D ou aumentar
+  detalhes (chuva na janela, dia/noite por hora, sub-agentes correndo
+  entre mesas)
