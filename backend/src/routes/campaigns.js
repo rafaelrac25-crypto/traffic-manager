@@ -1917,7 +1917,7 @@ router.get('/:id/hierarchy', async (req, res) => {
 
     /* AdSets + ads aninhados — 1 chamada via expansion */
     const adsetsResp = await metaGet(`/${camp.platform_campaign_id}/adsets`, {
-      fields: 'id,name,status,effective_status,daily_budget,lifetime_budget,targeting,optimization_goal,billing_event,destination_type,start_time,end_time,ads.limit(25){id,name,status,effective_status,creative{id,name},created_time}',
+      fields: 'id,name,status,effective_status,daily_budget,lifetime_budget,targeting,optimization_goal,billing_event,destination_type,start_time,end_time,ads.limit(25){id,name,status,effective_status,creative{id,name},created_time,insights{spend,clicks,impressions,reach,ctr,cpc,actions,unique_clicks}}',
       limit: 50,
     }, { token });
 
@@ -1934,15 +1934,30 @@ router.get('/:id/hierarchy', async (req, res) => {
       start_time: as.start_time,
       end_time: as.end_time,
       targeting: as.targeting || null,
-      ads: (as.ads?.data || []).map(ad => ({
-        id: ad.id,
-        name: ad.name,
-        status: ad.status,
-        effective_status: ad.effective_status,
-        creative_id: ad.creative?.id || null,
-        creative_name: ad.creative?.name || null,
-        created_time: ad.created_time,
-      })),
+      ads: (as.ads?.data || []).map(ad => {
+        const ins = ad.insights?.data?.[0] || null;
+        const linkClicks = ins?.actions?.find(a => a.action_type === 'link_click')?.value || 0;
+        const messages = ins?.actions?.find(a => /messaging_conversation_started|onsite_conversion\.messaging_first_reply|onsite_conversion\.total_messaging_connection/.test(a.action_type))?.value || 0;
+        return {
+          id: ad.id,
+          name: ad.name,
+          status: ad.status,
+          effective_status: ad.effective_status,
+          creative_id: ad.creative?.id || null,
+          creative_name: ad.creative?.name || null,
+          created_time: ad.created_time,
+          insights: ins ? {
+            spend:       Number(ins.spend) || 0,
+            clicks:      Number(ins.clicks) || 0,
+            link_clicks: Number(linkClicks) || 0,
+            impressions: Number(ins.impressions) || 0,
+            reach:       Number(ins.reach) || 0,
+            ctr:         Number(ins.ctr) || 0,
+            cpc:         Number(ins.cpc) || 0,
+            messages:    Number(messages) || 0,
+          } : null,
+        };
+      }),
     }));
 
     res.json({

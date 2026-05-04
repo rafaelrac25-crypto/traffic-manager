@@ -960,6 +960,9 @@ function AdSetCard({ adset, campaignLocalId, onAction, onSelect, selected, onSta
 /* ─── Card de Anúncio (Ad) ─── */
 function AdCard({ ad, onStatusChange, onDelete, busy }) {
   const status = statusLabel(ad.effective_status || ad.status);
+  const ins = ad.insights || null;
+  const fmtBRL = (n) => `R$ ${Number(n||0).toFixed(2).replace('.', ',')}`;
+  const fmtInt = (n) => Number(n||0).toLocaleString('pt-BR');
   return (
     <div className="ccb-card" style={{
       borderRadius: '12px',
@@ -997,6 +1000,21 @@ function AdCard({ ad, onStatusChange, onDelete, busy }) {
           letterSpacing: '.3px',
         }}>{status.txt}</span>
       </div>
+      {/* Metricas individuais por anuncio (vem do hierarchy enriquecido com insights por ad) */}
+      {ins && (
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px',
+          marginTop: '10px', paddingTop: '8px', borderTop: '1px solid var(--c-border)',
+          fontSize: '10.5px', color: 'var(--c-text-3)', fontFeatureSettings: "'tnum'",
+        }}>
+          <div><div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '.6px', color: 'var(--c-text-4)', marginBottom: '2px' }}>Gasto</div><strong style={{ color: 'var(--c-text-1)' }}>{fmtBRL(ins.spend)}</strong></div>
+          <div><div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '.6px', color: 'var(--c-text-4)', marginBottom: '2px' }}>Cliques link</div><strong style={{ color: 'var(--c-text-1)' }}>{fmtInt(ins.link_clicks || ins.clicks)}</strong></div>
+          <div><div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '.6px', color: 'var(--c-text-4)', marginBottom: '2px' }}>Mensagens</div><strong style={{ color: 'var(--c-success)' }}>{fmtInt(ins.messages)}</strong></div>
+          <div><div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '.6px', color: 'var(--c-text-4)', marginBottom: '2px' }}>Impressões</div><strong style={{ color: 'var(--c-text-1)' }}>{fmtInt(ins.impressions)}</strong></div>
+          <div><div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '.6px', color: 'var(--c-text-4)', marginBottom: '2px' }}>CTR</div><strong style={{ color: 'var(--c-text-1)' }}>{(Number(ins.ctr)||0).toFixed(2)}%</strong></div>
+          <div><div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '.6px', color: 'var(--c-text-4)', marginBottom: '2px' }}>CPC</div><strong style={{ color: 'var(--c-text-1)' }}>{fmtBRL(ins.cpc)}</strong></div>
+        </div>
+      )}
     </div>
   );
 }
