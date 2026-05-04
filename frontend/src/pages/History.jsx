@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useAppState } from '../contexts/AppStateContext';
+import api from '../services/api';
 import Icon from '../components/Icon';
 
 const TYPE_META = {
@@ -176,9 +177,33 @@ function LogRow({ entry, onRestore, onRemove }) {
 }
 
 export default function History() {
-  const { history, restoreHistoryEntry, removeHistoryEntry, clearHistory } = useAppState();
+  const { history: localHistory, restoreHistoryEntry, removeHistoryEntry, clearHistory } = useAppState();
   const [filter, setFilter] = useState('all');
   const [feedback, setFeedback] = useState(null);
+  const [backendHistory, setBackendHistory] = useState([]);
+
+  useEffect(() => {
+    api.get('/history').then(r => setBackendHistory(r.data || [])).catch(() => {});
+  }, []);
+
+  /* Funde backend (source of truth) com local (localStorage), deduplicando por id
+     ou pela combinação created_at+action. Backend usa created_at; local usa createdAt. */
+  const history = useMemo(() => {
+    const seen = new Set();
+    const normalize = (item) => ({
+      ...item,
+      createdAt: item.createdAt || item.created_at,
+    });
+    const all = [...backendHistory.map(normalize), ...localHistory.map(normalize)];
+    return all
+      .filter(item => {
+        const key = item.id || `${item.createdAt}-${item.action || item.type}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }, [backendHistory, localHistory]);
 
   const filtered = useMemo(() => {
     if (filter === 'all') return history;

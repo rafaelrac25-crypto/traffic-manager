@@ -21,12 +21,12 @@ const KINDS = {
     color: 'var(--c-success)',
     bg: 'rgba(46,187,122,.10)',
   },
-  reminder: {
-    label: 'Lembretes',
-    description: 'Avisos pontuais, datas marcadas e itens pra você revisar.',
-    iconName: 'clock',
-    color: 'var(--c-warning)',
-    bg: 'rgba(245,166,35,.10)',
+  ad: {
+    label: 'Anúncio',
+    description: 'Métricas separadas por anúncio — gasto, cliques, mensagens e CTR de cada criativo.',
+    iconName: 'image',
+    color: 'var(--c-info)',
+    bg: 'rgba(59,157,219,.10)',
   },
 };
 
@@ -210,7 +210,7 @@ export default function Relatorios() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
-  const [filter, setFilter]   = useState('all'); // all | campaign | system | reminder
+  const [filter, setFilter]   = useState('campaign'); // campaign | ad | system
   const [expanded, setExpanded] = useState({});  // { [id]: boolean }
   const [refreshing, setRefreshing] = useState(null); // null | 'campaign' | 'system'
 
@@ -230,12 +230,12 @@ export default function Relatorios() {
   useEffect(() => { load(); }, []);
 
   const filtered = useMemo(() => {
-    if (filter === 'all') return reports;
+    /* filter sempre tem valor — sem mais 'all' */
     return reports.filter(r => (r.kind || 'campaign') === filter);
   }, [reports, filter]);
 
   const counts = useMemo(() => {
-    const out = { all: reports.length, campaign: 0, system: 0, reminder: 0 };
+    const out = { campaign: 0, ad: 0, system: 0 };
     for (const r of reports) {
       const k = r.kind || 'campaign';
       if (out[k] != null) out[k] += 1;
@@ -363,16 +363,11 @@ export default function Relatorios() {
         }}>
           <Icon name="sparkles" size={14} color="warning" /> Gerar relatório agora:
         </div>
-        {(filter === 'all' || filter === 'campaign') && (
+        {filter === 'campaign' && (
           <RefreshButton kind="campaign" label="Sua campanha" color={KINDS.campaign.color} />
         )}
-        {(filter === 'all' || filter === 'system') && (
+        {filter === 'system' && (
           <RefreshButton kind="system" label="Sistema" color={KINDS.system.color} />
-        )}
-        {filter === 'reminder' && (
-          <span style={{ fontSize: '12px', color: 'var(--c-text-4)', fontStyle: 'italic', fontWeight: 400 }}>
-            Lembretes são pontuais — disparados pela rotina que você programou.
-          </span>
         )}
         <span style={{ flex: 1 }} />
         <span style={{ fontSize: '11px', color: 'var(--c-text-4)', fontWeight: 400 }}>
@@ -386,10 +381,9 @@ export default function Relatorios() {
         marginBottom: '20px',
       }}>
         {[
-          { id: 'all',      label: 'Todos',         emoji: '📋', color: 'var(--c-text-2)' },
           { id: 'campaign', label: KINDS.campaign.label, iconName: KINDS.campaign.iconName, color: KINDS.campaign.color },
+          { id: 'ad',       label: KINDS.ad.label,       iconName: KINDS.ad.iconName,       color: KINDS.ad.color },
           { id: 'system',   label: KINDS.system.label,   iconName: KINDS.system.iconName,   color: KINDS.system.color },
-          { id: 'reminder', label: KINDS.reminder.label, iconName: KINDS.reminder.iconName, color: KINDS.reminder.color },
         ].map(tab => {
           const active = filter === tab.id;
           const count = counts[tab.id] ?? 0;

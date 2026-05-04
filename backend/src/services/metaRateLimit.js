@@ -1,3 +1,10 @@
+/* AVISO — Token bucket in-memory: protege APENAS dentro de uma única
+   instância warm do servidor. Em Vercel (serverless multi-instância),
+   cada function fria começa com bucket cheio e não enxerga o estado
+   das outras instâncias. A real defesa contra rate limit do Meta vem
+   do retry/backoff em metaErrors.js (códigos 4, 17, 32, 613).
+   TODO: substituir por Redis/KV compartilhado quando o volume de
+   requisições simultâneas justificar (ex: Vercel KV ou Upstash Redis). */
 const BUCKETS = new Map();
 const CAPACITY = 180;
 const REFILL_PER_MS = CAPACITY / (60 * 60 * 1000);

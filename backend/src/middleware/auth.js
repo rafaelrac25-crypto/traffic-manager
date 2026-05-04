@@ -1,3 +1,12 @@
+/**
+ * AUTENTICAÇÃO JWT — atualmente DESATIVADA.
+ *
+ * Sistema é uso interno (uma única usuária, sem login).
+ * Este middleware NÃO está registrado em nenhuma rota do index.js.
+ *
+ * Para reativar: registrar via app.use('/api', authMiddleware) ou em rotas específicas.
+ * Antes de reativar, conferir que routes/auth.js (POST /setup, /login) está consistente.
+ */
 const jwt = require('jsonwebtoken');
 
 module.exports = (req, res, next) => {

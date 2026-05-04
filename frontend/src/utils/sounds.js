@@ -1,13 +1,21 @@
 let audioCtx = null;
 
 function getCtx() {
-  if (audioCtx) return audioCtx;
-  try {
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return null;
-    audioCtx = new Ctx();
-  } catch { return null; }
+  if (!audioCtx || audioCtx.state === 'closed') {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return null;
+      audioCtx = new Ctx();
+    } catch { return null; }
+  }
   return audioCtx;
+}
+
+export function closeAudioCtx() {
+  if (audioCtx && audioCtx.state !== 'closed') {
+    audioCtx.close().catch(() => {});
+    audioCtx = null;
+  }
 }
 
 function enabled() {

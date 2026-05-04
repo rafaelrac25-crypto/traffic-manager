@@ -461,11 +461,8 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
      diagnosticar pro usuário). */
   if (isVideo && mainVideoId && uploadedVideos.length > 0) {
     try {
-      /* maxWaitMs 50s deixa 10s de margem antes do Vercel maxDuration (60s)
-         matar o lambda. Se vídeo grande não fica pronto em 50s, abortamos
-         publicação com mensagem clara — Vercel não chega a matar o request,
-         cleanup propaga normalmente. */
-      const result = await waitForVideoReady(creds, mainVideoId, { maxWaitMs: 50000 });
+      // 40s deixa margem pra cleanupOrphans antes do timeout do Vercel
+      const result = await waitForVideoReady(creds, mainVideoId, { maxWaitMs: 40000 });
       if (!result?.ready) {
         throw new Error('Vídeo ainda em processamento no Meta após 50s. Aguarde 1-2 minutos e tente novamente, ou use uma versão menor (≤30s, <10MB).');
       }

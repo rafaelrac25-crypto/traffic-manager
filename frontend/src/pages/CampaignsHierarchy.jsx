@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useAppState } from '../contexts/AppStateContext';
 import Icon from '../components/Icon';
 
@@ -1607,6 +1607,7 @@ export default function CampaignsHierarchy() {
   /* AbortController previne race entre cliques rápidos em campanhas diferentes —
      resposta lenta de request anterior não sobrescreve hierarchy nova. */
   const hierAbortRef = React.useRef(null);
+  const pendingSyncRef = useRef(null);
   const refreshHierarchy = useCallback(async (campLocalId) => {
     if (!campLocalId) return;
     if (hierAbortRef.current) hierAbortRef.current.abort();
@@ -1636,6 +1637,9 @@ export default function CampaignsHierarchy() {
   useEffect(() => {
     if (selectedCamp?.id) refreshHierarchy(selectedCamp.id);
     else { setHierarchy(null); setSelectedAdSet(null); }
+    return () => {
+      if (pendingSyncRef.current) { clearTimeout(pendingSyncRef.current); pendingSyncRef.current = null; }
+    };
   }, [selectedCamp?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleAdSetAction(kind, adset) {
@@ -1686,7 +1690,11 @@ export default function CampaignsHierarchy() {
     }
     /* Força sync global pra /anuncios e Dashboard refletirem mudança imediata
        em vez de esperar o tick de 90s do polling. */
-    setTimeout(() => { runMetaSync?.().catch(() => {}); }, 1500);
+    if (pendingSyncRef.current) clearTimeout(pendingSyncRef.current);
+    pendingSyncRef.current = setTimeout(() => {
+      runMetaSync?.().catch(() => {});
+      pendingSyncRef.current = null;
+    }, 1500);
   }
   function showError(msg) {
     setErrToast(msg);
@@ -1814,7 +1822,7 @@ export default function CampaignsHierarchy() {
           setTimeout(() => refreshABTests(campLocalId), 500);
         }
       }
-    } catch {}
+    } catch (e) { console.warn('[refreshABTests]', e); }
   }
   useEffect(() => {
     if (selectedCamp?.id) refreshABTests(selectedCamp.id);
@@ -2048,7 +2056,7 @@ export default function CampaignsHierarchy() {
                 )}
 
                 <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', marginTop: '14px', textAlign: 'right', fontWeight: 400 }}>
-                  Atualizado em: {new Date(hierarchy.fetched_at).toLocaleString('pt-BR')}
+                  Atualizado em: {hierarchy.fetched_at ? new Date(hierarchy.fetched_at).toLocaleString('pt-BR') : '—'}
                 </div>
               </>
             ) : null}
