@@ -2,8 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import api from '../services/api';
 import { playBubble } from '../utils/sounds';
 
-/* Cores por agente — paleta vinho/rosé do projeto + complementares
-   pra agentes secundários. Quem aparecer fora dessa lista usa fallback. */
+/* Cores por agente — paleta vinho/rosé do projeto + complementares. */
 const AGENT_COLORS = {
   main:              '#C13584',
   'Claude Code':     '#C13584',
@@ -44,70 +43,58 @@ function relativeTime(ts) {
 }
 
 const MAX_VISIBLE = 50;
+const POLL_INTERVAL_MS = 1500;
 
 export default function Agency() {
   const [events, setEvents] = useState([]);
   const [filter, setFilter] = useState('all');
   const [connected, setConnected] = useState(false);
-  const sourceRef = useRef(null);
-  const reconnectAttempt = useRef(0);
+  const lastTsRef = useRef(0);
+  const mountedRef = useRef(true);
 
-  /* Hidratação inicial — busca últimos 50 do backend */
+  /* Polling — em multi-instance Vercel, SSE não funciona (POST e GET vão pra
+     containers diferentes; emitter local não conversa entre instâncias).
+     Polling do Postgres a cada 1.5s usa a tabela agency_events como fonte
+     única de verdade. Trade-off: latência ~1.5s, mas funciona em qualquer
+     topologia serverless. */
   useEffect(() => {
-    let mounted = true;
+    mountedRef.current = true;
+
+    /* Hidratação inicial — pega últimos 50. */
     api.get('/agency/recent?limit=50').then(r => {
-      if (!mounted) return;
-      setEvents(r.data?.events || []);
-    }).catch(() => { /* sem hidratação ok — virá pelo SSE */ });
-    return () => { mounted = false; };
-  }, []);
+      if (!mountedRef.current) return;
+      const evs = r.data?.events || [];
+      setEvents(evs);
+      lastTsRef.current = evs.length > 0 ? Math.max(...evs.map(e => e.ts)) : 0;
+      setConnected(true);
+    }).catch(() => setConnected(false));
 
-  /* SSE — conexão persistente com reconexão exponencial. */
-  useEffect(() => {
-    let cancelled = false;
-    let backoffTimer;
-
-    function connect() {
-      if (cancelled) return;
-      const src = new EventSource('/api/agency/stream');
-      sourceRef.current = src;
-
-      src.onopen = () => {
-        setConnected(true);
-        reconnectAttempt.current = 0;
-      };
-
-      src.onmessage = (e) => {
-        try {
-          const ev = JSON.parse(e.data);
+    /* Polling incremental — só pega eventos com ts > lastTsRef. */
+    const tick = async () => {
+      if (!mountedRef.current) return;
+      try {
+        const r = await api.get(`/agency/recent?since=${lastTsRef.current}&limit=20`);
+        if (!mountedRef.current) return;
+        const fresh = r.data?.events || [];
+        if (fresh.length > 0) {
           setEvents(prev => {
-            if (prev.some(x => x.id === ev.id)) return prev;
-            const next = [ev, ...prev];
-            return next.slice(0, MAX_VISIBLE);
+            const seen = new Set(prev.map(e => e.id));
+            const merged = [...fresh.filter(e => !seen.has(e.id)), ...prev];
+            return merged.slice(0, MAX_VISIBLE);
           });
-          /* Som suave por evento — mesma utility do sino. Volume baixo. */
+          lastTsRef.current = Math.max(lastTsRef.current, ...fresh.map(e => e.ts));
           try { playBubble(); } catch { /* ok */ }
-        } catch {
-          /* payload inválido — ignora */
         }
-      };
+        setConnected(true);
+      } catch {
+        if (mountedRef.current) setConnected(false);
+      }
+    };
 
-      src.onerror = () => {
-        setConnected(false);
-        src.close();
-        if (cancelled) return;
-        const wait = Math.min(30_000, 1000 * Math.pow(2, reconnectAttempt.current));
-        reconnectAttempt.current += 1;
-        backoffTimer = setTimeout(connect, wait);
-      };
-    }
-
-    connect();
-
+    const iv = setInterval(tick, POLL_INTERVAL_MS);
     return () => {
-      cancelled = true;
-      if (backoffTimer) clearTimeout(backoffTimer);
-      if (sourceRef.current) sourceRef.current.close();
+      mountedRef.current = false;
+      clearInterval(iv);
     };
   }, []);
 
@@ -129,7 +116,6 @@ export default function Agency() {
       padding: '24px 28px',
       color: 'var(--c-text-1)',
     }}>
-      {/* Header */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -164,7 +150,6 @@ export default function Agency() {
         </div>
       </div>
 
-      {/* Filtro por agente */}
       {agents.length > 2 && (
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '14px' }}>
           {agents.map(a => (
@@ -188,7 +173,6 @@ export default function Agency() {
         </div>
       )}
 
-      {/* Lista de eventos */}
       <div style={{
         background: 'var(--c-card-bg)',
         border: '1px solid var(--c-border-lt)',
@@ -265,7 +249,7 @@ export default function Agency() {
       </div>
 
       <div style={{ marginTop: 12, fontSize: 11, color: 'var(--c-text-4)', textAlign: 'right' }}>
-        {filtered.length} evento{filtered.length === 1 ? '' : 's'} · cap {MAX_VISIBLE}
+        {filtered.length} evento{filtered.length === 1 ? '' : 's'} · cap {MAX_VISIBLE} · poll {POLL_INTERVAL_MS}ms
       </div>
     </div>
   );

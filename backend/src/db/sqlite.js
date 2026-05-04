@@ -211,6 +211,19 @@ db.exec(`
     tokens REAL NOT NULL DEFAULT 180,
     last_refill TEXT NOT NULL DEFAULT (datetime('now'))
   );
+
+  /* Eventos da Agência 2D — sobrevive a cold starts. meta JSON em TEXT. */
+  CREATE TABLE IF NOT EXISTS agency_events (
+    id TEXT PRIMARY KEY,
+    ts INTEGER NOT NULL,
+    agent TEXT NOT NULL,
+    tool TEXT NOT NULL,
+    action TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'ok',
+    duration_ms INTEGER,
+    meta TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_agency_events_ts ON agency_events(ts DESC);
 `);
 
 const migrations = [

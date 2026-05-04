@@ -1,30 +1,26 @@
 /**
  * Agency 2D — pipeline em tempo real de eventos do Claude Code.
  *
- * Hooks do CLI fazem POST /api/agency/event a cada PostToolUse.
- * Frontend (/agencia) escuta /api/agency/stream via SSE e anima bonecos.
+ * Storage: tabela `agency_events` no Postgres (compartilhada entre instâncias
+ * serverless do Vercel — sobrevive a cold starts).
  *
- * Storage: in-memory (ring buffer de 200). Reseta em cold start — aceitável
- * pra Fase 1; histórico em DB fica pra fase futura se valer a pena.
+ * Hooks do CLI fazem POST /api/agency/event a cada PostToolUse.
+ * Frontend (/agencia) faz polling de GET /recent a cada 1.5s — não usa SSE
+ * porque SSE em multi-instance Vercel não dá pra rotear pra mesma instance
+ * que recebe o POST.
  *
  * Auth: header X-Agency-Secret comparado com env AGENCY_SECRET via
- * timingSafeEqual. Se AGENCY_SECRET ausente, deixa passar com warning
- * (modo bootstrap — facilita primeira iteração antes de setar env no Vercel).
+ * timingSafeEqual. Se AGENCY_SECRET ausente, deixa passar com modo bootstrap.
  */
 const express = require('express');
 const crypto = require('crypto');
-const EventEmitter = require('events');
+const db = require('../db');
 
 const router = express.Router();
 
-const MAX_EVENTS = 200;
 const RECENT_DEFAULT = 50;
 const RECENT_MAX = 100;
-
-/* Buffer FIFO simples — array com cap MAX_EVENTS. */
-const events = [];
-const emitter = new EventEmitter();
-emitter.setMaxListeners(50);
+const KEEP_CAP = 200;
 
 /* Token bucket por IP — 10 req/s, capacidade 20.
    Protege contra hook bug em loop floodando o backend. */
@@ -50,7 +46,6 @@ function take(ip) {
   return false;
 }
 
-/* Limpa buckets antigos a cada 5 min pra não vazar memória. */
 setInterval(() => {
   const cutoff = Date.now() - 5 * 60 * 1000;
   for (const [ip, b] of buckets) {
@@ -60,7 +55,7 @@ setInterval(() => {
 
 function authOk(req) {
   const expected = process.env.AGENCY_SECRET;
-  if (!expected) return true; /* modo bootstrap */
+  if (!expected) return true;
   const got = req.header('x-agency-secret') || '';
   if (got.length !== expected.length) return false;
   try {
@@ -70,8 +65,7 @@ function authOk(req) {
   }
 }
 
-/* Sanitiza payload — barra paths absolutos completos, limita tamanhos.
-   Hook já filtra antes; este é defesa em profundidade. */
+/* Sanitiza payload — barra paths absolutos completos, limita tamanhos. */
 function sanitize(raw) {
   const ev = {
     id: crypto.randomBytes(8).toString('hex'),
@@ -87,64 +81,102 @@ function sanitize(raw) {
   if (raw.meta && typeof raw.meta === 'object') {
     const m = {};
     if (raw.meta.file && typeof raw.meta.file === 'string') {
-      /* aceita só basename — sem path absoluto, sem traversal */
       const basename = raw.meta.file.split(/[\\\/]/).pop().slice(0, 80);
       if (basename && !/^\.env|secret|credential|password|token/i.test(basename)) {
         m.file = basename;
       }
     }
-    if (raw.meta.cmd && typeof raw.meta.cmd === 'string') {
-      m.cmd = raw.meta.cmd.slice(0, 60);
-    }
+    if (raw.meta.cmd && typeof raw.meta.cmd === 'string') m.cmd = raw.meta.cmd.slice(0, 60);
     if (typeof raw.meta.bytes === 'number') m.bytes = Math.round(raw.meta.bytes);
     if (Object.keys(m).length > 0) ev.meta = m;
   }
   return ev;
 }
 
-router.post('/event', (req, res) => {
+/* Cleanup a cada N inserts (não a cada um — overhead).
+   Mantém só os KEEP_CAP eventos mais recentes pra tabela não crescer infinito. */
+let insertsSinceCleanup = 0;
+async function maybeCleanup() {
+  insertsSinceCleanup += 1;
+  if (insertsSinceCleanup < 10) return;
+  insertsSinceCleanup = 0;
+  try {
+    await db.query(
+      'DELETE FROM agency_events WHERE id NOT IN (SELECT id FROM agency_events ORDER BY ts DESC LIMIT ?)',
+      [KEEP_CAP],
+    );
+  } catch (e) {
+    console.warn('[agency] cleanup falhou:', e.message);
+  }
+}
+
+router.post('/event', async (req, res) => {
   const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
   if (!take(String(ip))) return res.status(429).json({ ok: false, error: 'rate_limit' });
   if (!authOk(req)) return res.status(401).json({ ok: false, error: 'auth' });
 
   const ev = sanitize(req.body || {});
-  events.push(ev);
-  if (events.length > MAX_EVENTS) events.splice(0, events.length - MAX_EVENTS);
-  emitter.emit('event', ev);
-  res.json({ ok: true, id: ev.id });
+  try {
+    await db.query(
+      'INSERT INTO agency_events (id, ts, agent, tool, action, status, duration_ms, meta) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        ev.id,
+        ev.ts,
+        ev.agent,
+        ev.tool,
+        ev.action,
+        ev.status,
+        ev.duration_ms ?? null,
+        ev.meta ? JSON.stringify(ev.meta) : null,
+      ],
+    );
+    maybeCleanup().catch(() => {});
+    res.json({ ok: true, id: ev.id });
+  } catch (e) {
+    console.warn('[agency] insert falhou:', e.message);
+    res.status(500).json({ ok: false, error: 'db' });
+  }
 });
 
-router.get('/recent', (req, res) => {
+router.get('/recent', async (req, res) => {
   const limit = Math.min(RECENT_MAX, Math.max(1, parseInt(req.query.limit, 10) || RECENT_DEFAULT));
-  const slice = events.slice(-limit).reverse();
-  res.json({ events: slice, total: events.length });
+  const since = parseInt(req.query.since, 10) || 0;
+
+  try {
+    let result;
+    if (since > 0) {
+      /* Polling incremental — só eventos novos depois de `since` (epoch ms). */
+      result = await db.query(
+        'SELECT id, ts, agent, tool, action, status, duration_ms, meta FROM agency_events WHERE ts > ? ORDER BY ts DESC LIMIT ?',
+        [since, limit],
+      );
+    } else {
+      result = await db.query(
+        'SELECT id, ts, agent, tool, action, status, duration_ms, meta FROM agency_events ORDER BY ts DESC LIMIT ?',
+        [limit],
+      );
+    }
+    const events = (result.rows || []).map(r => ({
+      id: r.id,
+      ts: Number(r.ts),
+      agent: r.agent,
+      tool: r.tool,
+      action: r.action || '',
+      status: r.status || 'ok',
+      duration_ms: r.duration_ms != null ? Number(r.duration_ms) : undefined,
+      meta: parseMeta(r.meta),
+    }));
+    res.json({ events, total: events.length, server_ts: Date.now() });
+  } catch (e) {
+    console.warn('[agency] select falhou:', e.message);
+    res.json({ events: [], total: 0, server_ts: Date.now(), error: 'db' });
+  }
 });
 
-router.get('/stream', (req, res) => {
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache, no-transform');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
-  res.flushHeaders?.();
-
-  res.write(`: connected ${Date.now()}\n\n`);
-
-  const onEvent = (ev) => {
-    try { res.write(`data: ${JSON.stringify(ev)}\n\n`); } catch { /* connection died */ }
-  };
-  emitter.on('event', onEvent);
-
-  /* Heartbeat 30s — mantém conexão viva atrás de proxies (Vercel Fluid Compute,
-     CDN, browsers que matam SSE ocioso). Linha de comentário no SSE não dispara
-     handler client-side. */
-  const heartbeat = setInterval(() => {
-    try { res.write(`: heartbeat ${Date.now()}\n\n`); } catch { /* ok */ }
-  }, 30_000);
-
-  req.on('close', () => {
-    clearInterval(heartbeat);
-    emitter.off('event', onEvent);
-  });
-});
+function parseMeta(m) {
+  if (!m) return undefined;
+  if (typeof m === 'object') return m; /* PG JSONB já volta parseado */
+  try { return JSON.parse(m); } catch { return undefined; }
+}
 
 module.exports = router;

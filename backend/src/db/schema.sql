@@ -244,3 +244,18 @@ CREATE TABLE IF NOT EXISTS rate_limit_buckets (
   tokens DOUBLE PRECISION NOT NULL DEFAULT 180,
   last_refill TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+/* Eventos da Agência 2D — pipeline live do CLI Claude Code no painel.
+   Persiste pra sobreviver a cold starts do Vercel (multi-instance serverless).
+   Cleanup periódico mantém só os 200 mais recentes. */
+CREATE TABLE IF NOT EXISTS agency_events (
+  id TEXT PRIMARY KEY,
+  ts BIGINT NOT NULL,
+  agent TEXT NOT NULL,
+  tool TEXT NOT NULL,
+  action TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'ok',
+  duration_ms INTEGER,
+  meta JSONB
+);
+CREATE INDEX IF NOT EXISTS idx_agency_events_ts ON agency_events(ts DESC);
