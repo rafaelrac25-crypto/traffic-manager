@@ -1,5 +1,192 @@
 # CRITICAL_STATE — traffic-manager
 
+## CHECKPOINT — Nanopigmentação Maio v2 (PRÉ-PUBLICAÇÃO)
+
+### Análise atual (04/05/2026, dia 5 de 7)
+Campanha #436 "Nanopigmentação em Joinville!" rodando desde 29/04, termina 05/05.
+- 267 cliques no link · CPR R$ 0,43 · gasto ~R$ 115
+- Comparativo com #437 (Adeus cravos): 485 cliques · CPR R$ 0,20 · ticket menor (limpeza vs nano R$ 497)
+- Veredicto: Nano saudável dentro do nicho. Diferença de CPR esperada (decisão maior).
+
+### Pendências críticas antes da v2
+1. **Confirmar com Cris quantas MENSAGENS chegaram no WhatsApp** (cliques ≠ conversas; sem isso, ROI é cego)
+2. **Criativo B novo** — Rafa desenha em sessão `cris-costa-criativos`. Vídeo 9:16, 15-30s, resultado real Cris.
+3. **Decisão de orçamento:** R$ 20/dia (conservador, deixa v1 morrer 05/05 e recria v2 dia 06) ou R$ 35/dia (mantém v1 + adset B paralela com bairros novos + criativo B)
+
+### Plano da v2 (a executar quando Rafa retomar)
+- Bairros: 8 (atuais 6 + **Centro** + **Costa e Silva**)
+- Idade: 28-45 (mantém — público clássico nano)
+- Gênero: feminino
+- Interesses: Eyebrow, Microblading, Permanent makeup + adicionar variação PT
+- Criativo: rotação A+B (não só 1 vídeo — evita saturação de freq>3)
+- Headline alt: testar "Sobrancelha fio a fio em Joinville" vs original
+- Oferta: mantém R$ 699→R$ 497 ou 12×R$ 58 (clara, valor visível)
+- CTA: WhatsApp (mantém)
+- Horário comercial: testar 9h-21h (filtra curiosos noturnos) — decisão pendente
+
+### Como retomar
+Próxima sessão: "criar nova campanha Nano v2" → Claude lê checkpoint, pergunta as 4 decisões pendentes (mensagens reais? criativo B pronto? orçamento A/B/C? horário comercial sim/não?), monta payload pelo wizard `/criar-anuncio`, publica em PAUSED pra Cris validar visualmente.
+
+---
+
+## CHECKPOINT — Game Boy Agency
+
+### Fase 1 — CONCLUÍDA ✅ (commits 47b6e498 → cbdfc0f)
+
+**Pipeline em prod funcionando, 6 eventos demo persistidos.**
+
+Backend (`backend/src/routes/agency.js`):
+- 3 endpoints: POST /event (auth opcional X-Agency-Secret) · GET /recent (com query `?since=<ts>` pra polling incremental) · server_ts no response
+- Persistência: tabela `agency_events` no Postgres Neon (multi-instance safe)
+- Rate limit token bucket 10/s por IP
+- Cleanup a cada 10 inserts mantém só 200 mais recentes
+- Sanitização: basename só, blacklist de .env/secret/credential/password
+
+Schema (`schema.sql` + `sqlite.js` + `migrate.js`):
+- `agency_events(id, ts, agent, tool, action, status, duration_ms, meta jsonb)` + index ts DESC
+- Idempotente, criado em cold start na primeira request
+
+Frontend (`frontend/src/pages/Agency.jsx`):
+- Polling de /recent a cada 1.5s (NÃO usa SSE — multi-instance Vercel não rotearia POST e GET pra mesma function instance)
+- Hidratação inicial busca últimos 50; loop incremental usa `?since=<lastTs>` pra só pegar novos
+- Dedup por id, cap 50 visíveis, sons via playBubble por evento novo
+- Lazy chunk separado (~4.8KB), zero inflação no bundle principal
+- Trade-off aceito: latência ~1.5s ao invés de instantâneo, mas funciona em qualquer topologia serverless
+
+Sidebar: item "Agência 2D" com IconGameboy SVG inserido após Histórico.
+
+Hook (`~/.claude/hooks/agency-emit.js`):
+- PostToolUse matcher "*" no settings.json
+- Lê stdin JSON do Claude Code, identifica subagent vs main, humaniza ação
+- Filtra paths sensíveis, faz fetch POST com timeout 1.5s, exit 0 sempre
+- **Hook só ativa em nova sessão CC — Rafa precisa reiniciar o CLI pra fluxo automático**
+
+### Bug histórico documentado (não regredir)
+1ª versão usou Map in-memory + EventEmitter + SSE. Falhou em prod porque Vercel
+serverless multi-instance roteia POST e GET pra containers diferentes — eventos
+sumiam entre requests. Smoke test sequencial passava por sorte (caía na mesma instance).
+Lição: **storage in-memory + EventEmitter NÃO funciona em multi-instance Vercel**.
+Solução: Postgres como source of truth + polling incremental no cliente.
+
+### Próximo passo concreto pro Rafa
+1. **Atualiza a página /agencia** — vai ver 6 eventos demo postados durante validação
+2. **Reinicia o Claude Code** (fecha e abre o CLI) — settings.json mudou, hook só ativa em sessão nova
+3. Em sessão nova, qualquer comando do CC dispara hook → evento aparece em <1.5s na página
+
+### Fase 2 — REQUISITOS DEFINIDOS (Rafa especificou 2026-05-04)
+**Cena VIVA 24/7 (não one-shot por evento):**
+- Layer idle ambient: bonecos sempre fazendo algo (digitando, café, esticando), loop infinito sem precisar de evento
+- Layer active: quando SSE chega, agente correspondente vira `working` por 3-5s + balão HTML overlay com texto da ação, depois volta ao idle
+- Sensação: escritório vivo o tempo todo, sincroniza com CLI quando há atividade real
+
+**Personagens (8 base):**
+1. Cris Costa Beauty (cliente, mesa decorada)
+2. Claude Code main (Rafa, mesa central rosé)
+3. Sonnet (executor, digita rápido)
+4. Haiku (corredor frenético, várias mesas)
+5. Opus (chefe sério, sala separada)
+6. Vercel MCP (datacenter lateral)
+7. Subagents pool (Explore/Plan/Task revezam mesas)
+8. claude-mem (biblioteca canto)
+
+**Por personagem, 4 animações no Spline:**
+- idle_a, idle_b, idle_c (variações ambient — cycle aleatório a cada 8-15s)
+- working (mãos voando, foco — só com evento ativo)
+
+**State machine por agente** (variáveis Spline):
+- state_main, state_sonnet, state_haiku, state_opus, state_subagent, state_mcp, state_mem
+- Frontend: SSE event → setVariable("state_<agent>", "working") + setTimeout(reset, 3-5s)
+- Frontend: idle shuffle: a cada 8-15s, randomiza idle_a/b/c por agente
+
+**Balão de fala HTML overlay:**
+- Componente React posicionado sobre canvas Spline
+- Calcula coords via spline.getObjectByName(agente).position projetada pro DOM
+- Texto = ev.action (já vem humanizado do hook)
+- Fade-in 200ms, fica 3-5s, fade-out
+
+### Fase 2 — Tempo estimado revisado
+- Design Spline (Rafa): 2-3 dias (era 1-2 — adicionou animações idle)
+- Engenharia integração (Claude): ~6h (era 4h — adicionou idle shuffle + balão + transições)
+
+### Próximo passo concreto Fase 2
+1. Rafa abre Spline.design (free), Claude guia primeiro projeto
+2. Rafa desenha escritório voxel + 8 personagens
+3. Rafa cria 4 animações por personagem + state machine
+4. Rafa exporta <spline-viewer> URL → passa pro Claude
+5. Claude integra em Agency.jsx: substitui lista texto puro pela cena Spline + balão overlay + idle shuffle
+
+### Contexto da decisão (sessão 2026-05-04)
+Rafa quer reproduzir o conceito visual do story do @leandromastellini.ai (escritório isométrico voxel 3D com bonecos como agentes IA) DENTRO do traffic-manager, como rota `/agencia` na sidebar. Objetivo: **álbum visual divertido pra ele e mostrar pros amigos**, com bonecos reagindo em TEMPO REAL ao que o Claude Code está fazendo no CLI dele.
+
+Cris (namorada e cliente) pode ver — sem barreira de privacidade. Rota fica visível na sidebar.
+
+### Arquitetura aprovada
+Claude Code (hooks `PostToolUse`/`SubagentStart` em `~/.claude/settings.json`) → `curl POST /api/agency/event` → backend grava + repassa via SSE → frontend `/agencia` recebe → Spline anima boneco do agente correspondente + balão HTML overlay com texto da ação.
+
+### Plano em 3 fases
+| Fase | O que entrega | Quem faz | Tempo |
+|---|---|---|---|
+| 1. Esqueleto técnico | hook + POST endpoint + SSE + página `/agencia` mostrando eventos em **texto puro** ("Sonnet leu X.jsx às 14:23") | Claude | ~3h |
+| 2. Cena visual Spline | escritório isométrico voxel + 5-8 bonecos com animações idle/walk/work | Rafa (Spline editor) | 1-2 dias |
+| 3. Integração + polish | mapear eventos → animação correspondente, balão overlay, sons, idle states | Claude | ~4h |
+
+### Fase 1 — TODO detalhado (próxima sessão começa AQUI)
+
+**Backend (criar nova área `agency`):**
+- [ ] `backend/src/routes/agency.js` com 3 endpoints:
+  - `POST /api/agency/event` — recebe `{agent, tool, file?, status, duration_ms?}`. Auth via header `X-Agency-Secret` (env var `AGENCY_SECRET`). Grava em fila in-memory (Map por sessão) limitada a 200 últimos.
+  - `GET /api/agency/stream` — SSE keep-alive. Manda evento sempre que novo POST chega.
+  - `GET /api/agency/recent` — array dos últimos 50 eventos pra hidratação inicial da página.
+- [ ] Registrar rotas em `backend/src/index.js`
+- [ ] Adicionar `AGENCY_SECRET` no Vercel env (gerar 32 bytes random)
+
+**Hook do Claude Code (config local Rafa):**
+- [ ] Adicionar em `~/.claude/settings.json` hook `PostToolUse` que executa:
+  ```bash
+  curl -s -m 2 -X POST https://criscosta.vercel.app/api/agency/event \
+    -H "X-Agency-Secret: $AGENCY_SECRET" \
+    -H "Content-Type: application/json" \
+    -d "{\"agent\":\"$CLAUDE_AGENT\",\"tool\":\"$CLAUDE_TOOL\",\"file\":\"$CLAUDE_FILE\",\"status\":\"ok\"}" \
+    > /dev/null 2>&1 &
+  ```
+  - Background `&` pra não bloquear. Timeout 2s. Falha silenciosa.
+  - Não vazar paths sensíveis (filtrar `.env`, secrets) — fazer regex no shell ou filtrar no backend.
+
+**Frontend (rota nova):**
+- [ ] `frontend/src/pages/Agency.jsx` — página minimalista:
+  - `useEffect` abre EventSource em `/api/agency/stream`
+  - Lista cronológica reversa: agente em badge colorido, tool em mono, file truncado, timestamp relativo
+  - Auto-scroll pro topo quando chega evento novo
+  - Estilo dark consistente com resto do app
+- [ ] Adicionar item "🕹️ Agência" na `Sidebar.jsx` (rota `/agencia`)
+- [ ] Adicionar `<Route path="/agencia" element={<Agency />} />` em `App.jsx`
+- [ ] LAZY IMPORT: `const Agency = lazy(() => import('./pages/Agency'))` — evita inflar o bundle principal
+
+**Validação end-to-end (DoD da Fase 1):**
+1. Rafa abre `criscosta.vercel.app/agencia`
+2. Em outro terminal, Rafa faz qualquer comando no Claude Code (ex: `cat algum_arquivo`)
+3. Em <2s o evento aparece na página `/agencia` em texto puro
+4. ✓ Pipeline funciona — pronto pra Fase 2
+
+### O que NÃO faz parte da Fase 1
+- Visual 3D / Spline / bonecos (Fase 2)
+- Balão de fala (Fase 3)
+- Sons (Fase 3 — usa `sounds.js` existente)
+- Mapeamento agente→sprite (Fase 3)
+
+### Decisões pendentes pra começar Fase 1 (perguntar ao Rafa na retomada)
+- Tipo de auth do POST: shared secret no header (recomendado) OU sem auth (risco de flood)?
+- Eventos persistem em DB ou só memória? Recomendo memória pra Fase 1 (zero schema migration)
+- Sidebar: item "Agência" sempre visível ou só atrás de query param `?dev=1`? Decidi pelo primeiro (Cris pode ver)
+
+### Como retomar
+Próxima sessão Rafa pode dizer:
+- "retomar Game Boy Agency" / "continuar agência" / "agência" → Claude lê esse checkpoint, confirma TODO, começa Fase 1
+- Se quiser pular pra Fase 2 direto: "vou desenhar no Spline primeiro" — OK, mas Fase 1 valida o pipeline antes
+- Se desistir: remover esse checkpoint e seguir com outras prioridades (cron sync, code-splitting, etc)
+
+---
+
 ## Sessão 2026-05-04 (parte 3) — Auditoria profunda 2 varreduras + 17 fixes em 4 commits
 
 ### Veredicto da auditoria
