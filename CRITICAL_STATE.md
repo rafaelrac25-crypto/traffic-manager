@@ -34,10 +34,27 @@
 - `metaErrors.js`: código 200 vira `reconnect:false` (era falso positivo)
 - `platforms.js`: `safeDecrypt` em instagram-profile e campaign-status
 
-### Pendências derivadas
-- Joinville districts: 18/43 bairros oficiais. LOW — Rafa decide se vale completar via Nominatim.
-- Rate limit Meta em memória ainda é per-instance (comentado, não fixado — espera Redis/KV no futuro).
-- History merge: shape exato de `/api/history` não validado em runtime — se backend retornar formato diferente, dedup cai pra `id` apenas.
+### Pendências derivadas — TODAS RESOLVIDAS na mesma sessão
+
+**Commit ef3ce3b — Joinville completo:**
+- 26 bairros adicionados (era 17 reais + 1 bolha "Joinville"; agora 43 oficiais + bolha)
+- Centroides via OSM Nominatim, tier/renda/age estimados por região conhecida
+- Cris pode segmentar qualquer bairro oficial agora
+
+**Commit 7524be8 — Rate limit em Postgres compartilhado:**
+- Token bucket atômico via UPSERT + CTE; refill contínuo via EXTRACT(EPOCH)
+- Tabela `rate_limit_buckets` em schema.sql + sqlite.js + migrate.js (idempotente)
+- Fallback in-memory se DB indisponível (não bloqueia chamadas Meta)
+- Interface pública preservada (take/tryTake/status)
+
+**Commit 69c4370 — History merge com shape real:**
+- `normalizeBackendItem()` faz parse do meta JSON + infere type kebab-case
+- 9 ações backend mapeadas (ad_status, status_change, budget_safe, etc)
+- 8 entradas novas em TYPE_META (adset/campaign activated/paused/removed, budget-changed, etc)
+- IDs prefixados `bk-{id}` evitam colisão com `hist-{ts}` local
+- Dedup conservador por (timestamp_seg + type)
+
+Deploy: dpl_? em prod (commit c8b77d0)
 
 ---
 
