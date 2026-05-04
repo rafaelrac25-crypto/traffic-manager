@@ -74,8 +74,8 @@ export default function AgencyScene({ events = [] }) {
     const resize = () => {
       const parent = canvas.parentElement;
       if (!parent) return;
-      const w = Math.min(parent.clientWidth, 960);
-      const scale = Math.max(2, Math.floor(w / NATIVE_W));
+      const w = Math.min(parent.clientWidth, 1280);
+      const scale = Math.max(3, Math.floor(w / NATIVE_W));
       canvas.width = NATIVE_W * scale;
       canvas.height = NATIVE_H * scale;
       canvas.style.width = `${NATIVE_W * scale}px`;

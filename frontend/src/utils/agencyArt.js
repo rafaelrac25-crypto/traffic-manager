@@ -1,38 +1,119 @@
 /**
- * Agência 2D — arte pixel-art Game Boy DMG.
+ * Agência 2D — arte pixel-art retrô colorida (estilo Game Boy Color).
  *
- * Paleta DMG clássica (4 cores), resolução nativa 320x180.
+ * Paleta de 16 cores customizada com rosé Cris Costa (#C13584) como
+ * acento de marca. Cada agente tem cor de camisa única pra ser identificado
+ * de longe. Resolução nativa 320x180.
+ *
  * Renderização: drawScene() desenha o cenário estático em offscreen canvas
- * uma única vez. drawAgent() pinta sprite 14x18 por agente sobre o cenário.
- * Tudo em fillRect — zero asset externo.
+ * uma única vez. drawAgent() pinta sprite ~14x18 sobre o cenário.
  */
 
-export const PALETTE = {
-  /* 4 verdes do Game Boy DMG. Index 0 = mais escuro, 3 = mais claro. */
-  0: '#0f380f',
-  1: '#306230',
-  2: '#8bac0f',
-  3: '#9bbc0f',
+export const C = {
+  /* Céu / janela */
+  sky:        '#A8D8FF',
+  cloud:      '#FFFFFF',
+  sun:        '#FFE066',
+  sunCore:    '#F59E0B',
+
+  /* Parede rosé (combina com marca) */
+  wall:       '#F4D9E2',
+  wallDark:   '#D9A8B8',
+  baseboard:  '#7D4A5E',
+
+  /* Madeira */
+  floor:      '#8B6F47',
+  floorDark:  '#5D4A30',
+  desk:       '#A0826D',
+  deskDark:   '#6B5440',
+
+  /* Tech */
+  monitor:    '#1E1B2E',
+  monitorEdge:'#0A0814',
+  screen:     '#7DD3FC',
+  screenAlt:  '#86EFAC',
+
+  /* Plantas / vaso */
+  leaf:       '#4ADE80',
+  leafDark:   '#15803D',
+  pot:        '#B45309',
+  potDark:    '#78350F',
+
+  /* Pessoas */
+  skin:       '#FECACA',
+  skinDark:   '#FCA5A5',
+  hairBrown:  '#3F2917',
+  hairBlonde: '#F59E0B',
+  hairBlack:  '#1F1B2E',
+  hairRed:    '#B91C1C',
+
+  /* Marca */
+  rose:       '#C13584',
+  roseLt:     '#F472B6',
+  roseDk:     '#7D4A5E',
+
+  /* Café */
+  coffeeBody: '#525252',
+  coffeeDark: '#1F2937',
+  coffeeDisp: '#06B6D4',
+  cup:        '#FFFFFF',
+  cupRim:     '#7D4A5E',
+
+  /* Estante */
+  shelf:      '#92400E',
+  shelfDark:  '#451A03',
+  book1:      '#DC2626',
+  book2:      '#2563EB',
+  book3:      '#16A34A',
+  book4:      '#CA8A04',
+  book5:      '#7C3AED',
+
+  /* Quadro */
+  cork:       '#A16207',
+  corkDark:   '#451A03',
+  noteYellow: '#FEF08A',
+  notePink:   '#FBCFE8',
+  noteBlue:   '#BFDBFE',
+  noteGreen:  '#BBF7D0',
+
+  /* Relógio */
+  clockFace:  '#FFFFFF',
+  clockEdge:  '#0A0814',
+
+  /* Outline / sombra */
+  outline:    '#1E1B2E',
+  shadow:     '#00000033',
+  white:      '#FFFFFF',
+  bubbleBg:   '#FFFFFF',
 };
-export const PX = (i) => PALETTE[i];
 
 export const NATIVE_W = 320;
 export const NATIVE_H = 180;
 
-/* Posições fixas de cada agente na cena. y é o topo da mesa; o sprite
-   senta na cadeira atrás. x é o canto esquerdo do sprite. */
-export const AGENT_LAYOUT = {
-  'Claude Code':     { x: 148, y: 110, label: 'CLAUDE',  hat: 'crown' },
-  Opus:              { x:  44, y:  68, label: 'OPUS',    hat: 'tall'  },
-  Sonnet:            { x: 220, y: 110, label: 'SONNET',  hat: 'bob'   },
-  Haiku:             { x:  88, y: 110, label: 'HAIKU',   hat: 'short' },
-  'general-purpose': { x: 220, y:  68, label: 'GP',      hat: 'cap'   },
-  Explore:           { x: 132, y:  68, label: 'EXPL',    hat: 'lens'  },
-  Plan:              { x:  44, y: 110, label: 'PLAN',    hat: 'tie'   },
-  test:              { x: 264, y: 110, label: 'TEST',    hat: 'beanie'},
+/* Cor de camisa por agente — diferencia personagens com paleta colorida. */
+export const AGENT_COLORS = {
+  'Claude Code':     { shirt: C.rose,        pants: C.roseDk,    hair: C.hairBrown,  hatColor: C.sunCore },
+  Opus:              { shirt: '#7C3AED',     pants: '#3B0764',   hair: C.hairBlack,  hatColor: C.outline },
+  Sonnet:            { shirt: '#3B82F6',     pants: '#1E3A8A',   hair: C.hairBlonde, hatColor: C.hairBlonde },
+  Haiku:             { shirt: '#10B981',     pants: '#064E3B',   hair: C.hairBrown,  hatColor: C.hairBrown },
+  'general-purpose': { shirt: '#F59E0B',     pants: '#7C2D12',   hair: C.hairRed,    hatColor: '#DC2626' },
+  Explore:           { shirt: '#06B6D4',     pants: '#155E75',   hair: C.hairBrown,  hatColor: C.outline },
+  Plan:              { shirt: '#EC4899',     pants: '#831843',   hair: C.hairBlack,  hatColor: C.outline },
+  test:              { shirt: '#94A3B8',     pants: '#334155',   hair: C.hairBrown,  hatColor: '#DC2626' },
 };
 
-/* Aliases de agente — eventos vêm com nomes variáveis do hook. */
+/* Posições fixas. y é o topo da mesa; sprite senta na cadeira atrás. */
+export const AGENT_LAYOUT = {
+  'Claude Code':     { x: 148, y: 110, label: 'CLAUDE',  hat: 'crown'  },
+  Opus:              { x:  44, y:  68, label: 'OPUS',    hat: 'tall'   },
+  Sonnet:            { x: 220, y: 110, label: 'SONNET',  hat: 'bob'    },
+  Haiku:             { x:  88, y: 110, label: 'HAIKU',   hat: 'short'  },
+  'general-purpose': { x: 220, y:  68, label: 'GP',      hat: 'cap'    },
+  Explore:           { x: 132, y:  68, label: 'EXPL',    hat: 'lens'   },
+  Plan:              { x:  44, y: 110, label: 'PLAN',    hat: 'tie'    },
+  test:              { x: 264, y: 110, label: 'TEST',    hat: 'beanie' },
+};
+
 export function resolveAgent(name) {
   if (!name) return 'Claude Code';
   if (AGENT_LAYOUT[name]) return name;
@@ -47,291 +128,267 @@ export function resolveAgent(name) {
   return 'Claude Code';
 }
 
+/* Compat: PX usado em código antigo — deprecated mas mantido. */
+export const PALETTE = C;
+export const PX = (k) => (typeof k === 'string' ? (C[k] || k) : C.sky);
+
 /* ─────────────────────────────────────────────────────────────────────
    CENÁRIO ESTÁTICO
-   Chama drawScene(ctx) em offscreen canvas no mount. Depois drawImage.
    ───────────────────────────────────────────────────────────────────── */
 export function drawScene(ctx) {
-  /* Limpa */
-  ctx.fillStyle = PX(3);
-  ctx.fillRect(0, 0, NATIVE_W, NATIVE_H);
+  /* Fundo */
+  fill(ctx, 0, 0, NATIVE_W, NATIVE_H, C.wall);
 
   /* Janela / céu — faixa superior 0-32 */
-  ctx.fillStyle = PX(2);
-  ctx.fillRect(0, 0, NATIVE_W, 32);
+  fill(ctx, 0, 0, NATIVE_W, 32, C.sky);
 
-  /* Sol pixelado */
-  drawCircle(ctx, 282, 16, 8, 3);
-  drawCircle(ctx, 282, 16, 5, 2);
+  /* Sol */
+  drawCircle(ctx, 282, 16, 9, C.sun);
+  drawCircle(ctx, 282, 16, 6, C.sunCore);
 
   /* Nuvens */
   drawCloud(ctx, 40, 12);
   drawCloud(ctx, 130, 8);
   drawCloud(ctx, 200, 14);
 
-  /* Parede — 32-100 */
-  ctx.fillStyle = PX(2);
-  ctx.fillRect(0, 32, NATIVE_W, 68);
+  /* Moldura da janela */
+  fill(ctx, 0, 30, NATIVE_W, 2, C.outline);
+  fill(ctx, 0, 0, 2, 32, C.outline);
+
+  /* Parede 32-100 */
+  fill(ctx, 0, 32, NATIVE_W, 68, C.wall);
+  /* listras decorativas sutis */
+  for (let x = 0; x < NATIVE_W; x += 8) {
+    fillAlpha(ctx, x, 32, 1, 68, C.wallDark, 0.15);
+  }
 
   /* Rodapé entre parede e chão */
-  ctx.fillStyle = PX(0);
-  ctx.fillRect(0, 99, NATIVE_W, 2);
+  fill(ctx, 0, 98, NATIVE_W, 3, C.baseboard);
+  fill(ctx, 0, 96, NATIVE_W, 2, C.outline);
 
-  /* Quadro de cortiça com avisos */
-  ctx.fillStyle = PX(1);
-  ctx.fillRect(20, 38, 36, 24);
-  ctx.fillStyle = PX(0);
-  ctx.fillRect(19, 37, 38, 1);
-  ctx.fillRect(19, 62, 38, 1);
-  ctx.fillRect(19, 37, 1, 26);
-  ctx.fillRect(56, 37, 1, 26);
-  /* Notas no quadro */
-  ctx.fillStyle = PX(3);
-  ctx.fillRect(24, 42, 8, 6);
-  ctx.fillRect(36, 44, 7, 5);
-  ctx.fillRect(46, 41, 6, 7);
-  ctx.fillRect(28, 52, 9, 6);
-  ctx.fillRect(40, 53, 8, 6);
+  /* Quadro de cortiça */
+  fill(ctx, 19, 37, 38, 26, C.outline);
+  fill(ctx, 20, 38, 36, 24, C.cork);
+  /* Notas adesivas coloridas */
+  fill(ctx, 24, 42, 8, 6, C.noteYellow);
+  fill(ctx, 36, 44, 7, 5, C.notePink);
+  fill(ctx, 46, 41, 6, 7, C.noteBlue);
+  fill(ctx, 28, 52, 9, 6, C.noteGreen);
+  fill(ctx, 40, 53, 8, 6, C.noteYellow);
 
-  /* Relógio centralizado na parede */
-  drawCircle(ctx, 160, 50, 10, 3);
-  drawCircle(ctx, 160, 50, 9, 2);
-  drawCircle(ctx, 160, 50, 8, 3);
-  ctx.fillStyle = PX(0);
-  ctx.fillRect(160, 44, 1, 7);  /* ponteiro hora */
-  ctx.fillRect(160, 50, 6, 1);  /* ponteiro min  */
-  ctx.fillRect(159, 49, 3, 3);  /* miolo (placeholder pra cobrir 1px) */
+  /* Relógio */
+  drawCircle(ctx, 160, 50, 11, C.clockEdge);
+  drawCircle(ctx, 160, 50, 9, C.clockFace);
+  /* ponteiros */
+  fill(ctx, 160, 44, 1, 7, C.outline);   /* hora */
+  fill(ctx, 160, 50, 6, 1, C.outline);   /* min */
+  fill(ctx, 159, 49, 3, 3, C.outline);   /* miolo */
+  /* marcadores 12/3/6/9 */
+  fill(ctx, 160, 42, 1, 1, C.outline);
+  fill(ctx, 168, 50, 1, 1, C.outline);
+  fill(ctx, 160, 58, 1, 1, C.outline);
+  fill(ctx, 152, 50, 1, 1, C.outline);
 
   /* Estante de livros */
-  ctx.fillStyle = PX(1);
-  ctx.fillRect(252, 40, 40, 24);
-  ctx.fillStyle = PX(0);
-  ctx.fillRect(251, 39, 42, 1);
-  ctx.fillRect(251, 64, 42, 1);
-  ctx.fillRect(251, 39, 1, 26);
-  ctx.fillRect(292, 39, 1, 26);
-  ctx.fillRect(251, 51, 42, 1);
-  /* Lombadas */
+  fill(ctx, 251, 39, 42, 26, C.shelfDark);
+  fill(ctx, 252, 40, 40, 24, C.shelf);
+  fill(ctx, 251, 51, 42, 1, C.shelfDark);
+  /* Lombadas variadas */
+  const books = [C.book1, C.book2, C.book3, C.book4, C.book5, C.book2, C.book1, C.book3];
   for (let i = 0; i < 8; i++) {
-    ctx.fillStyle = i % 2 ? PX(2) : PX(3);
-    ctx.fillRect(254 + i * 5, 41, 4, 9);
+    fill(ctx, 254 + i * 5, 41, 4, 9, books[i]);
   }
+  const books2 = [C.book4, C.book5, C.book1, C.book2, C.book3, C.book4, C.book5, C.book1];
   for (let i = 0; i < 8; i++) {
-    ctx.fillStyle = i % 2 ? PX(3) : PX(2);
-    ctx.fillRect(254 + i * 5, 53, 4, 10);
+    fill(ctx, 254 + i * 5, 53, 4, 10, books2[i]);
   }
 
-  /* Planta no canto direito da parede */
-  ctx.fillStyle = PX(1);
-  ctx.fillRect(214, 70, 8, 8);
-  ctx.fillStyle = PX(0);
-  ctx.fillRect(213, 69, 10, 1);
-  ctx.fillRect(213, 78, 10, 1);
-  ctx.fillRect(213, 69, 1, 9);
-  ctx.fillRect(222, 69, 1, 9);
+  /* Planta */
+  fill(ctx, 213, 69, 10, 10, C.potDark);
+  fill(ctx, 214, 70, 8, 8, C.pot);
   /* folhas */
-  ctx.fillStyle = PX(0);
-  ctx.fillRect(216, 60, 2, 10);
-  ctx.fillRect(214, 64, 10, 2);
-  ctx.fillRect(212, 66, 2, 4);
-  ctx.fillRect(222, 66, 2, 4);
+  fill(ctx, 216, 60, 2, 10, C.leafDark);
+  fill(ctx, 214, 64, 10, 2, C.leaf);
+  fill(ctx, 212, 66, 2, 4, C.leaf);
+  fill(ctx, 222, 66, 2, 4, C.leaf);
+  fill(ctx, 215, 62, 1, 3, C.leaf);
+  fill(ctx, 218, 62, 1, 3, C.leaf);
 
-  /* Chão — 100-180 */
-  ctx.fillStyle = PX(1);
-  ctx.fillRect(0, 100, NATIVE_W, 80);
+  /* Chão de madeira 100-180 */
+  fill(ctx, 0, 101, NATIVE_W, 79, C.floor);
   /* Linhas de tábua */
-  ctx.fillStyle = PX(0);
-  for (let y = 120; y < 180; y += 18) {
-    ctx.fillRect(0, y, NATIVE_W, 1);
+  for (let y = 119; y < 180; y += 18) {
+    fill(ctx, 0, y, NATIVE_W, 1, C.floorDark);
   }
   for (let x = 30; x < NATIVE_W; x += 60) {
-    ctx.fillRect(x, 100, 1, 80);
+    fillAlpha(ctx, x, 101, 1, 79, C.floorDark, 0.5);
   }
 
-  /* Fileira de trás — 4 estações (y mesa = 88) */
+  /* Fileira de trás (y mesa = 88) — 4 estações */
   for (const x of [30, 118, 162, 206]) {
     drawDeskBack(ctx, x, 88);
   }
 
-  /* Fileira da frente — 4 estações (y mesa = 130) */
+  /* Fileira da frente (y mesa = 130) — 4 estações */
   for (const x of [30, 74, 162, 250]) {
     drawDeskFront(ctx, x, 130);
   }
 
-  /* Mesa central destaque (Claude Code) — overlay */
+  /* Mesa central destaque (Claude Code) */
   drawDeskFrontBig(ctx, 134, 128);
 
-  /* Café / geladeira no canto esquerdo do chão */
+  /* Café */
   drawCoffee(ctx, 4, 140);
 }
 
+/* Helpers de pintura */
+function fill(ctx, x, y, w, h, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, w, h);
+}
+function fillAlpha(ctx, x, y, w, h, color, alpha) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, w, h);
+  ctx.restore();
+}
 function drawCircle(ctx, cx, cy, r, color) {
-  ctx.fillStyle = PX(color);
+  ctx.fillStyle = color;
   for (let dy = -r; dy <= r; dy++) {
     for (let dx = -r; dx <= r; dx++) {
       if (dx * dx + dy * dy <= r * r) ctx.fillRect(cx + dx, cy + dy, 1, 1);
     }
   }
 }
-
 function drawCloud(ctx, x, y) {
-  ctx.fillStyle = PX(3);
+  ctx.fillStyle = C.cloud;
   ctx.fillRect(x, y, 14, 4);
   ctx.fillRect(x + 2, y - 2, 10, 6);
   ctx.fillRect(x + 4, y - 3, 6, 8);
 }
 
-/* Mesa de trás — apenas frente da mesa visível */
+/* Mesa de trás */
 function drawDeskBack(ctx, x, y) {
-  /* Tampo */
-  ctx.fillStyle = PX(0);
-  ctx.fillRect(x, y, 28, 8);
-  ctx.fillStyle = PX(1);
-  ctx.fillRect(x + 1, y + 1, 26, 5);
+  fill(ctx, x, y, 28, 8, C.deskDark);
+  fill(ctx, x + 1, y + 1, 26, 5, C.desk);
   /* Monitor */
-  ctx.fillStyle = PX(0);
-  ctx.fillRect(x + 9, y - 12, 12, 12);
-  ctx.fillStyle = PX(2);
-  ctx.fillRect(x + 10, y - 11, 10, 10);
-  /* Base monitor */
-  ctx.fillStyle = PX(0);
-  ctx.fillRect(x + 13, y - 1, 4, 2);
+  fill(ctx, x + 9, y - 12, 12, 12, C.monitorEdge);
+  fill(ctx, x + 10, y - 11, 10, 10, C.monitor);
+  fill(ctx, x + 11, y - 10, 8, 8, C.screen);
+  fill(ctx, x + 13, y - 1, 4, 2, C.monitorEdge);
 }
 
-/* Mesa da frente — perspectiva mais ampla */
+/* Mesa da frente */
 function drawDeskFront(ctx, x, y) {
-  /* Tampo */
-  ctx.fillStyle = PX(0);
-  ctx.fillRect(x, y, 36, 12);
-  ctx.fillStyle = PX(1);
-  ctx.fillRect(x + 1, y + 1, 34, 9);
+  fill(ctx, x, y, 36, 12, C.deskDark);
+  fill(ctx, x + 1, y + 1, 34, 9, C.desk);
   /* Pernas */
-  ctx.fillRect(x + 1, y + 12, 2, 14);
-  ctx.fillRect(x + 33, y + 12, 2, 14);
+  fill(ctx, x + 1, y + 12, 2, 14, C.deskDark);
+  fill(ctx, x + 33, y + 12, 2, 14, C.deskDark);
   /* Monitor */
-  ctx.fillStyle = PX(0);
-  ctx.fillRect(x + 11, y - 18, 16, 18);
-  ctx.fillStyle = PX(2);
-  ctx.fillRect(x + 12, y - 17, 14, 14);
-  /* Base */
-  ctx.fillStyle = PX(0);
-  ctx.fillRect(x + 16, y - 3, 6, 4);
+  fill(ctx, x + 11, y - 18, 16, 18, C.monitorEdge);
+  fill(ctx, x + 12, y - 17, 14, 14, C.monitor);
+  fill(ctx, x + 13, y - 16, 12, 12, C.screen);
+  fill(ctx, x + 16, y - 3, 6, 4, C.monitorEdge);
   /* Teclado */
-  ctx.fillRect(x + 6, y + 1, 10, 2);
+  fill(ctx, x + 6, y + 1, 10, 2, C.outline);
 }
 
 /* Mesa central maior */
 function drawDeskFrontBig(ctx, x, y) {
-  ctx.fillStyle = PX(0);
-  ctx.fillRect(x, y, 52, 14);
-  ctx.fillStyle = PX(1);
-  ctx.fillRect(x + 1, y + 1, 50, 11);
+  fill(ctx, x, y, 52, 14, C.deskDark);
+  fill(ctx, x + 1, y + 1, 50, 11, C.desk);
   /* Pernas */
-  ctx.fillRect(x + 1, y + 14, 2, 14);
-  ctx.fillRect(x + 49, y + 14, 2, 14);
+  fill(ctx, x + 1, y + 14, 2, 14, C.deskDark);
+  fill(ctx, x + 49, y + 14, 2, 14, C.deskDark);
   /* Dois monitores */
-  ctx.fillStyle = PX(0);
-  ctx.fillRect(x + 4, y - 22, 18, 22);
-  ctx.fillRect(x + 30, y - 22, 18, 22);
-  ctx.fillStyle = PX(2);
-  ctx.fillRect(x + 5, y - 21, 16, 18);
-  ctx.fillRect(x + 31, y - 21, 16, 18);
+  fill(ctx, x + 4, y - 22, 18, 22, C.monitorEdge);
+  fill(ctx, x + 30, y - 22, 18, 22, C.monitorEdge);
+  fill(ctx, x + 5, y - 21, 16, 18, C.monitor);
+  fill(ctx, x + 31, y - 21, 16, 18, C.monitor);
+  fill(ctx, x + 6, y - 20, 14, 16, C.screen);
+  fill(ctx, x + 32, y - 20, 14, 16, C.screenAlt);
   /* Bases */
-  ctx.fillStyle = PX(0);
-  ctx.fillRect(x + 10, y - 3, 6, 4);
-  ctx.fillRect(x + 36, y - 3, 6, 4);
+  fill(ctx, x + 10, y - 3, 6, 4, C.monitorEdge);
+  fill(ctx, x + 36, y - 3, 6, 4, C.monitorEdge);
   /* Teclado */
-  ctx.fillRect(x + 18, y + 1, 16, 2);
+  fill(ctx, x + 18, y + 1, 16, 2, C.outline);
 }
 
-/* Máquina de café */
+/* Café */
 function drawCoffee(ctx, x, y) {
-  /* Corpo */
-  ctx.fillStyle = PX(0);
-  ctx.fillRect(x, y, 22, 30);
-  ctx.fillStyle = PX(1);
-  ctx.fillRect(x + 1, y + 1, 20, 28);
-  /* Display */
-  ctx.fillStyle = PX(2);
-  ctx.fillRect(x + 4, y + 4, 14, 4);
-  /* Bico */
-  ctx.fillStyle = PX(0);
-  ctx.fillRect(x + 8, y + 14, 6, 2);
-  ctx.fillRect(x + 9, y + 16, 4, 4);
+  fill(ctx, x, y, 22, 30, C.coffeeDark);
+  fill(ctx, x + 1, y + 1, 20, 28, C.coffeeBody);
+  fill(ctx, x + 4, y + 4, 14, 4, C.coffeeDisp);
+  fill(ctx, x + 8, y + 14, 6, 2, C.coffeeDark);
+  fill(ctx, x + 9, y + 16, 4, 4, C.coffeeDark);
   /* Xícara */
-  ctx.fillStyle = PX(3);
-  ctx.fillRect(x + 8, y + 21, 6, 4);
-  ctx.fillStyle = PX(0);
-  ctx.fillRect(x + 7, y + 21, 1, 5);
-  ctx.fillRect(x + 14, y + 21, 1, 5);
-  ctx.fillRect(x + 7, y + 25, 8, 1);
+  fill(ctx, x + 8, y + 21, 6, 4, C.cup);
+  fill(ctx, x + 7, y + 21, 1, 5, C.cupRim);
+  fill(ctx, x + 14, y + 21, 1, 5, C.cupRim);
+  fill(ctx, x + 7, y + 25, 8, 1, C.cupRim);
 }
 
 /* ─────────────────────────────────────────────────────────────────────
    SPRITES DE AGENTE
-   Sprite base 14x18. 4 frames: idle, idle2 (blink), work, alert.
-   Cor do "chapéu" e altura variam por agente pra dar identidade.
    ───────────────────────────────────────────────────────────────────── */
 export function drawAgent(ctx, agentName, frame, isActive) {
   const layout = AGENT_LAYOUT[agentName];
   if (!layout) return;
+  const colors = AGENT_COLORS[agentName] || AGENT_COLORS['Claude Code'];
   const { x, y, hat } = layout;
 
-  /* Cadeira atrás do personagem (fileira de trás → cadeira mais simples) */
   const isBack = y < 100;
   if (isBack) {
     drawChairBack(ctx, x, y - 10);
   } else {
-    drawChairFront(ctx, x, y - 8);
+    drawChairFront(ctx, x, y - 8, colors);
   }
 
-  /* Personagem */
-  drawCharacter(ctx, x + 1, y - 26, hat, frame, isActive);
+  drawCharacter(ctx, x + 1, y - 26, hat, colors, frame, isActive);
 
-  /* Label embaixo (texto pixel 4x5 char) */
-  drawLabel(ctx, x - 2, y + 16, layout.label, isActive);
+  drawLabel(ctx, x - 2, y + 16, layout.label, isActive ? colors.shirt : C.outline);
 
-  /* Indicador de ativo: balão de fala pixelado */
   if (isActive) {
-    drawSpeechBubble(ctx, x + 12, y - 36, frame);
+    drawSpeechBubble(ctx, x + 12, y - 36, frame, colors.shirt);
   }
 }
 
 function drawChairBack(ctx, x, y) {
-  ctx.fillStyle = PX(0);
-  ctx.fillRect(x + 4, y, 16, 4);
-  ctx.fillRect(x + 4, y + 14, 2, 8);
-  ctx.fillRect(x + 18, y + 14, 2, 8);
+  /* Encosto simples (visto de trás) */
+  fill(ctx, x + 4, y, 16, 4, C.outline);
+  fill(ctx, x + 5, y + 1, 14, 2, C.deskDark);
+  fill(ctx, x + 4, y + 14, 2, 8, C.outline);
+  fill(ctx, x + 18, y + 14, 2, 8, C.outline);
 }
 
-function drawChairFront(ctx, x, y) {
+function drawChairFront(ctx, x, y, colors) {
   /* Encosto */
-  ctx.fillStyle = PX(0);
-  ctx.fillRect(x + 6, y + 2, 14, 8);
-  ctx.fillStyle = PX(1);
-  ctx.fillRect(x + 7, y + 3, 12, 6);
-  /* Assento (sob personagem) */
-  ctx.fillStyle = PX(0);
-  ctx.fillRect(x + 4, y + 18, 18, 4);
+  fill(ctx, x + 6, y + 2, 14, 8, C.outline);
+  fill(ctx, x + 7, y + 3, 12, 6, C.deskDark);
+  /* Almofada do encosto na cor da camisa do dono (toque) */
+  fillAlpha(ctx, x + 8, y + 4, 10, 4, colors.shirt, 0.3);
+  /* Assento */
+  fill(ctx, x + 4, y + 18, 18, 4, C.outline);
+  fill(ctx, x + 5, y + 19, 16, 2, C.deskDark);
   /* Pernas */
-  ctx.fillRect(x + 5, y + 22, 2, 6);
-  ctx.fillRect(x + 19, y + 22, 2, 6);
+  fill(ctx, x + 5, y + 22, 2, 6, C.outline);
+  fill(ctx, x + 19, y + 22, 2, 6, C.outline);
 }
 
 /* Personagem 14x18 */
-function drawCharacter(ctx, x, y, hat, frame, isActive) {
+function drawCharacter(ctx, x, y, hat, colors, frame, isActive) {
   const blink = frame === 1 && Math.random() > 0.85;
-  const headColor = isActive ? PX(0) : PX(0);
-  const skinColor = PX(2);
-  const shirtColor = isActive ? PX(0) : PX(1);
 
-  /* Cabeça 8x8 */
-  ctx.fillStyle = headColor;
-  ctx.fillRect(x + 3, y, 8, 8);
-  ctx.fillStyle = skinColor;
-  ctx.fillRect(x + 4, y + 1, 6, 6);
+  /* Cabeça 8x8 — outline + skin */
+  fill(ctx, x + 3, y, 8, 8, C.outline);
+  fill(ctx, x + 4, y + 1, 6, 6, C.skin);
+  /* Bochechas levemente coradas */
+  fillAlpha(ctx, x + 4, y + 4, 1, 1, C.rose, 0.4);
+  fillAlpha(ctx, x + 9, y + 4, 1, 1, C.rose, 0.4);
   /* Olhos */
-  ctx.fillStyle = headColor;
+  ctx.fillStyle = C.outline;
   if (blink) {
     ctx.fillRect(x + 5, y + 4, 1, 1);
     ctx.fillRect(x + 8, y + 4, 1, 1);
@@ -339,90 +396,95 @@ function drawCharacter(ctx, x, y, hat, frame, isActive) {
     ctx.fillRect(x + 5, y + 3, 1, 2);
     ctx.fillRect(x + 8, y + 3, 1, 2);
   }
-  /* Boca: muda com active/work */
-  if (isActive && frame === 2) {
-    ctx.fillRect(x + 6, y + 6, 2, 1);
-  } else {
-    ctx.fillRect(x + 6, y + 6, 2, 1);
-  }
+  /* Boca */
+  ctx.fillRect(x + 6, y + 6, 2, 1);
 
-  /* Acessório no topo (hat / cabelo) */
-  drawHat(ctx, x, y, hat);
+  /* Cabelo / acessório */
+  drawHat(ctx, x, y, hat, colors);
 
-  /* Corpo 8x8 */
-  ctx.fillStyle = shirtColor;
-  ctx.fillRect(x + 2, y + 8, 10, 7);
   /* Pescoço */
-  ctx.fillStyle = skinColor;
-  ctx.fillRect(x + 6, y + 7, 2, 1);
+  fill(ctx, x + 6, y + 7, 2, 1, C.skin);
 
-  /* Braços animados — frame 2 = digitando (braço pra frente) */
-  ctx.fillStyle = shirtColor;
+  /* Corpo (camisa) — cor do agente */
+  fill(ctx, x + 2, y + 8, 10, 7, C.outline);
+  fill(ctx, x + 3, y + 8, 8, 7, colors.shirt);
+  /* Detalhe colarinho/luz */
+  fillAlpha(ctx, x + 6, y + 8, 2, 1, C.white, 0.4);
+
+  /* Braços */
   if (frame === 2 || (isActive && frame === 0)) {
-    /* Digitando */
-    ctx.fillRect(x + 1, y + 9, 2, 4);
-    ctx.fillRect(x + 11, y + 9, 2, 4);
-    ctx.fillStyle = skinColor;
-    ctx.fillRect(x + 1, y + 13, 2, 1);
-    ctx.fillRect(x + 11, y + 13, 2, 1);
+    /* Digitando: braços pra frente */
+    fill(ctx, x + 1, y + 9, 2, 4, colors.shirt);
+    fill(ctx, x + 11, y + 9, 2, 4, colors.shirt);
+    fill(ctx, x + 1, y + 13, 2, 1, C.skin);
+    fill(ctx, x + 11, y + 13, 2, 1, C.skin);
   } else {
-    /* Idle, braços ao lado */
-    ctx.fillRect(x + 1, y + 9, 1, 5);
-    ctx.fillRect(x + 12, y + 9, 1, 5);
+    /* Idle: braços ao lado */
+    fill(ctx, x + 1, y + 9, 1, 5, colors.shirt);
+    fill(ctx, x + 12, y + 9, 1, 5, colors.shirt);
   }
 }
 
-function drawHat(ctx, x, y, hat) {
-  ctx.fillStyle = PX(0);
+function drawHat(ctx, x, y, hat, colors) {
   switch (hat) {
     case 'crown':
-      /* Coroa de chefe */
-      ctx.fillRect(x + 3, y - 2, 8, 2);
-      ctx.fillRect(x + 3, y - 4, 1, 2);
-      ctx.fillRect(x + 6, y - 4, 2, 2);
-      ctx.fillRect(x + 10, y - 4, 1, 2);
+      /* Coroa dourada */
+      fill(ctx, x + 3, y - 2, 8, 2, colors.hatColor);
+      fill(ctx, x + 3, y - 4, 1, 2, colors.hatColor);
+      fill(ctx, x + 6, y - 4, 2, 2, colors.hatColor);
+      fill(ctx, x + 10, y - 4, 1, 2, colors.hatColor);
+      /* Joia */
+      fill(ctx, x + 6, y - 1, 2, 1, C.book1);
       break;
     case 'tall':
-      /* Cartola Opus */
-      ctx.fillRect(x + 3, y - 1, 8, 1);
-      ctx.fillRect(x + 4, y - 6, 6, 5);
+      /* Cartola preta */
+      fill(ctx, x + 2, y - 1, 10, 1, colors.hatColor);
+      fill(ctx, x + 4, y - 6, 6, 5, colors.hatColor);
+      /* Faixa */
+      fill(ctx, x + 4, y - 3, 6, 1, C.rose);
       break;
     case 'bob':
-      /* Cabelo bob */
-      ctx.fillRect(x + 2, y - 1, 10, 2);
-      ctx.fillRect(x + 2, y, 2, 4);
-      ctx.fillRect(x + 10, y, 2, 4);
+      /* Cabelo bob loiro */
+      fill(ctx, x + 2, y - 1, 10, 2, colors.hair);
+      fill(ctx, x + 2, y, 2, 4, colors.hair);
+      fill(ctx, x + 10, y, 2, 4, colors.hair);
+      fillAlpha(ctx, x + 4, y - 1, 6, 1, C.white, 0.3);
       break;
     case 'short':
-      /* Cabelo curto */
-      ctx.fillRect(x + 3, y - 1, 8, 1);
+      /* Cabelo curto marrom */
+      fill(ctx, x + 3, y - 1, 8, 2, colors.hair);
+      fill(ctx, x + 3, y, 1, 1, colors.hair);
+      fill(ctx, x + 10, y, 1, 1, colors.hair);
       break;
     case 'cap':
-      /* Boné */
-      ctx.fillRect(x + 3, y - 2, 8, 2);
-      ctx.fillRect(x + 1, y, 4, 1);
+      /* Boné colorido com aba */
+      fill(ctx, x + 3, y - 2, 8, 2, colors.hatColor);
+      fill(ctx, x + 1, y, 4, 1, colors.hatColor);
+      /* Logo */
+      fill(ctx, x + 6, y - 1, 2, 1, C.white);
       break;
     case 'lens':
-      /* Lupa Explore */
-      ctx.fillRect(x + 3, y - 1, 8, 1);
-      /* Lupa flutuante */
-      ctx.fillStyle = PX(0);
-      ctx.fillRect(x + 11, y + 2, 4, 4);
-      ctx.fillStyle = PX(2);
-      ctx.fillRect(x + 12, y + 3, 2, 2);
-      ctx.fillStyle = PX(0);
-      ctx.fillRect(x + 14, y + 6, 2, 2);
+      /* Cabelo + lupa flutuante */
+      fill(ctx, x + 3, y - 1, 8, 1, colors.hair);
+      /* Lupa */
+      fill(ctx, x + 11, y + 1, 5, 5, C.outline);
+      fill(ctx, x + 12, y + 2, 3, 3, C.cup);
+      fillAlpha(ctx, x + 12, y + 2, 2, 1, C.screen, 0.6);
+      fill(ctx, x + 15, y + 6, 2, 2, C.outline);
       break;
     case 'tie':
-      /* Cabelo + gravata Plan (gravata desenhada com corpo, aqui só cabelo) */
-      ctx.fillRect(x + 3, y - 2, 8, 2);
-      ctx.fillRect(x + 4, y, 6, 1);
+      /* Cabelo preto + faixa rosa (gravata) */
+      fill(ctx, x + 3, y - 2, 8, 2, colors.hair);
+      fill(ctx, x + 4, y, 6, 1, colors.hair);
       break;
     case 'beanie':
-      /* Gorro estagiário */
-      ctx.fillRect(x + 3, y - 3, 8, 3);
-      ctx.fillStyle = PX(3);
-      ctx.fillRect(x + 6, y - 4, 2, 1);
+      /* Gorro vermelho com pompom */
+      fill(ctx, x + 3, y - 3, 8, 3, colors.hatColor);
+      fill(ctx, x + 3, y - 1, 8, 1, colors.hatColor);
+      /* Faixa */
+      fill(ctx, x + 3, y - 1, 8, 1, C.outline);
+      /* Pompom */
+      fill(ctx, x + 6, y - 4, 2, 1, C.cup);
       break;
   }
 }
@@ -458,8 +520,8 @@ const FONT_3x5 = {
   ' ': ['000','000','000','000','000'],
 };
 
-function drawLabel(ctx, x, y, text, isActive) {
-  ctx.fillStyle = isActive ? PX(0) : PX(0);
+function drawLabel(ctx, x, y, text, color) {
+  ctx.fillStyle = color;
   let cx = x;
   for (const ch of String(text).toUpperCase()) {
     const glyph = FONT_3x5[ch] || FONT_3x5[' '];
@@ -472,17 +534,15 @@ function drawLabel(ctx, x, y, text, isActive) {
   }
 }
 
-function drawSpeechBubble(ctx, x, y, frame) {
-  ctx.fillStyle = PX(0);
-  ctx.fillRect(x, y, 12, 9);
-  ctx.fillStyle = PX(3);
-  ctx.fillRect(x + 1, y + 1, 10, 7);
+function drawSpeechBubble(ctx, x, y, frame, accent) {
+  /* Borda */
+  fill(ctx, x, y, 12, 9, C.outline);
+  fill(ctx, x + 1, y + 1, 10, 7, C.bubbleBg);
   /* Cauda */
-  ctx.fillStyle = PX(0);
-  ctx.fillRect(x + 2, y + 9, 2, 1);
-  ctx.fillRect(x + 3, y + 10, 1, 1);
-  /* Conteúdo: ponto piscando */
-  ctx.fillStyle = PX(0);
+  fill(ctx, x + 2, y + 9, 2, 1, C.outline);
+  fill(ctx, x + 3, y + 10, 1, 1, C.outline);
+  /* Conteúdo: 3 pontos pulsando na cor do agente */
+  ctx.fillStyle = accent;
   if (frame === 0 || frame === 2) {
     ctx.fillRect(x + 3, y + 4, 1, 1);
     ctx.fillRect(x + 6, y + 4, 1, 1);
@@ -492,9 +552,6 @@ function drawSpeechBubble(ctx, x, y, frame) {
   }
 }
 
-/* ─────────────────────────────────────────────────────────────────────
-   Ícone de ferramenta no balão (opcional, futuro)
-   ───────────────────────────────────────────────────────────────────── */
 export const TOOL_GLYPH = {
   Bash: 'cmd',
   Read: 'eye',
