@@ -1967,7 +1967,11 @@ function ExecActiveAdsTable({ ads, onSeeAll }) {
                 {ad.name || 'Anúncio sem nome'}
               </div>
               <small style={{ display: 'block', color: 'var(--c-text-3)', fontSize: '11px', fontWeight: 400 }}>
-                Conjunto · Joinville · {ringLabel}
+                {/* Mostra conjunto/campanha pai em vez de só "Conjunto · Joinville".
+                   Pra ver métrica individual de cada anúncio dentro do conjunto, abrir /anuncios → vista "Por campanha". */}
+                {ad.meta?.ad_set?.name || 'Conjunto'}
+                {ad.objective ? ` · ${ad.objective.replace('OUTCOME_', '').toLowerCase()}` : ''}
+                {' · '}{ringLabel}
               </small>
             </div>
             <span style={{

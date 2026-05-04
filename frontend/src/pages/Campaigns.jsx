@@ -14,6 +14,7 @@ import api from '../services/api';
 import { getService } from '../data/services';
 import { topPerformers } from '../data/districtInsights';
 import { hasEnoughData as serviceInsightsEnoughData } from '../data/serviceInsights';
+import { useCampaignsHierarchy } from '../hooks/useCampaignsHierarchy';
 
 
 /* ── Configurações visuais ── */
@@ -1367,6 +1368,524 @@ function EditAudienceModal({ ad, onClose, onSaved }) {
   );
 }
 
+/* ───────────────────────────────────────────────────────────────────
+ * VISTA HIERÁRQUICA — Campanha → Conjunto → Anúncio (com métricas vivas)
+ * ─────────────────────────────────────────────────────────────────── */
+
+function fmtBRLCompact(n) {
+  if (n == null || isNaN(n)) return '—';
+  return `R$ ${Number(n).toFixed(2).replace('.', ',')}`;
+}
+function fmtIntCompact(n) {
+  if (n == null || isNaN(n)) return '—';
+  return Number(n).toLocaleString('pt-BR');
+}
+
+/* Soma os insights individuais dos ads de um adset (ou de uma campanha). */
+function aggregateInsights(ads) {
+  if (!Array.isArray(ads) || ads.length === 0) return null;
+  const tot = { spend: 0, clicks: 0, link_clicks: 0, impressions: 0, reach: 0, messages: 0, _ctrSum: 0, _ctrN: 0, _cpcSum: 0, _cpcN: 0 };
+  ads.forEach(a => {
+    const ins = a.insights;
+    if (!ins) return;
+    tot.spend       += Number(ins.spend || 0);
+    tot.clicks      += Number(ins.clicks || 0);
+    tot.link_clicks += Number(ins.link_clicks || 0);
+    tot.impressions += Number(ins.impressions || 0);
+    tot.reach       += Number(ins.reach || 0);
+    tot.messages    += Number(ins.messages || 0);
+    if (ins.ctr) { tot._ctrSum += Number(ins.ctr); tot._ctrN++; }
+    if (ins.cpc) { tot._cpcSum += Number(ins.cpc); tot._cpcN++; }
+  });
+  /* CTR e CPC efetivos do agregado: derivam de impressões/cliques quando há
+     dados; caem pra média ponderada simples como fallback. */
+  const ctrAgg = tot.impressions > 0 ? (tot.clicks / tot.impressions) * 100
+                : (tot._ctrN ? tot._ctrSum / tot._ctrN : 0);
+  const cpcAgg = tot.clicks > 0 ? (tot.spend / tot.clicks)
+                : (tot._cpcN ? tot._cpcSum / tot._cpcN : 0);
+  const cprAgg = tot.messages > 0 ? (tot.spend / tot.messages) : null;
+  return {
+    spend: tot.spend,
+    clicks: tot.clicks,
+    link_clicks: tot.link_clicks,
+    impressions: tot.impressions,
+    reach: tot.reach,
+    messages: tot.messages,
+    ctr: ctrAgg,
+    cpc: cpcAgg,
+    costPerMessage: cprAgg,
+  };
+}
+
+/* Resume targeting de um adset em string curta — nº de bairros + faixa idade.
+   Usado no header do conjunto pra dar contexto sem ocupar muito espaço. */
+function summarizeAdSetTargeting(adset) {
+  const t = adset?.targeting || {};
+  const bairros = t?.geo_locations?.custom_locations?.length || 0;
+  const ageMin = t?.age_min;
+  const ageMax = t?.age_max;
+  const parts = [];
+  if (bairros) parts.push(`${bairros} bairro${bairros > 1 ? 's' : ''}`);
+  if (ageMin && ageMax) parts.push(`${ageMin}-${ageMax} anos`);
+  return parts.join(' · ') || 'Joinville';
+}
+
+/* Pílula com 1 métrica — header do conjunto/campanha. */
+function MetricPill({ label, value, accent }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <span style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '.6px', color: 'var(--c-text-4)', fontWeight: 500 }}>{label}</span>
+      <strong style={{ fontSize: '13px', color: accent ? 'var(--c-accent)' : 'var(--c-text-1)', fontFeatureSettings: "'tnum'", marginTop: '1px' }}>{value}</strong>
+    </div>
+  );
+}
+
+/* Linha de anúncio dentro do bloco do conjunto — métricas individuais vivas. */
+function HierarchicalAdRow({ ad, parentUserAd, onPreview, onToggle, onEdit, onDuplicate, onRemove, isLast }) {
+  const [hovered, setHovered] = useState(false);
+  const ins = ad.insights || null;
+  const status = STATUS[(ad.effective_status || ad.status || '').toString().toLowerCase()] ||
+                 STATUS[(ad.status || '').toLowerCase()] ||
+                 STATUS.review;
+  const isActive = (ad.status || '').toUpperCase() === 'ACTIVE';
+  const cpr = ins && ins.messages > 0 ? ins.spend / ins.messages : null;
+
+  const btn = {
+    width: '26px', height: '26px', borderRadius: '7px',
+    border: '1px solid var(--c-border)', background: 'var(--c-surface)',
+    color: 'var(--c-text-2)', cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    transition: 'all .12s',
+  };
+  const stop = (fn) => (e) => { e.stopPropagation(); fn(); };
+
+  /* O ad da hierarchy é o nível Meta (id Meta), mas as ações (toggle/edit/dup/remove)
+     no AppState operam pelo userAd local. Reusa parentUserAd como contexto. */
+  const handlePreview = () => onPreview && parentUserAd && onPreview(parentUserAd);
+  const handleEdit    = () => onEdit && parentUserAd && onEdit(parentUserAd);
+  const handleDup     = () => onDuplicate && parentUserAd && onDuplicate(parentUserAd);
+
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onClick={handlePreview}
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1.6fr 90px 90px 90px 70px 80px 90px 130px',
+        gap: '10px',
+        alignItems: 'center',
+        padding: '9px 14px',
+        background: hovered ? 'var(--c-hover)' : 'transparent',
+        borderTop: isLast ? 'none' : '1px solid var(--c-border)',
+        cursor: parentUserAd ? 'pointer' : 'default',
+        transition: 'background .12s',
+        fontFeatureSettings: "'tnum'",
+      }}
+    >
+      {/* Nome + status */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+        <span style={{
+          width: '5px', height: '5px', borderRadius: '50%',
+          background: status.dot, flexShrink: 0,
+        }} />
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--c-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {ad.name || `Anúncio ${ad.id}`}
+          </div>
+          <div style={{ fontSize: '9.5px', color: 'var(--c-text-4)', fontWeight: 400, marginTop: '1px' }}>
+            ID: {ad.id}
+          </div>
+        </div>
+      </div>
+
+      {/* Gasto */}
+      <div style={{ fontSize: '12px', color: ins ? 'var(--c-text-1)' : 'var(--c-text-4)', fontWeight: ins?.spend ? 700 : 400, textAlign: 'right' }}>
+        {fmtBRLCompact(ins?.spend)}
+      </div>
+      {/* Impressões */}
+      <div style={{ fontSize: '12px', color: ins ? 'var(--c-text-2)' : 'var(--c-text-4)', textAlign: 'right' }}>
+        {fmtIntCompact(ins?.impressions)}
+      </div>
+      {/* Cliques */}
+      <div style={{ fontSize: '12px', color: ins ? 'var(--c-text-2)' : 'var(--c-text-4)', textAlign: 'right' }}>
+        {fmtIntCompact(ins?.link_clicks ?? ins?.clicks)}
+      </div>
+      {/* CTR */}
+      <div style={{ fontSize: '12px', color: ins ? 'var(--c-text-2)' : 'var(--c-text-4)', textAlign: 'right' }}>
+        {ins?.ctr != null ? `${Number(ins.ctr).toFixed(2).replace('.', ',')}%` : '—'}
+      </div>
+      {/* Mensagens */}
+      <div style={{ fontSize: '12px', color: ins?.messages ? '#34D399' : 'var(--c-text-4)', fontWeight: ins?.messages ? 700 : 400, textAlign: 'right' }}>
+        {fmtIntCompact(ins?.messages)}
+      </div>
+      {/* Custo/msg */}
+      <div style={{ fontSize: '12px', color: cpr ? 'var(--c-text-1)' : 'var(--c-text-4)', fontWeight: cpr ? 700 : 400, textAlign: 'right' }}>
+        {fmtBRLCompact(cpr)}
+      </div>
+      {/* Ações */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}>
+        <button title="Ver criativo" onClick={stop(handlePreview)} style={btn}><EyeIcon /></button>
+        {onToggle && parentUserAd && (
+          <button
+            title={isActive ? 'Pausar no Meta' : 'Ativar no Meta'}
+            onClick={stop(() => {
+              if (!isActive) {
+                const budget = parentUserAd.budgetValue || parentUserAd.budget;
+                if (!confirm(`Ativar "${parentUserAd.name || 'esse anúncio'}"? Começa a gastar R$ ${budget || '?'}/dia.`)) return;
+              }
+              onToggle(parentUserAd);
+            })}
+            style={btn}
+          >{isActive ? <PauseIcon /> : <PlayIcon />}</button>
+        )}
+        {onEdit && parentUserAd && <button title="Editar público" onClick={stop(handleEdit)} style={btn}><EditIcon /></button>}
+        {onDuplicate && parentUserAd && <button title="Duplicar" onClick={stop(handleDup)} style={btn}><CopyIcon /></button>}
+        <a
+          title="Abrir no Meta Ads Manager"
+          href={`https://adsmanager.facebook.com/adsmanager/manage/ads?act=1330468201431069&selected_ad_ids=${ad.id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          style={{ ...btn, textDecoration: 'none', color: '#60A5FA', borderColor: 'rgba(96,165,250,.4)', fontWeight: 700, fontSize: '11px', lineHeight: 1 }}
+        >ⓜ</a>
+      </div>
+    </div>
+  );
+}
+
+/* Bloco do Conjunto — header com nome/targeting/agregado + lista de ads. */
+function HierarchicalAdSetBlock({ adset, parentUserAd, onPreview, onToggle, onEdit, onDuplicate, onRemove }) {
+  const [expanded, setExpanded] = useState(true);
+  const ads = adset.ads || [];
+  const agg = aggregateInsights(ads);
+  const summary = summarizeAdSetTargeting(adset);
+  const status = STATUS[(adset.effective_status || adset.status || '').toLowerCase()] || STATUS.review;
+
+  return (
+    <div style={{
+      border: '1px solid var(--c-border)', borderRadius: '12px',
+      background: 'var(--c-surface)',
+      marginTop: '10px',
+      overflow: 'hidden',
+    }}>
+      {/* Header conjunto */}
+      <div
+        onClick={() => setExpanded(v => !v)}
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '24px 1.6fr 90px 90px 90px 70px 80px 90px 130px',
+          gap: '10px',
+          alignItems: 'center',
+          padding: '12px 14px',
+          cursor: 'pointer',
+          background: 'rgba(255,255,255,.02)',
+          borderBottom: expanded && ads.length ? '1px solid var(--c-border)' : 'none',
+        }}
+      >
+        <span style={{
+          display: 'inline-block', transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
+          transition: 'transform .15s', color: 'var(--c-text-3)', fontSize: '11px',
+        }}>▸</span>
+
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{
+              fontSize: '10px', fontWeight: 700, letterSpacing: '.4px',
+              padding: '2px 7px', borderRadius: '999px',
+              background: 'rgba(167,139,250,.16)', color: '#A78BFA',
+              border: '1px solid rgba(167,139,250,.35)',
+              flexShrink: 0,
+            }}>CONJUNTO</span>
+            <span style={{
+              fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>{adset.name}</span>
+            <span style={{
+              fontSize: '9.5px', fontWeight: 700, padding: '2px 7px', borderRadius: '999px',
+              background: status.bg, color: status.color, flexShrink: 0,
+            }}>{status.label}</span>
+          </div>
+          <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', fontWeight: 400, marginTop: '2px' }}>
+            {summary} · {ads.length} {ads.length === 1 ? 'anúncio' : 'anúncios'}
+          </div>
+        </div>
+
+        {/* Métricas agregadas (alinhadas com colunas dos ads) */}
+        <div style={{ fontSize: '12px', color: agg ? 'var(--c-text-1)' : 'var(--c-text-4)', fontWeight: 700, textAlign: 'right' }}>{fmtBRLCompact(agg?.spend)}</div>
+        <div style={{ fontSize: '12px', color: 'var(--c-text-2)', textAlign: 'right' }}>{fmtIntCompact(agg?.impressions)}</div>
+        <div style={{ fontSize: '12px', color: 'var(--c-text-2)', textAlign: 'right' }}>{fmtIntCompact(agg?.link_clicks ?? agg?.clicks)}</div>
+        <div style={{ fontSize: '12px', color: 'var(--c-text-2)', textAlign: 'right' }}>{agg?.ctr ? `${agg.ctr.toFixed(2).replace('.', ',')}%` : '—'}</div>
+        <div style={{ fontSize: '12px', color: agg?.messages ? '#34D399' : 'var(--c-text-4)', fontWeight: agg?.messages ? 700 : 400, textAlign: 'right' }}>{fmtIntCompact(agg?.messages)}</div>
+        <div style={{ fontSize: '12px', color: agg?.costPerMessage ? 'var(--c-text-1)' : 'var(--c-text-4)', fontWeight: agg?.costPerMessage ? 700 : 400, textAlign: 'right' }}>{fmtBRLCompact(agg?.costPerMessage)}</div>
+        <div style={{ textAlign: 'right' }}>
+          <a
+            title="Abrir conjunto no Meta"
+            href={`https://adsmanager.facebook.com/adsmanager/manage/adsets?act=1330468201431069&selected_adset_ids=${adset.id}`}
+            target="_blank" rel="noopener noreferrer"
+            onClick={e => e.stopPropagation()}
+            style={{
+              fontSize: '10.5px', fontWeight: 700, color: '#60A5FA',
+              textDecoration: 'none', padding: '4px 8px',
+              border: '1px solid rgba(96,165,250,.4)', borderRadius: '7px',
+            }}
+          >ⓜ Meta</a>
+        </div>
+      </div>
+
+      {/* Lista de ads */}
+      {expanded && ads.length > 0 && (
+        <div>
+          {/* Cabeçalho de colunas — claro, sem reflow grid */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1.6fr 90px 90px 90px 70px 80px 90px 130px',
+            gap: '10px',
+            padding: '8px 14px',
+            background: 'var(--c-surface)',
+            borderBottom: '1px solid var(--c-border)',
+            fontSize: '9px', fontWeight: 700, letterSpacing: '1px',
+            color: 'var(--c-text-4)', textTransform: 'uppercase',
+          }}>
+            <div>ANÚNCIO</div>
+            <div style={{ textAlign: 'right' }}>GASTO</div>
+            <div style={{ textAlign: 'right' }}>IMPRESSÕES</div>
+            <div style={{ textAlign: 'right' }}>CLIQUES</div>
+            <div style={{ textAlign: 'right' }}>CTR</div>
+            <div style={{ textAlign: 'right' }}>MSGS</div>
+            <div style={{ textAlign: 'right' }}>CUSTO/MSG</div>
+            <div style={{ textAlign: 'right' }}>AÇÕES</div>
+          </div>
+          {ads.map((ad, i) => (
+            <HierarchicalAdRow
+              key={ad.id}
+              ad={ad}
+              parentUserAd={parentUserAd}
+              onPreview={onPreview}
+              onToggle={onToggle}
+              onEdit={onEdit}
+              onDuplicate={onDuplicate}
+              onRemove={onRemove}
+              isLast={i === ads.length - 1}
+            />
+          ))}
+        </div>
+      )}
+      {expanded && ads.length === 0 && (
+        <div style={{ padding: '14px', fontSize: '11.5px', color: 'var(--c-text-4)', textAlign: 'center' }}>
+          Nenhum anúncio neste conjunto.
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* Card da Campanha — header + adsets dentro. */
+function CampaignGroupCard({ userAd, hierState, onPreview, onToggle, onEdit, onDuplicate, onRemove }) {
+  const [expanded, setExpanded] = useState(true);
+  const hier = hierState?.hier;
+  const loading = hierState?.loading;
+  const error = hierState?.error;
+  const adsets = hier?.adsets || [];
+
+  /* Métricas agregadas: prefere hierarchy ao vivo; cai pro snapshot do userAd. */
+  const liveAgg = adsets.length
+    ? aggregateInsights(adsets.flatMap(as => as.ads || []))
+    : null;
+  const spend = liveAgg?.spend ?? Number(userAd.spent ?? 0);
+  const messages = liveAgg?.messages ?? Number(userAd.messagesStarted ?? userAd.conversions ?? 0);
+  const cpr = messages > 0 && spend > 0 ? spend / messages
+              : (userAd.costPerMessage != null ? Number(userAd.costPerMessage) : null);
+
+  const status = STATUS[(userAd.status || '').toLowerCase()] || STATUS.review;
+  const platCampId = userAd.platform_campaign_id || userAd.metaCampaignId;
+
+  return (
+    <div className="ccb-card" style={{
+      borderRadius: '16px',
+      padding: '16px 18px',
+      marginBottom: '14px',
+    }}>
+      {/* Header campanha */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '12px',
+        flexWrap: 'wrap',
+      }}>
+        <button
+          onClick={() => setExpanded(v => !v)}
+          aria-label={expanded ? 'Recolher' : 'Expandir'}
+          style={{
+            width: '26px', height: '26px', borderRadius: '8px',
+            border: '1px solid var(--c-border)', background: 'var(--c-surface)',
+            color: 'var(--c-text-2)', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '12px',
+            transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
+            transition: 'transform .15s',
+            flexShrink: 0,
+          }}
+        >▸</button>
+
+        <div style={{ flex: 1, minWidth: '200px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <span style={{
+              fontSize: '10px', fontWeight: 700, letterSpacing: '.4px',
+              padding: '2px 8px', borderRadius: '999px',
+              background: 'rgba(193,53,132,.14)', color: 'var(--c-accent)',
+              border: '1px solid rgba(193,53,132,.35)',
+            }}>CAMPANHA</span>
+            <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--c-text-1)' }}>
+              {userAd.name}
+            </span>
+            <span style={{
+              fontSize: '10px', fontWeight: 700, letterSpacing: '.3px',
+              padding: '3px 8px', borderRadius: '999px',
+              background: status.bg, color: status.color,
+            }}>{status.label}</span>
+          </div>
+          <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', fontWeight: 400, marginTop: '3px' }}>
+            {adsets.length || 0} {adsets.length === 1 ? 'conjunto' : 'conjuntos'} ·
+            {' '}objetivo {userAd.objective?.replace('OUTCOME_', '').toLowerCase() || '—'} ·
+            {' '}{loading ? 'atualizando…' : (error ? `erro: ${error}` : 'ao vivo')}
+          </div>
+        </div>
+
+        {/* Métricas agregadas da campanha */}
+        <div style={{ display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <MetricPill label="Gasto" value={fmtBRLCompact(spend)} accent />
+          <MetricPill label="Mensagens" value={fmtIntCompact(messages)} />
+          <MetricPill label="Custo/msg" value={fmtBRLCompact(cpr)} />
+          <a
+            title="Abrir campanha no Meta"
+            href={`https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=1330468201431069&selected_campaign_ids=${platCampId}`}
+            target="_blank" rel="noopener noreferrer"
+            style={{
+              fontSize: '11px', fontWeight: 700, color: '#60A5FA',
+              textDecoration: 'none', padding: '6px 10px',
+              border: '1px solid rgba(96,165,250,.4)', borderRadius: '8px',
+            }}
+          >Abrir no Meta</a>
+        </div>
+      </div>
+
+      {/* Adsets */}
+      {expanded && (
+        <div style={{ marginTop: '4px' }}>
+          {loading && adsets.length === 0 && (
+            <div style={{ padding: '14px', fontSize: '12px', color: 'var(--c-text-3)', textAlign: 'center' }}>
+              Carregando hierarquia da campanha…
+            </div>
+          )}
+          {error && adsets.length === 0 && (
+            <div style={{ padding: '14px', fontSize: '12px', color: '#F87171', textAlign: 'center' }}>
+              Não consegui buscar do Meta: {error}
+            </div>
+          )}
+          {!loading && !error && adsets.length === 0 && (
+            <div style={{ padding: '14px', fontSize: '12px', color: 'var(--c-text-4)', textAlign: 'center' }}>
+              Nenhum conjunto encontrado.
+            </div>
+          )}
+          {adsets.map(adset => (
+            <HierarchicalAdSetBlock
+              key={adset.id}
+              adset={adset}
+              parentUserAd={userAd}
+              onPreview={onPreview}
+              onToggle={onToggle}
+              onEdit={onEdit}
+              onDuplicate={onDuplicate}
+              onRemove={onRemove}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* Seção que renderiza grupos de campanha + bloco de rascunhos. Recebe ads
+   já filtrados (não cuida de filtro/sort) e o map de hierarchies do hook. */
+function HierarchyAdsSection({
+  metaCampAds, draftAds, hierarchies,
+  onPreview, onToggle, onEdit, onDuplicate, onRemove,
+}) {
+  /* Ordena campanhas: ATIVAS antes, depois por gasto desc.
+     Gasto vem do snapshot do AppState (userAd.spent), suficiente como ordem. */
+  const orderedCamps = [...metaCampAds].sort((a, b) => {
+    const aActive = (a.status || '').toLowerCase() === 'active' ? 1 : 0;
+    const bActive = (b.status || '').toLowerCase() === 'active' ? 1 : 0;
+    if (aActive !== bActive) return bActive - aActive;
+    return Number(b.spent || 0) - Number(a.spent || 0);
+  });
+
+  return (
+    <div>
+      {orderedCamps.length === 0 && draftAds.length === 0 && (
+        <div className="ccb-card" style={{ padding: '60px', textAlign: 'center', borderRadius: '18px' }}>
+          <div style={{ marginBottom: '10px', opacity: .4 }}><Icon name="bell" size={32} /></div>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>Nenhum anúncio encontrado</div>
+          <div style={{ fontSize: '12px', color: 'var(--c-text-3)', fontWeight: 400 }}>
+            Tente remover os filtros ou crie um novo anúncio.
+          </div>
+        </div>
+      )}
+
+      {orderedCamps.map(userAd => (
+        <CampaignGroupCard
+          key={userAd.id}
+          userAd={userAd}
+          hierState={hierarchies[userAd.id]}
+          onPreview={onPreview}
+          onToggle={onToggle}
+          onEdit={onEdit}
+          onDuplicate={onDuplicate}
+          onRemove={onRemove}
+        />
+      ))}
+
+      {draftAds.length > 0 && (
+        <div className="ccb-card" style={{ borderRadius: '16px', padding: '14px 18px', marginTop: '16px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '4px' }}>
+            Rascunhos e não publicados
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--c-text-4)', fontWeight: 400, marginBottom: '10px' }}>
+            Esses anúncios ainda não têm campanha Meta no ar — não há hierarquia pra mostrar.
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {draftAds.map(ad => {
+              const status = STATUS[(ad.status || '').toLowerCase()] || STATUS.review;
+              return (
+                <div
+                  key={ad.id}
+                  onClick={() => onPreview && onPreview(ad)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                    padding: '8px 10px',
+                    border: '1px solid var(--c-border)', borderRadius: '10px',
+                    background: 'var(--c-surface)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: status.dot, flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--c-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {ad.name}
+                    </div>
+                    <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', fontWeight: 400, marginTop: '1px' }}>
+                      {ad.platform || 'sem plataforma'} · {status.label}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Página Anúncios ── */
 export default function Campaigns() {
   const navigate = useNavigate();
@@ -1379,6 +1898,10 @@ export default function Campaigns() {
   const [sortDir, setSortDir] = useState('desc');
   const [previewAd, setPreviewAd] = useState(null);
   const [editingAudienceAd, setEditingAudienceAd] = useState(null);
+  /* Vista padrão: hierárquica — Campanha → Conjunto → Anúncio com métricas
+     individuais por anúncio (vivas do Meta). Toggle pra "Lista" mantém o
+     formato flat antigo pra quem prefere ver tudo plano. */
+  const [viewMode, setViewMode] = useState('hierarchy');
 
   /* Força refresh do effective_status (status real Meta) ao abrir a página.
      Sem isso, tag "Pausado no Meta" pode ficar grudada em estado obsoleto até
@@ -1387,6 +1910,21 @@ export default function Campaigns() {
 
   const allAds = userAds;
   const TOTAL = allAds.length;
+
+  /* Anúncios que correspondem a campanhas Meta publicadas — usados na vista
+     hierárquica. Cada userAd vira 1 cartão de campanha; o hook busca em
+     paralelo a hierarquia de cada uma (adsets + ads + insights). */
+  const metaCampAds = userAds.filter(a =>
+    (a.platform === 'meta' || a.platform === 'instagram') &&
+    (a.platform_campaign_id || a.metaCampaignId)
+  );
+  const metaCampIds = metaCampAds.map(a => a.id);
+  const { hierarchies, refresh: refreshHier } = useCampaignsHierarchy(metaCampIds, { enabled: viewMode === 'hierarchy' });
+
+  /* Anúncios que NÃO têm campanha Meta publicada (rascunhos, agendados,
+     reprovados antes de publicar, Google) — vão pra seção secundária no
+     modo hierárquico, onde não há o que agrupar por campanha real. */
+  const draftAds = userAds.filter(a => !metaCampAds.includes(a));
 
   /* Pra campanhas Meta JÁ PUBLICADAS, "Editar" abre o modal de público inline
      (rápido). Pra rascunhos/agendadas, segue o fluxo antigo: reabre o wizard
@@ -1560,10 +2098,47 @@ export default function Campaigns() {
             Limpar filtros
           </button>
         )}
+        {/* Toggle vista hierárquica vs lista plana */}
+        <div style={{
+          marginLeft: 'auto',
+          display: 'inline-flex',
+          background: 'var(--c-surface)',
+          border: '1px solid var(--c-border)',
+          borderRadius: '10px',
+          padding: '3px',
+          gap: '2px',
+        }}>
+          {[
+            { id: 'hierarchy', label: 'Por campanha' },
+            { id: 'flat',      label: 'Lista' },
+          ].map(opt => {
+            const active = viewMode === opt.id;
+            return (
+              <button
+                key={opt.id}
+                onClick={() => setViewMode(opt.id)}
+                style={{
+                  padding: '6px 12px', fontSize: '12px', fontWeight: 700,
+                  borderRadius: '7px', border: 'none', cursor: 'pointer',
+                  background: active
+                    ? 'linear-gradient(135deg, var(--c-accent), var(--c-accent-dk))'
+                    : 'transparent',
+                  color: active ? '#fff' : 'var(--c-text-3)',
+                  boxShadow: active ? '0 4px 14px rgba(193,53,132,.3)' : 'none',
+                  transition: 'all .15s',
+                }}
+                title={opt.id === 'hierarchy'
+                  ? 'Agrupa por Campanha → Conjunto → Anúncio (com métrica individual de cada anúncio)'
+                  : 'Lista plana de todos os anúncios'}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
         <button
           onClick={() => setReportOpen(v => !v)}
           style={{
-            marginLeft: 'auto',
             background: 'var(--c-surface)', border: '1px solid var(--c-border)',
             borderRadius: '10px', padding: '9px 14px',
             fontSize: '13px', fontWeight: 600, color: 'var(--c-text-2)',
@@ -1579,7 +2154,27 @@ export default function Campaigns() {
         <PerformanceReport ads={allAds} avgCostPerResult={avgCostPerResult} />
       )}
 
-      {/* ── Tabela ── */}
+      {/* ── Conteúdo principal: hierarquia (default) ou tabela plana ── */}
+      {viewMode === 'hierarchy' ? (
+        <HierarchyAdsSection
+          metaCampAds={metaCampAds.filter(ad => {
+            if (statusFilter && ad.status !== statusFilter) return false;
+            if (platformFilter && ad.platform !== platformFilter) return false;
+            return true;
+          })}
+          draftAds={draftAds.filter(ad => {
+            if (statusFilter && ad.status !== statusFilter) return false;
+            if (platformFilter && ad.platform !== platformFilter) return false;
+            return true;
+          })}
+          hierarchies={hierarchies}
+          onPreview={setPreviewAd}
+          onToggle={(a) => toggleAdStatus(a.id)}
+          onEdit={handleEdit}
+          onDuplicate={(a) => duplicateAd(a.id)}
+          onRemove={(a) => removeAd(a.id)}
+        />
+      ) : (
       <div className="ads-table-wrapper ccb-card" style={{
         borderRadius: '18px',
         padding: 0,
@@ -1717,6 +2312,7 @@ export default function Campaigns() {
           </div>
         </div>
       </div>
+      )}
 
       <AdPreviewModal
         ad={previewAd}
