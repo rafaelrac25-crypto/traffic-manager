@@ -1,10 +1,9 @@
 import React, { createContext, useContext, useEffect } from 'react';
 
 /* Tema fixo em dark — o modo light foi removido por decisao do Rafa.
-   Mantemos useTheme() retornando { isDark: true, toggle: noop } pra
-   nao quebrar nenhum componente existente que importa esse hook. */
+   toggle removido: era noop e só gerava ruído no código. */
 
-const ThemeContext = createContext({ isDark: true, toggle: () => {} });
+const ThemeContext = createContext({ isDark: true });
 
 export function ThemeProvider({ children }) {
   useEffect(() => {
@@ -15,7 +14,7 @@ export function ThemeProvider({ children }) {
   }, []);
 
   return (
-    <ThemeContext.Provider value={{ isDark: true, toggle: () => {} }}>
+    <ThemeContext.Provider value={{ isDark: true }}>
       {children}
     </ThemeContext.Provider>
   );
@@ -23,5 +22,5 @@ export function ThemeProvider({ children }) {
 
 export function useTheme() {
   const ctx = useContext(ThemeContext);
-  return ctx || { isDark: true, toggle: () => {} };
+  return ctx || { isDark: true };
 }

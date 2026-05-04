@@ -2,7 +2,7 @@ const router = require('express').Router();
 const crypto = require('crypto');
 const https = require('https');
 const db = require('../db');
-const { encrypt } = require('../services/crypto');
+const { encrypt, safeDecrypt } = require('../services/crypto');
 const { metaGet } = require('../services/metaHttp');
 const { GRAPH_BASE: GRAPH } = require('../services/metaApiVersion');
 
@@ -376,10 +376,7 @@ router.get('/meta/campaign-status', async (req, res) => {
     const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
     const creds = credResult.rows[0];
     if (!creds) return res.status(400).json({ error: 'Meta não conectado' });
-    const { decrypt } = require('../services/crypto');
-    const token = String(creds.access_token).includes(':')
-      ? (() => { try { return decrypt(creds.access_token); } catch { return creds.access_token; } })()
-      : creds.access_token;
+    const token = safeDecrypt(creds.access_token);
     try {
       const info = await metaGet(`/${targetId}`, {
         fields: 'id,name,status,effective_status,configured_status,created_time,updated_time',
@@ -419,10 +416,7 @@ router.get('/meta/instagram-profile', async (req, res) => {
     if (!creds) return res.status(404).json({ error: 'Meta não conectado' });
     if (!creds.ig_business_id) return res.status(404).json({ error: 'IG Business não vinculado à conta Meta' });
 
-    const { decrypt } = require('../services/crypto');
-    const token = String(creds.access_token).includes(':')
-      ? (() => { try { return decrypt(creds.access_token); } catch { return creds.access_token; } })()
-      : creds.access_token;
+    const token = safeDecrypt(creds.access_token);
 
     const info = await metaGet(`/${creds.ig_business_id}`, {
       fields: 'id,username,name,profile_picture_url',

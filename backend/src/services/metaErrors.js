@@ -9,7 +9,7 @@ const META_ERROR_MAP = {
   102: { pt: 'Sessão expirada — reconectar o Facebook', retry: false, reconnect: true },
   104: { pt: 'Assinatura inválida do App', retry: false },
   190: { pt: 'Token de acesso inválido ou expirado — reconectar', retry: false, reconnect: true },
-  200: { pt: 'Permissões insuficientes — revisar escopos do OAuth', retry: false, reconnect: true },
+  200: { pt: 'Permissão OAuth insuficiente — revisar escopos do App no Meta Developer.', retry: false, reconnect: false },
   294: { pt: 'É necessário aceitar os termos de serviço do Meta Ads', retry: false },
   368: { pt: 'Ação bloqueada temporariamente pelo Meta (política)', retry: false },
   613: { pt: 'Muitas chamadas em pouco tempo — aguardar', retry: true, backoffMs: 60000 },

@@ -122,7 +122,7 @@ const NAV = [
 export default function Sidebar({ open = false, isMobile = false }) {
   const navigate             = useNavigate();
   const location             = useLocation();
-  const { isDark, toggle }   = useTheme();
+  const { isDark }           = useTheme();
   /* Estado collapsible dos grupos da nav (Biblioteca etc). Por default,
      grupo abre se algum item dele estiver ativo (não esconde rota atual). */
   const [groupsOpen, setGroupsOpen] = useState({});

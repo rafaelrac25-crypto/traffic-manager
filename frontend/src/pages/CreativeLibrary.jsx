@@ -53,7 +53,6 @@ function emptyCreative() {
     name: '',
     primaryText: '',
     headline: '',
-    description: '',
     cta: 'WhatsApp',
     thumbGrad: GRAD_OPTIONS[0],
   };
@@ -200,27 +199,15 @@ function CreativeForm({ onSave, onCancel }) {
         />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-        <div>
-          <label style={labelStyle}>Título</label>
-          <input
-            type="text"
-            placeholder="Chame a atenção"
-            value={data.headline}
-            onChange={e => update({ headline: e.target.value })}
-            style={inputStyle}
-          />
-        </div>
-        <div>
-          <label style={labelStyle}>Descrição</label>
-          <input
-            type="text"
-            placeholder="Reforço curto"
-            value={data.description}
-            onChange={e => update({ description: e.target.value })}
-            style={inputStyle}
-          />
-        </div>
+      <div>
+        <label style={labelStyle}>Título</label>
+        <input
+          type="text"
+          placeholder="Chame a atenção"
+          value={data.headline}
+          onChange={e => update({ headline: e.target.value })}
+          style={inputStyle}
+        />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -279,7 +266,7 @@ export default function CreativeLibrary() {
   }
 
   function handleCopy(creative) {
-    const text = [creative.primaryText, creative.headline, creative.description]
+    const text = [creative.primaryText, creative.headline]
       .filter(Boolean).join('\n\n');
     if (navigator.clipboard) {
       navigator.clipboard.writeText(text);
