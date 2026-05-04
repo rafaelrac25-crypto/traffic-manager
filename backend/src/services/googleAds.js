@@ -26,6 +26,7 @@ async function fetchCampaigns(creds) {
       hostname: 'googleads.googleapis.com',
       path: `/v18/customers/${customerId}/googleAds:searchStream`,
       method: 'POST',
+      timeout: 15000,
       headers: {
         'Authorization': `Bearer ${access_token}`,
         'developer-token': process.env.GOOGLE_DEVELOPER_TOKEN,
@@ -56,6 +57,9 @@ async function fetchCampaigns(creds) {
           resolve(campaigns);
         } catch (e) { reject(e); }
       });
+    });
+    req.on('timeout', () => {
+      req.destroy(new Error('Google Ads request timeout'));
     });
     req.on('error', reject);
     req.write(body);

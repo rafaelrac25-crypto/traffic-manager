@@ -62,8 +62,16 @@ IDIOMA: sempre português do Brasil.`;
 // Se qualquer mensagem tiver imagem usa llama-4-scout (vision); senão llama-3.3-70b
 router.post('/chat', async (req, res) => {
   const { messages } = req.body;
-  if (!messages || !Array.isArray(messages)) {
-    return res.status(400).json({ error: 'messages obrigatório' });
+  if (!Array.isArray(messages)) {
+    return res.status(400).json({ error: 'messages deve ser array' });
+  }
+  if (messages.length > 50) {
+    return res.status(400).json({ error: 'Limite de 50 mensagens por request.' });
+  }
+  for (const m of messages) {
+    if (m?.imageBase64 && m.imageBase64.length > 5_000_000) {
+      return res.status(413).json({ error: 'Imagem maior que 5MB. Reduza antes de enviar.' });
+    }
   }
 
   try {

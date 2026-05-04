@@ -63,8 +63,32 @@ router.post('/meta', async (req, res) => {
        console.warn se não for capturado explicitamente pelo Sentry. */
     (async () => {
       try {
-        const { syncPlatform } = require('../services/sync');
-        await syncPlatform('meta');
+        /* Proteção anti-replay: cada evento Meta é identificado por
+           entry[].id + entry[].time (Meta não garante unicidade só do id).
+           Tentamos INSERT; se já existe (ON CONFLICT DO NOTHING), abortamos
+           sem disparar sync — evita double-process em fanout de CDN. */
+        const eventId = entries.map(e => `${e.id}:${e.time}`).join('|');
+        let shouldSkip = false;
+        try {
+          const db = require('../db');
+          const result = await db.query(
+            'INSERT INTO processed_webhook_events(event_id) VALUES($1) ON CONFLICT DO NOTHING RETURNING event_id',
+            [eventId]
+          );
+          if (result.rowCount === 0) {
+            console.warn('[webhook/meta] evento já processado, ignorando:', eventId);
+            shouldSkip = true;
+          }
+        } catch (dbErr) {
+          /* Se INSERT falhar (ex.: tabela ainda não existe em dev), logar e
+             prosseguir — preferimos double-process a deixar de processar. */
+          console.warn('[webhook/meta] falha ao registrar evento no DB, prosseguindo mesmo assim:', dbErr.message);
+        }
+
+        if (!shouldSkip) {
+          const { syncPlatform } = require('../services/sync');
+          await syncPlatform('meta');
+        }
       } catch (err) {
         console.error('[webhook/meta] sync background error:', err);
         try {

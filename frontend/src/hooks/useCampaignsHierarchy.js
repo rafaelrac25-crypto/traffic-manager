@@ -30,6 +30,12 @@ export function useCampaignsHierarchy(metaCampaignIds, options = {}) {
 
   const idsKey = (metaCampaignIds || []).join(',');
 
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   const fetchOne = useCallback(async (campLocalId) => {
     const prev = abortRef.current.get(campLocalId);
     if (prev) prev.abort();
@@ -45,12 +51,14 @@ export function useCampaignsHierarchy(metaCampaignIds, options = {}) {
       const r = await fetch(`/api/campaigns/${campLocalId}/hierarchy`, { signal: ctrl.signal });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+      if (!mountedRef.current) return;
       setHierarchies(h => ({
         ...h,
         [campLocalId]: { hier: data, loading: false, error: null, fetchedAt: Date.now() },
       }));
     } catch (e) {
       if (e.name === 'AbortError') return;
+      if (!mountedRef.current) return;
       setHierarchies(h => ({
         ...h,
         [campLocalId]: { ...(h[campLocalId] || {}), loading: false, error: e.message },
@@ -75,16 +83,28 @@ export function useCampaignsHierarchy(metaCampaignIds, options = {}) {
   /* Fetch inicial + dispara quando lista de IDs muda. Cache TTL evita refetch
      em re-renders curtos. */
   useEffect(() => {
-    if (!enabled) return;
+    let mounted = true;
+    if (!enabled) return () => { mounted = false; };
     const ids = (metaCampaignIds || []).filter(Boolean);
+
+    // Purga entradas de IDs que não estão mais na lista (evita memory leak gradual)
+    setHierarchies(h => {
+      const next = {};
+      ids.forEach(id => { if (h[id]) next[id] = h[id]; });
+      return next;
+    });
+
     const now = Date.now();
     ids.forEach(id => {
       const cur = hierarchies[id];
       const stale = !cur || !cur.fetchedAt || (now - cur.fetchedAt) > ttlMs;
-      if (stale && !cur?.loading) fetchOne(id);
+      if (stale && !cur?.loading) {
+        fetchOne(id).then(() => {}).catch(() => {});
+      }
     });
 
     return () => {
+      mounted = false;
       // Cancela em desmontagem
       abortRef.current.forEach(c => c.abort());
       abortRef.current.clear();
