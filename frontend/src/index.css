@@ -61,8 +61,8 @@
 /* ── Tema claro glass equivalente — Glassmorphism light com accent rosa Cris (#C13584) ── */
 /* Estrutura idêntica ao dark; apenas os valores de cor são invertidos (escuro→claro).   */
 [data-theme="light"] {
-  /* Fundo cinza claríssimo levemente azulado — dark com luzes acesas */
-  --c-page-bg:       #ECEEF1;
+  /* Fundo branco puro — degradê rosa do spotlight cria a profundidade (igual dark) */
+  --c-page-bg:       #FFFFFF;
   /* Sidebar como ilha glass branca + topbar transparente */
   --c-sidebar-bg:    rgba(255,255,255,.85);
   --c-topbar-bg:     transparent;
@@ -117,14 +117,15 @@
   opacity: .60;
 }
 
-/* ── Spotlight central + glows nos cantos (light) — mesma estrutura do dark, tons mais suaves ── */
+/* ── Spotlight central + glows nos cantos (light) — mesma estrutura do dark com tons rosa visíveis em fundo branco ── */
 [data-theme="light"] body::after {
   content: '';
   position: fixed; inset: 0; z-index: -1; pointer-events: none;
   background:
-    radial-gradient(ellipse 90% 60% at 50% -10%, rgba(193,53,132,.10), transparent 70%),
-    radial-gradient(720px 720px at -8% -10%, rgba(193,53,132,.08), transparent 60%),
-    radial-gradient(640px 640px at 108% 108%, rgba(125,74,94,.12), transparent 60%);
+    radial-gradient(ellipse 110% 70% at 50% -10%, rgba(193,53,132,.18), transparent 70%),
+    radial-gradient(820px 820px at -8% -10%, rgba(193,53,132,.14), transparent 60%),
+    radial-gradient(740px 740px at 108% 108%, rgba(125,74,94,.18), transparent 60%),
+    radial-gradient(ellipse 80% 60% at 50% 100%, rgba(193,53,132,.10), transparent 70%);
 }
 
 /* ── Noise sutil light — mesma estrutura do dark, mas ruído em branco para fundo claro ── */
