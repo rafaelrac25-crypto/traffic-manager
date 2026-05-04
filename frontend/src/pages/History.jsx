@@ -31,7 +31,50 @@ const TYPE_META = {
   'notif-warning':             { icon: '⚠', label: 'Aviso',                 color: '#FBBF24' },
   'notif-insight-high-performer': { icon: '🔥', label: 'Oportunidade detectada', color: '#34D399' },
   'notif-insight-low-performer':  { icon: '📉', label: 'Baixa performance',  color: '#FBBF24' },
+  /* Eventos vindos do activity_log do backend (ações executadas no Meta) */
+  'adset-activated':       { icon: '▶',  label: 'Conjunto ativado',     color: '#34D399' },
+  'adset-paused':          { icon: '⏸',  label: 'Conjunto pausado',     color: '#FBBF24' },
+  'adset-removed':         { icon: '🗑',  label: 'Conjunto excluído',    color: '#F87171' },
+  'campaign-activated':    { icon: '▶',  label: 'Campanha ativada',     color: '#34D399' },
+  'campaign-paused':       { icon: '⏸',  label: 'Campanha pausada',     color: '#FBBF24' },
+  'budget-changed':        { icon: '💰', label: 'Orçamento alterado',   color: '#60A5FA' },
+  'ab-test-created':       { icon: '🧪', label: 'Teste A/B criado',     color: '#A78BFA' },
+  'meta-sync':             { icon: '🔄', label: 'Sincronização Meta',   color: '#60A5FA' },
 };
+
+/* Converte item do activity_log do backend para shape compatível com LogRow.
+   Backend: { id, action, entity, entity_id, description, meta (JSON string), created_at }
+   Local:   { id, createdAt, type, title, description, restorable, restored } */
+function normalizeBackendItem(item) {
+  let parsedMeta = null;
+  try { parsedMeta = typeof item.meta === 'string' ? JSON.parse(item.meta) : item.meta; }
+  catch { parsedMeta = null; }
+
+  const status = parsedMeta?.status;
+  let type = item.action; // fallback bruto
+
+  if (item.action === 'ad_status')      type = status === 'paused' ? 'ad-paused' : 'ad-activated';
+  else if (item.action === 'adset_status')   type = status === 'paused' ? 'adset-paused' : 'adset-activated';
+  else if (item.action === 'status_change')  type = status === 'paused' ? 'campaign-paused' : 'campaign-activated';
+  else if (item.action === 'create_ad_in_adset') type = 'ad-created';
+  else if (item.action === 'delete_ad')      type = 'ad-removed';
+  else if (item.action === 'delete_adset')   type = 'adset-removed';
+  else if (item.action === 'budget_safe')    type = 'budget-changed';
+  else if (item.action === 'ab_test_created') type = 'ab-test-created';
+  else if (item.action === 'meta_sync' || item.action === 'sync_meta') type = 'meta-sync';
+
+  const meta = TYPE_META[type];
+  return {
+    id: `bk-${item.id}`,
+    createdAt: item.created_at,
+    type,
+    title: meta?.label || item.action,
+    description: item.description || null,
+    restorable: false,
+    restored: false,
+    source: 'backend',
+  };
+}
 
 function groupKey(iso) {
   const d = new Date(iso);
@@ -186,23 +229,25 @@ export default function History() {
     api.get('/history').then(r => setBackendHistory(r.data || [])).catch(() => {});
   }, []);
 
-  /* Funde backend (source of truth) com local (localStorage), deduplicando por id
-     ou pela combinação created_at+action. Backend usa created_at; local usa createdAt. */
+  /* Funde backend (activity_log) com local (localStorage). Backend usa shape
+     {id, action, meta(json), created_at} — convertido por normalizeBackendItem
+     pra shape do local {id, createdAt, type, title, description}. IDs do backend
+     ficam prefixados 'bk-' pra não colidir com IDs locais 'hist-'. Dedup conservador
+     por chave (timestamp_seg + type) cobre o caso raro de mesma ação ter sido
+     logada nos dois lados. */
   const history = useMemo(() => {
+    const backendNormalized = backendHistory.map(normalizeBackendItem);
+    const localNormalized = localHistory.map(item => ({ ...item, source: item.source || 'local' }));
     const seen = new Set();
-    const normalize = (item) => ({
-      ...item,
-      createdAt: item.createdAt || item.created_at,
-    });
-    const all = [...backendHistory.map(normalize), ...localHistory.map(normalize)];
-    return all
+    return [...backendNormalized, ...localNormalized]
       .filter(item => {
-        const key = item.id || `${item.createdAt}-${item.action || item.type}`;
-        if (seen.has(key)) return false;
+        const ts = item.createdAt ? new Date(item.createdAt).toISOString().slice(0, 19) : '';
+        const key = `${ts}|${item.type || ''}`;
+        if (seen.has(key) && key !== '|') return false;
         seen.add(key);
         return true;
       })
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
   }, [backendHistory, localHistory]);
 
   const filtered = useMemo(() => {
