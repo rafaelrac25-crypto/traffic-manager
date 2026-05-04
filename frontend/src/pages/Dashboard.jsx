@@ -728,137 +728,75 @@ function MiniCalendar({ onViewFull, onPickCommercialDate }) {
 }
 
 /* ── Card de métrica (compacto — visão geral) ── */
-function MetricCard({ label, value, trend, trendUp, sub, icon, iconBg, iconColor, hint, alert, alertReason }) {
-  const { isDark } = useTheme();
-
-  /* Layout (proporcoes da print de referencia): icone 40x40 alinhado vertical
-     centralizado abrangendo as 2 linhas; coluna direita com label + ?
-     em cima e valor + setinha de delta embaixo. Tema atual preservado
-     (dark glass cards com accent rosa, alerta vermelho mantido). */
-  if (isDark) {
-    return (
-      <div className="ccb-card" style={{
-        borderRadius: '14px',
-        padding: '14px 18px',
-        position: 'relative',
-        overflow: 'hidden',
-        cursor: 'default',
-        display: 'flex', alignItems: 'center', gap: '14px',
-        minHeight: '72px',
-        border: alert ? '1.5px solid #EF4444' : undefined,
-        boxShadow: alert
-          ? '0 0 0 3px rgba(239,68,68,.12), 0 0 18px rgba(239,68,68,.18)'
-          : undefined,
-      }}>
-        {/* Ícone à esquerda — centralizado vertical entre label e valor */}
-        <div style={{
-          width: '40px', height: '40px', borderRadius: '10px',
-          background: alert ? 'rgba(239,68,68,.14)' : 'var(--c-accent-soft)',
-          color: alert ? '#EF4444' : 'var(--c-accent)',
-          border: alert ? '1px solid rgba(239,68,68,.4)' : '1px solid rgba(193,53,132,.3)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          flexShrink: 0,
-        }}>
-          {React.cloneElement(icon, { width: 18, height: 18 })}
-        </div>
-
-        {/* Coluna direita — label em cima, valor + delta embaixo */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          {/* Linha 1: label + ? */}
-          <div style={{
-            fontSize: '11px', color: 'var(--c-text-3)',
-            textTransform: 'uppercase', letterSpacing: '1.2px', fontWeight: 600,
-            display: 'flex', alignItems: 'center', gap: '5px',
-            lineHeight: 1.1,
-          }}>
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
-            {(hint || alertReason) && (
-              <span title={alert && alertReason ? alertReason : hint} style={{
-                cursor: 'help',
-                width: '13px', height: '13px',
-                borderRadius: '50%',
-                border: `1px solid ${alert ? '#EF4444' : 'var(--c-text-4)'}`,
-                color: alert ? '#EF4444' : 'var(--c-text-4)',
-                fontSize: '9px', fontWeight: 700,
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                lineHeight: 1, opacity: alert ? 1 : 0.7,
-                flexShrink: 0,
-              }}>{alert ? '!' : '?'}</span>
-            )}
-          </div>
-
-          {/* Linha 2: valor + setinha (sem texto, sem pill — igual print) */}
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-            <span style={{
-              fontSize: '20px', fontWeight: 700,
-              color: alert ? '#EF4444' : 'var(--c-text-1)', letterSpacing: '-0.01em',
-              fontFeatureSettings: "'tnum'",
-              lineHeight: 1.1,
-            }}>
-              {value}
-            </span>
-            {trend && (
-              <span style={{
-                fontSize: '12px', fontWeight: 700,
-                color: trendUp ? '#34D399' : '#F87171',
-                lineHeight: 1,
-              }}
-              title={trend}>
-                {trendUp ? '▲' : '▼'}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  /* Light mode — visual original (intocado) */
+function MetricCard({ label, value, trend, trendUp, sub, icon, hint, alert, alertReason }) {
+  /* Layout UNIFICADO (mesma estrutura em ambos temas — cores via CSS vars).
+     Glass card via .ccb-card herda var(--c-card-bg) que ja eh theme-aware.
+     Icone 40x40 abrangendo 2 linhas; direita: label+? em cima, valor+delta embaixo. */
   return (
     <div className="ccb-card" style={{
-      background: 'var(--c-card-bg)',
-      borderRadius: '12px',
-      padding: '10px 14px',
-      border: '1px solid var(--c-border)',
-      boxShadow: '0 1px 4px var(--c-shadow)',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px',
+      borderRadius: '14px',
+      padding: '14px 18px',
+      position: 'relative',
+      overflow: 'hidden',
       cursor: 'default',
-      minHeight: '58px',
+      display: 'flex', alignItems: 'center', gap: '14px',
+      minHeight: '72px',
+      border: alert ? '1.5px solid var(--c-attention)' : undefined,
+      boxShadow: alert
+        ? '0 0 0 3px rgba(255,120,73,.12), 0 0 18px rgba(255,120,73,.18)'
+        : undefined,
     }}>
-      <div className="ccb-icon" style={{
-        width: '30px', height: '30px', borderRadius: '8px',
-        background: iconBg, color: iconColor,
+      <div style={{
+        width: '40px', height: '40px', borderRadius: '10px',
+        background: alert ? 'rgba(255,120,73,.14)' : 'var(--c-accent-soft)',
+        color: alert ? 'var(--c-attention)' : 'var(--c-accent)',
+        border: alert ? '1px solid rgba(255,120,73,.4)' : '1px solid rgba(193,53,132,.3)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         flexShrink: 0,
       }}>
-        {React.cloneElement(icon, { width: 15, height: 15 })}
+        {React.cloneElement(icon, { width: 18, height: 18 })}
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '10px', color: 'var(--c-text-4)', lineHeight: 1.2, marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '.3px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-          {label}
-          {hint && (
-            <span title={hint} style={{
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <div style={{
+          fontSize: '11px', color: 'var(--c-text-3)',
+          textTransform: 'uppercase', letterSpacing: '1.2px', fontWeight: 600,
+          display: 'flex', alignItems: 'center', gap: '5px',
+          lineHeight: 1.1,
+        }}>
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+          {(hint || alertReason) && (
+            <span title={alert && alertReason ? alertReason : hint} style={{
               cursor: 'help',
               width: '13px', height: '13px',
               borderRadius: '50%',
-              border: '1px solid var(--c-text-4)',
-              color: 'var(--c-text-4)',
+              border: `1px solid ${alert ? 'var(--c-attention)' : 'var(--c-text-4)'}`,
+              color: alert ? 'var(--c-attention)' : 'var(--c-text-4)',
               fontSize: '9px', fontWeight: 700,
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              lineHeight: 1, opacity: 0.6,
-            }}>?</span>
+              lineHeight: 1, opacity: alert ? 1 : 0.7,
+              flexShrink: 0,
+            }}>{alert ? '!' : '?'}</span>
           )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', flexWrap: 'wrap' }}>
-          <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--c-text-1)', lineHeight: 1.1 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap' }}>
+          <span style={{
+            fontSize: '20px', fontWeight: 700,
+            color: alert ? 'var(--c-attention)' : 'var(--c-text-1)', letterSpacing: '-0.01em',
+            fontFeatureSettings: "'tnum'",
+            lineHeight: 1.1,
+          }}>
             {value}
-          </div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
-            {trendUp ? <ArrowUp color="#22C55E" /> : <ArrowDown color="#EF4444" />}
-            <span style={{ fontSize: '10px', fontWeight: 700, color: trendUp ? '#22C55E' : '#EF4444' }}>{trend}</span>
-          </div>
+          </span>
+          {trend && (
+            <span style={{
+              fontSize: '12px', fontWeight: 700,
+              color: trendUp ? 'var(--c-success)' : 'var(--c-attention)',
+              lineHeight: 1,
+            }}
+            title={trend}>
+              {trendUp ? '▲' : '▼'}
+            </span>
+          )}
           {sub && (
             <span style={{ fontSize: '10px', color: 'var(--c-text-4)', fontWeight: 500 }}>
               {sub}
@@ -1658,7 +1596,6 @@ function CampaignMetricsBlock({ campaigns, selectedId, onSelect, onCreate, onOpe
    todas estabilizam. Avisa o Rafa pra não mexer no orçamento (>20% reseta o
    algoritmo). Bate com a regra documentada em CRITICAL_STATE.md. */
 function LearningPhaseCard({ campaigns }) {
-  const { isDark } = useTheme();
   const learning = useMemo(() => {
     return campaigns
       .filter(c => c.status === 'active')
@@ -1689,54 +1626,26 @@ function LearningPhaseCard({ campaigns }) {
   const ageHRest = ageH % 24;
   const ageLabel = ageD > 0 ? `${ageD}d ${ageHRest}h` : `${ageH}h`;
 
-  /* Dark: discreto/glass com border-left amarelo. Light: card amarelo gradient (intacto). */
-  if (isDark) {
-    return (
-      <div className="ccb-card" style={{
-        borderRadius: '12px',
-        borderLeft: '2px solid #FBBF24',
-        padding: '12px 16px',
-        marginBottom: '14px',
-        display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap',
-      }}>
-        <div style={{ flexShrink: 0, opacity: .9 }}><Icon name="hourglass" color="warning" size={20} /></div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '2px' }}>
-            {learning.length === 1
-              ? `Campanha em fase de aprendizado — ${ageLabel} de 7d`
-              : `${learning.length} campanhas em fase de aprendizado`}
-          </div>
-          <div style={{ fontSize: '11px', color: 'var(--c-text-3)', fontWeight: 400, lineHeight: 1.4 }}>
-            {learning.length === 1
-              ? <>Estabiliza em <strong style={{ color: '#FBBF24', fontWeight: 700 }}>{remLabel}</strong>. Não mexer no orçamento até lá — alterações &gt;20% resetam o algoritmo do Meta.</>
-              : <>A mais nova estabiliza em <strong style={{ color: '#FBBF24', fontWeight: 700 }}>{remLabel}</strong>. Não mexer nos orçamentos até lá.</>}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  /* Layout UNIFICADO em ambos temas — glass card com border-left amarelo. Cores via vars. */
   return (
     <div className="ccb-card" style={{
-      background: 'linear-gradient(135deg, #FFF7ED 0%, #FEF3C7 100%)',
-      borderRadius: '14px',
-      border: '1px solid #FCD34D',
-      padding: '14px 18px',
-      marginBottom: '20px',
-      boxShadow: '0 2px 8px rgba(180, 83, 9, 0.08)',
-      display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap',
+      borderRadius: '12px',
+      borderLeft: '2px solid var(--c-warning)',
+      padding: '12px 16px',
+      marginBottom: '14px',
+      display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap',
     }}>
-      <div style={{ flexShrink: 0 }}><Icon name="hourglass" color="warning" size={24} /></div>
+      <div style={{ flexShrink: 0, opacity: .9 }}><Icon name="hourglass" color="warning" size={20} /></div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '13px', fontWeight: 700, color: '#92400E', marginBottom: '2px' }}>
+        <div style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '2px' }}>
           {learning.length === 1
             ? `Campanha em fase de aprendizado — ${ageLabel} de 7d`
             : `${learning.length} campanhas em fase de aprendizado`}
         </div>
-        <div style={{ fontSize: '11px', color: '#78350F', lineHeight: 1.4 }}>
+        <div style={{ fontSize: '11px', color: 'var(--c-text-3)', fontWeight: 400, lineHeight: 1.4 }}>
           {learning.length === 1
-            ? <>Estabiliza em <strong>{remLabel}</strong>. Não mexer no orçamento até lá — alterações &gt;20% resetam o algoritmo do Meta.</>
-            : <>A mais nova estabiliza em <strong>{remLabel}</strong>. Não mexer nos orçamentos até lá.</>}
+            ? <>Estabiliza em <strong style={{ color: 'var(--c-warning)', fontWeight: 700 }}>{remLabel}</strong>. Não mexer no orçamento até lá — alterações &gt;20% resetam o algoritmo do Meta.</>
+            : <>A mais nova estabiliza em <strong style={{ color: 'var(--c-warning)', fontWeight: 700 }}>{remLabel}</strong>. Não mexer nos orçamentos até lá.</>}
         </div>
       </div>
     </div>
