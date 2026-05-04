@@ -31,9 +31,11 @@ Próxima sessão: "criar nova campanha Nano v2" → Claude lê checkpoint, pergu
 
 ## CHECKPOINT — Game Boy Agency
 
-### Fase 1 — CONCLUÍDA ✅ (commits 47b6e498 → cbdfc0f)
+### Fase 1 — CONCLUÍDA ✅ (commits 47b6e498 → 389b0dc)
 
 **Pipeline em prod funcionando, 6 eventos demo persistidos.**
+
+> **Hotfix 04/05/2026 19h — commit 389b0dc:** `Agency.jsx` chamava `api.get('/agency/recent')` sem o prefixo `/api`. Como Express tem `app.get('*')` servindo SPA HTML como fallback, requisição caía no fallback e o frontend recebia HTML em vez de JSON, ficando eternamente em "Aguardando os agentes acordarem". Corrigido para `/api/agency/recent` (padrão das outras pages).
 
 Backend (`backend/src/routes/agency.js`):
 - 3 endpoints: POST /event (auth opcional X-Agency-Secret) · GET /recent (com query `?since=<ts>` pra polling incremental) · server_ts no response
@@ -1640,3 +1642,28 @@ Bypass Deployment Protection no Vercel.
 - Groq: ok
 - Webhook Meta: ok
 - Cron Vercel: ativo (proxima execucao automatica amanha 9h BRT)
+
+---
+
+## Game Boy Agency — hotfix hook PostToolUse (2026-05-04 19:25 BRT)
+
+Bug: hook agency-emit.js chamava process.exit(0) imediatamente apos disparar
+fetch, matando o processo antes do POST async resolver. Resultado: nenhum
+evento real do CLI chegava ao endpoint /api/agency/event — feed mostrava
+apenas eventos demo antigos de 27/Fev.
+
+Fix em C:\Users\Rafa\.claude\hooks\agency-emit.js:
+- end handler agora async; `await post(ev)` antes do exit
+- post() retorna a promise do fetch (era fire-and-forget)
+
+Validacao: POST direto retornou {"ok":true,"id":"3f00686d..."} e GET /recent
+mostra evento "validacao do hook fix" persistido. Endpoint, hook, settings,
+DB — todos validados ao vivo.
+
+Warning cosmetico libuv no Windows (`Assertion failed: !(handle->flags &
+UV_HANDLE_CLOSING)`) nao bloqueia entrega do evento; e bug conhecido de
+fetch+abort+exit no Node Windows. Pode ser resolvido depois removendo
+AbortController do post().
+
+Nota: hook so dispara em sessoes do CLI iniciadas APOS o fix. A sessao
+atual nao roda esse hook ate Rafa reiniciar o CLI.

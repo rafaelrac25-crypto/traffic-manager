@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import api from '../services/api';
 import { playBubble } from '../utils/sounds';
+import AgencyScene from './AgencyScene';
 
 /* Cores por agente — paleta vinho/rosé do projeto + complementares. */
 const AGENT_COLORS = {
@@ -127,7 +128,7 @@ export default function Agency() {
             🕹️ Agência 2D
           </h1>
           <p style={{ fontSize: '12px', color: 'var(--c-text-3)', margin: '4px 0 0' }}>
-            Eventos ao vivo do Claude Code rodando no terminal — Fase 1 (texto)
+            Eventos ao vivo do Claude Code rodando no terminal — Fase 2 (Game Boy DMG)
           </p>
         </div>
         <div style={{
@@ -149,6 +150,8 @@ export default function Agency() {
           {connected ? 'conectado' : 'reconectando…'}
         </div>
       </div>
+
+      <AgencyScene events={events} />
 
       {agents.length > 2 && (
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '14px' }}>
