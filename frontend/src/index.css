@@ -61,8 +61,8 @@
 /* ── Tema claro glass equivalente — Glassmorphism light com accent rosa Cris (#C13584) ── */
 /* Estrutura idêntica ao dark; apenas os valores de cor são invertidos (escuro→claro).   */
 [data-theme="light"] {
-  /* Fundo branco puro — degradê rosa do spotlight cria a profundidade (igual dark) */
-  --c-page-bg:       #FFFFFF;
+  /* Fundo branco com toque rosa direto — garantia visual, nao depende de spotlight */
+  --c-page-bg:       #FFF0F7;
   /* Sidebar como ilha glass branca + topbar transparente */
   --c-sidebar-bg:    rgba(255,255,255,.85);
   --c-topbar-bg:     transparent;
