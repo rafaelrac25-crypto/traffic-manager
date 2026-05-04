@@ -61,7 +61,7 @@ export default function Agency() {
     mountedRef.current = true;
 
     /* Hidratação inicial — pega últimos 50. */
-    api.get('/agency/recent?limit=50').then(r => {
+    api.get('/api/agency/recent?limit=50').then(r => {
       if (!mountedRef.current) return;
       const evs = r.data?.events || [];
       setEvents(evs);
@@ -73,7 +73,7 @@ export default function Agency() {
     const tick = async () => {
       if (!mountedRef.current) return;
       try {
-        const r = await api.get(`/agency/recent?since=${lastTsRef.current}&limit=20`);
+        const r = await api.get(`/api/agency/recent?since=${lastTsRef.current}&limit=20`);
         if (!mountedRef.current) return;
         const fresh = r.data?.events || [];
         if (fresh.length > 0) {
