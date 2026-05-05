@@ -1,1 +1,0 @@
-import{i as e}from"./index-sJaLkFwR.js";export{e as compressImage};

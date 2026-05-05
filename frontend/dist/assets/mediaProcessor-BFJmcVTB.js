@@ -1,0 +1,1 @@
+import{i as e}from"./index-C-S944RP.js";export{e as compressImage};

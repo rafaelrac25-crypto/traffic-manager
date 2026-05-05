@@ -128,7 +128,7 @@ export default function AgencyScene({ events = [] }) {
         /* Frame especial: alterna idle (0/1) e working (2/3) */
         let f = animFrame;
         if (isActive) f = animFrame % 2 === 0 ? 2 : 0;
-        drawAgent(fctx, agent, f, isActive);
+        drawAgent(fctx, agent, f, isActive, st.lastTool);
       }
 
       cctx.drawImage(
