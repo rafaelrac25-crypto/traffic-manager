@@ -2035,103 +2035,36 @@ router.get('/:id/hierarchy', async (req, res) => {
       });
     }
 
-    /* ── 2. Fallback ao Meta (banco vazio — ainda não sincronizado) ── */
-    console.log('[hierarchy] banco vazio para camp', camp.id, '— fazendo fallback ao Meta com timeout 25s');
+    /* ── 2. Cache vazio — NÃO bater no Meta (causa timeout 60s + retry) ──
+       Devolve payload vazio com flag pending_sync. Frontend mostra
+       "aguardando primeiro sync" + dispara POST /sync/meta. */
+    console.log('[hierarchy] cache vazio para camp', camp.id, '— retornando payload vazio (sem fallback Meta)');
 
-    const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
-    const creds = credResult.rows[0];
-    if (!creds) return res.status(400).json({ error: 'Meta não conectado' });
-
-    const { metaGet } = require('../services/metaHttp');
-    const { safeDecrypt } = require('../services/crypto');
-    const token = safeDecrypt(creds.access_token, 'hierarchy');
-
-    /* AbortSignal de 25s pra não deixar serverless pendurado */
-    const controller = new AbortController();
-    const abortTimer = setTimeout(() => controller.abort(), 25000);
-
-    let campResp, adsetsResp;
+    let campPayload = {};
     try {
-      /* Campaign */
-      campResp = await metaGet(`/${camp.platform_campaign_id}`, {
-        fields: 'id,name,status,effective_status,daily_budget,lifetime_budget,objective,buying_type',
-      }, { token, timeoutMs: 25000 });
+      campPayload = camp.payload
+        ? (typeof camp.payload === 'string' ? JSON.parse(camp.payload) : camp.payload)
+        : {};
+    } catch { /* corrompido */ }
 
-      /* AdSets + ads aninhados */
-      adsetsResp = await metaGet(`/${camp.platform_campaign_id}/adsets`, {
-        fields: 'id,name,status,effective_status,daily_budget,lifetime_budget,targeting,optimization_goal,billing_event,destination_type,start_time,end_time,ads.limit(25){id,name,status,effective_status,creative{id,name},created_time,insights{spend,clicks,impressions,reach,ctr,cpc,actions,unique_clicks}}',
-        limit: 50,
-      }, { token, timeoutMs: 25000 });
-    } catch (metaErr) {
-      clearTimeout(abortTimer);
-      if (controller.signal.aborted || metaErr.message?.includes('timeout')) {
-        return res.status(504).json({
-          error: 'Meta API demorou demais (>25s). Tente novamente ou aguarde o próximo sync automático.',
-          from_cache: false,
-        });
-      }
-      throw metaErr;
-    } finally {
-      clearTimeout(abortTimer);
-    }
-
-    const adsets = (adsetsResp?.data || []).map(as => ({
-      id: as.id,
-      name: as.name,
-      status: as.status,
-      effective_status: as.effective_status,
-      daily_budget:    as.daily_budget    ? Number(as.daily_budget)    / 100 : null,
-      lifetime_budget: as.lifetime_budget ? Number(as.lifetime_budget) / 100 : null,
-      optimization_goal: as.optimization_goal,
-      billing_event:   as.billing_event,
-      destination_type: as.destination_type,
-      start_time:      as.start_time,
-      end_time:        as.end_time,
-      targeting:       as.targeting || null,
-      ads: (as.ads?.data || []).map(ad => {
-        const ins = ad.insights?.data?.[0] || null;
-        const linkClicks = safeInt(ins?.actions?.find(a => a.action_type === 'link_click')?.value);
-        const messages   = safeInt(ins?.actions?.find(a =>
-          /messaging_conversation_started|onsite_conversion\.messaging_first_reply|onsite_conversion\.total_messaging_connection/.test(a.action_type)
-        )?.value);
-        return {
-          id:               ad.id,
-          name:             ad.name,
-          status:           ad.status,
-          effective_status: ad.effective_status,
-          creative_id:      ad.creative?.id   || null,
-          creative_name:    ad.creative?.name || null,
-          created_time:     ad.created_time,
-          insights: ins ? {
-            spend:       safeFloat(ins.spend),
-            clicks:      safeInt(ins.clicks),
-            link_clicks: linkClicks,
-            impressions: safeInt(ins.impressions),
-            reach:       safeInt(ins.reach),
-            ctr:         safeFloat(ins.ctr),
-            cpc:         safeFloat(ins.cpc),
-            messages,
-          } : null,
-        };
-      }),
-    }));
-
-    res.json({
+    return res.json({
       campaign: {
         local_id:         camp.id,
-        platform_id:      campResp.id,
-        name:             campResp.name,
-        status:           campResp.status,
-        effective_status: campResp.effective_status,
-        daily_budget:     campResp.daily_budget    ? Number(campResp.daily_budget)    / 100 : null,
-        lifetime_budget:  campResp.lifetime_budget ? Number(campResp.lifetime_budget) / 100 : null,
-        objective:        campResp.objective,
-        buying_type:      campResp.buying_type,
+        platform_id:      camp.platform_campaign_id,
+        name:             camp.name,
+        status:           camp.status,
+        effective_status: camp.effective_status,
+        daily_budget:     camp.budget || null,
+        lifetime_budget:  null,
+        objective:        campPayload.objective || null,
+        buying_type:      campPayload.meta?.campaign?.buying_type || null,
       },
-      adsets,
-      fetched_at:  new Date().toISOString(),
-      synced_at:   null,
-      from_cache:  false,
+      adsets:       [],
+      fetched_at:   new Date().toISOString(),
+      synced_at:    null,
+      from_cache:   false,
+      pending_sync: true,
+      message:      'Aguardando primeiro sync. Os dados aparecerão após sincronização.',
     });
   } catch (err) {
     /* Defesa: nunca devolver 500. Frontend mostra cards vazios em vez de travar
