@@ -1902,6 +1902,142 @@ router.get('/:id/hierarchy', async (req, res) => {
       return res.status(400).json({ error: 'Apenas campanhas Meta publicadas têm hierarquia' });
     }
 
+    const safeFloat = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
+    const safeInt   = (v) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : 0; };
+
+    /* ── 1. Tentar servir do banco (cache) ─────────────────────────── */
+    const adsetsDbResult = await db.query(
+      `SELECT * FROM ad_sets WHERE campaign_id = ? ORDER BY id ASC`,
+      [camp.id]
+    );
+    const fromCache = adsetsDbResult.rows.length > 0;
+
+    if (fromCache) {
+      /* Monta estrutura a partir do banco */
+      const adsetRows = adsetsDbResult.rows;
+
+      /* Max updated_at dos ad_sets como proxy de synced_at */
+      let syncedAt = null;
+      for (const as of adsetRows) {
+        const ts = as.updated_at || as.created_at;
+        if (ts && (!syncedAt || ts > syncedAt)) syncedAt = ts;
+      }
+
+      const adsets = [];
+      for (const as of adsetRows) {
+        /* ads do adset */
+        const adsResult = await db.query(
+          `SELECT * FROM ads WHERE ad_set_id = ? ORDER BY id ASC`,
+          [as.id]
+        );
+        const adsWithInsights = [];
+        for (const ad of adsResult.rows) {
+          /* insight mais recente para o ad */
+          const insResult = await db.query(
+            `SELECT * FROM insights WHERE ad_id = ? ORDER BY date_stop DESC, fetched_at DESC LIMIT 1`,
+            [ad.id]
+          );
+          const ins = insResult.rows[0] || null;
+
+          /* Extrai link_clicks e messages do campo raw (JSON) */
+          let link_clicks = 0;
+          let messages    = 0;
+          if (ins?.raw) {
+            try {
+              const raw = typeof ins.raw === 'string' ? JSON.parse(ins.raw) : ins.raw;
+              const actions = Array.isArray(raw.actions) ? raw.actions : [];
+              link_clicks = safeInt(
+                actions.find(a => a.action_type === 'link_click')?.value
+              );
+              messages = safeInt(
+                actions.find(a =>
+                  /messaging_conversation_started|onsite_conversion\.messaging_first_reply|onsite_conversion\.total_messaging_connection/.test(a.action_type)
+                )?.value
+              );
+              /* Atualiza syncedAt com fetched_at do insight se mais recente */
+              if (ins.fetched_at && (!syncedAt || ins.fetched_at > syncedAt)) {
+                syncedAt = ins.fetched_at;
+              }
+            } catch { /* raw corrompido — ignora */ }
+          }
+
+          adsWithInsights.push({
+            id:               ad.platform_ad_id,
+            local_id:         ad.id,
+            name:             ad.name,
+            status:           ad.status,
+            effective_status: ad.effective_status,
+            creative_id:      null,
+            creative_name:    null,
+            created_time:     ad.created_at,
+            insights: ins ? {
+              spend:       safeFloat(ins.spend),
+              clicks:      safeInt(ins.clicks),
+              link_clicks,
+              impressions: safeInt(ins.impressions),
+              reach:       safeInt(ins.reach),
+              ctr:         safeFloat(ins.ctr),
+              cpc:         safeFloat(ins.cpc),
+              messages,
+            } : null,
+          });
+        }
+
+        /* targeting pode estar como JSON string */
+        let targeting = null;
+        if (as.targeting) {
+          try { targeting = typeof as.targeting === 'string' ? JSON.parse(as.targeting) : as.targeting; }
+          catch { targeting = as.targeting; }
+        }
+
+        adsets.push({
+          id:               as.platform_ad_set_id,
+          local_id:         as.id,
+          name:             as.name,
+          status:           as.status,
+          effective_status: as.effective_status,
+          daily_budget:     as.daily_budget    ? safeFloat(as.daily_budget)    : null,
+          lifetime_budget:  as.lifetime_budget ? safeFloat(as.lifetime_budget) : null,
+          optimization_goal: as.optimization_goal,
+          billing_event:    as.billing_event,
+          destination_type: null,
+          start_time:       as.start_time,
+          end_time:         as.end_time,
+          targeting,
+          ads: adsWithInsights,
+        });
+      }
+
+      /* Dados da campanha do banco local */
+      let campPayload = {};
+      try {
+        campPayload = camp.payload
+          ? (typeof camp.payload === 'string' ? JSON.parse(camp.payload) : camp.payload)
+          : {};
+      } catch { /* corrompido */ }
+
+      return res.json({
+        campaign: {
+          local_id:         camp.id,
+          platform_id:      camp.platform_campaign_id,
+          name:             camp.name,
+          status:           camp.status,
+          effective_status: camp.effective_status,
+          daily_budget:     camp.budget || null,
+          lifetime_budget:  null,
+          objective:        campPayload.objective || null,
+          buying_type:      campPayload.meta?.campaign?.buying_type || null,
+        },
+        adsets,
+        fetched_at:  new Date().toISOString(),
+        synced_at:   syncedAt || null,
+        from_cache:  true,
+      });
+    }
+
+    /* ── 2. Fallback ao Meta (banco vazio — ainda não sincronizado) ── */
+    console.log('[hierarchy] banco vazio para camp', camp.id, '— fazendo fallback ao Meta com timeout 25s');
+
     const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
     const creds = credResult.rows[0];
     if (!creds) return res.status(400).json({ error: 'Meta não conectado' });
@@ -1910,51 +2046,71 @@ router.get('/:id/hierarchy', async (req, res) => {
     const { safeDecrypt } = require('../services/crypto');
     const token = safeDecrypt(creds.access_token, 'hierarchy');
 
-    /* Campaign */
-    const campResp = await metaGet(`/${camp.platform_campaign_id}`, {
-      fields: 'id,name,status,effective_status,daily_budget,lifetime_budget,objective,buying_type'
-    }, { token });
+    /* AbortSignal de 25s pra não deixar serverless pendurado */
+    const controller = new AbortController();
+    const abortTimer = setTimeout(() => controller.abort(), 25000);
 
-    /* AdSets + ads aninhados — 1 chamada via expansion */
-    const adsetsResp = await metaGet(`/${camp.platform_campaign_id}/adsets`, {
-      fields: 'id,name,status,effective_status,daily_budget,lifetime_budget,targeting,optimization_goal,billing_event,destination_type,start_time,end_time,ads.limit(25){id,name,status,effective_status,creative{id,name},created_time,insights{spend,clicks,impressions,reach,ctr,cpc,actions,unique_clicks}}',
-      limit: 50,
-    }, { token });
+    let campResp, adsetsResp;
+    try {
+      /* Campaign */
+      campResp = await metaGet(`/${camp.platform_campaign_id}`, {
+        fields: 'id,name,status,effective_status,daily_budget,lifetime_budget,objective,buying_type',
+      }, { token, timeoutMs: 25000 });
+
+      /* AdSets + ads aninhados */
+      adsetsResp = await metaGet(`/${camp.platform_campaign_id}/adsets`, {
+        fields: 'id,name,status,effective_status,daily_budget,lifetime_budget,targeting,optimization_goal,billing_event,destination_type,start_time,end_time,ads.limit(25){id,name,status,effective_status,creative{id,name},created_time,insights{spend,clicks,impressions,reach,ctr,cpc,actions,unique_clicks}}',
+        limit: 50,
+      }, { token, timeoutMs: 25000 });
+    } catch (metaErr) {
+      clearTimeout(abortTimer);
+      if (controller.signal.aborted || metaErr.message?.includes('timeout')) {
+        return res.status(504).json({
+          error: 'Meta API demorou demais (>25s). Tente novamente ou aguarde o próximo sync automático.',
+          from_cache: false,
+        });
+      }
+      throw metaErr;
+    } finally {
+      clearTimeout(abortTimer);
+    }
 
     const adsets = (adsetsResp?.data || []).map(as => ({
       id: as.id,
       name: as.name,
       status: as.status,
       effective_status: as.effective_status,
-      daily_budget: as.daily_budget ? Number(as.daily_budget) / 100 : null,
+      daily_budget:    as.daily_budget    ? Number(as.daily_budget)    / 100 : null,
       lifetime_budget: as.lifetime_budget ? Number(as.lifetime_budget) / 100 : null,
       optimization_goal: as.optimization_goal,
-      billing_event: as.billing_event,
+      billing_event:   as.billing_event,
       destination_type: as.destination_type,
-      start_time: as.start_time,
-      end_time: as.end_time,
-      targeting: as.targeting || null,
+      start_time:      as.start_time,
+      end_time:        as.end_time,
+      targeting:       as.targeting || null,
       ads: (as.ads?.data || []).map(ad => {
         const ins = ad.insights?.data?.[0] || null;
-        const linkClicks = ins?.actions?.find(a => a.action_type === 'link_click')?.value || 0;
-        const messages = ins?.actions?.find(a => /messaging_conversation_started|onsite_conversion\.messaging_first_reply|onsite_conversion\.total_messaging_connection/.test(a.action_type))?.value || 0;
+        const linkClicks = safeInt(ins?.actions?.find(a => a.action_type === 'link_click')?.value);
+        const messages   = safeInt(ins?.actions?.find(a =>
+          /messaging_conversation_started|onsite_conversion\.messaging_first_reply|onsite_conversion\.total_messaging_connection/.test(a.action_type)
+        )?.value);
         return {
-          id: ad.id,
-          name: ad.name,
-          status: ad.status,
+          id:               ad.id,
+          name:             ad.name,
+          status:           ad.status,
           effective_status: ad.effective_status,
-          creative_id: ad.creative?.id || null,
-          creative_name: ad.creative?.name || null,
-          created_time: ad.created_time,
+          creative_id:      ad.creative?.id   || null,
+          creative_name:    ad.creative?.name || null,
+          created_time:     ad.created_time,
           insights: ins ? {
-            spend:       Number(ins.spend) || 0,
-            clicks:      Number(ins.clicks) || 0,
-            link_clicks: Number(linkClicks) || 0,
-            impressions: Number(ins.impressions) || 0,
-            reach:       Number(ins.reach) || 0,
-            ctr:         Number(ins.ctr) || 0,
-            cpc:         Number(ins.cpc) || 0,
-            messages:    Number(messages) || 0,
+            spend:       safeFloat(ins.spend),
+            clicks:      safeInt(ins.clicks),
+            link_clicks: linkClicks,
+            impressions: safeInt(ins.impressions),
+            reach:       safeInt(ins.reach),
+            ctr:         safeFloat(ins.ctr),
+            cpc:         safeFloat(ins.cpc),
+            messages,
           } : null,
         };
       }),
@@ -1962,18 +2118,20 @@ router.get('/:id/hierarchy', async (req, res) => {
 
     res.json({
       campaign: {
-        local_id: camp.id,
-        platform_id: campResp.id,
-        name: campResp.name,
-        status: campResp.status,
+        local_id:         camp.id,
+        platform_id:      campResp.id,
+        name:             campResp.name,
+        status:           campResp.status,
         effective_status: campResp.effective_status,
-        daily_budget: campResp.daily_budget ? Number(campResp.daily_budget) / 100 : null,
-        lifetime_budget: campResp.lifetime_budget ? Number(campResp.lifetime_budget) / 100 : null,
-        objective: campResp.objective,
-        buying_type: campResp.buying_type,
+        daily_budget:     campResp.daily_budget    ? Number(campResp.daily_budget)    / 100 : null,
+        lifetime_budget:  campResp.lifetime_budget ? Number(campResp.lifetime_budget) / 100 : null,
+        objective:        campResp.objective,
+        buying_type:      campResp.buying_type,
       },
       adsets,
-      fetched_at: new Date().toISOString(),
+      fetched_at:  new Date().toISOString(),
+      synced_at:   null,
+      from_cache:  false,
     });
   } catch (err) {
     console.error('[hierarchy]', err);
