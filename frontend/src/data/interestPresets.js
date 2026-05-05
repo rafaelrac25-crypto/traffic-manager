@@ -43,11 +43,11 @@ export const INTEREST_PRESETS = [
     id: 'nanopigmentacao-sobrancelhas',
     service: 'Nanopigmentação de sobrancelhas',
     emoji: '🪄',
-    description: 'Ticket alto — público que valoriza design de sobrancelhas',
+    description: 'Ticket alto — concentrado em quem já entende valor de pigmentação (sem Eyebrow amplo)',
     interests: [
-      'Eyebrow',          /* → "Sobrancelha (partes do corpo)" 80M */
-      'Microblading',     /* → "Microblading" 22M (técnica) */
+      'Microblading',     /* → "Microblading" 22M (técnica irmã, intent alto) */
       'Permanent makeup', /* → "Maquiagem permanente" 35M (categoria irmã) */
+      'Beauty Shop',      /* → "Beauty Shop" 32M (comportamento de COMPRA, não só consumo de conteúdo) */
     ],
   },
   {
