@@ -2134,8 +2134,18 @@ router.get('/:id/hierarchy', async (req, res) => {
       from_cache:  false,
     });
   } catch (err) {
-    console.error('[hierarchy]', err);
-    res.status(500).json({ error: err.message, meta: err.meta || null });
+    /* Defesa: nunca devolver 500. Frontend mostra cards vazios em vez de travar
+       em "carregando". Erro fica no log da Vercel pra investigação. */
+    console.error('[hierarchy] erro inesperado para camp', req.params.id, '—', err?.message, err?.stack?.split('\n')[1]?.trim());
+    return res.json({
+      campaign:   null,
+      adsets:     [],
+      fetched_at: new Date().toISOString(),
+      synced_at:  null,
+      from_cache: false,
+      error:      'Não foi possível carregar a hierarquia agora. Aguarde o próximo sync ou tente novamente.',
+      _debug:     process.env.NODE_ENV === 'production' ? undefined : (err?.message || String(err)),
+    });
   }
 });
 
