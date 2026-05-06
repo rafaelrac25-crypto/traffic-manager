@@ -101,7 +101,19 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { name, platform, budget, start_date, end_date, publish_mode, scheduled_for, status: statusIn, payload } = req.body;
+  /* Aceita tanto snake_case (legado) quanto camelCase (frontend atual);
+     `payload` vem aninhado OU como o próprio body (frontend mais novo
+     manda meta no top-level em vez de wrappar em payload). */
+  const b = req.body || {};
+  const name = b.name;
+  const platform = b.platform;
+  const budget = b.budget;
+  const start_date = b.start_date ?? b.startDate ?? null;
+  const end_date = b.end_date ?? b.endDate ?? null;
+  const publish_mode = b.publish_mode ?? b.publishMode;
+  const scheduled_for = b.scheduled_for ?? b.scheduledFor ?? null;
+  const statusIn = b.status;
+  const payload = b.payload ?? b;
   if (!name || !platform) return res.status(400).json({ error: 'Nome e plataforma obrigatórios' });
 
   const mode = publish_mode || 'immediate';
