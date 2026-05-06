@@ -140,6 +140,34 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'payload.meta.creative e payload.meta.ad obrigatórios' });
     }
 
+    /* DEDUP: se houver outra campanha em status='publishing' com mesmo nome
+       criada nos últimos 60s, retorna o job dela (idempotência). Protege
+       contra POSTs duplicados (axios retry, navegador, double-click). */
+    try {
+      const dupResult = await db.query(
+        `SELECT c.id AS campaign_id_local, j.id AS job_id, j.status AS job_status
+         FROM campaigns c
+         LEFT JOIN publish_jobs j ON j.campaign_id_local = c.id
+         WHERE c.name = ? AND c.platform = 'meta' AND c.status = 'publishing'
+           AND c.created_at > NOW() - INTERVAL '60 seconds'
+         ORDER BY c.created_at DESC LIMIT 1`,
+        [name]
+      );
+      if (dupResult.rows.length > 0) {
+        const dup = dupResult.rows[0];
+        console.log('[campaigns.POST] dedup: retornando job existente', dup.job_id, 'pra campanha', dup.campaign_id_local);
+        return res.status(202).json({
+          job_id: dup.job_id,
+          campaign_id_local: dup.campaign_id_local,
+          status: dup.job_status || 'queued',
+          deduped: true,
+        });
+      }
+    } catch (e) {
+      /* DB erro / SQLite dev sem INTERVAL syntax: continua sem dedup. */
+      console.warn('[campaigns.POST] dedup check falhou (continuando):', e.message);
+    }
+
     /* Cria registro na tabela campaigns com status 'publishing' pra UI mostrar progresso */
     const submitted_at = new Date().toISOString();
     const payloadStr = JSON.stringify({ ...payload, mediaFilesData: undefined });

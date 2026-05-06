@@ -404,31 +404,28 @@ async function publishCampaign(creds, metaPayload, mediaItems = [], onProgress =
   const droppedInterests = [];
   async function resolveInterestIds(interests) {
     if (!Array.isArray(interests) || interests.length === 0) return [];
-    const resolved = [];
-    for (const it of interests) {
+    /* Paraleliza /search Meta em vez de sequencial — antes 4 interesses
+       custavam 4 × 25s = 100s. Agora ~25s no pior caso. */
+    const tasks = interests.map(async (it) => {
       const name = it?.name || (typeof it === 'string' ? it : null);
       const hasValidId = it?.id && !String(it.id).startsWith('interest_');
-      if (hasValidId) { resolved.push({ id: it.id, name: it.name || name }); continue; }
-      if (!name) { droppedInterests.push({ name: null, reason: 'sem_nome' }); continue; }
+      if (hasValidId) return { ok: true, item: { id: it.id, name: it.name || name } };
+      if (!name) { droppedInterests.push({ name: null, reason: 'sem_nome' }); return { ok: false }; }
       try {
-        const result = await metaGet('/search', {
-          type: 'adinterest',
-          q: name,
-          limit: 1,
-        }, { token });
+        const result = await metaGet('/search', { type: 'adinterest', q: name, limit: 1 }, { token });
         const first = result?.data?.[0];
-        if (first?.id) {
-          resolved.push({ id: first.id, name: first.name || name });
-        } else {
-          console.warn('[metaWrite] interesse descartado (sem match no Meta):', name);
-          droppedInterests.push({ name, reason: 'sem_match' });
-        }
+        if (first?.id) return { ok: true, item: { id: first.id, name: first.name || name } };
+        console.warn('[metaWrite] interesse descartado (sem match no Meta):', name);
+        droppedInterests.push({ name, reason: 'sem_match' });
+        return { ok: false };
       } catch (e) {
         console.warn('[metaWrite] interesse descartado (erro search):', name, e.message);
         droppedInterests.push({ name, reason: 'erro_search', error: e.message });
+        return { ok: false };
       }
-    }
-    return resolved;
+    });
+    const out = await Promise.all(tasks);
+    return out.filter(r => r.ok).map(r => r.item);
   }
 
   // 1. Upload de mídia — detecta image vs video
@@ -464,16 +461,14 @@ async function publishCampaign(creds, metaPayload, mediaItems = [], onProgress =
      em timeout e publishCampaign seguia mesmo assim, criando creative com
      vídeo "processing" — Meta rejeitava com erro genérico, mais difícil de
      diagnosticar pro usuário). */
-  if (isVideo && mainVideoId && uploadedVideos.length > 0) {
-    try {
-      // 40s deixa margem pra cleanupOrphans antes do timeout do Vercel
-      const result = await waitForVideoReady(creds, mainVideoId, { maxWaitMs: 60000 });
-      if (!result?.ready) {
-        throw new Error('Vídeo ainda em processamento no Meta após 50s. Aguarde 1-2 minutos e tente novamente, ou use uma versão menor (≤30s, <10MB).');
-      }
-    } catch (e) {
-      throw new Error(`Vídeo não ficou pronto no Meta: ${e.message}`);
-    }
+  /* SKIP waitForVideoReady — Meta aceita criar creative com video_id em
+     processing. Status do creative fica 'processing' brevemente, depois
+     converte automatico quando Meta termina o video. Economiza 0-60s do
+     timeout do Vercel sem perder funcionalidade.
+     (Se Meta rejeitar futuramente o creative com video processing, voltar
+     com maxWaitMs:30000 ou implementar como step OPCIONAL.) */
+  if (false && isVideo && mainVideoId && uploadedVideos.length > 0) {
+    /* desativado — ver comentario acima */
   }
 
   /* Cleanup transacional: se qualquer etapa depois da criação da campaign
