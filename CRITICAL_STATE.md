@@ -1,5 +1,46 @@
 # CRITICAL_STATE — traffic-manager
 
+## ✅ CHECKPOINT — 2026-05-06 14:30 — Publicação Nano v2 100% pronta (5 bugs críticos fechados + 2 varreduras)
+
+### Bugs corrigidos hoje (commits, em ordem)
+1. `3f98cae` — fix(api): prefixo /api faltando em 3 chamadas frontend (POST /campaigns, getPublishJob, /history)
+2. `c32d189` — fix(ux): reset uploadProgress no catch (barra antiga não reaparece em retry)
+3. `d5bf0bd` — fix(campaigns POST): aceita meta no top-level + camelCase do frontend (era o que travava o publish — caía no fluxo sync legacy que só salvava local com IDs Meta fake)
+4. `9933901` — fix(worker+sync): mesmo fallback de body shape no worker `/api/internal/publish-worker/:id` + sync.js preserva status='publishing' durante upsert (evita sumir barra de progresso enquanto worker termina)
+
+### Phantom cleanup
+- #444 e #445 (phantoms criados antes dos fixes — verdict: LOCAL_ONLY): DELETADOS
+- 4 campanhas smoke-test acidentais (#446-#449, #450): DELETADAS
+- Lista limpa: só #436 Nano v1 (paused) e #437 Limpeza v1 (paused)
+
+### Validação live (criscosta.vercel.app)
+- `GET /api/health/full`: ok / Meta warn (token 45 dias, lentidão habitual hoje)
+- `POST /api/internal/publish-worker/test` sem header → 401 ✅
+- `POST /api/internal/publish-worker/test` com header correto + job fake → 404 ✅
+- `POST /api/campaigns` payload Google sem meta → 201 (sync legacy) ✅
+- `POST /api/campaigns` payload Instagram com meta + ad_sets vazio → 400 "Pelo menos 1 adset obrigatório" ✅ (async detectado E validação funcionando)
+
+### Bugs/riscos NÃO bloqueantes (deferred)
+- `/api/admin/*` sem autenticação (segurança)
+- `/api/admin/zombie-campaigns` 500 em prod (Meta lento + parâmetro inválido — Rafa não usa agora)
+- `insights_by_district` duplica a cada sync (afeta dashboard, não publicação)
+- `Promise.all` em metaWrite embaralha onProgress (UX impreciso, não funcional)
+- SQLite migrations sem `effective_status` em ad_sets/ads (só dev)
+- ConfirmModal de zombie cleanup sem digitação por nome
+- Polling sem retry exponencial
+- Vídeo não tem reuso real por hash (Rafa precisa re-uploadar 41MB)
+
+### Protocolo Rafa retornar e publicar
+1. **Ctrl+F5** na aba (carrega JS novo)
+2. Wizard preencher tudo (formulário não persiste)
+3. Step 5 anexar o vídeo (re-upload obrigatório)
+4. **Não trocar de aba/rota durante publish**
+5. Esperar 12 chunks de upload (~20min com Meta lento)
+6. Após upload, abre PublishingModal com 4 fases (campaign → adset → creative → ad)
+7. Se travar mais de 5min no modal → ver logs Vercel
+
+---
+
 ## ✅ CHECKPOINT — 2026-05-06 10:17 — INTERNAL_WORKER_SECRET ativa em prod + projeto Vercel correto
 
 ### Descoberta crítica
