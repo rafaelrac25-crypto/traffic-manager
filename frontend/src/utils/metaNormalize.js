@@ -110,9 +110,14 @@ export function toMetaPayload(ad) {
      colar URL de wa.me OU api.whatsapp.com OU whatsapp.com/, sistema cai
      no fluxo CTWA formal (destination_type WHATSAPP) e Meta rejeita com
      erro 100/2446885 quando Page não tem WhatsApp Business linkado. */
-  const usingWaLink = ad.objective === 'messages'
-    && typeof ad.destUrl === 'string'
+  /* isWaMeLink detecta wa.me INDEPENDENTE do objetivo. Necessario porque
+     billing_event precisa cair pra IMPRESSIONS (CPM) sempre que o link
+     for wa.me — contas Meta novas nao podem usar LINK_CLICKS billing
+     (subcode 2446404). usingWaLink permanece com check do objetivo
+     pra paths que SO valem pra Mensagens (CTA enforcement etc). */
+  const isWaMeLink = typeof ad.destUrl === 'string'
     && /(wa\.me\/|api\.whatsapp\.com|whatsapp\.com\/)/i.test(ad.destUrl);
+  const usingWaLink = ad.objective === 'messages' && isWaMeLink;
 
   /* CBO = budget no nível da Campaign, Meta redistribui entre ad_sets.
      ABO (padrão) = budget no nível do ad_set, controle manual. */
@@ -300,7 +305,9 @@ export function toMetaPayload(ad) {
     optimization_goal:  usingWaLink
                           ? 'LINK_CLICKS'
                           : (OPTIMIZATION_GOAL[ad.objective] || 'LINK_CLICKS'),
-    billing_event:      usingWaLink
+    /* IMPRESSIONS sempre que link for wa.me — Meta rejeita LINK_CLICKS
+       billing pra contas novas (subcode 2446404). Independe do objetivo. */
+    billing_event:      isWaMeLink
                           ? 'IMPRESSIONS'
                           : (BILLING_EVENT[ad.objective] || 'IMPRESSIONS'),
     bid_strategy:       'LOWEST_COST_WITHOUT_CAP',
