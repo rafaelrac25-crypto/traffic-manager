@@ -2565,8 +2565,13 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
      "Saiba mais" pra evitar confusão do usuário. */
   const isWaMeLink = typeof destUrl === 'string'
     && /(wa\.me\/|api\.whatsapp\.com|whatsapp\.com\/)/i.test(destUrl);
-  const allowedCTAs = (objective === 'messages' && isWaMeLink)
-    ? ['Saiba mais', 'Fale conosco', 'Agendar', 'Reservar']
+  /* Whitelist wa.me: Meta força CTA pra LEARN_MORE quando link é wa.me e
+     CTA não está em [LEARN_MORE, CONTACT_US, BOOK_TRAVEL, BOOK_NOW].
+     Pra evitar UX confuso (user escolhe X, anuncio mostra Saiba mais),
+     restringe lista a só os 4 que sobrevivem o whitelist. Vale para
+     QUALQUER objetivo (Trafego, Mensagens, etc) com link wa.me. */
+  const allowedCTAs = isWaMeLink
+    ? ['Saiba mais', 'Agendar', 'Reservar', 'Entrar em contato']
     : (CTA_BY_OBJECTIVE[objective] || CTA_BY_OBJECTIVE.traffic);
 
   /* Auto-corrige ctaButton se o user voltou pro passo 1 e trocou de objetivo

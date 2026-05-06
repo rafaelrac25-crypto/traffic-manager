@@ -1,1 +1,0 @@
-import{i as e}from"./index-suzorEyR.js";export{e as compressImage};
