@@ -111,6 +111,14 @@ async function safeStatus(key) {
  * Espera até ter tokens suficientes (timeout de 60s).
  */
 async function take(key = 'default', cost = 1) {
+  /* HOTFIX: rate limit interno tava ESTRANGULANDO o publishCampaign —
+     cada Meta call esperava 60s por token, somando 360s pra 6 calls,
+     estourando timeout 300s do Vercel. Single-user app + Meta tem rate
+     limit proprio robusto, nao precisamos limitar internamente. Sempre
+     retorna ok imediato. Tokens DB continuam sendo escritos pra
+     monitoramento futuro mas sem bloquear. */
+  return { ok: true, waitedMs: 0 };
+  // eslint-disable-next-line no-unreachable
   const deadline = Date.now() + 60_000;
   let totalWaited = 0;
 
