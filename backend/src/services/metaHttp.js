@@ -15,8 +15,11 @@ const rateLimit = require('./metaRateLimit');
 const { parseMetaError, isRetryableForMethod } = require('./metaErrors');
 const { API_VERSION, GRAPH_HOST } = require('./metaApiVersion');
 
-const DEFAULT_TIMEOUT_MS = 30000;
-const MAX_RETRIES = 3;
+/* Reduzido pra caber publishCampaign em 300s do Vercel.
+   Antes: 30s × 3 retries × 6 calls = até 540s pior caso (estourava 504).
+   Agora: 12s × 2 tentativas × 6 calls = ate 144s pior caso. */
+const DEFAULT_TIMEOUT_MS = 12000;
+const MAX_RETRIES = 2;
 const DEFAULT_BACKOFF_MS = 2000;
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));

@@ -146,7 +146,16 @@ router.post('/publish-worker/:job_id', async (req, res) => {
     try {
       const { publishCampaign } = require('../services/metaWrite');
       const mediaItems = Array.isArray(payload?.mediaFilesData) ? payload.mediaFilesData : [];
-      metaResult = await publishCampaign(creds, payload.meta, mediaItems, onProgress);
+      /* Safety race: se publishCampaign passar de 240s, mata e marca failed
+         antes do Vercel matar com 504 silencioso aos 300s. Frontend pega
+         status='publish_failed' e para o "enviando" eterno. */
+      metaResult = await Promise.race([
+        publishCampaign(creds, payload.meta, mediaItems, onProgress),
+        new Promise((_, reject) => setTimeout(
+          () => reject(new Error('Publicação demorou demais (>4min). Meta pode estar congestionado. Tente de novo em alguns minutos.')),
+          240000
+        )),
+      ]);
     } catch (e) {
       /* Erro Meta — serializa via metaErrors se disponível */
       let errorMsg = e.message || 'Erro desconhecido ao publicar no Meta';
