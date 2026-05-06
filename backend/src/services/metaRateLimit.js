@@ -4,8 +4,11 @@
 
 const db = require('../db');
 
-const CAPACITY = 180;
-const REFILL_PER_SEC = CAPACITY / (60 * 60); // 0.05 tokens/seg
+/* CAPACITY aumentada de 180 → 1000 — single-user app, Meta real
+   limits sao muito mais altos. 180 era conservador demais e estourava
+   timeout 300s do Vercel quando publishCampaign bate em ~10 endpoints. */
+const CAPACITY = 1000;
+const REFILL_PER_SEC = CAPACITY / (60 * 60); // 0.278 tokens/seg
 
 /* ─── Fallback in-memory (usado apenas quando DB está indisponível) ─── */
 const FALLBACK = new Map();
