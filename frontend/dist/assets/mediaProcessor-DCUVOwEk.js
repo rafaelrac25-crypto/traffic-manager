@@ -1,0 +1,1 @@
+import{i as e}from"./index-DPFakoAN.js";export{e as compressImage};

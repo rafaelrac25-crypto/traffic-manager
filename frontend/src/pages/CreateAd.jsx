@@ -3792,6 +3792,7 @@ export default function CreateAd() {
         mediaFilesData = await uploadAllMedia(mediaFiles);
       } catch (uploadErr) {
         setPublishing(false);
+        setUploadProgress?.(null);
         addNotification({
           kind: 'publish-failed',
           title: 'Falha no upload da mídia',
