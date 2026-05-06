@@ -174,7 +174,7 @@ router.post('/', async (req, res) => {
     /* Fire-and-forget: dispara o worker sem await.
        O worker roda em background e atualiza publish_jobs + campaigns conforme avança. */
     const workerUrl = process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}/api/internal/publish-worker/${jobId}`
+      ? `https://criscosta.vercel.app/api/internal/publish-worker/${jobId}`
       : `http://localhost:${process.env.PORT || 3001}/api/internal/publish-worker/${jobId}`;
     const workerSecret = process.env.INTERNAL_WORKER_SECRET || 'dev';
     /* AWAIT a request inicial pro worker — o handler do worker retorna 200

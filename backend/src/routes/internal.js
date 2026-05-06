@@ -89,12 +89,13 @@ router.post('/publish-worker/:job_id', async (req, res) => {
     return res.status(200).json({ noop: true, status: job.status });
   }
 
-  /* Responde imediatamente pra Vercel não segurar a conexão —
-     o trabalho real acontece após esta linha via setImmediate */
-  res.status(200).json({ accepted: true, job_id });
-
-  /* Executa o fluxo em background (fora do ciclo de request/response) */
-  setImmediate(async () => {
+  /* INLINE — não usa setImmediate. Em Vercel Fluid Compute,
+     setImmediate APÓS res.json() não tem garantia de execução
+     se a função ficar idle. Rodar inline garante que o trabalho
+     completa antes do response. POST /api/campaigns aguarda este
+     handler retornar 200 (até 300s via maxDuration). */
+  console.log('[publish-worker] INICIANDO job', job_id);
+  try {
     let body;
     try {
       body = typeof job.payload === 'string' ? JSON.parse(job.payload) : job.payload;
@@ -213,7 +214,12 @@ router.post('/publish-worker/:job_id', async (req, res) => {
     } catch {}
 
     console.log('[publish-worker] job concluído:', job_id, '— campaign Meta:', platform_campaign_id);
-  });
+    return res.status(200).json({ ok: true, job_id, status: 'completed', platform_campaign_id });
+  } catch (workerErr) {
+    console.error('[publish-worker] erro fatal nao capturado:', workerErr);
+    try { await updateJob(job_id, { status: 'failed', error: 'Erro fatal: ' + (workerErr.message || 'desconhecido') }); } catch {}
+    return res.status(500).json({ ok: false, job_id, error: workerErr.message || 'Erro fatal' });
+  }
 });
 
 /* Marca a row da campanha local como falha de publicação (best-effort) */
