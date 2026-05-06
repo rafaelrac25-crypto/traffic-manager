@@ -20,7 +20,9 @@ import apiClient from '../services/api';
 /* 3.5 MB por chunk → cabe folgado no limite Vercel (4.5 MB) considerando
    overhead multipart (boundary + headers ≈ 200 bytes). Chunks maiores
    reduzem round-trips mas aumentam risco de timeout em rede ruim. */
-const CHUNK_SIZE = 3.5 * 1024 * 1024;
+/* PLANO A — chunks GRANDES indo DIRETO pro Meta (sem passar pelo Vercel).
+   Meta aceita ~50MB por chunk em transfer. 25MB balance throughput/robustez. */
+const CHUNK_SIZE = 25 * 1024 * 1024;
 
 /* Wrapper sobre o axios global do projeto (mesma baseURL/interceptors). */
 async function postJson(url, body) {
@@ -56,34 +58,70 @@ export async function uploadVideoChunked(file, { onProgress } = {}) {
 
   const emit = (pct, label) => { try { onProgress?.(pct, label); } catch {} };
 
+  /* PLANO A — Browser → Meta direto.
+     Backend só faz `init` (cria sessão Meta + devolve token).
+     Todo o transfer + finish é feito pelo navegador direto pra graph.facebook.com,
+     usando chunks de 25MB (limite Meta) em vez de 3.5MB (limite Vercel).
+     Token Meta vive em memória JS até upload terminar — depois é descartado. */
+
   emit(0, 'Iniciando envio…');
-  const startData = await postJson('/api/upload/video/start', { file_size: fileSize });
-  const { upload_session_id, video_id } = startData;
-  if (!upload_session_id || !video_id) {
-    throw new Error('Meta não retornou sessão de upload');
+  const initData = await postJson('/api/upload/video/init', { file_size: fileSize });
+  const {
+    access_token,
+    account_id,
+    api_version,
+    graph_host,
+    upload_session_id,
+    video_id,
+  } = initData;
+  if (!upload_session_id || !video_id || !access_token || !account_id) {
+    throw new Error('Meta não retornou dados completos da sessão de upload');
   }
 
-  let offset = Number(startData.start_offset || 0);
+  const metaUrl = `https://${graph_host}/${api_version}/${account_id}/advideos`;
+
+  /* Helper: POST direto pra Meta com timeout + tratamento de erro. */
+  async function metaPost(form, timeoutMs = 240000) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const res = await fetch(metaUrl, {
+        method: 'POST',
+        body: form,
+        signal: ctrl.signal,
+      });
+      const json = await res.json();
+      if (json.error) {
+        const msg = json.error.error_user_msg || json.error.message || 'Erro Meta';
+        throw new Error(`Meta: ${msg}`);
+      }
+      return json;
+    } finally {
+      clearTimeout(t);
+    }
+  }
+
+  let offset = Number(initData.start_offset || 0);
   const total = fileSize;
 
-  /* Loop de chunks: Meta retorna a cada transfer { start_offset, end_offset }
-     que indicam o RANGE do PRÓXIMO chunk esperado. Quando start_offset === total,
-     terminou. */
+  /* Loop de chunks DIRETO pro Meta. */
   while (offset < total) {
     const end = Math.min(offset + CHUNK_SIZE, total);
     const chunkBlob = file.slice(offset, end);
 
     const form = new FormData();
+    form.append('upload_phase', 'transfer');
     form.append('upload_session_id', upload_session_id);
     form.append('start_offset', String(offset));
-    form.append('chunk', chunkBlob, 'chunk.bin');
+    form.append('video_file_chunk', chunkBlob, 'chunk.bin');
+    form.append('access_token', access_token);
 
-    const pct = Math.round((offset / total) * 95); /* 0-95% durante transfer; finish vira 100% */
+    const pct = Math.round((offset / total) * 95);
     const sentMB = (offset / 1024 / 1024).toFixed(1);
     const totalMB = (total / 1024 / 1024).toFixed(1);
-    emit(pct, `Enviando vídeo (${sentMB}/${totalMB} MB)…`);
+    emit(pct, `Enviando direto pro Meta (${sentMB}/${totalMB} MB)…`);
 
-    const out = await postChunk('/api/upload/video/chunk', form);
+    const out = await metaPost(form);
     const next = Number(out.start_offset);
     if (!Number.isFinite(next) || next <= offset) {
       throw new Error(`Meta não avançou offset (atual ${offset}, retornado ${out.start_offset})`);
@@ -92,10 +130,13 @@ export async function uploadVideoChunked(file, { onProgress } = {}) {
   }
 
   emit(97, 'Finalizando…');
-  await postJson('/api/upload/video/finish', {
-    upload_session_id,
-    title: file.name?.replace(/\.[^.]+$/, '') || undefined,
-  });
+  const finishForm = new FormData();
+  finishForm.append('upload_phase', 'finish');
+  finishForm.append('upload_session_id', upload_session_id);
+  const title = file.name?.replace(/\.[^.]+$/, '');
+  if (title) finishForm.append('title', title);
+  finishForm.append('access_token', access_token);
+  await metaPost(finishForm, 60000);
 
   emit(100, 'Pronto');
   return { video_id };

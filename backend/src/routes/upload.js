@@ -72,6 +72,65 @@ router.post('/media', upload.single('file'), async (req, res) => {
  * Token Meta NUNCA sai do backend.
  * ============================================================ */
 
+/* ============================================================
+ * PLANO A — Direct Browser → Meta Upload (sem chunking via Vercel).
+ *
+ * POST /api/upload/video/init { file_size }
+ *   Returns: { access_token, account_id, api_version, graph_host, video_id, upload_session_id }
+ *
+ * Frontend usa esses dados pra fazer upload DIRETO pro Meta Graph API
+ * com chunks de até 25 MB (limite do Meta), pulando o limite Vercel
+ * de 4.5 MB. ~7x mais rápido pra videos de 40-80 MB.
+ *
+ * Tradeoff: token Meta exposto no browser durante o upload (segundos).
+ * Risco aceitável pra app single-user (Cris Costa). Token é short-lived
+ * automaticamente via refreshIfNeeded antes do response.
+ * ============================================================ */
+router.post('/video/init', async (req, res) => {
+  try {
+    const fileSize = Number(req.body?.file_size);
+    if (!fileSize || fileSize <= 0) {
+      return res.status(400).json({ error: 'file_size obrigatório (bytes)' });
+    }
+    const creds = await getMetaCreds();
+    if (!creds) return res.status(400).json({ error: 'Meta não conectado' });
+
+    /* Refresh token se faltam <15 dias pra expirar (defensivo — antes de
+       expor pro browser, garante que tá fresh). */
+    try {
+      const { refreshIfNeeded } = require('../services/metaToken');
+      await refreshIfNeeded(creds);
+    } catch (e) {
+      console.warn('[upload/video/init] refresh token falhou (continuando com token atual):', e.message);
+    }
+
+    /* Inicia sessão de upload no Meta — frontend reutiliza upload_session_id
+       e video_id retornados pra fazer transfer + finish direto. */
+    const { startVideoUpload } = require('../services/metaMedia');
+    const startOut = await startVideoUpload(creds, fileSize);
+
+    /* Decripta token só agora (após validar tudo) e devolve pro frontend. */
+    const { safeDecrypt } = require('../services/crypto');
+    const { API_VERSION, GRAPH_HOST } = require('../services/metaApiVersion');
+    const token = safeDecrypt(creds.access_token, 'metaMedia');
+
+    return res.json({
+      access_token: token,
+      account_id: creds.account_id,
+      api_version: API_VERSION,
+      graph_host: GRAPH_HOST,
+      video_id: startOut.video_id,
+      upload_session_id: startOut.upload_session_id,
+      start_offset: startOut.start_offset,
+      end_offset: startOut.end_offset,
+    });
+  } catch (err) {
+    console.error('[upload/video/init]', err);
+    const pt = err?.meta?.pt || err.message;
+    res.status(502).json({ error: pt, meta: err?.meta || null });
+  }
+});
+
 router.post('/video/start', async (req, res) => {
   try {
     const fileSize = Number(req.body?.file_size);
