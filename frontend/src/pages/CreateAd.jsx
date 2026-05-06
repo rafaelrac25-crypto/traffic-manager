@@ -3126,6 +3126,8 @@ function PreflightCheckPanel({ data }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 60000); /* 60s — Meta às vezes trava na validação */
       try {
         /* Calcula duração estimada pra validação de saldo (usa o mesmo
            helper que o painel de resumo pra não divergir). */
@@ -3135,16 +3137,23 @@ function PreflightCheckPanel({ data }) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ budget_daily: Number(daily.toFixed(2)), days }),
+          signal: ctrl.signal,
         });
+        clearTimeout(tid);
         const json = await res.json();
         if (!cancelled) setState({ loading: false, ...json });
       } catch (e) {
+        clearTimeout(tid);
         /* Traduz erros nativos do navegador pra mensagem amigável.
-           "Failed to fetch" / "Load failed" → sem internet ou servidor offline. */
+           "Failed to fetch" / "Load failed" → sem internet ou servidor offline.
+           "AbortError" → timeout 60s — Meta provavelmente lento. */
         const raw = String(e?.message || e);
-        const friendly = /Failed to fetch|Load failed|NetworkError|TypeError.*fetch/i.test(raw)
-          ? 'Sem conexão com o servidor. Verifique sua internet e tente de novo.'
-          : raw;
+        const isAbort = e?.name === 'AbortError';
+        const friendly = isAbort
+          ? 'Meta demorou demais pra responder (>60s). Pode publicar mesmo assim — esta verificação é só informativa.'
+          : /Failed to fetch|Load failed|NetworkError|TypeError.*fetch/i.test(raw)
+            ? 'Sem conexão com o servidor. Verifique sua internet e tente de novo.'
+            : raw;
         if (!cancelled) setState({ loading: false, ok_overall: false, checks: [], error: friendly });
       }
     })();
