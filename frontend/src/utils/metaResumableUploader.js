@@ -26,7 +26,9 @@ const CHUNK_SIZE = 3.5 * 1024 * 1024;
 async function postJson(url, body) {
   const { data } = await apiClient.post(url, body, {
     headers: { 'Content-Type': 'application/json' },
-    timeout: 60000,
+    /* 2min — start/finish do upload dependem do Meta responder. Em janelas
+       de Meta lento (validate token >8s), 60s estoura no init/finalize. */
+    timeout: 120000,
   });
   return data;
 }
