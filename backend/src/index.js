@@ -65,6 +65,8 @@ app.use('/api/health', require('./routes/health'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/competitors', require('./routes/competitors'));
 app.use('/api/agency', require('./routes/agency'));
+app.use('/api/admin', require('./routes/admin'));
+app.use('/api/internal', require('./routes/internal'));
 app.use('/api/cron', require('./routes/cron'));
 app.use('/webhooks', require('./routes/webhooks'));
 

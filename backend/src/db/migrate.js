@@ -74,6 +74,20 @@ const CREATE_TABLES_EXTRA = [
     meta JSONB
   )`,
   `CREATE INDEX IF NOT EXISTS idx_agency_events_ts ON agency_events(ts DESC)`,
+  /* Jobs de publicação assíncrona — resolve timeout 504 em campanhas com múltiplos adsets */
+  `CREATE TABLE IF NOT EXISTS publish_jobs (
+    id TEXT PRIMARY KEY,
+    campaign_id_local INTEGER,
+    status TEXT NOT NULL DEFAULT 'queued',
+    current_step INTEGER NOT NULL DEFAULT 0,
+    total_steps INTEGER NOT NULL DEFAULT 0,
+    message TEXT,
+    payload TEXT,
+    error TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_publish_jobs_status ON publish_jobs(status, updated_at DESC)`,
 ];
 
 async function runMigrations(pool) {

@@ -8,3 +8,13 @@ api.interceptors.response.use(
 );
 
 export default api;
+
+/* ── Utilitários de publicação async ── */
+
+/**
+ * Consulta o status de um job de publicação.
+ * GET /api/campaigns/jobs/:jobId
+ * Retorna: { job_id, campaign_id_local, status, current_step, total_steps,
+ *            message, error, updated_at }
+ */
+export const getPublishJob = (jobId) => api.get(`/campaigns/jobs/${jobId}`);

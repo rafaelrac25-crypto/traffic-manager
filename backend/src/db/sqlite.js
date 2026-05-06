@@ -224,6 +224,22 @@ db.exec(`
     meta TEXT
   );
   CREATE INDEX IF NOT EXISTS idx_agency_events_ts ON agency_events(ts DESC);
+
+  /* Jobs de publicação assíncrona — espelha schema.sql do PG.
+     payload em TEXT (JSON.stringify) porque SQLite não tem JSONB nativo. */
+  CREATE TABLE IF NOT EXISTS publish_jobs (
+    id TEXT PRIMARY KEY,
+    campaign_id_local INTEGER,
+    status TEXT NOT NULL DEFAULT 'queued',
+    current_step INTEGER NOT NULL DEFAULT 0,
+    total_steps INTEGER NOT NULL DEFAULT 0,
+    message TEXT,
+    payload TEXT,
+    error TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_publish_jobs_status ON publish_jobs(status, updated_at DESC);
 `);
 
 const migrations = [

@@ -1,5 +1,118 @@
 # CRITICAL_STATE — traffic-manager
 
+## ✅ CHECKPOINT — 2026-05-06 09:36 — Tarefas 1+2+3 entregues (3 agentes em paralelo)
+
+**Sessão:** Rafa pediu Tarefas 1 (zumbis Meta), 2 (refactor publish async pra resolver 504) e 3 (UX feedback de publicação) — distribuídas em 3 subagentes Sonnet em paralelo.
+
+### O que foi entregue
+
+**T1 — Limpeza de zumbis Meta** (Agente A)
+- `backend/src/routes/admin.js` (NOVO): GET/DELETE `/api/admin/zombie-campaigns` — lista campanhas Meta sem registro local nem adsets, deleta sob confirmação
+- `frontend/src/pages/ZombieCleanup.jsx` (NOVO) — página `/limpeza-meta` com cards, modal de confirmação por nome, empty state, loading skeleton
+- `Sidebar.jsx` + `App.jsx` — item "Limpeza Meta" + rota
+- `index.js` — registra `/api/admin`
+
+**T2 — Refactor publish async (resolve 504)** (Agente B)
+- Tabela nova `publish_jobs` (id UUID, status, current_step/total_steps, message, payload JSONB, error) em Postgres + SQLite + migrate
+- `POST /api/campaigns` agora detecta publish Meta imediato → cria job, dispara worker fire-and-forget, retorna **202 + job_id** (não trava em 300s)
+- `POST /api/internal/publish-worker/:job_id` (NOVO) — verifica `X-Internal-Secret`, executa publishCampaign com `onProgress`, atualiza job a cada fase, paralelliza adsets/creatives/ads via `Promise.all`
+- `GET /api/campaigns/jobs/:job_id` — endpoint de polling
+- `services/metaWrite.js` — aceita `onProgress(stepKey, current, total, message)`, paraleliza Promise.all
+- `index.js` — registra `/api/internal`
+- **ENV var nova obrigatória em prod: `INTERNAL_WORKER_SECRET`** (sem ela, modo dev permissivo)
+
+**T3 — UX feedback de publicação** (Agente C)
+- `frontend/src/components/PublishingModal.jsx` (NOVO) — modal não-fechável durante fases ativas, polling 1.2s, barra de progresso real (current/total), rótulos PT-BR por status, ESC bloqueado, aria-live, sons (`playBubble` em sucesso, `playBell` em falha), 1.5s de ✅ animado antes de redirecionar
+- `CreateAd.jsx` — Step 5 publish agora consome 202 + job_id, abre PublishingModal em vez de redirecionar prematuro; mensagem 504/408 corrigida ("Tempo de resposta esgotado", não mais "<2MB")
+- `Campaigns.jsx` — badge "Em publicação X%" amber/yellow + polling 5s individual quando `status_local='publishing'`; badge "Falhou — ver detalhes" em vermelho quando job=failed
+- `services/api.js` — export `getPublishJob(jobId)`
+
+### Estado pré-deploy (este commit)
+
+- ✅ Backend: todos os 7 arquivos modificados/novos carregam sem erro de sintaxe
+- ✅ Frontend: `npm run build` OK em 1.31s, 907kB chunk principal (esperado)
+- ✅ `frontend/dist/` commitado
+- ⚠️ Prod ainda **sem** `INTERNAL_WORKER_SECRET` — worker vai aceitar mesmo sem header em modo dev permissivo, mas precisa ser setada via `vercel env add INTERNAL_WORKER_SECRET` ou MCP em produção pra proteger `/api/internal/*` contra invocação externa
+
+### Próximos passos práticos pro Rafa
+
+1. **Setar `INTERNAL_WORKER_SECRET` no Vercel** (gerar com `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`) e redeploy. Sem isso, qualquer um na internet pode chamar `/api/internal/publish-worker/:id` e disparar publish — mas só funciona se já existir job no DB e for só fire-and-forget; risco real: baixo, mas vale fechar.
+2. **Abrir `/limpeza-meta`** no painel pra ver os zumbis #438/#439 e deletar (em vez de Meta Gerenciador manual)
+3. **Republicar Nano v2** com objetivo Tráfego + CTA Agendar (BOOK_NOW) — modal de progresso vai mostrar fase a fase
+
+### Pendências carregadas pra próxima sessão (não tocadas aqui)
+- 4 decisões de Nano v2 ainda abertas: mensagens reais (Cris), criativo B, orçamento R$20/35, horário 9-21h
+- Cron automático de sync Meta (hoje manual)
+- Rollback automático no worker em caso de falha parcial (hoje só marca failed, não desfaz órfãos no Meta)
+
+---
+
+## 🔴 RETOMAR AMANHÃ — 2026-05-06 04:00 (sessão pausada)
+
+**Onde paramos:** Nano v2 NÃO foi publicada com sucesso. Ficaram **2 campanhas zumbi no Meta** que precisam ser verificadas/deletadas no Gerenciador antes de tentar de novo.
+
+### Estado vivo
+- **#436 Nano v1:** PAUSED ✅ (encerrada manualmente, R$141 / 335 cliques)
+- **#437 Limpeza v1:** PAUSED ✅ (encerrada manualmente, R$126 / 611 cliques)
+- **#438 zumbi 1:** "Sobrancelhas naturais, fio a fio." — criada com objetivo **Mensagens** (erro). Meta criou a CAMPANHA mas falhou nos adsets (Mensagens incompatível com wa.me). Status no front: "Em revisão · 0 conjuntos". Não está no nosso DB local.
+- **#439 zumbi 2 (provável):** mesma campanha, segunda tentativa com objetivo **Tráfego** + CTA "Entrar em contato". Backend deu timeout 504 ao criar (Vercel matou em 300s — Meta lento + N×M chamadas sequenciais Meta). Pode ter criado parcialmente: campaign + alguns adsets + zero ads. Frontend mostrou erro enganoso "Reduza imagem/vídeo pra <2MB" (mensagem hard-coded pra status 504/408 — não é tamanho).
+
+### Ação primeiro thing tomorrow
+1. **Abrir Meta Gerenciador** → Campanhas → procurar "Sobrancelhas naturais, fio a fio." → DELETAR todas as ocorrências (provavelmente 1-2 zumbis sem ads)
+2. Verificar se vídeo "Limpeza de pele Rafa_FINAL.mp4" ou similar (do upload de 41MB) ficou na **Biblioteca de Mídia do Meta** — se sim, reaproveitar pra evitar re-upload
+3. Refazer publicação no nosso wizard com:
+   - **Objetivo: Tráfego** (NÃO Mensagens — incompatível com wa.me — regra salva em `feedback_traffic_manager_objective_wame.md`)
+   - **CTA: "Entrar em contato"** (CONTACT_US, validado seguro pra wa.me) OU "Agendar" (BOOK_NOW, ainda não validado em prod)
+   - **Mensagem pré-preenchida wa.me:** "Oi Cris, vim pelo Instagram, quero agendar uma avaliação de nanopigmentação"
+   - Resto da config: ver "CHECKPOINT — Nanopigmentação Maio v2" abaixo
+
+### Causa raiz do timeout 504 (a investigar)
+Backend `POST /api/campaigns` cria sequencialmente: campaign → N adsets → N ads → N creatives. Cada etapa = 1+ chamada Meta. Com Meta lento à noite e ~3 adsets, soma >300s e Vercel mata. Soluções possíveis:
+- (a) Quebrar em 2 endpoints: criar campaign rápido + processar adsets/ads async em background
+- (b) Subir maxDuration pra 600s (bandage temporário)
+- (c) Paralelizar criação de adsets/ads (Meta aguenta, mas pode bater rate limit)
+Decidir + implementar amanhã antes de tentar publicar de novo.
+
+### Fixes deployados nesta sessão (já em prod)
+- `5e3a292` feat(cta): "Agendar" → BOOK_NOW + liberado wa.me whitelist
+- `a7051b3` fix(upload): timeout init/finalize do upload Meta 60s→120s
+- `aa79f6c` fix(preflight): timeout amigável 60s no Step 5 (Meta lento não trava UI)
+
+### Lições novas registradas
+- **Memória permanente:** `feedback_traffic_manager_objective_wame.md` — Mensagens + wa.me incompatível, sempre Tráfego pra wa.me
+- **Pendência UX (abaixo nesta CRITICAL_STATE):** barra de progresso real do upload + feedback pós-publicação + badge "em publicação" — Rafa não pode mais precisar abrir F12 pra ver progresso
+
+### Aprendizado consolidado das #436 + #437
+- Limpeza ganhou disparado: CTR 4,18% vs 1,57%, CPC R$0,13 vs R$0,28
+- Tracking de mensagens 0 nas duas (wa.me é blind spot do Meta — não é bug nosso)
+- WhatsApp ABRIA sim (946 cliques no link total) — só não dá pra saber quantos viraram mensagem
+- Pendente: Cris contar quantas mensagens reais chegaram em cada (Nano vs Limpeza)
+
+---
+
+## PENDÊNCIA UX — Feedback de upload + publicação (PRIORIDADE ALTA)
+
+Rafa pediu em 2026-05-06 03:35 após ter que abrir F12 pra ver se publicação estava progredindo.
+
+**Bugs UX a corrigir:**
+1. **Barra de progresso real do upload de vídeo no Step 5/Modal Publishing**
+   - Hoje: spinner genérico ou nada visível enquanto sobem 12 chunks de 3.5 MB
+   - Frontend já recebe `onProgress(pct, label)` no `uploadVideoChunked` — falta amarrar à barra visual com `Chunk X/Y — N%`
+   - Local: `frontend/src/utils/metaResumableUploader.js` já emite progresso. `CreateAd.jsx` tem `setUploadProgress` mas não está exibindo claramente.
+
+2. **Feedback pós-publicação mais explícito**
+   - Hoje: redirect pra /anuncios sem confirmação clara → Rafa não sabe se publicou ou se travou
+   - Mostrar toast persistente "Publicação em andamento" durante upload + toast verde "Publicado!" ao confirmar criação no DB
+   - Bloquear redirect prematuro até POST /api/campaigns voltar 200
+
+3. **Badge "Em publicação" na lista /anuncios**
+   - Quando campanha foi disparada mas ainda subindo chunks, mostrar card com barra "Subindo vídeo… 7/12"
+   - Hoje: não aparece nada até POST /api/campaigns terminar
+
+**Por que importa:** sem isso, Rafa precisa abrir F12 + Network pra confirmar que sistema está vivo. Cliente final (não-dev) não vai conseguir publicar sozinho.
+
+---
+
 ## CHECKPOINT — 2026-05-06 00:35 — Encerramento Nano #436 + Limpeza #437 (rodada 1)
 
 Ambas as campanhas pausadas manualmente via PATCH /api/campaigns/:id/status (cascade Meta confirmado nos 2 casos). Adsets já tinham `end_time` 2026-05-05 23:59:59, mas Meta não muda pra "completed" automaticamente — só para de entregar. Pausa explícita zera qualquer entrega residual e libera pra v2.
@@ -43,9 +156,10 @@ Campanha #436 "Nanopigmentação em Joinville!" rodando desde 29/04, termina 05/
 - Gênero: feminino
 - Interesses: Eyebrow, Microblading, Permanent makeup + adicionar variação PT
 - Criativo: rotação A+B (não só 1 vídeo — evita saturação de freq>3)
-- Headline alt: testar "Sobrancelha fio a fio em Joinville" vs original
+- Headline aprovada: **Sobrancelhas naturais, fio a fio** (32/40) — decidido 2026-05-06
+- Texto principal aprovado: **Técnica fio a fio que segue o desenho natural da sua sobrancelha. Sem ficar borrado e sem cara de tatuagem. Agende sua avaliação.** (124/125)
 - Oferta: mantém R$ 699→R$ 497 ou 12×R$ 58 (clara, valor visível)
-- CTA: WhatsApp (mantém)
+- CTA: **Agendar** (BOOK_NOW) — alinhado com áudio do criativo "agendar avaliação". Decidido 2026-05-06 após mapping fix. Validar 1 ad em PAUSED antes do lançamento (BOOK_NOW + link wa.me ainda não testado em prod).
 - Horário comercial: testar 9h-21h (filtra curiosos noturnos) — decisão pendente
 
 ### Como retomar

@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAppState } from '../contexts/AppStateContext';
 import { updateAdTargeting, searchInterests } from '../services/adsApi';
 import Icon from '../components/Icon';
-import api from '../services/api';
+import api, { getPublishJob } from '../services/api';
 import { getService } from '../data/services';
 import { topPerformers } from '../data/districtInsights';
 import { hasEnoughData as serviceInsightsEnoughData } from '../data/serviceInsights';
@@ -25,11 +25,12 @@ const PLAT = {
 };
 
 const STATUS = {
-  active:  { label: 'Ativo',       dot: 'var(--c-success)', bg: 'rgba(46,187,122,.18)', color: 'var(--c-success)' },
-  paused:  { label: 'Pausado',     dot: 'var(--c-warning)', bg: 'rgba(245,166,35,.18)', color: 'var(--c-warning)' },
-  review:  { label: 'Em revisão',  dot: '#8B5CF6', bg: 'rgba(139,92,246,.16)', color: '#A78BFA' },
-  draft:   { label: 'Rascunho',    dot: '#94A3B8', bg: 'rgba(148,163,184,.16)', color: 'var(--c-text-3)' },
-  ended:   { label: 'Inativo',     dot: '#94A3B8', bg: 'var(--c-surface)', color: 'var(--c-text-4)' },
+  active:     { label: 'Ativo',          dot: 'var(--c-success)', bg: 'rgba(46,187,122,.18)',  color: 'var(--c-success)' },
+  paused:     { label: 'Pausado',        dot: 'var(--c-warning)', bg: 'rgba(245,166,35,.18)',  color: 'var(--c-warning)' },
+  review:     { label: 'Em revisão',     dot: '#8B5CF6',          bg: 'rgba(139,92,246,.16)',  color: '#A78BFA' },
+  draft:      { label: 'Rascunho',       dot: '#94A3B8',          bg: 'rgba(148,163,184,.16)', color: 'var(--c-text-3)' },
+  ended:      { label: 'Inativo',        dot: '#94A3B8',          bg: 'var(--c-surface)',      color: 'var(--c-text-4)' },
+  publishing: { label: 'Em publicação',  dot: '#FBBF24',          bg: 'rgba(251,191,36,.18)',  color: '#FBBF24' },
 };
 
 /* Estado efetivo vindo do Meta — qual o REAL status de entrega.
@@ -1697,6 +1698,52 @@ function CampaignGroupCard({ userAd, hierState, onPreview, onToggle, onEdit, onD
   const cpr = messages > 0 && spend > 0 ? spend / messages
               : (userAd.costPerMessage != null ? Number(userAd.costPerMessage) : null);
 
+  /* ── Polling de job de publicação ──
+     TODO: quando o backend expor status_local e publish_job_id no GET /api/campaigns,
+     remover o optional chaining e usar os campos diretamente. */
+  const jobId = userAd?.publish_job_id ?? null;
+  const isPublishing = (userAd?.status_local ?? userAd?.status) === 'publishing' && !!jobId;
+  const [jobPct, setJobPct] = useState(null);
+  const [jobFailed, setJobFailed] = useState(false);
+  const pollRef = useRef(null);
+  const { updateAd } = useAppState?.() ?? {};
+
+  useEffect(() => {
+    if (!isPublishing || !jobId) return;
+    setJobPct(0);
+    setJobFailed(false);
+
+    async function poll() {
+      try {
+        const res = await getPublishJob(jobId);
+        const d = res.data;
+        const pct = d.total_steps > 0
+          ? Math.min(100, Math.round((d.current_step / d.total_steps) * 100))
+          : null;
+        setJobPct(pct);
+
+        if (d.status === 'completed') {
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+          /* Atualiza o ad local para status 'review' e limpa o job_id */
+          updateAd?.(userAd.id, { status: 'review', publish_job_id: null, status_local: 'review' });
+        }
+        if (d.status === 'failed') {
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+          setJobFailed(true);
+          updateAd?.(userAd.id, { status: 'review', publish_job_id: null, status_local: 'failed' });
+        }
+      } catch {
+        /* erro de rede — não para o polling */
+      }
+    }
+
+    poll();
+    pollRef.current = setInterval(poll, 5000);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [isPublishing, jobId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const status = STATUS[(userAd.status || '').toLowerCase()] || STATUS.review;
   const platCampId = userAd.platform_campaign_id || userAd.metaCampaignId;
 
@@ -1742,6 +1789,32 @@ function CampaignGroupCard({ userAd, hierState, onPreview, onToggle, onEdit, onD
               padding: '3px 8px', borderRadius: '999px',
               background: status.bg, color: status.color,
             }}>{status.label}</span>
+
+            {/* Badge de publicação em andamento */}
+            {isPublishing && !jobFailed && (
+              <span style={{
+                fontSize: '10px', fontWeight: 700, letterSpacing: '.3px',
+                padding: '3px 10px', borderRadius: '999px',
+                background: 'rgba(251,191,36,.18)', color: '#FBBF24',
+                border: '1px solid rgba(251,191,36,.35)',
+                display: 'inline-flex', alignItems: 'center', gap: '5px',
+              }}>
+                <span style={{ display: 'inline-block', animation: 'ccb-spin 1.4s linear infinite', fontSize: '9px' }}>⚙️</span>
+                Em publicação{jobPct !== null ? ` ${jobPct}%` : '…'}
+              </span>
+            )}
+
+            {/* Badge de falha na publicação */}
+            {jobFailed && (
+              <span style={{
+                fontSize: '10px', fontWeight: 700, letterSpacing: '.3px',
+                padding: '3px 10px', borderRadius: '999px',
+                background: 'rgba(248,113,113,.14)', color: '#F87171',
+                border: '1px solid rgba(248,113,113,.3)',
+              }}>
+                Falhou — ver detalhes
+              </span>
+            )}
           </div>
           <div style={{ fontSize: '10.5px', color: 'var(--c-text-4)', fontWeight: 400, marginTop: '3px' }}>
             {adsets.length || 0} {adsets.length === 1 ? 'conjunto' : 'conjuntos'} ·

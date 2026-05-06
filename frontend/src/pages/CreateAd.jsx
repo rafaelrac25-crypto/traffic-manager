@@ -18,6 +18,7 @@ import api from '../services/api';
 import { processMediaFile } from '../utils/mediaProcessor';
 import { INTEREST_PRESETS } from '../data/interestPresets';
 import { getRejectionInfo } from '../data/rejectionRules';
+import PublishingModal from '../components/PublishingModal';
 import {
   DISTRICT_COORDS,
   analyzeDistrict,
@@ -3433,6 +3434,8 @@ export default function CreateAd() {
   const [publishing, setPublishing] = useState(false);
   /* { pct: 0-100, label: string } | null — progresso do upload chunked Meta */
   const [uploadProgress, setUploadProgress] = useState(null);
+  /* job_id retornado pelo POST /api/campaigns (202) — abre PublishingModal */
+  const [publishJobId, setPublishJobId] = useState(null);
 
   const initialStart = (() => {
     if (source && source.startDate !== undefined) return source.startDate || '';
@@ -3742,7 +3745,6 @@ export default function CreateAd() {
         setErrors(finalErrs);
         const firstStepWithError = [0, 1, 2, 3].find(i => Object.keys(validateStep(i)).length > 0);
         if (firstStepWithError !== undefined) setStep(firstStepWithError);
-        /* Sino é só pra alertas — formulário já destaca campos inline */
         return;
       }
     }
@@ -3827,7 +3829,7 @@ export default function CreateAd() {
     const adPayload = {
       name: adName,
       platform: 'instagram',
-      status: asDraft ? 'draft' : 'review', /* draft = só local, sem Meta */
+      status: asDraft ? 'draft' : 'publishing', /* publishing = job async em curso */
       publishMode: asDraft ? 'draft' : 'immediate',
 
       // Orçamento (local)
@@ -3868,36 +3870,87 @@ export default function CreateAd() {
     // Anexa o payload no schema Meta v20 (pronto pra sync real)
     adPayload.meta = toMetaPayload(adPayload);
 
-    let publishedAd = null;
-    if (editingAd) {
-      updateAd(editingAd.id, adPayload);
-      publishedAd = { ...editingAd, ...adPayload };
-    } else {
-      publishedAd = addAd(adPayload);
+    /* ── Rascunho: salva local, sem chamada ao backend async ── */
+    if (asDraft) {
+      let publishedAd = null;
+      if (editingAd) {
+        updateAd(editingAd.id, { ...adPayload, status: 'draft' });
+        publishedAd = { ...editingAd, ...adPayload, status: 'draft' };
+      } else {
+        publishedAd = addAd({ ...adPayload, status: 'draft' });
+      }
+      if (!reuseCreative && primaryText && headline) {
+        addCreative({ name: headline, primaryText, headline, destUrl, ctaButton, adFormat });
+      } else if (reuseCreative?.id) {
+        markCreativeUsed?.(reuseCreative.id);
+      }
+      logHistory({
+        type: 'ad-published',
+        title: `Rascunho salvo: ${adName}`,
+        description: 'Salvo como rascunho — publique quando estiver pronto.',
+        restorable: false,
+        payload: publishedAd,
+      });
+      setPublishing(false);
+      navigate('/anuncios');
+      return;
     }
-    // Cria criativo reutilizável apenas se o user NÃO reusou um existente
-    if (!reuseCreative && primaryText && headline) {
-      addCreative({ name: headline, primaryText, headline, destUrl, ctaButton, adFormat });
-    } else if (reuseCreative?.id) {
-      markCreativeUsed?.(reuseCreative.id);
+
+    /* ── Publicação real: POST /api/campaigns → 202 { job_id } ── */
+    try {
+      const resp = await api.post('/campaigns', adPayload);
+      const { job_id, campaign_id_local } = resp.data;
+
+      /* Salva o anúncio localmente com status 'publishing' e o job_id
+         para que Campaigns.jsx possa mostrar o badge "Em publicação". */
+      const localPayload = { ...adPayload, status: 'publishing', publish_job_id: job_id };
+      let publishedAd = null;
+      if (editingAd) {
+        updateAd(editingAd.id, localPayload);
+        publishedAd = { ...editingAd, ...localPayload };
+      } else {
+        /* Se o backend retornou campaign_id_local, usa ele como id local */
+        publishedAd = addAd(campaign_id_local ? { ...localPayload, id: campaign_id_local } : localPayload);
+      }
+      if (!reuseCreative && primaryText && headline) {
+        addCreative({ name: headline, primaryText, headline, destUrl, ctaButton, adFormat });
+      } else if (reuseCreative?.id) {
+        markCreativeUsed?.(reuseCreative.id);
+      }
+      logHistory({
+        type: fixMode ? 'ad-corrected' : (editingAd ? 'ad-updated' : 'ad-published'),
+        title: fixMode
+          ? `Correção enviada: ${adName}`
+          : editingAd
+            ? `Anúncio atualizado: ${adName}`
+            : `Campanha em publicação: ${adName}`,
+        description: isScheduled
+          ? `Agendado para ${new Date(startDate + 'T12:00:00').toLocaleDateString('pt-BR')}.`
+          : 'Job de publicação iniciado — acompanhe o progresso no modal.',
+        restorable: false,
+        payload: publishedAd,
+      });
+      if (fixMode) {
+        removeRejectedAd(rejectedAd.id);
+      }
+
+      /* Abre o PublishingModal — polling começa dentro do componente */
+      setPublishJobId(job_id);
+      setPublishing(false);
+    } catch (postErr) {
+      setPublishing(false);
+      /* Erros de timeout (504/408) não são problema de tamanho de arquivo —
+         o backend processará o job em background. Mensagem genérica clara. */
+      const httpStatus = postErr?.response?.status;
+      const isTimeout = httpStatus === 504 || httpStatus === 408 || postErr?.code === 'ECONNABORTED';
+      addNotification({
+        kind: 'publish-failed',
+        title: 'Falha ao iniciar publicação',
+        message: isTimeout
+          ? 'Tempo de resposta esgotado. Verifique sua conexão e tente novamente.'
+          : `Não foi possível enviar a campanha. ${postErr?.response?.data?.error || postErr?.message || 'Erro desconhecido.'}`,
+      });
     }
-    logHistory({
-      type: fixMode ? 'ad-corrected' : (editingAd ? 'ad-updated' : 'ad-published'),
-      title: fixMode
-        ? `Correção publicada: ${adName}`
-        : editingAd
-          ? `Anúncio atualizado: ${adName}`
-          : `Anúncio publicado: ${adName}`,
-      description: isScheduled
-        ? `Agendado para ${new Date(startDate + 'T12:00:00').toLocaleDateString('pt-BR')}.`
-        : 'Enviado ao Meta para revisão.',
-      restorable: false,
-      payload: publishedAd,
-    });
-    if (fixMode) {
-      removeRejectedAd(rejectedAd.id);
-    }
-    /* Publicação/correção já aparece no histórico — não vira notificação */
   }
 
   const reviewData = { objective, locations, ageRange, gender, interests, budgetType, budgetValue, startDate, endDate, adFormat, mediaFiles, primaryText, headline, destUrl, ctaButton, budgetRingSplit, ringsMode, budgetOptimization, businessHours };
@@ -4123,7 +4176,7 @@ export default function CreateAd() {
                   {publishing
                     ? (uploadProgress
                         ? `${uploadProgress.label || 'Enviando…'} (${uploadProgress.pct || 0}%)`
-                        : 'Publicando...')
+                        : 'Enviando...')
                     : fixMode
                       ? 'Corrigir e publicar'
                       : (isScheduled ? 'Agendar campanha' : 'Publicar campanha')}
@@ -4153,7 +4206,22 @@ export default function CreateAd() {
            reativado no futuro. */}
       </div>
 
-      {publishing && <PublishModal onClose={() => navigate('/anuncios')} scheduled={isScheduled} startDate={startDate} />}
+      {publishJobId && (
+        <PublishingModal
+          jobId={publishJobId}
+          onComplete={() => navigate('/anuncios')}
+          onFailure={() => {/* playBell já tocou dentro do modal */}}
+          onClose={(retry) => {
+            setPublishJobId(null);
+            if (retry) {
+              /* Volta ao Step 5 para o usuário tentar de novo */
+              setStep(4);
+            } else {
+              navigate('/anuncios');
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

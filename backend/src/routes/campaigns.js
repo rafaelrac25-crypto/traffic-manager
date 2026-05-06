@@ -107,109 +107,132 @@ router.post('/', async (req, res) => {
   const mode = publish_mode || 'immediate';
   const isImmediate = mode === 'immediate';
   const isDraft = mode === 'draft';
-  /* publishCampaign cria os 3 níveis (campaign+adset+ad) PAUSED no Meta por
-     segurança. Status local reflete isso: 'paused' até user clicar play (que
-     cascata pra ACTIVE nos 3 níveis via updateCampaignStatus).
-     mode='draft' = só salva local (zero chamada Meta) pra Rafa publicar depois. */
+
+  /* Publicação Meta assíncrona via job — evita timeout 504 do Vercel em
+     campanhas com múltiplos adsets (cada adset + ad pode levar 10-30s no Meta).
+     mode='draft' ou plataforma não-Meta seguem o fluxo síncrono original. */
+  const shouldPublishMetaAsync = (platform === 'meta' || platform === 'instagram') && isImmediate && payload?.meta?.campaign;
+
+  if (shouldPublishMetaAsync) {
+    /* Valida payload mínimo antes de enfileirar */
+    const adSetsList = Array.isArray(payload?.meta?.ad_sets)
+      ? payload.meta.ad_sets
+      : (payload?.meta?.ad_set ? [payload.meta.ad_set] : []);
+    if (!payload?.meta?.campaign?.name) {
+      return res.status(400).json({ error: 'payload.meta.campaign.name obrigatório' });
+    }
+    if (adSetsList.length === 0) {
+      return res.status(400).json({ error: 'Pelo menos 1 adset é obrigatório' });
+    }
+    if (!payload?.meta?.creative || !payload?.meta?.ad) {
+      return res.status(400).json({ error: 'payload.meta.creative e payload.meta.ad obrigatórios' });
+    }
+
+    /* Cria registro na tabela campaigns com status 'publishing' pra UI mostrar progresso */
+    const submitted_at = new Date().toISOString();
+    const payloadStr = JSON.stringify({ ...payload, mediaFilesData: undefined });
+    let campaignIdLocal = null;
+    try {
+      const insertResult = await db.query(
+        `INSERT INTO campaigns
+          (name, platform, budget, start_date, end_date, publish_mode, status, submitted_at, payload)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
+        [name, 'meta', budget || null, start_date || null, end_date || null,
+         mode, 'publishing', submitted_at, payloadStr]
+      );
+      campaignIdLocal = insertResult.rows[0]?.id || null;
+    } catch (err) {
+      console.error('[campaigns.POST] INSERT publishing falhou:', err);
+      return res.status(500).json({ error: 'Erro ao registrar campanha localmente' });
+    }
+
+    /* Cria o publish_job */
+    const jobId = require('crypto').randomUUID();
+    const jobPayloadStr = JSON.stringify({ ...req.body, _campaign_id_local: campaignIdLocal });
+    try {
+      await db.query(
+        `INSERT INTO publish_jobs (id, campaign_id_local, status, payload) VALUES (?, ?, ?, ?)`,
+        [jobId, campaignIdLocal, 'queued', jobPayloadStr]
+      );
+    } catch (err) {
+      console.error('[campaigns.POST] INSERT publish_job falhou:', err);
+      return res.status(500).json({ error: 'Erro ao enfileirar job de publicação' });
+    }
+
+    /* Fire-and-forget: dispara o worker sem await.
+       O worker roda em background e atualiza publish_jobs + campaigns conforme avança. */
+    const workerUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}/api/internal/publish-worker/${jobId}`
+      : `http://localhost:${process.env.PORT || 3001}/api/internal/publish-worker/${jobId}`;
+    const workerSecret = process.env.INTERNAL_WORKER_SECRET || 'dev';
+    fetch(workerUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Internal-Secret': workerSecret,
+      },
+    }).catch(e => console.warn('[campaigns.POST] fire-and-forget worker erro (ignorado):', e.message));
+
+    await log('create', 'campaign', campaignIdLocal, `Campanha "${name}" enfileirada para publicação no Meta (job ${jobId})`, { platform, budget, mode, job_id: jobId });
+
+    /* 202 Accepted — cliente usa job_id pra pollar GET /api/campaigns/jobs/:job_id */
+    return res.status(202).json({
+      job_id: jobId,
+      campaign_id_local: campaignIdLocal,
+      status: 'queued',
+    });
+  }
+
+  /* Fluxo síncrono original — draft, scheduled, ou plataformas não-Meta */
   let status = statusIn || (isDraft ? 'draft' : isImmediate ? 'paused' : 'scheduled');
   const submitted_at = isImmediate ? new Date().toISOString() : null;
   const sched = (!isImmediate && scheduled_for) ? scheduled_for : null;
 
-  let metaResult = null;
-  let platform_campaign_id = null;
-  let metaError = null;
-
-  const shouldPublishMeta = (platform === 'meta' || platform === 'instagram') && isImmediate && payload?.meta?.campaign;
-  if (shouldPublishMeta) {
-    try {
-      const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
-      const creds = credResult.rows[0];
-      if (!creds) throw new Error('Conecte o Facebook antes de publicar');
-      const { publishCampaign } = require('../services/metaWrite');
-      const mediaItems = Array.isArray(payload.mediaFilesData) ? payload.mediaFilesData : [];
-      metaResult = await publishCampaign(creds, payload.meta, mediaItems);
-      platform_campaign_id = metaResult.platform_campaign_id;
-      /* Recursos criados PAUSED no Meta — local reflete o real até o user
-         clicar play (cascata em metaWrite.updateCampaignStatus ativa os 3). */
-      status = 'paused';
-    } catch (e) {
-      /* Log detalhado pros logs do Vercel — payload completo + erro Meta */
-      console.error('[meta.publish] FALHA — stage:', e.stage || 'unknown');
-      console.error('[meta.publish] FALHA — params enviados:', JSON.stringify(e.params, null, 2));
-      console.error('[meta.publish] FALHA — erro:', e.message, 'meta:', JSON.stringify(e.meta, null, 2));
-      metaError = e.meta?.pt || e.message || 'Erro ao publicar no Meta';
-      const stageLabel = { campaign: 'Campanha', creative: 'Criativo', adset: 'Conjunto de anúncios', ad: 'Anúncio' }[e.stage] || null;
-      const reasonWithStage = stageLabel ? `[${stageLabel}] ${metaError}` : metaError;
-      /* Retorna TODOS os detalhes do erro pro frontend — inclusive campos enviados
-         pra facilitar diagnóstico quando Meta não devolve error_user_msg. */
-      return res.status(200).json({
-        rejected: true,
-        reason: reasonWithStage,
-        details: e.meta?.user_msg || e.meta?.raw || null,
-        user_title: e.meta?.user_title || null,
-        code: e.meta?.code || null,
-        subcode: e.meta?.subcode || null,
-        stage: e.stage || null,
-        sentParams: e.params || null,
-        endpoint: e.endpoint || null,
-        meta: e.meta || null,
-      });
-    }
-  }
-
-  const enrichedPayload = metaResult
-    ? { ...payload, mediaFilesData: undefined, metaPublishResult: metaResult }
-    : payload
-      ? { ...payload, mediaFilesData: undefined }
-      : null;
+  const enrichedPayload = payload ? { ...payload, mediaFilesData: undefined } : null;
   const payloadStr = enrichedPayload ? JSON.stringify(enrichedPayload) : null;
 
   try {
-    const savedPlatform = metaResult ? 'meta' : platform;
     const result = await db.query(
       `INSERT INTO campaigns
         (name, platform, platform_campaign_id, budget, start_date, end_date, publish_mode, status, scheduled_for, submitted_at, payload)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`,
-      [name, savedPlatform, platform_campaign_id, budget || null, start_date || null, end_date || null,
+      [name, platform, null, budget || null, start_date || null, end_date || null,
        mode, status, sched, submitted_at, payloadStr]
     );
     const camp = rowToAd(result.rows[0]);
-    const desc = metaResult
-      ? `Campanha "${name}" publicada no Meta (ID ${platform_campaign_id})`
-      : mode === 'scheduled'
+    const desc = mode === 'scheduled'
       ? `Campanha "${name}" agendada para ${sched}`
       : `Campanha "${name}" criada na plataforma ${platform}`;
-    await log('create', 'campaign', camp?.id, desc, { platform, budget, mode, platform_campaign_id });
+    await log('create', 'campaign', camp?.id, desc, { platform, budget, mode });
     res.status(201).json(camp);
   } catch (err) {
     console.error('[campaigns.POST] INSERT falhou:', err);
-    /* Rollback transacional: se o INSERT local falhou DEPOIS de publishCampaign
-       criar a Campaign no Meta, deletamos do Meta pra evitar órfã (Meta tem
-       campanha publicada mas o painel não tem registro local — ad fantasma).
-       Best-effort: se delete também falhar, salvamos em pending_cleanup pra
-       reconciliação posterior. */
-    if (metaResult?.platform_campaign_id) {
-      try {
-        const credResult = await db.query('SELECT * FROM platform_credentials WHERE platform = ?', ['meta']);
-        const creds = credResult.rows[0];
-        if (creds) {
-          const { deleteCampaign } = require('../services/metaWrite');
-          await deleteCampaign(creds, metaResult.platform_campaign_id);
-          console.warn('[campaigns.POST] rollback Meta OK — campaign deletada:', metaResult.platform_campaign_id);
-        }
-      } catch (rollbackErr) {
-        console.error('[campaigns.POST] ROLLBACK META FALHOU — órfã pode existir:', metaResult.platform_campaign_id, rollbackErr.message);
-        /* Marca pra cleanup posterior — best-effort, não bloqueia resposta */
-        try {
-          await db.query(
-            `INSERT INTO activity_log (action, entity, entity_id, description, meta) VALUES (?, ?, ?, ?, ?)`,
-            ['orphan_meta', 'campaign', null, `Campaign Meta ${metaResult.platform_campaign_id} órfã: INSERT local falhou e rollback no Meta também falhou`,
-             JSON.stringify({ platform_campaign_id: metaResult.platform_campaign_id, db_error: err.message, rollback_error: rollbackErr.message })]
-          );
-        } catch {}
-      }
-    }
-    res.status(500).json({ error: 'Erro ao criar campanha — registro local falhou' });
+    res.status(500).json({ error: 'Erro ao criar campanha' });
+  }
+});
+
+/* Consulta status de um job de publicação assíncrona */
+router.get('/jobs/:job_id', async (req, res) => {
+  try {
+    const result = await db.query(
+      'SELECT id, campaign_id_local, status, current_step, total_steps, message, error, updated_at FROM publish_jobs WHERE id = ?',
+      [req.params.job_id]
+    );
+    const job = result.rows[0];
+    if (!job) return res.status(404).json({ error: 'Job não encontrado' });
+    res.json({
+      job_id:            job.id,
+      campaign_id_local: job.campaign_id_local,
+      status:            job.status,
+      current_step:      job.current_step,
+      total_steps:       job.total_steps,
+      message:           job.message,
+      error:             job.error,
+      updated_at:        job.updated_at,
+    });
+  } catch (err) {
+    console.error('[campaigns.GET /jobs/:id]', err);
+    res.status(500).json({ error: 'Erro ao buscar status do job' });
   }
 });
 

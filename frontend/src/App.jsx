@@ -14,6 +14,7 @@ import CreativeLibrary from './pages/CreativeLibrary';
 import References from './pages/References';
 import History from './pages/History';
 import Relatorios from './pages/Relatorios';
+import ZombieCleanup from './pages/ZombieCleanup';
 /* Lazy: rota /agencia é showcase pessoal (Game Boy Agency); só carrega
    quando visitada — zero impacto no bundle principal. */
 const Agency = lazy(() => import('./pages/Agency'));
@@ -500,6 +501,7 @@ function Layout() {
             <Route path="/referencias"   element={<References />} />
             <Route path="/criar-anuncio" element={<CreateAd />} />
             <Route path="/historico"     element={<History />} />
+            <Route path="/limpeza-meta"  element={<ZombieCleanup />} />
             <Route path="/agencia"       element={<Suspense fallback={<div style={{padding:'40px',color:'var(--c-text-3)'}}>carregando agência…</div>}><Agency /></Suspense>} />
             {/* HeatMap removido — Meta não diferencia performance entre bairros do mesmo anel.
                 Métricas por anel ficam no Dashboard (RingPerformanceCard). */}

@@ -259,3 +259,28 @@ CREATE TABLE IF NOT EXISTS agency_events (
   meta JSONB
 );
 CREATE INDEX IF NOT EXISTS idx_agency_events_ts ON agency_events(ts DESC);
+
+/* Jobs de publicação assíncrona — resolve timeout 504 do Vercel em campanhas
+   com múltiplos adsets. POST /api/campaigns retorna 202 + job_id imediato;
+   o worker /api/internal/publish-worker/:id executa o fluxo Meta completo em
+   background e atualiza este registro a cada fase.
+
+   Estados possíveis:
+     queued → uploading_media → creating_campaign → creating_adsets
+     → creating_creatives → creating_ads → completed | failed
+
+   payload: JSON completo do request original (campaign + ad_sets + mediaFilesData).
+   error: texto serializado do erro Meta (parseado via metaErrors.js) se falhar. */
+CREATE TABLE IF NOT EXISTS publish_jobs (
+  id TEXT PRIMARY KEY,
+  campaign_id_local INTEGER,
+  status TEXT NOT NULL DEFAULT 'queued',
+  current_step INTEGER NOT NULL DEFAULT 0,
+  total_steps INTEGER NOT NULL DEFAULT 0,
+  message TEXT,
+  payload TEXT,
+  error TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_publish_jobs_status ON publish_jobs(status, updated_at DESC);

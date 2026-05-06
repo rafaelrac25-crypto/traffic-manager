@@ -363,7 +363,7 @@ async function duplicateAdInAdSet(creds, {
  * Se payload traz `ad_sets` (array) → 1 campaign → N ad sets + N ads (anéis)
  * Se traz `ad_set` (objeto) → 1 campaign → 1 ad set + 1 ad (legado)
  */
-async function publishCampaign(creds, metaPayload, mediaItems = []) {
+async function publishCampaign(creds, metaPayload, mediaItems = [], onProgress = null) {
   const token = getToken(creds);
   const accountId = creds.account_id;
   if (!accountId) throw new Error('account_id ausente');
@@ -435,8 +435,12 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
   const { uploadVideo, waitForVideoReady } = require('./metaMedia');
   const uploadedImages = [];
   const uploadedVideos = [];
-  for (const m of mediaItems) {
-    if (!m?.base64) continue;
+  const mediaToUpload = mediaItems.filter(m => m?.base64);
+  if (mediaToUpload.length > 0) {
+    onProgress && onProgress('uploading_media', 0, mediaToUpload.length, `Enviando ${mediaToUpload.length} arquivo(s) de mídia`);
+  }
+  for (let mi = 0; mi < mediaToUpload.length; mi++) {
+    const m = mediaToUpload[mi];
     try {
       if (m.type === 'video' || (m.mime || '').startsWith('video/')) {
         const vid = await uploadVideo(creds, m.base64);
@@ -445,6 +449,7 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
         const img = await uploadImage(creds, m.base64);
         uploadedImages.push({ ...img, originalId: m.id });
       }
+      onProgress && onProgress('uploading_media', mi + 1, mediaToUpload.length, `Mídia "${m.name || 'arquivo'}" enviada`);
     } catch (e) {
       throw new Error(`Falha ao enviar "${m.name || 'mídia'}": ${e.message}`);
     }
@@ -507,6 +512,7 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
   try {
 
   // 2. Campaign
+  onProgress && onProgress('creating_campaign', 0, 1, 'Criando campanha no Meta');
   const c = metaPayload.campaign;
   const hasCampaignBudget = !!(c.daily_budget || c.lifetime_budget);
   const campParams = {
@@ -535,8 +541,10 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
   const campResp = await metaCall('campaign', campParams, `/${accountId}/campaigns`);
   const campaignId = campResp.id;
   createdCampaignId = campaignId;
+  onProgress && onProgress('creating_campaign', 1, 1, `Campanha "${c.name}" criada (ID ${campaignId})`);
 
   // 3. Creative ÚNICO — reutilizado entre N ads
+  onProgress && onProgress('creating_creatives', 0, 1, 'Criando criativo');
   const cr = { ...metaPayload.creative };
   const storySpec = JSON.parse(JSON.stringify(cr.object_story_spec || {}));
   if (!storySpec.page_id && creds.page_id) storySpec.page_id = creds.page_id;
@@ -635,11 +643,13 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
   }, `/${accountId}/adcreatives`);
   const creativeId = crResp.id;
   createdCreativeId = creativeId;
+  onProgress && onProgress('creating_creatives', 1, 1, `Criativo criado (ID ${creativeId})`);
 
-  // 4. Para cada ad_set: cria AdSet + Ad. Erro em um dos anéis é fatal pra consistência.
-  const adSetResults = [];
-  for (let i = 0; i < adSetsList.length; i++) {
-    const a = adSetsList[i];
+  // 4. Para cada ad_set: prepara params + resolve interesses em paralelo
+  onProgress && onProgress('creating_adsets', 0, adSetsList.length, `Criando ${adSetsList.length} conjunto(s) de anúncios`);
+
+  /* Monta parâmetros de cada adset em paralelo (resolveInterestIds é I/O) */
+  const adSetParamsList = await Promise.all(adSetsList.map(async (a, i) => {
     /* Resolve IDs de interesses pelos IDs reais do Meta antes de enviar
        (frontend envia IDs fake tipo 'interest_beleza' que Meta rejeita). */
     const targeting = { ...(a.targeting || {}) };
@@ -680,32 +690,32 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
     if (Array.isArray(a.adset_schedule) && a.adset_schedule.length > 0) {
       asParams.adset_schedule = a.adset_schedule;
     }
-    /* Frequency capping — limita exibições por pessoa numa janela.
-       Ex: max 3 impressões por usuário em 7 dias.
-       Usado se Cris ativar anti-fadiga pro anel primário (público pequeno). */
+    /* Frequency capping — limita exibições por pessoa numa janela. */
     if (Array.isArray(a.frequency_control_specs) && a.frequency_control_specs.length > 0) {
       asParams.frequency_control_specs = a.frequency_control_specs;
     }
     /* Bid cap (COST_CAP / BID_CAP / LOWEST_COST_WITH_BID_CAP) precisa de bid_amount em centavos */
     if (a.bid_amount != null) asParams.bid_amount = Math.round(Number(a.bid_amount));
-    /* Janela de atribuição customizada por ad_set (default Meta v20 são valores fixos) */
+    /* Janela de atribuição customizada por ad_set */
     if (Array.isArray(a.attribution_spec) && a.attribution_spec.length > 0) {
       asParams.attribution_spec = a.attribution_spec;
     }
-    /* CONVERSATIONS (objetivo Mensagens) exige promoted_object.page_id.
-       Fallback: se frontend não mandou, usa page_id das credenciais. */
+    /* CONVERSATIONS (objetivo Mensagens) exige promoted_object.page_id. */
     if (asParams.optimization_goal === 'CONVERSATIONS' && !asParams.promoted_object && creds.page_id) {
       asParams.promoted_object = { page_id: creds.page_id };
     }
-    /* Meta v20: optimization_goal=CONVERSATIONS exige destination_type
-       (MESSENGER / INSTAGRAM_DIRECT / WHATSAPP). Default INSTAGRAM_DIRECT
-       porque canal único da Cris é IG Direct. */
+    /* Meta v20: optimization_goal=CONVERSATIONS exige destination_type. */
     if (a.destination_type) {
       asParams.destination_type = a.destination_type;
     } else if (asParams.optimization_goal === 'CONVERSATIONS') {
       asParams.destination_type = 'INSTAGRAM_DIRECT';
     }
+    return { params: asParams, original: a, index: i };
+  }));
 
+  /* Cria todos os AdSets em paralelo — independentes entre si */
+  const adSetResults = [];
+  const adSetCreationResults = await Promise.all(adSetParamsList.map(async ({ params: asParams, original: a, index: i }) => {
     let asResp;
     try {
       asResp = await metaCall('adset', asParams, `/${accountId}/adsets`);
@@ -715,7 +725,13 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
     }
     const adSetId = asResp.id;
     createdAdSets.push(adSetId);
+    onProgress && onProgress('creating_adsets', i + 1, adSetsList.length, `AdSet "${a.name}" criado`);
+    return { adSetId, original: a, index: i };
+  }));
 
+  /* Cria todos os Ads em paralelo — cada ad referencia o adset + creative já criados */
+  onProgress && onProgress('creating_ads', 0, adSetCreationResults.length, `Criando ${adSetCreationResults.length} anúncio(s)`);
+  const adCreationResults = await Promise.all(adSetCreationResults.map(async ({ adSetId, original: a, index: i }) => {
     const baseAdName = metaPayload.ad.name || a.name;
     const adName = adSetsList.length > 1 ? `${baseAdName} — Anúncio ${i + 1}` : baseAdName;
     let adResp;
@@ -731,15 +747,16 @@ async function publishCampaign(creds, metaPayload, mediaItems = []) {
       throw e;
     }
     createdAds.push(adResp.id);
-
-    adSetResults.push({
-      ad_set_id:     adSetId,
-      ad_id:         adResp.id,
-      ring_key:      a._ring_key || null,
-      ring_percent:  a._ring_percent ?? null,
-      daily_budget:  a.daily_budget ?? null,
-    });
-  }
+    onProgress && onProgress('creating_ads', i + 1, adSetsList.length, `Anúncio "${adName}" criado`);
+    return {
+      ad_set_id:    adSetId,
+      ad_id:        adResp.id,
+      ring_key:     a._ring_key || null,
+      ring_percent: a._ring_percent ?? null,
+      daily_budget: a.daily_budget ?? null,
+    };
+  }));
+  adSetResults.push(...adCreationResults);
 
   return {
     platform_campaign_id: campaignId,

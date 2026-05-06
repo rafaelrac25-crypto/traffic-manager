@@ -80,6 +80,13 @@ const IconGameboy = ({ active }) => (
     <circle cx="15" cy="11" r="1"/><circle cx="17.5" cy="13.5" r="1"/>
   </svg>
 );
+const IconTrash = ({ active }) => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+    <path d="M10 11v6"/><path d="M14 11v6"/>
+    <path d="M9 6V4h6v2"/>
+  </svg>
+);
 const IconMoon = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/>
@@ -124,6 +131,7 @@ const NAV = [
   ]},
   { to: '/investimento',  label: 'Investimento',  Icon: IconInvestment },
   { to: '/historico',     label: 'Histórico',     Icon: IconHistory },
+  { to: '/limpeza-meta',  label: 'Limpeza Meta',  Icon: IconTrash },
   { to: '/agencia',       label: 'Agência 2D',    Icon: IconGameboy },
 ];
 
