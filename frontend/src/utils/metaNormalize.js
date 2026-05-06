@@ -160,10 +160,13 @@ export function toMetaPayload(ad) {
   const rawCtaMeta = CTA_TO_META[ad.ctaButton] || 'LEARN_MORE';
   const isMessagingCTA = MESSAGING_CTAS.includes(rawCtaMeta);
   const isMessagesObjective = ad.objective === 'messages';
-  /* Fallback wa.me/: aceita LEARN_MORE/CONTACT_US/BOOK_TRAVEL (CTAs universais
-     que aceitam link externo). Outros CTAs viram LEARN_MORE como default seguro.
-     Pessoa clica → abre o link wa.me/ → app WhatsApp abre na conversa. */
-  const WAME_SAFE_CTAS = ['LEARN_MORE', 'CONTACT_US', 'BOOK_TRAVEL'];
+  /* Fallback wa.me/: aceita CTAs universais que aceitam link externo arbitrário.
+     BOOK_NOW adicionado em 2026-05-06 pra Nano v2 (rótulo "Agendar" em PT-BR
+     pra serviços de beleza). Risco: Meta historicamente associa BOOK_NOW a
+     plataformas de booking (Booking/OpenTable) — se rejeitar com link wa.me,
+     remover daqui e voltar pra BOOK_TRAVEL ("Reservar"). Outros CTAs fora da
+     lista viram LEARN_MORE como default seguro. */
+  const WAME_SAFE_CTAS = ['LEARN_MORE', 'CONTACT_US', 'BOOK_TRAVEL', 'BOOK_NOW'];
   const finalCtaType = usingWaLink
     ? (WAME_SAFE_CTAS.includes(rawCtaMeta) ? rawCtaMeta : 'LEARN_MORE')
     : ((isMessagesObjective && !isMessagingCTA) ? 'SEND_MESSAGE' : rawCtaMeta);

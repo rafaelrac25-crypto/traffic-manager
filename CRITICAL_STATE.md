@@ -1,5 +1,29 @@
 # CRITICAL_STATE — traffic-manager
 
+## CHECKPOINT — 2026-05-06 00:35 — Encerramento Nano #436 + Limpeza #437 (rodada 1)
+
+Ambas as campanhas pausadas manualmente via PATCH /api/campaigns/:id/status (cascade Meta confirmado nos 2 casos). Adsets já tinham `end_time` 2026-05-05 23:59:59, mas Meta não muda pra "completed" automaticamente — só para de entregar. Pausa explícita zera qualquer entrega residual e libera pra v2.
+
+**Resultado final 7 dias (29/04 → 05/05):**
+
+| | Nano #436 | Limpeza #437 |
+|---|---|---|
+| Investido | R$141,03 | R$126,60 |
+| Link clicks | 335 | 611 |
+| CPC | R$0,28 | R$0,13 |
+| CTR | 1,57% | 4,18% |
+| Reach | 12.319 | 14.528 |
+| Freq | 2,60 (saturando) | 1,59 (saudável) |
+| Mensagens trackeadas | 0 | 0 |
+
+**Veredicto:** Limpeza ganhou disparada no topo do funil (CTR 2,66× maior, CPC 50% menor, 1,8× mais cliques gastando MENOS). Mensagens trackeadas em 0 nas duas (wa.me não conta como conversão Meta — buraco conhecido). ROI real só com input da Cris.
+
+**Pendente:** perguntar pra Cris quantas mensagens chegaram em cada (Nano vs Limpeza) nos últimos 7 dias. Sem esse número, decisão de reinvestimento é cega.
+
+**Próximo passo Nano v2:** segue valendo o plano em "CHECKPOINT — Nanopigmentação Maio v2" abaixo (criativo B novo, bairros 8, rotação A+B, decisão orçamento).
+
+---
+
 ## CHECKPOINT — Nanopigmentação Maio v2 (PRÉ-PUBLICAÇÃO)
 
 ### Análise atual (04/05/2026, dia 5 de 7)

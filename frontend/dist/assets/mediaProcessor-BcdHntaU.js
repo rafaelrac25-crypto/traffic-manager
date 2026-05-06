@@ -1,0 +1,1 @@
+import{i as e}from"./index-DeDa-a59.js";export{e as compressImage};

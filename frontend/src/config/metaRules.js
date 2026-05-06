@@ -85,7 +85,7 @@ export const CTA_TO_META = {
   'Entrar em contato':  'CONTACT_US',
   'Fale conosco':       'CONTACT_US',
   'Reservar':           'BOOK_TRAVEL',
-  'Agendar':            'BOOK_TRAVEL',
+  'Agendar':            'BOOK_NOW',
   'WhatsApp':           'WHATSAPP_MESSAGE',
   'Enviar mensagem':    'MESSAGE_PAGE',
   'Mande uma mensagem': 'MESSAGE_PAGE',
