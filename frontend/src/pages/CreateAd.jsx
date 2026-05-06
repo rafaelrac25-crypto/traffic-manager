@@ -2571,7 +2571,7 @@ function Step5Creative({ objective, adFormat, setAdFormat, mediaFiles, setMediaF
      restringe lista a só os 4 que sobrevivem o whitelist. Vale para
      QUALQUER objetivo (Trafego, Mensagens, etc) com link wa.me. */
   const allowedCTAs = isWaMeLink
-    ? ['Saiba mais', 'Agendar', 'Reservar', 'Entrar em contato']
+    ? ['Saiba mais', 'Fale conosco', 'Agendar', 'Reservar']
     : (CTA_BY_OBJECTIVE[objective] || CTA_BY_OBJECTIVE.traffic);
 
   /* Auto-corrige ctaButton se o user voltou pro passo 1 e trocou de objetivo
@@ -3155,12 +3155,18 @@ function PreflightCheckPanel({ data }) {
            "AbortError" → timeout 60s — Meta provavelmente lento. */
         const raw = String(e?.message || e);
         const isAbort = e?.name === 'AbortError';
-        const friendly = isAbort
-          ? 'Meta demorou demais pra responder (>60s). Pode publicar mesmo assim — esta verificação é só informativa.'
-          : /Failed to fetch|Load failed|NetworkError|TypeError.*fetch/i.test(raw)
+        const isNetworkErr = /Failed to fetch|Load failed|NetworkError|TypeError.*fetch/i.test(raw);
+        /* Timeout do Meta no preflight nao bloqueia publish — silencia
+           pra nao confundir o usuario com aviso inutil. So mostra erro
+           se for falha real de rede com o backend (nao com Meta). */
+        if (isAbort) {
+          if (!cancelled) setState({ loading: false, ok_overall: true, checks: [], silenced: true });
+        } else {
+          const friendly = isNetworkErr
             ? 'Sem conexão com o servidor. Verifique sua internet e tente de novo.'
             : raw;
-        if (!cancelled) setState({ loading: false, ok_overall: false, checks: [], error: friendly });
+          if (!cancelled) setState({ loading: false, ok_overall: false, checks: [], error: friendly });
+        }
       }
     })();
     return () => { cancelled = true; };
