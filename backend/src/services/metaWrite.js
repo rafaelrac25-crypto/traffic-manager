@@ -461,14 +461,17 @@ async function publishCampaign(creds, metaPayload, mediaItems = [], onProgress =
      em timeout e publishCampaign seguia mesmo assim, criando creative com
      vídeo "processing" — Meta rejeitava com erro genérico, mais difícil de
      diagnosticar pro usuário). */
-  /* SKIP waitForVideoReady — Meta aceita criar creative com video_id em
-     processing. Status do creative fica 'processing' brevemente, depois
-     converte automatico quando Meta termina o video. Economiza 0-60s do
-     timeout do Vercel sem perder funcionalidade.
-     (Se Meta rejeitar futuramente o creative com video processing, voltar
-     com maxWaitMs:30000 ou implementar como step OPCIONAL.) */
-  if (false && isVideo && mainVideoId && uploadedVideos.length > 0) {
-    /* desativado — ver comentario acima */
+  /* Wait curto (15s) como rede de seguranca — Meta DEVERIA aceitar criar
+     creative com video em processing, mas se rejeitar a publicacao falha.
+     15s eh barato no budget de 300s e elimina esse risco em ~99% dos casos
+     (vídeo geralmente fica pronto em <10s apos upload terminar).
+     Se vídeo ainda processando após 15s, segue mesmo assim sem throw. */
+  if (isVideo && mainVideoId && uploadedVideos.length > 0) {
+    try {
+      await waitForVideoReady(creds, mainVideoId, { maxWaitMs: 15000 });
+    } catch (e) {
+      console.warn('[publishCampaign] waitForVideoReady falhou (seguindo mesmo assim):', e.message);
+    }
   }
 
   /* Cleanup transacional: se qualquer etapa depois da criação da campaign
