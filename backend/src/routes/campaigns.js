@@ -177,13 +177,27 @@ router.post('/', async (req, res) => {
       ? `https://${process.env.VERCEL_URL}/api/internal/publish-worker/${jobId}`
       : `http://localhost:${process.env.PORT || 3001}/api/internal/publish-worker/${jobId}`;
     const workerSecret = process.env.INTERNAL_WORKER_SECRET || 'dev';
-    fetch(workerUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Internal-Secret': workerSecret,
-      },
-    }).catch(e => console.warn('[campaigns.POST] fire-and-forget worker erro (ignorado):', e.message));
+    /* AWAIT a request inicial pro worker — o handler do worker retorna 200
+       imediatamente (~ms) e processa o trabalho via setImmediate em background.
+       Sem o await, Vercel mata o container antes do fetch sair do socket. */
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 8000);
+      const r = await fetch(workerUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Internal-Secret': workerSecret,
+        },
+        signal: ctrl.signal,
+      });
+      clearTimeout(t);
+      if (!r.ok && r.status !== 200) {
+        console.warn('[campaigns.POST] worker respondeu', r.status);
+      }
+    } catch (e) {
+      console.warn('[campaigns.POST] falha ao acordar worker (job ficará queued):', e.message);
+    }
 
     await log('create', 'campaign', campaignIdLocal, `Campanha "${name}" enfileirada para publicação no Meta (job ${jobId})`, { platform, budget, mode, job_id: jobId });
 
