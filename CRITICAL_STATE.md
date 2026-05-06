@@ -1,5 +1,69 @@
 # CRITICAL_STATE — traffic-manager
 
+## 🎯 CHECKPOINT — 2026-05-06 20:30 — NANO V2 PUBLICADA E EM REVISÃO META
+
+**Após ~36h de tentativas e ~12 commits de fix, campanha #464 está ACTIVE no Meta.**
+
+### Estado final
+- **Campaign #464** local | Meta ID `120246144593150627` | Status ACTIVE/Effective ACTIVE
+- **Adset:** ACTIVE | 30-50 | feminino | 8 bairros Joinville | location_types `['home','recent']`
+- **Interesses:** Microblading, Salões de beleza (cosméticos), Sobrancelha, Beauty Shop
+- **Budget:** R$30/dia | **Período:** 06/05 → 06/06 | **Objetivo:** OUTCOME_TRAFFIC
+- **CTA:** BOOK_NOW (Rafa pode trocar pra "Fale conosco" no Meta UI se aviso aparecer)
+- **Verdict diagnose:** "EM REVISÃO no Meta — vai entregar quando Meta aprovar (≤24h)"
+
+### Bugs/fixes deployados hoje (em ordem cronológica de commit)
+1. `3f98cae` — fix(api): prefixo /api faltando em 3 chamadas frontend
+2. `c32d189` — fix(ux): reset uploadProgress no catch
+3. `d5bf0bd` — fix(POST): aceita meta no top-level + camelCase
+4. `9933901` — fix(worker+sync): mesmo body shape no worker + sync preserva publishing
+5. `1646d9f` — fix: await fetch worker (Vercel matava antes do socket)
+6. `8a1e27d` — fix: worker INLINE + URL canonica + waitForVideoReady 180s
+7. `6823dff` — fix: rate-limit cap 180→1000, video-wait 180→60s
+8. `9e7336e` — fix(safety-net): waitForVideoReady 15s sem throw
+9. `1d85fc8` — fix(audit-final): timeout fetch worker 8s→290s + offset check + dedup deduped
+10. `1f1ac74` — fix(billing): IMPRESSIONS pra wa.me independente de objetivo
+11. `4377067` — fix(timeout): Meta call 30s→12s, retries 3→2, safety race 240s
+12. `556b456` — fix(rate-limit): bypass interno (era estrangulando publishCampaign)
+13. `9c09903` — fix(cta): adiciona Agendar/Reservar/Solicitar orcamento em Trafego
+14. `faf7ae7` — fix(cta): wa.me restringe a 4 CTAs seguros
+15. `9e707ec` — fix(cta): wa.me dropdown — Fale conosco no lugar de Entrar em contato
+16. `b98310c` — fix(targeting): location_types ['home','recent'] (substitui ['home'] deprecada)
+
+### Plano A implementado (Browser→Meta direct upload)
+- Upload de vídeo agora bypassa Vercel completo (chunks 25MB direto pro Meta)
+- Backend `/api/upload/video/init` cria sessão Meta + devolve token
+- Frontend `metaResumableUploader.js` faz transfer/finish direto
+- Resultado: vídeo 41MB sobe em ~2min (vs 15min antes)
+
+### Issues conhecidos não bloqueantes
+- **Duplo POST /api/campaigns** (~7-9s gap) ainda acontece em algumas tentativas. Dedup server-side (60s) cobre quase todos os casos. Causa raiz não identificada — algum retry no axios/browser/Vercel proxy. Próximo investigar.
+- **/api/admin/* sem auth** — segurança baixa-prioridade
+- **Cron automático de sync Meta** — ainda manual (botão "Sincronizar" em /anuncios e /investimento)
+- **CreativeLibrary reuse de hash** — não existe; user precisa re-anexar vídeo a cada nova campanha
+- **`amount_spent: R$2.733 / spend_cap: R$2.798`** — teto interno automático Meta. Não editável via UI. Meta libera conforme conta gasta sem problemas.
+- **Saldo carteira pré-paga: R$6,80** — Rafa precisa adicionar saldo antes de Meta começar a entregar
+- **Limite diário Meta: R$162,30** — bem acima dos R$30/dia, sem risco
+
+### Memórias permanentes adicionadas hoje
+- `feedback_root_cause_path_thinking.md` — pensar na raiz/caminho antes do 3º fix; trazer Plano B/C espontaneamente
+- `feedback_solution_not_problem.md` — nunca explicar risco sem aplicar fix; reservar pergunta pra ação destrutiva
+
+### Pendências pra próxima sessão
+- [ ] Investigar duplo POST /api/campaigns (axios/browser retry)
+- [ ] Adicionar botão "Apagar" visível pra campanhas em status='publishing'/'failed' na UI
+- [ ] Cron automático de sync Meta (15min)
+- [ ] Reuse de vídeo por hash (refactor médio)
+- [ ] Auth nos endpoints /api/admin/*
+
+### Limpeza de phantoms feitos hoje
+Deletados via DELETE /api/campaigns/:id (com cascade Meta quando aplicável):
+#444, #445, #446-#449 (smoke), #450, #453, #454, #455, #456, #457 (smoke), #458, #459, #460, #461, #462, #463, #465 (duplicado de #464)
+
+Lista atual: **só #464** (a real, em revisão Meta).
+
+---
+
 ## ✅ CHECKPOINT — 2026-05-06 14:30 — Publicação Nano v2 100% pronta (5 bugs críticos fechados + 2 varreduras)
 
 ### Bugs corrigidos hoje (commits, em ordem)
