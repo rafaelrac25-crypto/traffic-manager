@@ -158,7 +158,9 @@ async function syncPlatform(platform) {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
        ON CONFLICT (platform, platform_campaign_id) DO UPDATE SET
          name = excluded.name,
-         status = excluded.status,
+         /* Preserva 'publishing' se o job async ainda estiver em curso —
+            evita sumir a barra de progresso enquanto o worker termina. */
+         status = CASE WHEN campaigns.status = 'publishing' THEN campaigns.status ELSE excluded.status END,
          effective_status = COALESCE(excluded.effective_status, campaigns.effective_status),
          budget = excluded.budget,
          spent = excluded.spent,

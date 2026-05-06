@@ -103,7 +103,10 @@ router.post('/publish-worker/:job_id', async (req, res) => {
       return;
     }
 
-    const { name, platform, budget, start_date, end_date, publish_mode, scheduled_for, payload, _campaign_id_local } = body;
+    const { name, platform, budget, _campaign_id_local } = body;
+    /* O frontend envia meta no top-level (sem wrapper payload) — fallback
+       igual ao do POST /api/campaigns pra aceitar ambos formatos. */
+    const payload = body.payload ?? body;
     const campaignIdLocal = _campaign_id_local || job.campaign_id_local;
 
     /* Busca credenciais Meta */
