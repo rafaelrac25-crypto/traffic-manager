@@ -125,7 +125,7 @@ const META_OBJECTIVES = [
    objective escolhido no passo 1 — evita erro 1487891 do Meta. */
 const CTA_BY_OBJECTIVE = {
   messages:     ['WhatsApp', 'Enviar mensagem', 'Mande uma mensagem', 'Chamar agora'],
-  traffic:      ['Saiba mais', 'Comprar agora', 'Inscrever-se', 'Entrar em contato', 'Ver mais'],
+  traffic:      ['Saiba mais', 'Agendar', 'Reservar', 'Comprar agora', 'Inscrever-se', 'Entrar em contato', 'Ver mais', 'Solicitar orçamento'],
   engagement:   ['Saiba mais', 'Enviar mensagem', 'Entrar em contato'],
   leads:        ['Saiba mais', 'Inscrever-se', 'Entrar em contato'],
   sales:        ['Comprar agora', 'Saiba mais', 'Ver mais'],
