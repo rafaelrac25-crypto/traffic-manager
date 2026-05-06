@@ -123,7 +123,7 @@ export async function uploadVideoChunked(file, { onProgress } = {}) {
 
     const out = await metaPost(form);
     const next = Number(out.start_offset);
-    if (!Number.isFinite(next) || next <= offset) {
+    if (!Number.isFinite(next) || next < offset) {
       throw new Error(`Meta não avançou offset (atual ${offset}, retornado ${out.start_offset})`);
     }
     offset = next;
@@ -190,7 +190,7 @@ export async function uploadImageChunked(file, { onProgress } = {}) {
 
     const out = await postChunk('/api/upload/image/chunk', form);
     const next = Number(out.start_offset);
-    if (!Number.isFinite(next) || next <= offset) {
+    if (!Number.isFinite(next) || next < offset) {
       throw new Error(`Backend não avançou offset (atual ${offset}, retornado ${out.start_offset})`);
     }
     offset = next;

@@ -210,7 +210,11 @@ router.post('/', async (req, res) => {
        Sem o await, Vercel mata o container antes do fetch sair do socket. */
     try {
       const ctrl = new AbortController();
-      const t = setTimeout(() => ctrl.abort(), 8000);
+      /* 290s — worker eh INLINE agora e demora ate ~150s pra terminar
+         publishCampaign. Antes era 8s (assumindo setImmediate retornaria
+         200 rapido). Agora awaits o publish completo, com folga ate o
+         maxDuration 300s do Vercel. */
+      const t = setTimeout(() => ctrl.abort(), 290000);
       const r = await fetch(workerUrl, {
         method: 'POST',
         headers: {

@@ -3905,7 +3905,7 @@ export default function CreateAd() {
     /* ── Publicação real: POST /api/campaigns → 202 { job_id } ── */
     try {
       const resp = await api.post('/api/campaigns', adPayload);
-      const { job_id, campaign_id_local } = resp.data;
+      const { job_id, campaign_id_local, deduped } = resp.data;
 
       /* Salva o anúncio localmente com status 'publishing' e o job_id
          para que Campaigns.jsx possa mostrar o badge "Em publicação". */
@@ -3914,6 +3914,11 @@ export default function CreateAd() {
       if (editingAd) {
         updateAd(editingAd.id, localPayload);
         publishedAd = { ...editingAd, ...localPayload };
+      } else if (deduped && campaign_id_local) {
+        /* Backend dedupou — campanha ja existe local com esse id, atualiza
+           em vez de duplicar. */
+        updateAd(campaign_id_local, localPayload);
+        publishedAd = { id: campaign_id_local, ...localPayload };
       } else {
         /* Se o backend retornou campaign_id_local, usa ele como id local */
         publishedAd = addAd(campaign_id_local ? { ...localPayload, id: campaign_id_local } : localPayload);
