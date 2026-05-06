@@ -226,7 +226,7 @@ export default function History() {
   const [backendHistory, setBackendHistory] = useState([]);
 
   useEffect(() => {
-    api.get('/history').then(r => setBackendHistory(r.data || [])).catch(() => {});
+    api.get('/api/history').then(r => setBackendHistory(r.data || [])).catch(() => {});
   }, []);
 
   /* Funde backend (activity_log) com local (localStorage). Backend usa shape

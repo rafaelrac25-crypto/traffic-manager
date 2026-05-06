@@ -1,5 +1,34 @@
 # CRITICAL_STATE — traffic-manager
 
+## ✅ CHECKPOINT — 2026-05-06 10:17 — INTERNAL_WORKER_SECRET ativa em prod + projeto Vercel correto
+
+### Descoberta crítica
+Existiam **2 projetos no Vercel** apontando pro mesmo repo GitHub `rafaelrac25-crypto/traffic-manager`:
+- **`criscosta`** (`prj_8TFqFkqfUTGQvFe4TG5tcazbHGuZ`, criado 2026-04-08) — serve `criscosta.vercel.app` em produção, tem todas as env vars
+- **`traffic-manager`** (`prj_FGKb5yXAPIAFtB0CAw3bpob3y96e`, criado 2026-04-23) — duplicata órfã, servia `traffic-manager-two.vercel.app`, env vars vazias
+
+Todo `git push` disparava deploy nos 2 projetos. A primeira tentativa de adicionar `INTERNAL_WORKER_SECRET` foi no projeto duplicado (errado) — por isso o teste sem header passou em "modo dev permissivo" (env var realmente não existia no `criscosta`).
+
+### Ações tomadas
+1. Rafa **deletou** o projeto duplicado `traffic-manager` no Vercel
+2. Adicionou `INTERNAL_WORKER_SECRET` no projeto correto `criscosta` (Production + Preview)
+3. Redeploy → deploy `dpl_g7B8nEpXM1S6bADcFVnT66h2RV5g` READY
+4. `.vercel/project.json` local atualizado: `prj_FGKb...` → `prj_8TFqFkqfUTGQvFe4TG5tcazbHGuZ` (`criscosta`)
+
+### Validação ao vivo (criscosta.vercel.app)
+- `POST /api/internal/publish-worker/abc-test` SEM header → **401 Não autorizado** ✅ (auth ativa)
+- `POST /api/internal/publish-worker/abc-test` COM header correto → 404 Job não encontrado ✅ (auth passou)
+- `GET /api/health/full` → DB ok, Groq ok, Webhook ok, Meta warn (token ainda válido 45 dias, lentidão habitual)
+
+### Valor do segredo (rotacionar quando precisar)
+`7dd5833c360d8df25cbb80baeafa1000b947163bcc25f09ba37d7766c9f8b754`
+
+### Próximos passos
+- Republicar Nano v2 com objetivo Tráfego + CTA Agendar (BOOK_NOW) — modal de progresso vai mostrar fase a fase, worker async já blindado
+- Antes: usar `/limpeza-meta` pra deletar zumbis #438/#439 do Meta Gerenciador
+
+---
+
 ## ✅ CHECKPOINT — 2026-05-06 09:36 — Tarefas 1+2+3 entregues (3 agentes em paralelo)
 
 **Sessão:** Rafa pediu Tarefas 1 (zumbis Meta), 2 (refactor publish async pra resolver 504) e 3 (UX feedback de publicação) — distribuídas em 3 subagentes Sonnet em paralelo.

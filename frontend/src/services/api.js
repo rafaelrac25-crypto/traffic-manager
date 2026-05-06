@@ -17,4 +17,4 @@ export default api;
  * Retorna: { job_id, campaign_id_local, status, current_step, total_steps,
  *            message, error, updated_at }
  */
-export const getPublishJob = (jobId) => api.get(`/campaigns/jobs/${jobId}`);
+export const getPublishJob = (jobId) => api.get(`/api/campaigns/jobs/${jobId}`);

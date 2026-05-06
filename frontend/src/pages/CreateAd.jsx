@@ -3898,7 +3898,7 @@ export default function CreateAd() {
 
     /* ── Publicação real: POST /api/campaigns → 202 { job_id } ── */
     try {
-      const resp = await api.post('/campaigns', adPayload);
+      const resp = await api.post('/api/campaigns', adPayload);
       const { job_id, campaign_id_local } = resp.data;
 
       /* Salva o anúncio localmente com status 'publishing' e o job_id
