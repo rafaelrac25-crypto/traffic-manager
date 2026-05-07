@@ -132,7 +132,6 @@ const NAV = [
   { to: '/investimento',  label: 'Investimento',  Icon: IconInvestment },
   { to: '/historico',     label: 'Histórico',     Icon: IconHistory },
   { to: '/limpeza-meta',  label: 'Limpeza Meta',  Icon: IconTrash },
-  { to: '/agencia',       label: 'Agência 2D',    Icon: IconGameboy },
 ];
 
 export default function Sidebar({ open = false, isMobile = false }) {
