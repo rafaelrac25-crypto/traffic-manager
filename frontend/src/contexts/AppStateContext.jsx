@@ -815,8 +815,14 @@ export function AppStateProvider({ children }) {
     /* Persiste no backend. Se o backend falhar (null) ou rejeitar, REMOVE o ad
        local — eliminamos ads "zumbi" que aparecem no painel mas não existem em
        lugar nenhum (banco ou Meta). Trade-off aceito: offline resiliente vira
-       offline-com-erro visível. */
-    adsApi.createAd(newAd).then((serverAd) => {
+       offline-com-erro visível.
+
+       Idempotency-Key: gerada por tentativa de submit. Backend usa pra
+       deduplicar POSTs duplicados (axios retry / browser / Vercel proxy). */
+    const idempotencyKey = (typeof crypto !== 'undefined' && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : `${newAd.id}-${Math.random().toString(36).slice(2, 10)}`;
+    adsApi.createAd(newAd, idempotencyKey).then((serverAd) => {
       if (!serverAd || serverAd.__failed) {
         setAds(prev => prev.filter(a => a.id !== newAd.id));
         /* Extrai motivo real garantindo string (nunca [object Object]).

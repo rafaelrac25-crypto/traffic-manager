@@ -45,9 +45,10 @@ export async function fetchAds() {
   }
 }
 
-export async function createAd(ad) {
+export async function createAd(ad, idempotencyKey) {
   try {
-    const { data } = await api.post(BASE, adToPayload(ad));
+    const headers = idempotencyKey ? { 'X-Idempotency-Key': idempotencyKey } : {};
+    const { data } = await api.post(BASE, adToPayload(ad), { headers });
     return data;
   } catch (err) {
     const status = err?.response?.status;

@@ -2,6 +2,32 @@ const router = require('express').Router();
 const db = require('../db');
 const { isMessagesViaWaLink } = require('../services/sync');
 
+/* Idempotency: cache em memória por instância serverless.
+   Map<key, { result, expiresAt }> com TTL de 60s.
+   Cobre o caso comum (POST duplicado pelo mesmo browser na mesma instância).
+   Dedup por NOME na tabela campaigns continua como segunda camada quando
+   instâncias diferentes recebem os 2 POSTs (cold start, scaling). */
+const IDEMPOTENCY_CACHE = new Map();
+const IDEMPOTENCY_TTL_MS = 60_000;
+function idempotencyGet(key) {
+  if (!key) return null;
+  const entry = IDEMPOTENCY_CACHE.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) { IDEMPOTENCY_CACHE.delete(key); return null; }
+  return entry.result;
+}
+function idempotencySet(key, result) {
+  if (!key) return;
+  IDEMPOTENCY_CACHE.set(key, { result, expiresAt: Date.now() + IDEMPOTENCY_TTL_MS });
+  /* Limpeza barata: a cada set, drop entries vencidas */
+  if (IDEMPOTENCY_CACHE.size > 200) {
+    const now = Date.now();
+    for (const [k, v] of IDEMPOTENCY_CACHE) {
+      if (now > v.expiresAt) IDEMPOTENCY_CACHE.delete(k);
+    }
+  }
+}
+
 async function log(action, entity, entity_id, description, meta) {
   try {
     await db.query(
@@ -101,6 +127,17 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
+  /* Idempotency-Key: cliente envia UUID por tentativa. Se key bate com
+     uma resposta cacheada (TTL 60s), retorna a MESMA resposta sem reexecutar. */
+  const idemKey = (req.headers['x-idempotency-key'] || '').toString().trim() || null;
+  if (idemKey) {
+    const cached = idempotencyGet(idemKey);
+    if (cached) {
+      console.log('[campaigns.POST] idempotency hit:', idemKey);
+      return res.status(cached.status).json({ ...cached.body, idempotent: true });
+    }
+  }
+
   /* Aceita tanto snake_case (legado) quanto camelCase (frontend atual);
      `payload` vem aninhado OU como o próprio body (frontend mais novo
      manda meta no top-level em vez de wrappar em payload). */
@@ -156,12 +193,14 @@ router.post('/', async (req, res) => {
       if (dupResult.rows.length > 0) {
         const dup = dupResult.rows[0];
         console.log('[campaigns.POST] dedup: retornando job existente', dup.job_id, 'pra campanha', dup.campaign_id_local);
-        return res.status(202).json({
+        const dedupBody = {
           job_id: dup.job_id,
           campaign_id_local: dup.campaign_id_local,
           status: dup.job_status || 'queued',
           deduped: true,
-        });
+        };
+        idempotencySet(idemKey, { status: 202, body: dedupBody });
+        return res.status(202).json(dedupBody);
       }
     } catch (e) {
       /* DB erro / SQLite dev sem INTERVAL syntax: continua sem dedup. */
@@ -234,11 +273,13 @@ router.post('/', async (req, res) => {
     await log('create', 'campaign', campaignIdLocal, `Campanha "${name}" enfileirada para publicação no Meta (job ${jobId})`, { platform, budget, mode, job_id: jobId });
 
     /* 202 Accepted — cliente usa job_id pra pollar GET /api/campaigns/jobs/:job_id */
-    return res.status(202).json({
+    const acceptedBody = {
       job_id: jobId,
       campaign_id_local: campaignIdLocal,
       status: 'queued',
-    });
+    };
+    idempotencySet(idemKey, { status: 202, body: acceptedBody });
+    return res.status(202).json(acceptedBody);
   }
 
   /* Fluxo síncrono original — draft, scheduled, ou plataformas não-Meta */
@@ -262,6 +303,7 @@ router.post('/', async (req, res) => {
       ? `Campanha "${name}" agendada para ${sched}`
       : `Campanha "${name}" criada na plataforma ${platform}`;
     await log('create', 'campaign', camp?.id, desc, { platform, budget, mode });
+    idempotencySet(idemKey, { status: 201, body: camp });
     res.status(201).json(camp);
   } catch (err) {
     console.error('[campaigns.POST] INSERT falhou:', err);
