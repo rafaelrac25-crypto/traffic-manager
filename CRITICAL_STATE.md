@@ -2026,3 +2026,35 @@ extra (provavelmente um `\n` colado junto quando foi setada).
   { "path": "/api/cron/sync-meta", "schedule": "0 9 * * *" }
 ]
 ```
+
+## ✅ CHECKPOINT — 2026-05-07 — POLIMENTO EXTENSO 9 FASES CONCLUÍDO
+
+Sessão de varredura ultrathink (3 agentes Explore + 1 Plan agent) → 9 fases sequenciais commitadas e deployadas.
+
+**Commits desta sessão (em ordem):**
+1. `c4d81d5` — fix(status): util único + corrige toggle invertido
+2. (Fase 2) feat(ui): botão Apagar publishing/failed + modal estilizado
+3. (Fase 3) fix(api): idempotency-key elimina duplo POST /api/campaigns
+4. (Fase 4) feat(ux): ZombieCleanup mostra conclusão + Voltar para Campanhas
+5. (Fase 5) feat(cron): vercel.json com /api/cron/sync-meta às 09:00 — REVERTIDO depois (CRON_SECRET com whitespace)
+6. (Fase 6) feat(upload): reuso de vídeo por hash sha256 (fim do re-upload de 41MB)
+7. (Fase 7) fix(security): auth /api/admin/* via X-Admin-Key + erros visíveis no console
+8. (Fase 8) refactor: remove Agência 2D (Game Boy showcase)
+9. `de8c65c` — fix(logging): visibiliza erros de sync Meta no AppStateContext
+
+**Pendência aberta:** corrigir whitespace no CRON_SECRET (Vercel UI) pra restaurar cron de sync diário.
+
+**Itens deferidos conscientemente (P2 — não bloqueia):**
+- Relatorios.jsx alert() → toast (refator maior)
+- migrate.js agency_events tabela órfã (DROP destrutivo)
+- Audiences/CreativeLibrary sem confirm em delete
+
+**Health prod:** 4 verdes (DB, Meta token 44d, Groq, Webhook). Campanha #464 segue ACTIVE.
+
+## ✅ CRON REATIVADO — 2026-05-07 14:10
+
+Deploy `dpl_Ce3oodnU89VvH7xR7jRACsJxgXk5` (commit `be73f37`) = **READY**.
+Rafa corrigiu whitespace do CRON_SECRET no Vercel. Bloco `"crons"` no
+vercel.json restaurado. Sync Meta automático às **09:00 UTC** (≈06:00 GMT-3).
+
+Health prod: 4 verdes confirmados. Sessão de polimento (9 fases) 100% concluída.
