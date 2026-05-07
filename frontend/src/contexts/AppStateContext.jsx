@@ -103,7 +103,7 @@ export function AppStateProvider({ children }) {
           } catch (_) { /* fallback CC */ }
         }
       })
-      .catch(() => {});
+      .catch(err => console.warn('[meta-account] fetch falhou (mantendo avatar local):', err?.message));
     return () => { cancelled = true; };
   }, []);
   const [metaBilling,   setMetaBilling]   = useState(null);
@@ -996,7 +996,9 @@ export function AppStateProvider({ children }) {
          Sem isso, a UI mostra "Pausado no Meta" mesmo após dar play até o
          próximo tick (até 90s grudado em estado obsoleto). 2,5s = tempo de
          o Meta processar a mudança e devolver o novo effective_status. */
-      setTimeout(() => { runMetaSync().catch(() => {}); }, 2500);
+      setTimeout(() => {
+        runMetaSync().catch(err => console.warn('[toggleAdStatus] sync Meta pós-toggle falhou:', err?.message));
+      }, 2500);
     } catch (err) {
       console.warn('[toggleAdStatus] backend rejeitou, revertendo:', err?.message);
       setAds(prev => prev.map(a => a.id === id ? { ...a, status: current.status } : a));
