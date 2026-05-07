@@ -1985,7 +1985,12 @@ export default function Campaigns() {
   /* Força refresh do effective_status (status real Meta) ao abrir a página.
      Sem isso, tag "Pausado no Meta" pode ficar grudada em estado obsoleto até
      o próximo tick de 90s do polling. */
-  useEffect(() => { runMetaSync().catch(() => {}); }, [runMetaSync]);
+  useEffect(() => {
+    /* Sync inicial silencioso — se falhar, loga pra debug mas não bloqueia
+       a tela (próximo tick de polling 90s tenta de novo). Banner visível
+       seria over-engineering pra erro background. */
+    runMetaSync().catch((err) => console.warn('[Campaigns] sync inicial falhou:', err?.message || err));
+  }, [runMetaSync]);
 
   const allAds = userAds;
   const TOTAL = allAds.length;

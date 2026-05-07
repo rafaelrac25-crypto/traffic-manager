@@ -5,6 +5,13 @@ import api from '../services/api';
 import { playBell } from '../utils/sounds';
 import { statusLabel as statusLabelOf } from '../utils/statusLabels';
 
+/* Header X-Admin-Key — lido em build-time via VITE_ADMIN_KEY.
+   Backend valida contra ADMIN_SECRET. Sem a env, header vazio = libera (dev). */
+function adminHeaders() {
+  const key = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_ADMIN_KEY) || '';
+  return key ? { 'X-Admin-Key': key } : {};
+}
+
 /* Formata data ISO do Meta em pt-BR (ex: "03 de maio de 2025, 14:32") */
 function formatDateBR(iso) {
   if (!iso) return '—';
@@ -179,7 +186,7 @@ export default function ZombieCleanup() {
     setLoading(true);
     setError(null);
     try {
-      const { data } = await api.get('/api/admin/zombie-campaigns');
+      const { data } = await api.get('/api/admin/zombie-campaigns', { headers: adminHeaders() });
       setZombies(data.zombies ?? []);
     } catch (e) {
       const msg = e?.response?.data?.error || 'Erro ao buscar campanhas zumbi';
@@ -203,7 +210,7 @@ export default function ZombieCleanup() {
     setConfirmModal(null);
     setDeletingId(campaign.meta_id);
     try {
-      await api.delete(`/api/admin/zombie-campaigns/${campaign.meta_id}`);
+      await api.delete(`/api/admin/zombie-campaigns/${campaign.meta_id}`, { headers: adminHeaders() });
       setZombies(prev => (prev ?? []).filter(z => z.meta_id !== campaign.meta_id));
       setDeletedCount(c => c + 1);
       addToast(`Campanha "${campaign.name}" deletada do Meta.`, true);
