@@ -89,11 +89,37 @@ router.post('/media', upload.single('file'), async (req, res) => {
 router.post('/video/init', async (req, res) => {
   try {
     const fileSize = Number(req.body?.file_size);
+    const sha256 = (req.body?.sha256 || '').toString().trim().toLowerCase() || null;
     if (!fileSize || fileSize <= 0) {
       return res.status(400).json({ error: 'file_size obrigatório (bytes)' });
     }
     const creds = await getMetaCreds();
     if (!creds) return res.status(400).json({ error: 'Meta não conectado' });
+
+    /* REUSO POR HASH: se o frontend mandou sha256 e já existe um vídeo Meta
+       com esse hash, retorna o video_id existente sem refazer o upload.
+       Tabela media tem UNIQUE(platform, sha256). Economiza ~2min e 41MB
+       de tráfego em re-uploads do mesmo arquivo. */
+    if (sha256) {
+      try {
+        const r = await db.query(
+          `SELECT video_id FROM media
+           WHERE platform = 'meta' AND kind = 'video' AND sha256 = ?
+             AND video_id IS NOT NULL
+           ORDER BY created_at DESC LIMIT 1`,
+          [sha256]
+        );
+        if (r.rows.length > 0 && r.rows[0].video_id) {
+          console.log('[upload/video/init] reusando vídeo hash=', sha256.slice(0, 12), 'video_id=', r.rows[0].video_id);
+          return res.json({
+            reused: true,
+            video_id: r.rows[0].video_id,
+          });
+        }
+      } catch (e) {
+        console.warn('[upload/video/init] lookup por hash falhou (continuando com upload):', e.message);
+      }
+    }
 
     /* Refresh token se faltam <15 dias pra expirar (defensivo — antes de
        expor pro browser, garante que tá fresh). */
@@ -189,6 +215,34 @@ router.post('/video/finish', async (req, res) => {
     console.error('[upload/video/finish]', err);
     const pt = err?.meta?.pt || err.message;
     res.status(502).json({ error: pt, meta: err?.meta || null });
+  }
+});
+
+/* POST /api/upload/video/record — registra metadata pós-upload pra reuso futuro.
+   Frontend chama isso DEPOIS do finish direto pro Meta (Plano A bypassa Vercel).
+   Próximo upload do mesmo arquivo (mesmo sha256) reusa o video_id sem refazer
+   transfer + finish. UNIQUE(platform, sha256) protege duplicidade. */
+router.post('/video/record', async (req, res) => {
+  try {
+    const sha256 = (req.body?.sha256 || '').toString().trim().toLowerCase() || null;
+    const videoId = (req.body?.video_id || '').toString().trim() || null;
+    const byteSize = Number(req.body?.byte_size) || null;
+    if (!sha256 || !videoId) {
+      return res.status(400).json({ error: 'sha256 e video_id obrigatórios' });
+    }
+    /* INSERT idempotente — UPSERT via ON CONFLICT (platform, sha256) DO NOTHING */
+    await db.query(
+      `INSERT INTO media (platform, kind, video_id, sha256, byte_size)
+       VALUES ('meta', 'video', ?, ?, ?)
+       ON CONFLICT (platform, sha256) DO UPDATE
+       SET video_id = EXCLUDED.video_id`,
+      [videoId, sha256, byteSize]
+    );
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('[upload/video/record]', err);
+    /* Erro aqui não bloqueia upload — só perde feature de reuso futuro */
+    res.status(200).json({ ok: false, warning: err.message });
   }
 });
 

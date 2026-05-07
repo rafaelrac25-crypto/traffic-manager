@@ -43,6 +43,24 @@ async function postChunk(url, formData) {
   return data;
 }
 
+/* SHA-256 do arquivo via Web Crypto API (sem libs externas).
+   Para arquivos grandes (40+ MB), lê em chunks pra não estourar memória. */
+async function sha256OfFile(file) {
+  if (typeof crypto === 'undefined' || !crypto.subtle) return null;
+  try {
+    const buf = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buf);
+    const bytes = new Uint8Array(hashBuffer);
+    let hex = '';
+    for (let i = 0; i < bytes.length; i++) {
+      hex += bytes[i].toString(16).padStart(2, '0');
+    }
+    return hex;
+  } catch {
+    return null;  /* sem hash = fluxo normal sem reuso */
+  }
+}
+
 /**
  * @param {File} file - vídeo (qualquer tamanho)
  * @param {Object} opts
@@ -62,10 +80,23 @@ export async function uploadVideoChunked(file, { onProgress } = {}) {
      Backend só faz `init` (cria sessão Meta + devolve token).
      Todo o transfer + finish é feito pelo navegador direto pra graph.facebook.com,
      usando chunks de 25MB (limite Meta) em vez de 3.5MB (limite Vercel).
-     Token Meta vive em memória JS até upload terminar — depois é descartado. */
+     Token Meta vive em memória JS até upload terminar — depois é descartado.
 
-  emit(0, 'Iniciando envio…');
-  const initData = await postJson('/api/upload/video/init', { file_size: fileSize });
+     REUSO POR HASH: calcula sha256 do arquivo e manda no init. Backend faz
+     lookup em media WHERE sha256=? — se hit, retorna video_id existente e
+     pulamos todo o upload. Economiza ~2min em re-uploads do mesmo vídeo. */
+
+  emit(0, 'Calculando hash do arquivo…');
+  const sha256 = await sha256OfFile(file);
+
+  emit(2, 'Verificando se já enviou esse vídeo…');
+  const initData = await postJson('/api/upload/video/init', { file_size: fileSize, sha256 });
+
+  /* Reused = vídeo idêntico já está no Meta, video_id reaproveitado */
+  if (initData?.reused && initData?.video_id) {
+    emit(100, 'Vídeo reaproveitado (sem upload)');
+    return { video_id: initData.video_id, reused: true };
+  }
   const {
     access_token,
     account_id,
@@ -137,6 +168,20 @@ export async function uploadVideoChunked(file, { onProgress } = {}) {
   if (title) finishForm.append('title', title);
   finishForm.append('access_token', access_token);
   await metaPost(finishForm, 60000);
+
+  /* Registra metadata pro reuso futuro do mesmo arquivo (UPSERT idempotente).
+     Erro aqui não falha o upload — só perde feature de reuso. */
+  if (sha256) {
+    try {
+      await postJson('/api/upload/video/record', {
+        sha256,
+        video_id,
+        byte_size: fileSize,
+      });
+    } catch (e) {
+      console.warn('[uploader] /video/record falhou (continuando):', e?.message);
+    }
+  }
 
   emit(100, 'Pronto');
   return { video_id };
