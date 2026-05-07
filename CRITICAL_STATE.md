@@ -1976,3 +1976,24 @@ Pendente:
 - Fase 3 (futuro): se Rafa pedir, evoluir pra Spline 3D ou aumentar
   detalhes (chuva na janela, dia/noite por hora, sub-agentes correndo
   entre mesas)
+
+---
+
+## 🔧 CHECKPOINT — 2026-05-06 21:36 — Visão Meta vazia (#464) corrigida + fix permanente
+
+### Sintoma
+Rafa não via conjunto de anúncio nem anúncio dentro da campanha #464 — nem em "Anúncios" nem na "Visão Meta".
+
+### Diagnóstico (via curl ao vivo)
+- `/api/campaigns/464/diagnose` → Meta retorna 1 adset ACTIVE + 1 ad ACTIVE corretamente
+- `/api/campaigns/464/hierarchy` → `adsets:[]` com `pending_sync:true, message:"Aguardando primeiro sync"`
+- Causa: `/hierarchy` lê das tabelas locais `ad_sets`/`ads`, que nunca foram populadas no publish (publish-worker só fazia UPDATE em `campaigns`, sem inserir adsets/ads)
+
+### Resolução
+1. **Imediato pra #464:** rodei `POST /api/campaigns/sync/meta` → /hierarchy agora retorna adset+ad. Visão Meta funcional.
+2. **Permanente (commit `11e8d35`):** publish-worker dispara `syncPlatform('meta')` automaticamente após sucesso do Meta, antes de marcar job completed. Best-effort com timeout 25s — falha não bloqueia job (Meta já criou tudo). Próximas publicações vão aparecer na Visão Meta sem precisar clicar em sync.
+
+### Estado pós-fix
+- Campaign #464 visível em Visão Meta (`/campanhas-v2`) com adset `120246144593930627` e ad `120246144594260627`
+- Sem bugs abertos
+- Saldo: ~R$74,23 / runway 2,5 dias
