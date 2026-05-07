@@ -15,6 +15,7 @@ import { getService } from '../data/services';
 import { topPerformers } from '../data/districtInsights';
 import { hasEnoughData as serviceInsightsEnoughData } from '../data/serviceInsights';
 import { useCampaignsHierarchy } from '../hooks/useCampaignsHierarchy';
+import { statusOf } from '../utils/statusLabels';
 
 
 /* ── Configurações visuais ── */
@@ -24,31 +25,15 @@ const PLAT = {
   google:    { label: 'Google Ads', bg: 'rgba(251,191,36,.16)', color: '#FBBF24' },
 };
 
-const STATUS = {
-  active:     { label: 'Ativo',          dot: 'var(--c-success)', bg: 'rgba(46,187,122,.18)',  color: 'var(--c-success)' },
-  paused:     { label: 'Pausado',        dot: 'var(--c-warning)', bg: 'rgba(245,166,35,.18)',  color: 'var(--c-warning)' },
-  review:     { label: 'Em revisão',     dot: '#8B5CF6',          bg: 'rgba(139,92,246,.16)',  color: '#A78BFA' },
-  draft:      { label: 'Rascunho',       dot: '#94A3B8',          bg: 'rgba(148,163,184,.16)', color: 'var(--c-text-3)' },
-  ended:      { label: 'Inativo',        dot: '#94A3B8',          bg: 'var(--c-surface)',      color: 'var(--c-text-4)' },
-  publishing: { label: 'Em publicação',  dot: '#FBBF24',          bg: 'rgba(251,191,36,.18)',  color: '#FBBF24' },
-};
-
-/* Estado efetivo vindo do Meta — qual o REAL status de entrega.
-   O Meta retorna effective_status via Graph API (sync-meta-status a cada 90s). */
-const DELIVERY_STATUS = {
-  ACTIVE:               { label: '🟢 Entregando',      color: '#34D399', bg: 'rgba(52,211,153,.16)', help: 'Ad está rodando e gastando orçamento no Meta.' },
-  PAUSED:               { label: '⏸️ Pausado no Meta',  color: '#FBBF24', bg: 'rgba(251,191,36,.16)', help: 'Pausado — não está entregando.' },
-  PENDING_REVIEW:       { label: '🟡 Aguardando Meta',  color: '#FBBF24', bg: 'rgba(251,191,36,.16)', help: 'Meta ainda está analisando o ad. Não entrega até aprovar (pode levar até 24h).' },
-  PREAPPROVED:          { label: '🟡 Quase liberado',   color: '#FBBF24', bg: 'rgba(251,191,36,.16)', help: 'Aprovação preliminar do Meta — entrega em breve.' },
-  WITH_ISSUES:          { label: '🔴 Com problema',     color: '#F87171', bg: 'rgba(248,113,113,.16)', help: 'Meta detectou algo que impede a entrega. Veja detalhes no Ads Manager.' },
-  DISAPPROVED:          { label: '🔴 Reprovado',        color: '#F87171', bg: 'rgba(248,113,113,.16)', help: 'Meta rejeitou o ad.' },
-  CAMPAIGN_PAUSED:      { label: '⏸️ Campanha pausada', color: '#FBBF24', bg: 'rgba(251,191,36,.16)', help: 'A campanha inteira foi pausada.' },
-  ADSET_PAUSED:         { label: '⏸️ Conjunto pausado', color: '#FBBF24', bg: 'rgba(251,191,36,.16)', help: 'O ad set (anel) específico está pausado.' },
-  PENDING_BILLING_INFO: { label: '💳 Aguardando pagto', color: '#FBBF24', bg: 'rgba(251,191,36,.16)', help: 'Problema no método de pagamento — resolva no Ads Manager.' },
-  IN_PROCESS:           { label: '⏳ Processando',       color: 'var(--c-text-3)', bg: 'var(--c-surface)', help: 'Meta está processando o ad.' },
-  ARCHIVED:             { label: '📦 Arquivado',        color: 'var(--c-text-4)', bg: 'var(--c-surface)', help: 'Campanha arquivada no Meta.' },
-  DELETED:              { label: '🗑️ Deletado no Meta', color: 'var(--c-text-4)', bg: 'var(--c-surface)', help: 'Campanha foi deletada no Meta.' },
-};
+/* STATUS e DELIVERY_STATUS unificados em utils/statusLabels.js (statusOf).
+   Proxies abaixo preservam compatibilidade com call sites existentes:
+   - STATUS[key] devolve sempre objeto (statusOf trata fallback)
+   - DELIVERY_STATUS[key] devolve null se key não tiver help (= não é status Meta) */
+const STATUS = new Proxy({}, { get: (_t, k) => statusOf(k) });
+const DELIVERY_STATUS = new Proxy({}, { get: (_t, k) => {
+  const s = statusOf(k);
+  return s.help ? { ...s, label: `${s.icon} ${s.label}` } : null;
+}});
 
 /* ── Ícones ── */
 const PauseIcon = () => (

@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import api from '../services/api';
 import { playBell } from '../utils/sounds';
+import { statusLabel as statusLabelOf } from '../utils/statusLabels';
 
 /* Formata data ISO do Meta em pt-BR (ex: "03 de maio de 2025, 14:32") */
 function formatDateBR(iso) {
@@ -16,13 +17,7 @@ function formatDateBR(iso) {
   }
 }
 
-/* Tradução de status Meta → PT-BR */
-const STATUS_LABEL = {
-  ACTIVE: 'Ativa',
-  PAUSED: 'Pausada',
-  DELETED: 'Deletada',
-  ARCHIVED: 'Arquivada',
-};
+/* Tradução vem do util único — statusLabels.js */
 
 /* Tradução de objetivos Meta mais comuns */
 const OBJECTIVE_LABEL = {
@@ -393,7 +388,7 @@ export default function ZombieCleanup() {
 
               {/* Metadados */}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '4px' }}>
-                <MetaTag label="Status" value={STATUS_LABEL[z.status] ?? z.status} />
+                <MetaTag label="Status" value={statusLabelOf(z.status)} />
                 <MetaTag label="Objetivo" value={OBJECTIVE_LABEL[z.objective] ?? z.objective} />
                 <MetaTag label="Criada em" value={formatDateBR(z.created_time)} />
               </div>

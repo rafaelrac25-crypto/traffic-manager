@@ -10,18 +10,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { getPublishJob } from '../services/api';
 import { playBell, playBubble } from '../utils/sounds';
-
-/* Mapeamento status → rótulo PT-BR */
-const STATUS_LABELS = {
-  queued:            'Aguardando worker...',
-  uploading_media:   'Subindo mídia... ⬆️',
-  creating_campaign: 'Criando campanha... 🏗️',
-  creating_adsets:   'Criando conjuntos... 📦',
-  creating_creatives:'Criando criativos... 🖼️',
-  creating_ads:      'Criando anúncios... 📢',
-  completed:         'Publicado! ✅',
-  failed:            'Algo deu errado ❌',
-};
+import { statusOf } from '../utils/statusLabels';
 
 /* Fases ativas: modal não pode ser fechado nessas */
 const ACTIVE_PHASES = new Set([
@@ -113,7 +102,7 @@ export default function PublishingModal({ jobId, onComplete, onFailure, onClose 
     return Math.min(100, Math.max(0, Math.round((current_step / total_steps) * 100)));
   })();
 
-  const statusLabel = job ? (STATUS_LABELS[job.status] || job.status) : 'Iniciando...';
+  const statusLabel = job ? statusOf(job.status).label : 'Iniciando…';
   const isActive    = ACTIVE_PHASES.has(job?.status);
   const isCompleted = job?.status === 'completed';
   const isFailed    = job?.status === 'failed';

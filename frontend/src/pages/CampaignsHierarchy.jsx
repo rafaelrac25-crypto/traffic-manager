@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useAppState } from '../contexts/AppStateContext';
 import Icon from '../components/Icon';
+import { statusOf as statusOfShared } from '../utils/statusLabels';
 
 /* ============================================================
    Visão Meta — Campanhas em 3 níveis (Campanha > Conjunto > Anúncio)
@@ -68,18 +69,11 @@ function MetaLinkButton({ campaignId, adsetId, adId, label = 'Abrir no Meta', si
     </a>
   );
 }
+/* statusLabel local — adapter pro util único.
+   Mantém o shape { txt, color } esperado pelos call sites desta página. */
 function statusLabel(s) {
-  const map = {
-    ACTIVE: { txt: 'Ativo', color: 'var(--c-success)' },
-    PAUSED: { txt: 'Pausado', color: 'var(--c-warning)' },
-    PENDING_REVIEW: { txt: 'Em análise', color: 'var(--c-warning)' },
-    DISAPPROVED: { txt: 'Reprovado', color: 'var(--c-attention)' },
-    WITH_ISSUES: { txt: 'Com avisos', color: 'var(--c-warning)' },
-    CAMPAIGN_PAUSED: { txt: 'Campanha pausada', color: 'var(--c-warning)' },
-    ADSET_PAUSED: { txt: 'Conjunto pausado', color: 'var(--c-warning)' },
-    AD_PAUSED: { txt: 'Anúncio pausado', color: 'var(--c-warning)' },
-  };
-  return map[s] || { txt: s || '—', color: '#8A8A8A' };
+  const info = statusOfShared(s);
+  return { txt: info.label, color: info.color };
 }
 
 function Banner({ kind = 'info', title, children }) {
@@ -768,7 +762,7 @@ function PlayPauseButton({ status, onToggle, disabled, size = 'sm' }) {
         borderRadius: '50%',
         border: 'none',
         background: 'var(--c-surface)',
-        color: isActive ? 'var(--c-warning)' : 'var(--c-success)',
+        color: isActive ? 'var(--c-success)' : 'var(--c-warning)',
         cursor: disabled ? 'not-allowed' : 'pointer',
         fontSize: FS,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -776,8 +770,8 @@ function PlayPauseButton({ status, onToggle, disabled, size = 'sm' }) {
         opacity: disabled ? 0.6 : 1,
         transition: 'transform .12s, box-shadow .12s, background .15s',
         boxShadow: isActive
-          ? 'inset 0 0 0 1.5px var(--c-warning)'
-          : 'inset 0 0 0 1.5px var(--c-success)',
+          ? 'inset 0 0 0 1.5px var(--c-success)'
+          : 'inset 0 0 0 1.5px var(--c-warning)',
       }}
       onMouseEnter={e => { if (!disabled) e.currentTarget.style.transform = 'scale(1.08)'; }}
       onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
