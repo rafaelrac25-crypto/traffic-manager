@@ -1574,6 +1574,7 @@ export default function CampaignsHierarchy() {
 
   /* Modais */
   const [budgetModal, setBudgetModal]       = useState({ open: false, level: null, target: null, adsetId: null });
+  const [deleteAdModal, setDeleteAdModal]   = useState({ open: false, ad: null });
   const [duplicateModal, setDuplicateModal] = useState({ open: false, adset: null });
   const [newAdModal, setNewAdModal]         = useState({ open: false, adset: null });
   const [abTestModal, setABTestModal]       = useState(false);
@@ -1660,9 +1661,12 @@ export default function CampaignsHierarchy() {
       markBusy(adset.id, false);
     }
   }
-  async function handleDeleteAd(ad) {
-    const ok = window.confirm(`Excluir o anúncio "${ad.name}"?\n\nVai apagar do Meta sem volta.`);
-    if (!ok) return;
+  /* Pede confirmação via modal (não window.confirm) — fluxo destrutivo merece UI cuidadosa */
+  function handleDeleteAd(ad) {
+    setDeleteAdModal({ open: true, ad });
+  }
+  async function performDeleteAd(ad) {
+    setDeleteAdModal({ open: false, ad: null });
     markBusy(ad.id, true);
     try {
       const r = await fetch(`/api/campaigns/ads/${ad.id}`, { method: 'DELETE' });
@@ -2074,6 +2078,54 @@ export default function CampaignsHierarchy() {
       )}
 
       {/* Modais */}
+      {deleteAdModal.open && deleteAdModal.ad && (
+        <div
+          onClick={() => setDeleteAdModal({ open: false, ad: null })}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 220, padding: '20px',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="ccb-card"
+            style={{
+              maxWidth: '440px', width: '100%',
+              borderRadius: '16px', padding: '24px',
+              border: '1px solid rgba(248,113,113,.4)',
+            }}
+          >
+            <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '8px' }}>
+              Excluir anúncio?
+            </div>
+            <div style={{ fontSize: '13px', color: 'var(--c-text-3)', lineHeight: 1.55, marginBottom: '20px', fontWeight: 400 }}>
+              Vai apagar <strong style={{ color: 'var(--c-text-1)' }}>"{deleteAdModal.ad.name}"</strong> do Meta.
+              <br />Essa ação não tem volta.
+            </div>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setDeleteAdModal({ open: false, ad: null })}
+                style={{
+                  padding: '9px 16px', fontSize: '13px', fontWeight: 600,
+                  background: 'transparent', color: 'var(--c-text-2)',
+                  border: '1px solid var(--c-border)', borderRadius: '10px',
+                  cursor: 'pointer',
+                }}
+              >Cancelar</button>
+              <button
+                onClick={() => performDeleteAd(deleteAdModal.ad)}
+                style={{
+                  padding: '9px 16px', fontSize: '13px', fontWeight: 700,
+                  background: '#F87171', color: '#fff',
+                  border: 'none', borderRadius: '10px',
+                  cursor: 'pointer',
+                }}
+              >Excluir</button>
+            </div>
+          </div>
+        </div>
+      )}
       <BudgetEditModal
         open={budgetModal.open}
         onClose={() => setBudgetModal({ open: false, level: null, target: null, adsetId: null })}

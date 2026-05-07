@@ -1823,6 +1823,27 @@ function CampaignGroupCard({ userAd, hierState, onPreview, onToggle, onEdit, onD
               border: '1px solid rgba(96,165,250,.4)', borderRadius: '8px',
             }}
           >Abrir no Meta</a>
+
+          {/* Botão Apagar — sempre disponível pra usuário tirar campanha presa
+             em publishing/failed da listagem (resolve pendência do CRITICAL_STATE) */}
+          {onRemove && (userAd.status === 'publishing' || userAd.status === 'failed' || jobFailed) && (
+            <button
+              title="Apagar esta campanha"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (confirm(`Apagar "${userAd.name || 'esta campanha'}"?\n\nIsso remove do painel e tenta apagar do Meta.\nNão tem volta.`)) {
+                  onRemove(userAd);
+                }
+              }}
+              style={{
+                fontSize: '11px', fontWeight: 700, color: '#F87171',
+                background: 'transparent',
+                padding: '6px 10px',
+                border: '1px solid rgba(248,113,113,.4)', borderRadius: '8px',
+                cursor: 'pointer',
+              }}
+            >Apagar</button>
+          )}
         </div>
       </div>
 
