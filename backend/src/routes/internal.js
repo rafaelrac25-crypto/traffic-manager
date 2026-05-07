@@ -205,6 +205,24 @@ router.post('/publish-worker/:job_id', async (req, res) => {
       /* Não falha o job — Meta criou tudo; é problema de DB local */
     }
 
+    /* Popula ad_sets/ads locais para a Visão Meta funcionar imediatamente.
+       Sem isso, GET /:id/hierarchy retorna pending_sync:true até o usuário
+       clicar manualmente no botão de sync. Best-effort: erro aqui não falha
+       o job — campanha já está publicada. */
+    try {
+      const { syncPlatform } = require('../services/sync');
+      await Promise.race([
+        syncPlatform('meta'),
+        new Promise((_, reject) => setTimeout(
+          () => reject(new Error('post-publish sync timeout 25s')),
+          25000
+        )),
+      ]);
+      console.log('[publish-worker] post-publish sync OK para job', job_id);
+    } catch (syncErr) {
+      console.warn('[publish-worker] post-publish sync falhou (não-fatal):', syncErr.message);
+    }
+
     await updateJob(job_id, {
       status:        'completed',
       current_step:  1,
