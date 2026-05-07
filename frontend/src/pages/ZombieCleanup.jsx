@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import api from '../services/api';
 import { playBell } from '../utils/sounds';
@@ -150,6 +151,8 @@ function ConfirmModal({ campaign, onConfirm, onCancel, deleting }) {
 export default function ZombieCleanup() {
   const { isDark } = useTheme();
 
+  const navigate = useNavigate();
+
   const [zombies, setZombies]           = useState(null);   // null = não carregado ainda
   const [loading, setLoading]           = useState(false);
   const [error, setError]               = useState(null);
@@ -157,6 +160,10 @@ export default function ZombieCleanup() {
   // { campaign, resolve, reject } ou null
   const [confirmModal, setConfirmModal] = useState(null);
   const [deletingId, setDeletingId]     = useState(null);
+
+  // Quantos zumbis já foram deletados nessa sessão — pra mostrar mensagem
+  // "Limpeza concluída" diferenciada de "nunca havia zumbis aqui"
+  const [deletedCount, setDeletedCount] = useState(0);
 
   // Toast: { id, text, ok }
   const [toasts, setToasts]             = useState([]);
@@ -198,6 +205,7 @@ export default function ZombieCleanup() {
     try {
       await api.delete(`/api/admin/zombie-campaigns/${campaign.meta_id}`);
       setZombies(prev => (prev ?? []).filter(z => z.meta_id !== campaign.meta_id));
+      setDeletedCount(c => c + 1);
       addToast(`Campanha "${campaign.name}" deletada do Meta.`, true);
       resolve();
     } catch (e) {
@@ -310,21 +318,47 @@ export default function ZombieCleanup() {
         </div>
       )}
 
-      {/* ── Empty state ── */}
+      {/* ── Empty state — diferencia "limpeza concluída" de "nunca havia zumbis" ── */}
       {!loading && isEmpty && (
         <div style={{
           textAlign: 'center',
           padding: '60px 20px',
           background: 'var(--c-surface)',
-          border: '1px solid var(--c-border)',
+          border: `1px solid ${deletedCount > 0 ? 'rgba(46,187,122,.4)' : 'var(--c-border)'}`,
           borderRadius: '18px',
         }}>
-          <div style={{ fontSize: '36px', marginBottom: '12px' }}>✨</div>
+          <div style={{ fontSize: '36px', marginBottom: '12px' }}>{deletedCount > 0 ? '✅' : '✨'}</div>
           <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--c-text-1)', marginBottom: '6px' }}>
-            Nenhuma campanha zumbi por aqui
+            {deletedCount > 0
+              ? `Limpeza concluída — ${deletedCount} campanha${deletedCount === 1 ? '' : 's'} removida${deletedCount === 1 ? '' : 's'}`
+              : 'Nenhuma campanha zumbi por aqui'}
           </div>
-          <div style={{ fontSize: '13px', color: 'var(--c-text-3)' }}>
-            Todas as campanhas do Meta têm registro no painel ou têm conjuntos de anúncios ativos.
+          <div style={{ fontSize: '13px', color: 'var(--c-text-3)', marginBottom: '20px' }}>
+            {deletedCount > 0
+              ? 'Tudo limpo no Meta. Você já pode voltar pra gestão de campanhas.'
+              : 'Todas as campanhas do Meta têm registro no painel ou têm conjuntos de anúncios ativos.'}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => navigate('/anuncios')}
+              style={{
+                padding: '10px 18px',
+                fontSize: '13px', fontWeight: 700,
+                background: 'var(--c-accent)', color: '#fff',
+                border: 'none', borderRadius: '10px',
+                cursor: 'pointer',
+              }}
+            >Voltar para Campanhas</button>
+            <button
+              onClick={loadZombies}
+              style={{
+                padding: '10px 18px',
+                fontSize: '13px', fontWeight: 600,
+                background: 'transparent', color: 'var(--c-text-2)',
+                border: '1px solid var(--c-border)', borderRadius: '10px',
+                cursor: 'pointer',
+              }}
+            >Verificar novamente</button>
           </div>
         </div>
       )}
