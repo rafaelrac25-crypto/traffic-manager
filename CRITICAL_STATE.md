@@ -42,8 +42,8 @@
 - **Cron automático de sync Meta** — ainda manual (botão "Sincronizar" em /anuncios e /investimento)
 - **CreativeLibrary reuse de hash** — não existe; user precisa re-anexar vídeo a cada nova campanha
 - **`amount_spent: R$2.733 / spend_cap: R$2.798`** — teto interno automático Meta. Não editável via UI. Meta libera conforme conta gasta sem problemas.
-- **Saldo carteira pré-paga: R$6,80** — Rafa precisa adicionar saldo antes de Meta começar a entregar
 - **Limite diário Meta: R$162,30** — bem acima dos R$30/dia, sem risco
+- ~~Saldo carteira pré-paga R$6,80~~ — leitura incorreta (lugar errado no Meta), invalidada em 2026-05-07
 
 ### Memórias permanentes adicionadas hoje
 - `feedback_root_cause_path_thinking.md` — pensar na raiz/caminho antes do 3º fix; trazer Plano B/C espontaneamente
@@ -1997,3 +1997,32 @@ Rafa não via conjunto de anúncio nem anúncio dentro da campanha #464 — nem 
 - Campaign #464 visível em Visão Meta (`/campanhas-v2`) com adset `120246144593930627` e ad `120246144594260627`
 - Sem bugs abertos
 - Saldo: ~R$74,23 / runway 2,5 dias
+
+
+## ⚠️ CRON DESATIVADO (2026-05-07) — AÇÃO PENDENTE DO RAFA
+
+**Vercel rejeitou o deploy da Fase 5 com erro:**
+```
+The CRON_SECRET environment variable contains leading or trailing
+whitespace, which is not allowed in HTTP header values.
+```
+
+**Causa:** a env var `CRON_SECRET` no Vercel tá com espaço/quebra de linha
+extra (provavelmente um `\n` colado junto quando foi setada).
+
+**Pra reativar o cron de sync-meta automático (Fase 5):**
+
+1. Vai em https://vercel.com → projeto **criscosta** → Settings → Environment Variables
+2. Encontra `CRON_SECRET`, clica pra editar
+3. Remove TODO espaço/quebra de linha do início e fim do valor
+4. Salva
+5. Avisa o Claude — ele recoloca o bloco `"crons"` no `vercel.json` e faz push
+
+**Workaround atual:** sync continua manual (botão "Sincronizar" em /investimento e /anuncios). Funciona normal, só não é automático.
+
+**Bloco a restaurar quando env var corrigida:**
+```json
+"crons": [
+  { "path": "/api/cron/sync-meta", "schedule": "0 9 * * *" }
+]
+```

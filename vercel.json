@@ -18,8 +18,5 @@
   "routes": [
     { "src": "/api/(.*)", "dest": "backend/src/index.js" },
     { "src": "/(.*)", "dest": "backend/src/index.js" }
-  ],
-  "crons": [
-    { "path": "/api/cron/sync-meta", "schedule": "0 9 * * *" }
   ]
 }
