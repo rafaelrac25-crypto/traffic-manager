@@ -22,6 +22,22 @@ Cris encontrou email do Meta avisando **uso excessivo da API**. Meta rebaixou ti
 ### Não foi disparada nenhuma chamada Meta nesta sessão
 Cris ainda bloqueada. Qualquer call agora pode contar contra o recurso.
 
+### Plano B documentado caso bloqueio vire permanente (probabilidade ~5-10%)
+1. **Recurso Tier 2/3** via Meta Business Help (chat humano, 5-15 dias úteis)
+2. **BM de terceiro:** outra pessoa cria Business Manager novo com identidade/device/cartão dela; Cris entra como colaboradora de Page sem privilégio admin
+3. **Pivot Google Ads:** stub `googleAds.js` já existe, completar integração — porto seguro paralelo
+4. **Orgânico forte:** IG diário, parcerias microinfluencer Joinville, Google Business com reviews
+
+NUNCA fazer: conta pessoal nova da Cris no mesmo device/IP, comprar conta velha, VPN pra simular outro país, republicar vídeo nano sem revisar.
+
+### Doc de referência criada
+`backend/src/services/META_USAGE.md` — checklist obrigatório antes de subir CAPACITY do rate limit interno.
+
+### Estado ao encerrar sessão (08/05 manhã)
+- Cris bloqueada, recurso em andamento, ~70-80% chance de voltar em 24-48h
+- Fix em prod (commits `60a1b16` + `16a800c`) — quando reconectar, /api/health/full mostra `meta_usage` em tempo real
+- Próximo passo: aguardar resposta Meta + Cris ter documentos prontos pra reenvio
+
 ## 🚨 CHECKPOINT — 2026-05-08 07:30 — CONTA FACEBOOK DA CRIS BLOQUEADA + FIX CI
 
 ### Bloqueio Meta (CRÍTICO — bloqueia tudo)
