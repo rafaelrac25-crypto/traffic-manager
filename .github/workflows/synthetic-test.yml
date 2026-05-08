@@ -15,6 +15,10 @@ on:
       - 'frontend/src/config/**.test.js'
   workflow_dispatch:
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   test-meta:
     runs-on: ubuntu-latest

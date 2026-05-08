@@ -11,6 +11,10 @@ on:
     branches: [main]
   workflow_dispatch:  # permite rodar manualmente pelo GitHub
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   health-check:
     runs-on: ubuntu-latest

@@ -1,5 +1,41 @@
 # CRITICAL_STATE — traffic-manager
 
+## 🚨 CHECKPOINT — 2026-05-08 07:30 — CONTA FACEBOOK DA CRIS BLOQUEADA + FIX CI
+
+### Bloqueio Meta (CRÍTICO — bloqueia tudo)
+- Cris recebeu hoje (08/05) tela "Apresentou um recurso — sua conta não está visível no Facebook"
+- Recurso já protocolado, Meta responde em ~24-48h
+- **Impacto:** conta pessoal → arrasta Business Manager, ad account `act_1330468201431069`, Page e IG Business
+- **Token Meta:** `expirado` no /api/health/full (consequência, não causa)
+- **Campanha #464 Nano v2:** entrega vai parar enquanto bloqueio durar
+- **Causa real Meta não diz.** Hipóteses (não confirmadas): copy de "saúde/tratamento", frame do vídeo lido como bem-estar, identidade não verificada, volume incomum em conta nova
+
+### O que NÃO fazer enquanto bloqueio durar
+- ❌ Desconectar OAuth no nosso painel (perde token; quando Cris voltar, refaz tudo do zero)
+- ❌ Criar nova conta Facebook pra contornar (Meta detecta device/IP, agrava)
+- ❌ Tentar publicar/editar campanha #464 (atividade nova pode contar contra recurso)
+
+### Plano de espera
+1. Aguardar 24-48h decisão Meta
+2. Se Meta pedir documento (CNH/RG da Cris), enviar imediatamente
+3. Se LIBERAR: reconectar token em /investimento, conferir métricas #464, decidir pause/escalar/ajustar
+4. Se NÃO LIBERAR: avaliar criar Business Manager separado para Cris com identidade verificada (não conta pessoal nova)
+
+### Fix CI nesta sessão
+- Workflow GitHub Actions `smoke-test` (a cada 15min) e `synthetic-test` (diário) estavam falhando com `HttpError: Resource not accessible by integration` ao tentar abrir issue automática quando health=ERROR
+- **Causa:** faltava `permissions: { contents: read, issues: write }` no top-level dos workflows. GITHUB_TOKEN default era read-only
+- **Fix:** adicionado bloco `permissions:` em ambos os YAMLs
+- Warning Node 20 deprecation no `actions/github-script@v7` é deferred (v8 ainda não existe; force Node 24 ainda é beta)
+
+### Pendências mantidas da sessão anterior (não tocadas)
+- Investigar duplo POST /api/campaigns
+- Botão "Apagar" visível pra campanhas em status `publishing`/`failed`
+- Reuso de vídeo por hash já entregue (`c4f8412`)
+- Auth /api/admin/* já entregue (`32db081`)
+- Cron sync Meta já reativado (`be73f37`)
+
+---
+
 ## 🎯 CHECKPOINT — 2026-05-06 20:30 — NANO V2 PUBLICADA E EM REVISÃO META
 
 **Após ~36h de tentativas e ~12 commits de fix, campanha #464 está ACTIVE no Meta.**
