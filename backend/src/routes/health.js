@@ -13,7 +13,7 @@
 
 const router = require('express').Router();
 const db = require('../db');
-const { metaGet } = require('../services/metaHttp');
+const { metaGet, getLastUsage } = require('../services/metaHttp');
 const { decrypt } = require('../services/crypto');
 
 router.get('/', (_, res) => res.json({ status: 'ok' }));
@@ -133,6 +133,34 @@ async function checkMeta() {
   }
 }
 
+function checkMetaUsage() {
+  /* Mostra o último % visto do header X-App-Usage. Adicionado em 2026-05-08
+     após Meta rebaixar tier de 1500 → 500 e bloquear conta da Cris por uso
+     excessivo da API. Valor é populado a cada call Meta bem-sucedida. */
+  const u = getLastUsage();
+  if (!u || !u.observed_at) {
+    return {
+      key: 'meta_usage',
+      label: 'Uso da API Meta',
+      status: 'ok',
+      details: 'Nenhuma chamada Meta feita ainda nesta instância — sem dados.',
+    };
+  }
+  const pct = u.peak_pct;
+  let status = 'ok';
+  let prefix = 'Saudável';
+  if (pct >= 90) { status = 'error'; prefix = 'CRÍTICO — chamadas serão abortadas'; }
+  else if (pct >= 70) { status = 'warn'; prefix = 'Alto — moderar chamadas'; }
+  else if (pct >= 50) { status = 'warn'; prefix = 'Atenção'; }
+  return {
+    key: 'meta_usage',
+    label: 'Uso da API Meta',
+    status,
+    details: `${prefix} — pico ${pct}% (call_count=${u.call_count_pct}%, cputime=${u.total_cputime_pct}%, time=${u.total_time_pct}%, ad_acct=${u.ad_account_pct}%, buc=${u.buc_peak_pct}%) · medido ${u.observed_at}`,
+    meta: u,
+  };
+}
+
 function checkGroq() {
   const key = process.env.GROQ_API_KEY;
   if (!key) {
@@ -175,7 +203,7 @@ function checkWebhook() {
 router.get('/full', async (_, res) => {
   try {
     const [dbCheck, metaCheck] = await Promise.all([checkDatabase(), checkMeta()]);
-    const items = [dbCheck, metaCheck, checkGroq(), checkWebhook()];
+    const items = [dbCheck, metaCheck, checkMetaUsage(), checkGroq(), checkWebhook()];
 
     const order = { ok: 0, warn: 1, error: 2 };
     const worst = items.reduce((w, it) => (order[it.status] > order[w] ? it.status : w), 'ok');

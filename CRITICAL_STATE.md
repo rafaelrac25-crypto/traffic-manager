@@ -1,5 +1,27 @@
 # CRITICAL_STATE — traffic-manager
 
+## 🚨 CHECKPOINT — 2026-05-08 08:30 — CAUSA RAIZ DO BLOQUEIO IDENTIFICADA + FIX RATE LIMIT
+
+### Causa REAL do bloqueio (descoberta agora)
+Cris encontrou email do Meta avisando **uso excessivo da API**. Meta rebaixou tier de **1500 → 500** chamadas/h e escalou pro bloqueio da conta pessoal.
+
+**Mea culpa do Claude:** durante a maratona de fix da Nano v2 (06/05), commits abriram brecha que me deveria ter alertado:
+- `6823dff` subiu rate-limit cap interno de 180 → 1000/h
+- `556b456` adicionou bypass interno (early return em `take()` que pulava todo o gate)
+- Resultado: nenhuma proteção interna efetiva. Cada publish e cada sync batia Meta na velocidade que conseguisse.
+- Eu não monitorei `X-App-Usage` que Meta envia em todo response — teria visto a degradação dias antes.
+
+### Fix aplicado nesta sessão (commit pendente)
+1. `metaRateLimit.js`: CAPACITY 1000 → **300/h**, removido early return de `take()`, timeout 25s lança erro `RATE_LIMIT_INTERNAL` em vez de liberar
+2. `metaHttp.js`: agora captura headers `X-App-Usage`, `X-Business-Use-Case-Usage`, `X-Ad-Account-Usage` em CADA response. Calcula pico %.
+   - **≥90% → ABORTA** com erro `META_USAGE_CRITICAL` (proteção dura)
+   - ≥70% → warn no log
+   - Exporta `getLastUsage()` consumido pelo health endpoint
+3. `routes/health.js`: novo item `meta_usage` em `/api/health/full` mostrando último % visto + breakdown (call_count, cputime, time, ad_acct, buc) com status ok/warn/error baseado em threshold
+
+### Não foi disparada nenhuma chamada Meta nesta sessão
+Cris ainda bloqueada. Qualquer call agora pode contar contra o recurso.
+
 ## 🚨 CHECKPOINT — 2026-05-08 07:30 — CONTA FACEBOOK DA CRIS BLOQUEADA + FIX CI
 
 ### Bloqueio Meta (CRÍTICO — bloqueia tudo)

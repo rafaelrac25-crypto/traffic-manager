@@ -4,11 +4,12 @@
 
 const db = require('../db');
 
-/* CAPACITY aumentada de 180 → 1000 — single-user app, Meta real
-   limits sao muito mais altos. 180 era conservador demais e estourava
-   timeout 300s do Vercel quando publishCampaign bate em ~10 endpoints. */
-const CAPACITY = 1000;
-const REFILL_PER_SEC = CAPACITY / (60 * 60); // 0.278 tokens/seg
+/* CAPACITY 300/h: cap sustentavel apos incidente 2026-05-08 — Meta
+   rebaixou tier de 1500 → 500 e bloqueou conta pessoal por uso excessivo
+   da API. 300 cobre publishCampaign (10 calls) + sync diario + diagnose
+   ocasional sem chegar perto de 60% do tier degradado. */
+const CAPACITY = 300;
+const REFILL_PER_SEC = CAPACITY / (60 * 60); // 0.083 tokens/seg
 
 /* ─── Fallback in-memory (usado apenas quando DB está indisponível) ─── */
 const FALLBACK = new Map();
@@ -111,15 +112,11 @@ async function safeStatus(key) {
  * Espera até ter tokens suficientes (timeout de 60s).
  */
 async function take(key = 'default', cost = 1) {
-  /* HOTFIX: rate limit interno tava ESTRANGULANDO o publishCampaign —
-     cada Meta call esperava 60s por token, somando 360s pra 6 calls,
-     estourando timeout 300s do Vercel. Single-user app + Meta tem rate
-     limit proprio robusto, nao precisamos limitar internamente. Sempre
-     retorna ok imediato. Tokens DB continuam sendo escritos pra
-     monitoramento futuro mas sem bloquear. */
-  return { ok: true, waitedMs: 0 };
-  // eslint-disable-next-line no-unreachable
-  const deadline = Date.now() + 60_000;
+  /* PROTEÇÃO RESTAURADA 2026-05-08: o early return removido aqui foi
+     o que permitiu uso excessivo da API e bloqueio da conta da Cris.
+     Timeout reduzido de 60s pra 25s pra evitar estouro de 300s do Vercel
+     mesmo em pior caso de 6 calls sequenciais. */
+  const deadline = Date.now() + 25_000;
   let totalWaited = 0;
 
   while (true) {
@@ -139,9 +136,11 @@ async function take(key = 'default', cost = 1) {
 
     const remaining = deadline - Date.now();
     if (remaining <= 0) {
-      // Timeout: deixa passar com aviso (não bloqueia chamadas Meta para sempre)
-      console.warn(`[rateLimit] timeout 60s atingido, liberando mesmo sem token (key=${key})`);
-      return { ok: true, waitedMs: totalWaited };
+      /* Timeout 25s: NÃO libera mais. Falha alto pra proteger a conta.
+         Caller decide se aborta ou tenta de novo depois. */
+      const err = new Error(`Rate limit interno atingido (${CAPACITY}/h). Aguarde alguns minutos.`);
+      err.code = 'RATE_LIMIT_INTERNAL';
+      throw err;
     }
 
     const sleepMs = Math.min(waitMs, remaining);
