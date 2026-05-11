@@ -1,5 +1,26 @@
 # CRITICAL_STATE — traffic-manager
 
+## 🟡 CHECKPOINT — 2026-05-11 15:20 — Workflows GitHub Actions PAUSADOS
+
+### Motivo
+Conta Facebook da Cris segue bloqueada (3 dias após 08/05). Token Meta expirado → `/api/health/full` retorna `overall: error` → workflows `smoke-test` (15min) e `synthetic-test` (diário) criavam issue + mandavam email a cada rodada.
+
+### Ação
+Commit `7d5d50d` comenta `schedule:` em `.github/workflows/smoke-test.yml` e `synthetic-test.yml`. Mantidos: `workflow_dispatch` (rodar manual) + `push` (rodar em deploy). Push não cria issue (`if: github.event_name == 'schedule'`), então spam acaba.
+
+### Reativar quando tráfego voltar
+Descomentar os blocos `schedule:` nos dois YAMLs + push. Não precisa mexer em mais nada.
+
+### Estado das integrações no momento da pausa
+- DB Neon: ok
+- Meta Ads: **error (token expirou)**
+- Meta usage: ok (nenhuma chamada feita)
+- Groq: ok
+- Webhook Meta: ok
+
+---
+
+
 ## 🚨 CHECKPOINT — 2026-05-08 08:30 — CAUSA RAIZ DO BLOQUEIO IDENTIFICADA + FIX RATE LIMIT
 
 ### Causa REAL do bloqueio (descoberta agora)
