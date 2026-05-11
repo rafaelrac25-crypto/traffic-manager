@@ -5,8 +5,11 @@ name: Smoke test produção
 # pra checar deploy logo após subir.
 
 on:
-  schedule:
-    - cron: '*/15 * * * *'  # a cada 15 minutos
+  # PAUSADO em 2026-05-11 — conta Facebook da Cris bloqueada temporariamente,
+  # health endpoint retorna error por token Meta expirado e spam de issue/email.
+  # Reativar: descomentar o bloco `schedule:` abaixo quando tráfego voltar ao normal.
+  # schedule:
+  #   - cron: '*/15 * * * *'  # a cada 15 minutos
   push:
     branches: [main]
   workflow_dispatch:  # permite rodar manualmente pelo GitHub

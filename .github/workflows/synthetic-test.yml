@@ -5,8 +5,10 @@ name: Synthetic test diário Meta
 # pacto contratual com Meta API antes de bater no usuário.
 
 on:
-  schedule:
-    - cron: '0 12 * * *'  # 09:00 GMT-3 (12:00 UTC)
+  # PAUSADO em 2026-05-11 — conta Facebook da Cris bloqueada temporariamente.
+  # Reativar: descomentar o bloco `schedule:` abaixo quando tráfego voltar.
+  # schedule:
+  #   - cron: '0 12 * * *'  # 09:00 GMT-3 (12:00 UTC)
   push:
     branches: [main]
     paths:
