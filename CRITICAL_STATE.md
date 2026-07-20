@@ -1,5 +1,34 @@
 # CRITICAL_STATE — traffic-manager
 
+## 🛑 CHECKPOINT — 2026-07-20 08:09 — OPERAÇÃO PARADA POR DECISÃO DO RAFA
+
+### Motivo
+Rafa não usa mais o AdManager e a conta Meta da Cris foi bloqueada **pela 2ª vez** por excesso de chamadas API. Decisão: parar TUDO agora, sem prazo pra reativar.
+
+### Ações executadas nesta sessão
+1. ✅ `DELETE /api/platforms/meta` em produção → token Meta removido do DB (`platform_credentials`). Nenhuma chamada Meta possível pelo backend a partir de agora — todos os call sites checam token antes.
+2. ✅ Health confirma: `meta: "Meta não conectado"`, `meta_usage: nenhuma chamada`.
+3. ✅ Crons GitHub Actions seguem pausados (smoke-test.yml + synthetic-test.yml continuam com `schedule:` comentado desde 2026-05-11).
+
+### Estado pós-parada
+- **Backend Vercel:** ainda no ar em https://criscosta.vercel.app (inerte — não consegue chamar Meta sem token)
+- **Webhook Meta:** subscription ainda ativa no App do Meta (Meta pode chamar nosso endpoint, mas Cris não tem anúncios rodando → tráfego será zero)
+- **DB Neon:** intacto — histórico, configs e criativos preservados
+
+### Pendências pra shutdown mais profundo (se Rafa quiser depois)
+- [ ] Pausar/deletar projeto Vercel (evita qualquer request no domínio)
+- [ ] Remover webhook subscription no App do Meta (developers.facebook.com → App → Webhooks → Instagram/Pages → Unsubscribe)
+- [ ] Arquivar repo GitHub `rafaelrac25-crypto/traffic-manager`
+- [ ] Deletar/pausar DB Neon (só depois de exportar histórico se quiser guardar)
+
+### Como reativar (se um dia voltar)
+1. Investigar como Meta desbloqueia a conta da Cris (mais chato) — pode ser wait 90d + apelação
+2. `Investimento → Conectar Meta` no painel refaz OAuth do zero
+3. Descomentar `schedule:` nos 2 YAMLs de workflows
+4. Verificar se `metaRateLimit.js` ainda tem CAPACITY 300/h + monitor `X-App-Usage` ativo
+
+---
+
 ## 🟡 CHECKPOINT — 2026-05-11 15:20 — Workflows GitHub Actions PAUSADOS
 
 ### Motivo
