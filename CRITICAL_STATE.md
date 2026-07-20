@@ -1,5 +1,22 @@
 # CRITICAL_STATE — traffic-manager
 
+## 🛑 CHECKPOINT — 2026-07-20 08:15 — PROJETO ENCERRADO (REGRA PERMANENTE) + VERCEL SUNSET
+
+Regra registrada em:
+- `~/CLAUDE.md` (bloco "REGRA PERMANENTE — TRAFFIC MANAGER ENCERRADO", desabilita fluxo de retomada automática)
+- `traffic-manager/CLAUDE.md` (banner de encerramento no topo)
+- `~/.claude/projects/C--Users-Rafa/memory/project_traffic_manager_encerrado.md` (memória global)
+- `~/.claude/projects/C--Users-Rafa/memory/MEMORY.md` (índice)
+
+Vercel tirado do ar via sunset:
+- `sunset/index.html` criado (página estática "Encerrado")
+- `vercel.json` reescrito: só `@vercel/static` servindo `sunset/index.html` com status 410
+- Backend Node inteiro sai do deploy no próximo push → zero API endpoint funcional, zero risco de chamada Meta
+
+Próximo passo automático (imediatamente após este checkpoint): commit + push do sunset.
+
+---
+
 ## 🛑 CHECKPOINT — 2026-07-20 08:09 — OPERAÇÃO PARADA POR DECISÃO DO RAFA
 
 ### Motivo

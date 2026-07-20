@@ -1,22 +1,9 @@
 {
   "version": 2,
   "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": { "distDir": "frontend/dist" }
-    },
-    {
-      "src": "backend/src/index.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["frontend/dist/**"],
-        "maxDuration": 300
-      }
-    }
+    { "src": "sunset/index.html", "use": "@vercel/static" }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "backend/src/index.js" },
-    { "src": "/(.*)", "dest": "backend/src/index.js" }
+    { "src": "/(.*)", "dest": "/sunset/index.html", "status": 410 }
   ]
 }

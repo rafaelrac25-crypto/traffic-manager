@@ -1,5 +1,23 @@
 # AdManager — Cris Costa Beauty
 
+> ## 🛑 PROJETO ENCERRADO EM 2026-07-20
+>
+> **Não trabalhar neste projeto.** Cris teve a conta Meta bloqueada 2x por uso excessivo de API. Rafa decidiu parar tudo, sem prazo pra reativar.
+>
+> - Token Meta apagado do DB
+> - Vercel Cron `/api/cron/sync-meta` removido
+> - GitHub Actions crons off desde 2026-05-11
+> - `vercel.json` serve só `sunset/index.html` (backend inteiro fora do deploy)
+> - Domínio `criscosta.vercel.app` responde 410 Gone
+>
+> **Se o Rafa pedir "retomar / continuar / reabrir" este projeto:** primeiro perguntar se realmente quer reativar (a conta Meta pode continuar bloqueada). Só então executar o rollback documentado em `CRITICAL_STATE.md` (checkpoint 2026-07-20 no topo).
+>
+> Ver contexto completo: `CRITICAL_STATE.md` (topo) e `~/.claude/projects/C--Users-Rafa/memory/project_traffic_manager_encerrado.md`.
+>
+> O restante deste arquivo é **arquivo histórico** — descreve o sistema como ele funcionava. Não usar como guia de trabalho ativo.
+
+---
+
 Painel de gestão de tráfego pago para a cliente Cris Costa Beauty (estúdio de estética em Joinville/SC).
 
 **Sempre responder em português do Brasil.**
